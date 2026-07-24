@@ -4,18 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mon jardin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-<header>
-  <div class="entete-haut">
-    <h1>Mon jardin</h1>
-    <div class="compte-util">
-      <span id="utilisateur"></span>
-      <button class="lien-clair" id="deconnexion" hidden type="button">Se déconnecter</button>
+
+<header class="tete">
+  <div class="tete-corps">
+    <div class="tete-haut">
+      <h1>Mon jardin</h1>
+      <div class="compte-util">
+        <span id="utilisateur"></span>
+        <button class="lien-clair" id="deconnexion" hidden type="button">Se déconnecter</button>
+      </div>
     </div>
+    <p class="tete-sous">Climat océanique frais<span class="pt-sep">·</span><span id="tete-total"></span></p>
   </div>
-  <p id="sous-titre">Climat océanique frais. Informations indicatives.</p>
   <nav class="onglets" role="tablist">
     <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">Ma sélection</button>
     <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">En ce moment</button>
@@ -27,9 +33,9 @@
   <div id="etat" class="etat" hidden></div>
 
   <section id="ec-selection" hidden>
-    <div id="zone-connexion" class="bloc connexion" hidden>
+    <div id="zone-connexion" class="carte connexion" hidden>
       <h2>Enregistrer votre jardin</h2>
-      <p>Votre sélection est synchronisée entre vos appareils. Saisissez votre adresse, vous recevrez un lien de connexion sans mot de passe.</p>
+      <p>Votre sélection vous suit d'un appareil à l'autre. Saisissez votre adresse, vous recevrez un lien de connexion sans mot de passe.</p>
       <form id="form-connexion">
         <input id="email" type="email" required placeholder="vous@exemple.fr" aria-label="Adresse électronique">
         <button class="bouton" type="submit">Recevoir le lien</button>
@@ -37,27 +43,71 @@
       <p class="note" id="note-connexion" hidden></p>
     </div>
 
-    <div class="barre">
-      <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
-      <span class="compte" id="compte"></span>
-      <button class="lien" id="vider" type="button">Tout décocher</button>
+    <div class="filtres">
+      <div class="ligne-rech">
+        <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
+        <div class="segments" role="group" aria-label="Regroupement">
+          <button class="segment" data-tri="categorie" aria-pressed="true">Par catégorie</button>
+          <button class="segment" data-tri="alpha" aria-pressed="false">A à Z</button>
+        </div>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Type</span>
+        <div class="jeu-chips" id="chipsTypo"></div>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Catégorie</span>
+        <div class="jeu-chips" id="chipsCat"></div>
+      </div>
+      <div class="ligne-bilan">
+        <span class="bilan" id="bilanSel"></span>
+        <span class="bilan fort" id="compte"></span>
+        <button class="lien" id="vider" type="button">Tout décocher</button>
+      </div>
     </div>
+
     <div id="listes"></div>
+    <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
   </section>
 
   <section id="ec-maintenant">
-    <p class="date-jour" id="dateJour"></p>
+    <div class="bandeau-date">
+      <p class="date-jour" id="dateJour"></p>
+      <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
+    </div>
     <div id="maintenant"></div>
   </section>
 
   <section id="ec-planning" hidden>
-    <div class="barre" id="filtresPhase"></div>
-    <div class="barre">
-      <button class="chip" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
-      <span class="compte" id="compte2"></span>
+    <div class="filtres">
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Tâche</span>
+        <div class="jeu-chips" id="chipsPhase"></div>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Type</span>
+        <div class="jeu-chips" id="chipsTypoP"></div>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Catégorie</span>
+        <div class="jeu-chips" id="chipsCatP"></div>
+      </div>
+      <div class="ligne-bilan">
+        <button class="chip chip-jardin" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
+        <span class="bilan" id="bilanPlan"></span>
+      </div>
     </div>
-    <div class="entete-mois"><div></div><div class="mois-grille" id="grilleMois"></div></div>
-    <div id="rangees"></div>
+
+    <div class="cadre-frise">
+      <div class="entete-mois">
+        <div class="coin-entete">Culture</div>
+        <div class="mois-grille" id="grilleMois"></div>
+      </div>
+      <div id="zoneRangees">
+        <div class="marqueur-jour" id="marqueurJour" hidden></div>
+        <div id="rangees"></div>
+      </div>
+    </div>
     <p class="vide" id="videPlanning" hidden></p>
   </section>
 </main>
