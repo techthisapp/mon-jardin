@@ -298,11 +298,26 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
   .ligne-filtre{flex-direction:column;gap:4px}
   .nom-plante small{display:none}
   .liste{grid-template-columns:1fr}
-  .mois-case{font-size:0}
-  .mois-case::after{content:attr(data-court);font-size:10px}
+  .mois-case{font-size:0;padding:14px 0}
+  .mois-case::after{content:attr(data-court);font-size:11px}
+  .coin-entete{display:flex;align-items:center}
   .carac{grid-template-columns:1fr;gap:1px 0}
   .carac dd{margin-bottom:6px}
 }
 @media (prefers-reduced-motion:no-preference){
   .item,.chip,.segment,.onglet{transition:background-color .12s ease,border-color .12s ease,opacity .12s ease}
+}
+
+/* ---------- Filtre par mois ---------- */
+.mois-case{
+  cursor:pointer;color:inherit;font-family:"IBM Plex Mono",monospace;
+  border-top:0;border-right:0;border-bottom:0;
+}
+.mois-case:hover{background:rgba(239,239,232,.22)}
+.mois-case:focus-visible{outline:2px solid #EFEFE8;outline-offset:-3px}
+.mois-case[aria-pressed="true"]{background:#EFEFE8;color:var(--encre);font-weight:500}
+.bande-mois{
+  position:absolute;top:0;bottom:0;z-index:1;pointer-events:none;
+  background:rgba(76,140,63,.09);border-left:1px solid rgba(76,140,63,.34);
+  border-right:1px solid rgba(76,140,63,.34);
 }
