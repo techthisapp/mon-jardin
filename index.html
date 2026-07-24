@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon jardin</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header>
+  <div class="entete-haut">
+    <h1>Mon jardin</h1>
+    <div class="compte-util">
+      <span id="utilisateur"></span>
+      <button class="lien-clair" id="deconnexion" hidden type="button">Se déconnecter</button>
+    </div>
+  </div>
+  <p id="sous-titre">Climat océanique frais. Informations indicatives.</p>
+  <nav class="onglets" role="tablist">
+    <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">Ma sélection</button>
+    <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">En ce moment</button>
+    <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">Planning</button>
+  </nav>
+</header>
+
+<main>
+  <div id="etat" class="etat" hidden></div>
+
+  <section id="ec-selection" hidden>
+    <div id="zone-connexion" class="bloc connexion" hidden>
+      <h2>Enregistrer votre jardin</h2>
+      <p>Votre sélection est synchronisée entre vos appareils. Saisissez votre adresse, vous recevrez un lien de connexion sans mot de passe.</p>
+      <form id="form-connexion">
+        <input id="email" type="email" required placeholder="vous@exemple.fr" aria-label="Adresse électronique">
+        <button class="bouton" type="submit">Recevoir le lien</button>
+      </form>
+      <p class="note" id="note-connexion" hidden></p>
+    </div>
+
+    <div class="barre">
+      <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
+      <span class="compte" id="compte"></span>
+      <button class="lien" id="vider" type="button">Tout décocher</button>
+    </div>
+    <div id="listes"></div>
+  </section>
+
+  <section id="ec-maintenant">
+    <p class="date-jour" id="dateJour"></p>
+    <div id="maintenant"></div>
+  </section>
+
+  <section id="ec-planning" hidden>
+    <div class="barre" id="filtresPhase"></div>
+    <div class="barre">
+      <button class="chip" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
+      <span class="compte" id="compte2"></span>
+    </div>
+    <div class="entete-mois"><div></div><div class="mois-grille" id="grilleMois"></div></div>
+    <div id="rangees"></div>
+    <p class="vide" id="videPlanning" hidden></p>
+  </section>
+</main>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
