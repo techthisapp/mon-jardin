@@ -27,6 +27,7 @@ let jardinId = null;
 let session = null;
 let tri = "categorie";
 let jardinSeul = false;
+let moisChoisi = null;
 
 const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Ma sélection
 const etatTypoP = {}, etatCatP = {};                     // écran Planning
@@ -325,13 +326,38 @@ function construireMois() {
   const gm = $("grilleMois");
   if (gm.childElementCount) return;
   MOIS.forEach((m, i) => {
-    const d = document.createElement("div");
-    d.className = "mois-case" + (i === auj.getMonth() ? " en-cours" : "");
-    d.dataset.court = m[0];
-    d.textContent = ABR[i].toUpperCase();
-    d.title = m;
-    gm.appendChild(d);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "mois-case" + (i === auj.getMonth() ? " en-cours" : "");
+    b.dataset.court = m[0];
+    b.textContent = ABR[i].toUpperCase();
+    b.title = `N'afficher que les plantes ayant une tâche en ${m.toLowerCase()}`;
+    b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => {
+      moisChoisi = (moisChoisi === i) ? null : i;   // second clic : on relâche le filtre
+      majMois();
+      rendrePlanning();
+    });
+    gm.appendChild(b);
   });
+}
+
+function majMois() {
+  [...$("grilleMois").children].forEach((b, i) =>
+    b.setAttribute("aria-pressed", String(i === moisChoisi)));
+  const bande = $("bandeMois");
+  if (moisChoisi === null) { bande.hidden = true; return; }
+  const col = getComputedStyle(document.documentElement).getPropertyValue("--col-nom").trim();
+  bande.style.left = `calc(${col} + (100% - ${col}) * ${moisChoisi / 12})`;
+  bande.style.width = `calc((100% - ${col}) / 12)`;
+  bande.hidden = false;
+}
+
+// Une plante entre dans le mois si l'une de ses tâches encore filtrées y tombe.
+function dansMois(p) {
+  if (moisChoisi === null) return true;
+  const h1 = moisChoisi * 2 + 1, h2 = moisChoisi * 2 + 2;
+  return ORDRE.some(k => etatPhase[k] && (p.phases[k] || []).some(s => s[0] <= h2 && s[1] >= h1));
 }
 
 function segs(p) {
@@ -376,9 +402,12 @@ function rendrePlanning() {
   const lot = plantes.filter(p => {
     if (jardinSeul && !sel.has(p.id)) return false;
     if (!etatTypoP[p.typo] || !etatCatP[p.cat]) return false;
+    if (!dansMois(p)) return false;
     return ORDRE.some(k => etatPhase[k] && p.phases[k]);
   });
-  $("bilanPlan").textContent = `${lot.length} sur ${plantes.length} affichées`;
+  $("bilanPlan").textContent = `${lot.length} sur ${plantes.length} affichées`
+    + (moisChoisi === null ? "" : ` · ${MOIS[moisChoisi].toLowerCase()}`);
+  $("razMois").hidden = moisChoisi === null;
 
   lot.forEach(p => {
     const r = document.createElement("div");
@@ -397,7 +426,9 @@ function rendrePlanning() {
   v.hidden = lot.length > 0;
   v.textContent = (jardinSeul && !sel.size)
     ? "Aucune plante retenue. Ouvrez Ma sélection pour composer votre jardin."
-    : "Aucune plante ne correspond à ces filtres.";
+    : (moisChoisi === null
+        ? "Aucune plante ne correspond à ces filtres."
+        : `Aucune tâche en ${MOIS[moisChoisi].toLowerCase()} parmi les plantes filtrées.`);
   placerMarqueur();
 }
 
@@ -410,6 +441,10 @@ function placerMarqueur() {
   m.style.left = `calc(${col} + (100% - ${col}) * ${f})`;
   m.hidden = false;
 }
+
+$("razMois").addEventListener("click", () => {
+  moisChoisi = null; majMois(); rendrePlanning();
+});
 
 $("filtreJardin").addEventListener("click", function () {
   jardinSeul = !jardinSeul;
@@ -453,7 +488,7 @@ function rendreTout() {
   rendrePlanning();
 }
 
-window.addEventListener("resize", placerMarqueur);
+window.addEventListener("resize", () => { placerMarqueur(); majMois(); });
 majCompte();
 await chargerCatalogue();
 const { data: { session: s0 } } = await db.auth.getSession();
