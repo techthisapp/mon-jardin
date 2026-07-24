@@ -23,14 +23,57 @@
     <p class="tete-sous">Climat océanique frais<span class="pt-sep">·</span><span id="tete-total"></span></p>
   </div>
   <nav class="onglets" role="tablist">
-    <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">Ma sélection</button>
     <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">En ce moment</button>
     <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">Planning</button>
+    <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">Ma sélection</button>
   </nav>
 </header>
 
 <main>
   <div id="etat" class="etat" hidden></div>
+
+  <section id="ec-maintenant">
+    <div class="bandeau-date">
+      <p class="date-jour" id="dateJour"></p>
+      <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
+    </div>
+    <div id="maintenant"></div>
+  </section>
+
+  <section id="ec-planning" hidden>
+    <div class="filtres">
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Tâche</span>
+        <div class="jeu-chips" id="chipsPhase"></div>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Type</span>
+        <div class="jeu-chips" id="chipsTypoP"></div>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Catégorie</span>
+        <div class="jeu-chips" id="chipsCatP"></div>
+      </div>
+      <div class="ligne-bilan">
+        <button class="chip chip-jardin" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
+        <span class="bilan" id="bilanPlan"></span>
+        <button class="lien" id="razMois" type="button" hidden>Tous les mois</button>
+      </div>
+    </div>
+
+    <div class="cadre-frise">
+      <div class="entete-mois">
+        <div class="coin-entete">Culture</div>
+        <div class="mois-grille" id="grilleMois"></div>
+      </div>
+      <div id="zoneRangees">
+        <div class="bande-mois" id="bandeMois" hidden></div>
+        <div class="marqueur-jour" id="marqueurJour" hidden></div>
+        <div id="rangees"></div>
+      </div>
+    </div>
+    <p class="vide" id="videPlanning" hidden></p>
+  </section>
 
   <section id="ec-selection" hidden>
     <div id="zone-connexion" class="carte connexion" hidden>
@@ -68,47 +111,6 @@
 
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
-  </section>
-
-  <section id="ec-maintenant">
-    <div class="bandeau-date">
-      <p class="date-jour" id="dateJour"></p>
-      <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
-    </div>
-    <div id="maintenant"></div>
-  </section>
-
-  <section id="ec-planning" hidden>
-    <div class="filtres">
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Tâche</span>
-        <div class="jeu-chips" id="chipsPhase"></div>
-      </div>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Type</span>
-        <div class="jeu-chips" id="chipsTypoP"></div>
-      </div>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Catégorie</span>
-        <div class="jeu-chips" id="chipsCatP"></div>
-      </div>
-      <div class="ligne-bilan">
-        <button class="chip chip-jardin" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
-        <span class="bilan" id="bilanPlan"></span>
-      </div>
-    </div>
-
-    <div class="cadre-frise">
-      <div class="entete-mois">
-        <div class="coin-entete">Culture</div>
-        <div class="mois-grille" id="grilleMois"></div>
-      </div>
-      <div id="zoneRangees">
-        <div class="marqueur-jour" id="marqueurJour" hidden></div>
-        <div id="rangees"></div>
-      </div>
-    </div>
-    <p class="vide" id="videPlanning" hidden></p>
   </section>
 </main>
 
