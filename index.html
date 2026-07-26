@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607261554">
+<link rel="stylesheet" href="./styles.css?v=202607261903">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -140,9 +140,10 @@
         <button class="bouton" type="submit">Recevoir le lien</button>
       </form>
       <form id="form-code" hidden>
-        <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code à 6 chiffres" aria-label="Code reçu par courrier électronique">
-        <button class="bouton" type="submit">Valider le code</button>
+        <input id="code" type="text" autocomplete="one-time-code" placeholder="Collez le lien, ou saisissez le code" aria-label="Lien ou code reçu par courrier électronique">
+        <button class="bouton" type="submit">Valider</button>
       </form>
+      <p class="note" id="aide-code" hidden>Depuis l'application installée, ne cliquez pas sur le lien du courriel. Appuyez dessus longuement, choisissez Copier le lien, puis collez-le ci-dessus.</p>
       <p class="note" id="note-connexion" hidden></p>
     </div>
     <div id="bloc-jardin" hidden>
@@ -169,6 +170,6 @@
 
 </main>
 
-<script type="module" src="./app.js?v=202607261554"></script>
+<script type="module" src="./app.js?v=202607261903"></script>
 </body>
 </html>
