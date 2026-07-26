@@ -697,7 +697,7 @@ sur("form-connexion", "submit", async e => {
   const { error } = await db.auth.signInWithOtp({
     email, options: { emailRedirectTo: window.location.href.split("#")[0] },
   });
-  if (!error) { $("form-code").hidden = false; $("code").focus(); }
+  if (!error) { $("form-code").hidden = false; $("aide-code").hidden = false; $("code").focus(); }
   const note = $("note-connexion");
   note.hidden = false;
   note.classList.toggle("erreur", Boolean(error));
@@ -712,7 +712,7 @@ db.auth.onAuthStateChange((_e, s) => {
   const connecte = Boolean(s);
   $("zone-connexion").hidden = connecte;
   $("videSelection").hidden = connecte;
-  if (connecte) { $("form-code").hidden = true; $("code").value = ""; }
+  if (connecte) { $("form-code").hidden = true; $("aide-code").hidden = true; $("code").value = ""; }
   $("deconnexion").hidden = !connecte;
   $("utilisateur").textContent = connecte ? s.user.email : "";
   if (!$("etat").classList.contains("erreur")) info("");
@@ -895,17 +895,39 @@ if (!s0) $("zone-connexion").hidden = false;
 // Le lien reçu par courrier électronique s'ouvre dans le navigateur, jamais dans
 // l'application ajoutée à l'écran d'accueil, qui dispose de son propre stockage.
 // La saisie du code ouvre la session dans le contexte où elle est saisie.
+// Le lien reçu s'ouvre toujours dans le navigateur, jamais dans l'application ajoutée
+// à l'écran d'accueil, qui dispose de son propre stockage. Coller le lien, ou saisir le
+// code quand le modèle de courriel en fournit un, ouvre la session dans ce contexte.
+function validerEntree(valeur, email) {
+  const v = valeur.trim();
+  if (!/^https?:\/\//i.test(v)) {
+    if (!email) return Promise.resolve({ error: { message: "adresse électronique manquante" } });
+    return db.auth.verifyOtp({ email, token: v.replace(/\s+/g, ""), type: "email" });
+  }
+  let u;
+  try { u = new URL(v); } catch (err) { return Promise.resolve({ error: { message: "lien illisible" } }); }
+  const frag = new URLSearchParams((u.hash || "").replace(/^#/, ""));
+  if (frag.get("access_token") && frag.get("refresh_token")) {
+    return db.auth.setSession({
+      access_token: frag.get("access_token"),
+      refresh_token: frag.get("refresh_token"),
+    });
+  }
+  const jeton = u.searchParams.get("token_hash") || u.searchParams.get("token");
+  if (!jeton) return Promise.resolve({ error: { message: "aucun jeton dans ce lien" } });
+  return db.auth.verifyOtp({ token_hash: jeton, type: u.searchParams.get("type") || "magiclink" });
+}
+
 sur("form-code", "submit", async e => {
   e.preventDefault();
-  const email = $("email").value.trim();
-  const token = $("code").value.replace(/\s+/g, "");
-  if (!email || !token) return;
+  const saisie = $("code").value;
+  if (!saisie.trim()) return;
   const n = $("note-connexion");
   n.hidden = false; n.classList.remove("erreur"); n.textContent = "Vérification en cours.";
-  const { error } = await db.auth.verifyOtp({ email, token, type: "email" });
+  const { error } = await validerEntree(saisie, $("email").value.trim());
   if (error) {
     n.classList.add("erreur");
-    n.textContent = "Code refusé : " + error.message;
+    n.textContent = "Connexion refusée : " + error.message;
     return;
   }
   n.hidden = true; n.textContent = "";
