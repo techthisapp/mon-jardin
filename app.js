@@ -120,12 +120,21 @@ const compte = f => plantes.filter(f).length;
 
 /* ================== Jardin ================== */
 
-const COL_JARDIN = "id,name,climate_key,altitude";
+const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at";
 const jardinActif = () => jardins.find(g => g.id === jardinId) || null;
-const cleJardin = () => "monjardin.jardin." + (session ? session.user.id : "anonyme");
+// iOS isole le stockage local de l'application ajoutée à l'écran d'accueil de celui
+// de Safari. Le jardin actif est donc mémorisé en base, où il suit le compte.
+function memoriserOuverture(id) {
+  const g = jardins.find(x => x.id === id);
+  if (g) g.last_opened_at = new Date().toISOString();
+  db.from("gardens").update({ last_opened_at: new Date().toISOString() }).eq("id", id)
+    .then(({ error }) => { if (error) console.warn("dernier jardin non mémorisé :", error.message); });
+}
 
 async function listerJardins() {
-  const { data, error } = await db.from("gardens").select(COL_JARDIN).order("created_at");
+  const { data, error } = await db.from("gardens").select(COL_JARDIN)
+    .order("last_opened_at", { ascending: false, nullsFirst: false })
+    .order("created_at");
   if (error) { info("Jardins inaccessibles : " + error.message, true); return false; }
   jardins = data || [];
   return true;
@@ -143,14 +152,12 @@ async function chargerJardin() {
     if (error) { info("Jardin inaccessible : " + error.message, true); return; }
     if (!await listerJardins()) return;
   }
-  let memo = null;
-  try { memo = localStorage.getItem(cleJardin()); } catch (e) { /* stockage indisponible */ }
-  jardinId = (jardins.find(g => g.id === memo) || jardins[0]).id;
+  jardinId = jardins[0].id;
   await chargerContenuJardin();
 }
 
 async function chargerContenuJardin() {
-  try { localStorage.setItem(cleJardin(), jardinId); } catch (e) { /* stockage indisponible */ }
+  memoriserOuverture(jardinId);
   const [rp, rz, ra] = await Promise.all([
     db.from("garden_plants").select("plant_id").eq("garden_id", jardinId),
     db.from("espaces").select("*").eq("garden_id", jardinId).order("position").order("name"),
