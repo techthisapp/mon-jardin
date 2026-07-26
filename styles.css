@@ -414,3 +414,10 @@ main{
   flex:1;font:400 15px/1.3 "IBM Plex Mono",monospace;letter-spacing:.14em;
   padding:10px 12px;border:1px solid var(--filet);border-radius:8px;background:#fff;
 }
+
+/* ---------- Code de reprise ---------- */
+.code-reprise{
+  font:600 17px/1.3 "IBM Plex Mono",monospace;letter-spacing:.16em;
+  color:var(--encre);
+}
+#codeReprise.erreur{color:var(--alerte)}
