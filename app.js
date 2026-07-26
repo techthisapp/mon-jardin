@@ -700,8 +700,9 @@ sur("form-connexion", "submit", async e => {
   if (!error) { $("form-code").hidden = false; $("code").focus(); }
   const note = $("note-connexion");
   note.hidden = false;
+  note.classList.toggle("erreur", Boolean(error));
   note.textContent = error ? "Envoi impossible : " + error.message
-                           : "Lien envoyé. Ouvrez votre boîte de réception.";
+                           : "Message envoyé. Ouvrez le lien depuis un navigateur, ou saisissez ici le code reçu.";
 });
 
 sur("deconnexion", "click", () => db.auth.signOut());
