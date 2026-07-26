@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=6">
+<link rel="stylesheet" href="./styles.css?v=7">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -27,6 +27,7 @@
       <h1>Mon jardin</h1>
       <div class="compte-util">
         <span id="utilisateur"></span>
+        <button class="lien-clair" id="btnConfig" type="button" aria-expanded="false">Réglages</button>
         <button class="lien-clair" id="deconnexion" hidden type="button">Se déconnecter</button>
       </div>
     </div>
@@ -35,8 +36,11 @@
   <nav class="onglets" role="tablist">
     <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">En ce moment</button>
     <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">Planning</button>
-    <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">Ma sélection</button>
-    <button class="onglet" role="tab" aria-selected="false" data-ecran="jardin">Jardin</button>
+  </nav>
+  <nav class="sous-onglets" id="sousOnglets" role="tablist" hidden>
+    <button class="sous-onglet" role="tab" aria-selected="true"  data-ecran="selection">Mes plantes</button>
+    <button class="sous-onglet" role="tab" aria-selected="false" data-ecran="jardin">Jardin et zones</button>
+    <button class="lien-clair" id="fermerConfig" type="button">Retour</button>
   </nav>
 </header>
 
@@ -57,6 +61,13 @@
 
   <section id="ec-planning" hidden>
     <div class="filtres">
+      <div class="barre-filtres">
+        <button class="chip" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">Filtres<span class="nb" id="nbFiltres" hidden></span></button>
+        <button class="chip chip-jardin" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
+        <span class="bilan" id="bilanPlan"></span>
+        <button class="lien" id="razMois" type="button" hidden>Tous les mois</button>
+      </div>
+      <div id="corpsFiltres" hidden>
       <div class="ligne-filtre">
         <span class="etiq-filtre">Tâche</span>
         <div class="jeu-chips" id="chipsPhase"></div>
@@ -73,10 +84,6 @@
         <span class="etiq-filtre">Zone</span>
         <div class="jeu-chips" id="chipsZoneP"></div>
       </div>
-      <div class="ligne-bilan">
-        <button class="chip chip-jardin" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
-        <span class="bilan" id="bilanPlan"></span>
-        <button class="lien" id="razMois" type="button" hidden>Tous les mois</button>
       </div>
     </div>
 
