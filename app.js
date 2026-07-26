@@ -285,13 +285,30 @@ function chipsZones(conteneur, ligne, apres) {
 
 /* ================== Onglets ================== */
 
+const ECRANS = ["maintenant", "planning", "selection", "jardin"];
+const CONFIG = ["selection", "jardin"];
 const onglets = [...document.querySelectorAll(".onglet")];
-onglets.forEach(o => o.addEventListener("click", () => {
-  onglets.forEach(x => x.setAttribute("aria-selected", String(x === o)));
-  ["selection", "maintenant", "planning", "jardin"].forEach(n => { $("ec-" + n).hidden = (n !== o.dataset.ecran); });
+const sousOnglets = [...document.querySelectorAll(".sous-onglet")];
+let ecranCourant = "maintenant";
+let ecranConfig = "selection";
+
+function afficher(ecran) {
+  ecranCourant = ecran;
+  const enConfig = CONFIG.includes(ecran);
+  if (enConfig) ecranConfig = ecran;
+  ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== ecran); });
+  onglets.forEach(x => x.setAttribute("aria-selected", String(!enConfig && x.dataset.ecran === ecran)));
+  sousOnglets.forEach(x => x.setAttribute("aria-selected", String(x.dataset.ecran === ecran)));
+  $("sousOnglets").hidden = !enConfig;
+  $("btnConfig").setAttribute("aria-expanded", String(enConfig));
   window.scrollTo(0, 0);
-  if (o.dataset.ecran === "planning") placerMarqueur();
-}));
+  if (ecran === "planning") placerMarqueur();
+}
+
+onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
+sousOnglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
+$("btnConfig").addEventListener("click", () => afficher(CONFIG.includes(ecranCourant) ? "maintenant" : ecranConfig));
+$("fermerConfig").addEventListener("click", () => afficher("maintenant"));
 
 document.querySelectorAll(".segment").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
@@ -584,6 +601,7 @@ function rendrePlanning() {
   $("bilanPlan").textContent = `${lot.length} sur ${plantes.length} affichées`
     + (moisChoisi === null ? "" : ` · ${MOIS[moisChoisi].toLowerCase()}`);
   $("razMois").hidden = moisChoisi === null;
+  majCompteurFiltres();
 
   lot.forEach(p => {
     const r = document.createElement("div");
@@ -617,6 +635,32 @@ function placerMarqueur() {
   m.style.left = `calc(${col} + (100% - ${col}) * ${f})`;
   m.hidden = false;
 }
+
+function nbFiltresActifs() {
+  let n = 0;
+  const cles = ORDRE.filter(k => phases[k]);
+  if (cles.length && cles.some(k => !etatPhase[k])) n++;
+  if (ORDRE_TYPO.some(t => !etatTypoP[t])) n++;
+  const cats = catsVisibles(etatTypoP);
+  if (cats.length && cats.some(c => !etatCatP[c])) n++;
+  if (zoneChoisie !== null) n++;
+  if (moisChoisi !== null) n++;
+  return n;
+}
+
+function majCompteurFiltres() {
+  const n = nbFiltresActifs(), e = $("nbFiltres");
+  if (!e) return;
+  e.textContent = n;
+  e.hidden = n === 0;
+  $("basculeFiltres").setAttribute("aria-pressed", String(n > 0));
+}
+
+$("basculeFiltres").addEventListener("click", function () {
+  const ouvert = $("corpsFiltres").hidden;
+  $("corpsFiltres").hidden = !ouvert;
+  this.setAttribute("aria-expanded", String(ouvert));
+});
 
 $("razMois").addEventListener("click", () => {
   moisChoisi = null; majMois(); rendrePlanning();
