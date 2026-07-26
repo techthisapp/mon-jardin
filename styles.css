@@ -379,3 +379,31 @@ main{
   padding-right:env(safe-area-inset-right);
   padding-bottom:env(safe-area-inset-bottom);
 }
+
+/* ---------- Correctif : l'attribut hidden prime sur les mises en page ---------- */
+[hidden]{display:none !important}
+
+/* ---------- Navigation de configuration ---------- */
+.compte-util #btnConfig[aria-expanded="true"]{text-decoration:underline}
+.sous-onglets{
+  display:flex;align-items:center;gap:4px;
+  max-width:1060px;margin:0 auto;padding:0 16px;
+  background:var(--encre);
+}
+.sous-onglet{
+  font:600 13px/1 "IBM Plex Sans",sans-serif;letter-spacing:.01em;
+  padding:10px 12px;border:0;background:none;color:#A8B2A6;cursor:pointer;
+  border-bottom:2px solid transparent;
+}
+.sous-onglet[aria-selected="true"]{color:#EFEFE8;border-bottom-color:var(--terre)}
+.sous-onglets #fermerConfig{margin-left:auto;font-size:12.5px}
+
+/* ---------- Barre de filtres compacte ---------- */
+.barre-filtres{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+}
+#basculeFiltres[aria-pressed="true"]{border-color:var(--terre);color:var(--terre)}
+#corpsFiltres{
+  display:flex;flex-direction:column;gap:10px;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--filet-clair);
+}
