@@ -3,7 +3,7 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille"];
+const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille", "multiplication"];
 const ORDRE_TYPO = ["Légumes", "Fruits", "Aromatiques", "Ornement"];
 const COUL_TYPO = { "Légumes":"#4C8C3F", "Fruits":"#A23E4E", "Aromatiques":"#3E7C6B", "Ornement":"#B0559A" };
 // Ordre de lecture des catégories : par typologie, puis du plus courant au plus rare.
@@ -291,7 +291,10 @@ function construireRegle() {
 }
 
 const actif = (p, k) => (p.phases[k] || []).some(s => s[0] <= demi && s[1] >= demi);
-const texteAction = (p, k) => k === "taille" ? (p.guide.taille || p.attr.taille || "") : (p.guide[k] || "");
+const texteAction = (p, k) =>
+  k === "taille" ? (p.guide.taille || p.attr.taille || "")
+  : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
+  : (p.guide[k] || "");
 
 function rendreMaintenant() {
   const zone = $("maintenant");
