@@ -497,3 +497,24 @@ main{
   .nom-espace{flex:1 1 150px}
   .etiq-reglage{flex:0 0 118px}
 }
+
+/* ---------- Regroupement à deux niveaux : type puis catégorie ---------- */
+.groupe-type{
+  display:flex;align-items:center;gap:9px;
+  margin:26px 0 2px;padding:9px 12px;
+  background:var(--encre);color:#EFEFE8;border-radius:var(--rayon);
+}
+.groupe-type:first-child{margin-top:4px}
+.groupe-type b{
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:14px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;
+}
+.groupe-type .nb{
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;
+  margin-left:auto;opacity:.7;color:#EFEFE8;
+}
+.groupe-type .pastille{width:9px;height:9px}
+
+/* Sous ce niveau, la catégorie s'efface d'un cran */
+.groupe-type + .groupe-titre{margin-top:12px}
+.groupe-titre b{font-size:11.5px;color:var(--encre-doux)}
