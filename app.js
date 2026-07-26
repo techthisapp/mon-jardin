@@ -36,7 +36,7 @@ let tri = "categorie";
 let jardinSeul = false;
 let moisChoisi = null;
 
-const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Ma sélection
+const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Mes plantes
 const etatTypoP = {}, etatCatP = {};                     // écran Planning
 ORDRE.forEach(k => etatPhase[k] = true);
 
@@ -228,7 +228,7 @@ function groupeChips(conteneur, cles, etat, opts) {
 function catsVisibles(etatT) { return categories.filter(c => etatT[typoDe(c)]); }
 
 function construireChips() {
-  // Écran Ma sélection
+  // Écran Mes plantes
   groupeChips($("chipsTypo"), ORDRE_TYPO, etatTypo, {
     couleur: t => COUL_TYPO[t],
     nb: t => compte(p => p.typo === t),
@@ -257,13 +257,13 @@ function construireChips() {
   chipsZones($("chipsZoneP"), $("ligneZoneP"), rendrePlanning);
 }
 
-// Filtre de zone : sélection unique, avec une valeur pour les plantes non classées.
+// Filtre d'espace : sélection unique, avec une valeur pour les plantes non classées.
 function chipsZones(conteneur, ligne, apres) {
   if (!conteneur || !ligne) return;
   ligne.hidden = !zones.length;
   conteneur.innerHTML = "";
   if (!zones.length) return;
-  const valeurs = [{ id: null, nom: "Toutes" }]
+  const valeurs = [{ id: null, nom: "Tous" }]
     .concat(zones.map(z => ({ id: z.id, nom: z.name, couleur: z.color })))
     .concat([{ id: "0", nom: "Non classées" }]);
   valeurs.forEach(v => {
@@ -363,7 +363,7 @@ async function basculerZone(plantId, zoneId) {
         .eq("garden_id", jardinId).eq("plant_id", plantId).eq("zone_id", zoneId)
     : db.from("garden_plant_zones").insert({ garden_id: jardinId, plant_id: plantId, zone_id: zoneId });
   const { error } = await req;
-  if (error) { info("Zone non enregistrée : " + error.message, true); return; }
+  if (error) { info("Espace non enregistré : " + error.message, true); return; }
   if (present) aff.set(plantId, liste.filter(r => r.zone_id !== zoneId));
   else aff.set(plantId, liste.concat([{ plant_id: plantId, zone_id: zoneId, quantity: null, notes: null }]));
   construireChips(); rendreTout();
@@ -483,7 +483,7 @@ function rendreMaintenant() {
   const zone = $("maintenant");
   zone.innerHTML = "";
   if (!sel.size) {
-    zone.innerHTML = '<p class="vide">Aucune plante retenue. Ouvrez Ma sélection pour indiquer ce que vous cultivez.</p>';
+    zone.innerHTML = '<p class="vide">Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour indiquer ce que vous cultivez.</p>';
     return;
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeZone(p));
@@ -619,7 +619,7 @@ function rendrePlanning() {
   const v = $("videPlanning");
   v.hidden = lot.length > 0;
   v.textContent = (jardinSeul && !sel.size)
-    ? "Aucune plante retenue. Ouvrez Ma sélection pour composer votre jardin."
+    ? "Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour composer votre jardin."
     : (moisChoisi === null
         ? "Aucune plante ne correspond à ces filtres."
         : `Aucune tâche en ${MOIS[moisChoisi].toLowerCase()} parmi les plantes filtrées.`);
@@ -734,7 +734,7 @@ function rendreZones() {
   if (!z) return;
   z.innerHTML = "";
   if (!zones.length) {
-    z.innerHTML = '<p class="vide">Aucune zone. Ajoutez-en une pour découper ce jardin.</p>';
+    z.innerHTML = '<p class="vide">Aucun espace. Ajoutez-en un pour découper ce jardin.</p>';
     return;
   }
   zones.forEach(zo => {
@@ -762,7 +762,7 @@ function rendreZones() {
       corps.appendChild(l);
     });
     if (!membres.length) {
-      corps.innerHTML = '<p class="vide">Aucune plante rattachée. Ouvrez Ma sélection pour en rattacher.</p>';
+      corps.innerHTML = '<p class="vide">Aucune plante rattachée. Ouvrez Réglages puis Mes plantes pour en rattacher.</p>';
     }
     d.appendChild(corps);
     d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerZone(zo));
@@ -785,13 +785,13 @@ async function majAffectation(plantId, zoneId, qte, notes) {
 async function creerZone(nom) {
   const { data, error } = await db.from("zones")
     .insert({ garden_id: jardinId, name: nom, position: zones.length }).select().single();
-  if (error) { info("Zone non créée : " + error.message, true); return; }
+  if (error) { info("Espace non créé : " + error.message, true); return; }
   zones.push(data);
   construireChips(); majJardinUI(); rendreTout();
 }
 
 async function renommerZone(zo) {
-  const nom = prompt("Nouveau nom de la zone", zo.name);
+  const nom = prompt("Nouveau nom de l'espace", zo.name);
   if (!nom || nom.trim() === "" || nom.trim() === zo.name) return;
   const { error } = await db.from("zones").update({ name: nom.trim() }).eq("id", zo.id);
   if (error) { info("Renommage refusé : " + error.message, true); return; }
@@ -800,7 +800,7 @@ async function renommerZone(zo) {
 }
 
 async function supprimerZone(zo) {
-  if (!confirm(`Supprimer la zone ${zo.name} ? Les plantes restent dans le jardin, elles deviennent non classées.`)) return;
+  if (!confirm(`Supprimer l'espace ${zo.name} ? Les plantes restent dans le jardin, elles deviennent non classées.`)) return;
   const { error } = await db.from("zones").delete().eq("id", zo.id);
   if (error) { info("Suppression refusée : " + error.message, true); return; }
   zones = zones.filter(x => x.id !== zo.id);
