@@ -17,10 +17,17 @@ const ORDRE_CAT = [
 const MOIS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const ABR  = ["Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc"];
 const CHECK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-const CACHE = "monjardin.catalogue.v2";
+const CACHE = "monjardin.catalogue.v3";
 
 let phases = {};
 let plantes = [];
+let climats = {};
+let shifts = {};
+let jardins = [];
+let zones = [];
+let aff = new Map();
+let adapt = {};
+let zoneChoisie = null;
 let categories = [];
 let sel = new Set();
 let jardinId = null;
@@ -51,7 +58,7 @@ async function chargerCatalogue() {
     const brut = localStorage.getItem(CACHE);
     if (brut) {
       const c = JSON.parse(brut);
-      phases = c.phases; plantes = c.plantes;
+      phases = c.phases; plantes = c.plantes; climats = c.climats || {}; shifts = c.shifts || {};
       apresCatalogue();
       verifierFraicheur(c.empreinte);
       return;
@@ -61,11 +68,18 @@ async function chargerCatalogue() {
 }
 
 async function lireCatalogue() {
-  const [rp, rl, rm] = await Promise.all([
+  const [rp, rl, rm, rc, rs] = await Promise.all([
     db.from("phases").select("*").order("position"),
     db.from("plants_full").select("*").eq("is_active", true),
     db.from("catalog_meta").select("*").single(),
+    db.from("climates").select("*").order("position"),
+    db.from("climate_phase_shifts").select("*"),
   ]);
+  climats = {}; shifts = {};
+  (rc.data || []).forEach(c => climats[c.key] = c);
+  (rs.data || []).forEach(r => {
+    (shifts[r.climate_key] = shifts[r.climate_key] || {})[r.phase] = { s: r.shift_spring, a: r.shift_autumn };
+  });
   if (rp.error || rl.error) { info("Catalogue indisponible. Vérifiez la connexion.", true); return; }
   phases = {};
   rp.data.forEach(p => phases[p.key] = { label: p.label, color: p.color });
@@ -76,7 +90,7 @@ async function lireCatalogue() {
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   try {
     localStorage.setItem(CACHE, JSON.stringify({
-      phases, plantes, empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
+      phases, plantes, climats, shifts, empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
     }));
   } catch (e) { /* stockage indisponible */ }
   apresCatalogue();
@@ -104,15 +118,61 @@ const compte = f => plantes.filter(f).length;
 
 /* ================== Jardin ================== */
 
+const COL_JARDIN = "id,name,climate_key,altitude";
+const jardinActif = () => jardins.find(g => g.id === jardinId) || null;
+const cleJardin = () => "monjardin.jardin." + (session ? session.user.id : "anonyme");
+
+async function listerJardins() {
+  const { data, error } = await db.from("gardens").select(COL_JARDIN).order("created_at");
+  if (error) { info("Jardins inaccessibles : " + error.message, true); return false; }
+  jardins = data || [];
+  return true;
+}
+
 async function chargerJardin() {
-  if (!session) { sel = new Set(); majCompte(); rendreTout(); return; }
-  const { data: gid, error } = await db.rpc("ensure_garden");
-  if (error) { info("Jardin inaccessible : " + error.message, true); return; }
-  jardinId = gid;
-  const { data, error: e2 } = await db.from("garden_plants").select("plant_id").eq("garden_id", jardinId);
-  if (e2) { info("Sélection illisible : " + e2.message, true); return; }
-  sel = new Set(data.map(r => r.plant_id));
-  majCompte(); rendreTout();
+  if (!session) {
+    jardins = []; jardinId = null; zones = []; aff = new Map(); adapt = {};
+    sel = new Set(); zoneChoisie = null;
+    majCompte(); majJardinUI(); construireChips(); rendreTout(); return;
+  }
+  if (!await listerJardins()) return;
+  if (!jardins.length) {
+    const { error } = await db.rpc("ensure_garden");
+    if (error) { info("Jardin inaccessible : " + error.message, true); return; }
+    if (!await listerJardins()) return;
+  }
+  let memo = null;
+  try { memo = localStorage.getItem(cleJardin()); } catch (e) { /* stockage indisponible */ }
+  jardinId = (jardins.find(g => g.id === memo) || jardins[0]).id;
+  await chargerContenuJardin();
+}
+
+async function chargerContenuJardin() {
+  try { localStorage.setItem(cleJardin(), jardinId); } catch (e) { /* stockage indisponible */ }
+  const [rp, rz, ra] = await Promise.all([
+    db.from("garden_plants").select("plant_id").eq("garden_id", jardinId),
+    db.from("zones").select("*").eq("garden_id", jardinId).order("position").order("name"),
+    db.from("garden_plant_zones").select("plant_id,zone_id,quantity,notes").eq("garden_id", jardinId),
+  ]);
+  if (rp.error) { info("Sélection illisible : " + rp.error.message, true); return; }
+  sel = new Set((rp.data || []).map(r => r.plant_id));
+  zones = rz.data || [];
+  aff = new Map();
+  (ra.data || []).forEach(r => {
+    if (!aff.has(r.plant_id)) aff.set(r.plant_id, []);
+    aff.get(r.plant_id).push(r);
+  });
+  if (zoneChoisie !== null && zoneChoisie !== "0" && !zones.some(z => z.id === zoneChoisie)) zoneChoisie = null;
+  await chargerAdaptations();
+  majCompte(); majJardinUI(); construireChips(); rendreTout();
+}
+
+async function chargerAdaptations() {
+  adapt = {};
+  const g = jardinActif();
+  if (!g || !g.climate_key) return;
+  const { data } = await db.from("plant_climates").select("plant_id,level,note").eq("climate_key", g.climate_key);
+  (data || []).forEach(r => adapt[r.plant_id] = r);
 }
 
 async function basculer(plantId) {
@@ -128,7 +188,9 @@ async function basculer(plantId) {
     present ? sel.add(plantId) : sel.delete(plantId);
     majCompte(); rendreTout();
     info("Modification non enregistrée : " + error.message, true);
+    return;
   }
+  if (present) { aff.delete(plantId); construireChips(); rendreTout(); }
 }
 
 function majCompte() {
@@ -191,6 +253,34 @@ function construireChips() {
     nb: c => compte(p => p.cat === c),
     apres: () => { construireChips(); rendrePlanning(); },
   });
+  chipsZones($("chipsZoneM"), $("ligneZoneM"), rendreMaintenant);
+  chipsZones($("chipsZoneP"), $("ligneZoneP"), rendrePlanning);
+}
+
+// Filtre de zone : sélection unique, avec une valeur pour les plantes non classées.
+function chipsZones(conteneur, ligne, apres) {
+  if (!conteneur || !ligne) return;
+  ligne.hidden = !zones.length;
+  conteneur.innerHTML = "";
+  if (!zones.length) return;
+  const valeurs = [{ id: null, nom: "Toutes" }]
+    .concat(zones.map(z => ({ id: z.id, nom: z.name, couleur: z.color })))
+    .concat([{ id: "0", nom: "Non classées" }]);
+  valeurs.forEach(v => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip";
+    b.setAttribute("aria-pressed", String(zoneChoisie === v.id));
+    const n = v.id === null ? sel.size
+      : v.id === "0" ? [...sel].filter(id => !zonesDe(id).length).length
+      : [...sel].filter(id => zonesDe(id).includes(v.id)).length;
+    b.innerHTML = (v.couleur ? `<i class="pastille" style="background:${v.couleur}"></i>` : "")
+      + esc(v.nom) + `<span class="nb">${n}</span>`;
+    b.addEventListener("click", () => {
+      zoneChoisie = zoneChoisie === v.id ? null : v.id;
+      construireChips(); apres();
+    });
+    conteneur.appendChild(b);
+  });
 }
 
 /* ================== Onglets ================== */
@@ -198,7 +288,7 @@ function construireChips() {
 const onglets = [...document.querySelectorAll(".onglet")];
 onglets.forEach(o => o.addEventListener("click", () => {
   onglets.forEach(x => x.setAttribute("aria-selected", String(x === o)));
-  ["selection", "maintenant", "planning"].forEach(n => { $("ec-" + n).hidden = (n !== o.dataset.ecran); });
+  ["selection", "maintenant", "planning", "jardin"].forEach(n => { $("ec-" + n).hidden = (n !== o.dataset.ecran); });
   window.scrollTo(0, 0);
   if (o.dataset.ecran === "planning") placerMarqueur();
 }));
@@ -218,13 +308,48 @@ function filtrerSel() {
 }
 
 function carteItem(p) {
+  const bloc = document.createElement("div");
+  bloc.className = "item-bloc";
   const b = document.createElement("button");
   b.type = "button"; b.className = "item";
   b.setAttribute("aria-pressed", String(sel.has(p.id)));
+  const ad = adapt[p.id];
+  const marque = ad && ad.level !== "adapte"
+    ? `<span class="pastille-niv niv-${ad.level}" title="${esc(NIVEAUX[ad.level].long)}"></span>` : "";
   const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
-  b.innerHTML = `<span class="rond">${CHECK}</span><span>${esc(p.nom)}${sousTitre}</span>`;
+  b.innerHTML = `<span class="rond">${CHECK}</span><span>${marque}${esc(p.nom)}${sousTitre}</span>`;
   b.addEventListener("click", () => basculer(p.id));
-  return b;
+  bloc.appendChild(b);
+  if (sel.has(p.id) && zones.length) {
+    const r = document.createElement("div");
+    r.className = "zones-item";
+    const prises = zonesDe(p.id);
+    zones.forEach(z => {
+      const c = document.createElement("button");
+      c.type = "button"; c.className = "mini-chip";
+      c.setAttribute("aria-pressed", String(prises.includes(z.id)));
+      c.textContent = z.name;
+      c.addEventListener("click", () => basculerZone(p.id, z.id));
+      r.appendChild(c);
+    });
+    bloc.appendChild(r);
+  }
+  return bloc;
+}
+
+async function basculerZone(plantId, zoneId) {
+  if (!session || !jardinId) return;
+  const liste = aff.get(plantId) || [];
+  const present = liste.some(r => r.zone_id === zoneId);
+  const req = present
+    ? db.from("garden_plant_zones").delete()
+        .eq("garden_id", jardinId).eq("plant_id", plantId).eq("zone_id", zoneId)
+    : db.from("garden_plant_zones").insert({ garden_id: jardinId, plant_id: plantId, zone_id: zoneId });
+  const { error } = await req;
+  if (error) { info("Zone non enregistrée : " + error.message, true); return; }
+  if (present) aff.set(plantId, liste.filter(r => r.zone_id !== zoneId));
+  else aff.set(plantId, liste.concat([{ plant_id: plantId, zone_id: zoneId, quantity: null, notes: null }]));
+  construireChips(); rendreTout();
 }
 
 function rendreSelection() {
@@ -260,10 +385,13 @@ function rendreSelection() {
 $("rech").addEventListener("input", rendreSelection);
 $("vider").addEventListener("click", async () => {
   if (!sel.size || !session) return;
-  const copie = new Set(sel);
-  sel = new Set(); majCompte(); rendreTout();
+  const copie = new Set(sel), copieAff = new Map(aff);
+  sel = new Set(); aff = new Map(); majCompte(); construireChips(); rendreTout();
   const { error } = await db.from("garden_plants").delete().eq("garden_id", jardinId);
-  if (error) { sel = copie; majCompte(); rendreTout(); info("Suppression refusée : " + error.message, true); }
+  if (error) {
+    sel = copie; aff = copieAff; majCompte(); construireChips(); rendreTout();
+    info("Suppression refusée : " + error.message, true);
+  }
 });
 
 /* ================== Écran 2 : en ce moment ================== */
@@ -290,7 +418,45 @@ function construireRegle() {
   r.appendChild(c);
 }
 
-const actif = (p, k) => (p.phases[k] || []).some(s => s[0] <= demi && s[1] >= demi);
+function shiftPour(k) {
+  const g = jardinActif();
+  if (!g || !g.climate_key) return { s: 0, a: 0 };
+  const f = (shifts[g.climate_key] || {})[k];
+  if (f) return f;
+  const c = climats[g.climate_key];
+  return c ? { s: c.shift_spring, a: c.shift_autumn } : { s: 0, a: 0 };
+}
+
+const borne = v => Math.min(24, Math.max(1, v));
+
+// Un segment ancré au premier semestre suit le décalage de printemps, sinon celui d'automne.
+function segsDe(p, k) {
+  const base = p.phases[k];
+  if (!base) return null;
+  const sh = shiftPour(k);
+  if (!sh.s && !sh.a) return base;
+  return base.map(v => {
+    const d = v[0] <= 12 ? sh.s : sh.a;
+    return [borne(v[0] + d), borne(v[1] + d)];
+  });
+}
+
+const NIVEAUX = {
+  adapte:      { court: "Adaptée",  long: "Adaptée à ce climat" },
+  protection:  { court: "Protéger", long: "Cultivable avec précautions" },
+  abri:        { court: "Abri",     long: "Exige un abri ou une rentrée hivernale" },
+  deconseille: { court: "Déconseillée", long: "Déconseillée sous ce climat" },
+};
+
+function zonesDe(id) { return (aff.get(id) || []).map(r => r.zone_id); }
+
+function passeZone(p) {
+  if (zoneChoisie === null) return true;
+  const z = zonesDe(p.id);
+  return zoneChoisie === "0" ? z.length === 0 : z.includes(zoneChoisie);
+}
+
+const actif = (p, k) => (segsDe(p, k) || []).some(v => v[0] <= demi && v[1] >= demi);
 const texteAction = (p, k) =>
   k === "taille" ? (p.guide.taille || p.attr.taille || "")
   : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
@@ -303,7 +469,7 @@ function rendreMaintenant() {
     zone.innerHTML = '<p class="vide">Aucune plante retenue. Ouvrez Ma sélection pour indiquer ce que vous cultivez.</p>';
     return;
   }
-  const mien = plantes.filter(p => sel.has(p.id));
+  const mien = plantes.filter(p => sel.has(p.id) && passeZone(p));
   let blocs = 0;
   ORDRE.forEach(k => {
     if (!phases[k]) return;
@@ -320,7 +486,7 @@ function rendreMaintenant() {
       + `<span class="nb">${lot.length}</span></h2><div class="corps-tache">${corps}</div>`;
     zone.appendChild(carte);
   });
-  if (!blocs) zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur vos plantes. Période de repos ou de simple surveillance.</p>';
+  if (!blocs) zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
 }
 
 /* ================== Écran 3 : planning ================== */
@@ -360,14 +526,15 @@ function majMois() {
 function dansMois(p) {
   if (moisChoisi === null) return true;
   const h1 = moisChoisi * 2 + 1, h2 = moisChoisi * 2 + 2;
-  return ORDRE.some(k => etatPhase[k] && (p.phases[k] || []).some(s => s[0] <= h2 && s[1] >= h1));
+  return ORDRE.some(k => etatPhase[k] && (segsDe(p, k) || []).some(v => v[0] <= h2 && v[1] >= h1));
 }
 
 function segs(p) {
   let h = "";
   ORDRE.forEach(k => {
-    if (!p.phases[k] || !etatPhase[k] || !phases[k]) return;
-    const v = p.phases[k].map(s => {
+    const seg = segsDe(p, k);
+    if (!seg || !etatPhase[k] || !phases[k]) return;
+    const v = seg.map(s => {
       const g = (s[0] - 1) / 24 * 100, w = (s[1] - s[0] + 1) / 24 * 100;
       return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[k].color}" title="${esc(phases[k].label)}"></span>`;
     }).join("");
@@ -383,9 +550,14 @@ function ficheHTML(p) {
     return t ? `<li><span class="pt" style="background:${phases[k].color}"></span><span><b>${esc(phases[k].label)}.</b> ${esc(t)}</span></li>` : "";
   }).join("");
   const tag = v => v ? `<span class="tag">${esc(v)}</span>` : "";
+  const ad = adapt[p.id];
+  const tagClim = ad
+    ? `<span class="tag niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}">${esc(NIVEAUX[ad.level].court)}</span>`
+    : "";
   const ligne = (t, v) => v ? `<dt>${t}</dt><dd>${esc(v)}</dd>` : "";
   return `<div class="fiche">
-    <div class="tags">${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
+    <div class="tags">${tagClim}${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
+    ${ad && ad.note ? `<p class="note-clim">${esc(ad.note)}</p>` : ""}
     <dl class="carac">
       ${ligne("Famille", a.famille)}${ligne("Hauteur", a.hauteur)}${ligne("Couleur", a.couleur)}
       ${ligne("Parfum", a.parfum)}${ligne("Espacement", p.espacement)}${ligne("Profondeur", p.prof)}
@@ -404,6 +576,7 @@ function rendrePlanning() {
   zone.innerHTML = "";
   const lot = plantes.filter(p => {
     if (jardinSeul && !sel.has(p.id)) return false;
+    if (zoneChoisie !== null && (!sel.has(p.id) || !passeZone(p))) return false;
     if (!etatTypoP[p.typo] || !etatCatP[p.cat]) return false;
     if (!dansMois(p)) return false;
     return ORDRE.some(k => etatPhase[k] && p.phases[k]);
@@ -482,6 +655,163 @@ db.auth.onAuthStateChange((_e, s) => {
   chargerJardin();
 });
 
+
+/* ================== Écran 4 : jardin ================== */
+
+function majJardinUI() {
+  const connecte = Boolean(session);
+  $("videJardin").hidden = connecte;
+  $("bloc-jardin").hidden = !connecte;
+  const g = jardinActif();
+  const c = g && g.climate_key ? climats[g.climate_key] : null;
+  $("tete-climat").textContent = c ? c.label : "Climat non renseigné";
+
+  const sj = $("selJardin");
+  sj.innerHTML = jardins.map(j => `<option value="${j.id}">${esc(j.name)}</option>`).join("");
+  if (g) sj.value = g.id;
+
+  const sc = $("selClimat");
+  sc.innerHTML = '<option value="">Non renseigné</option>'
+    + Object.values(climats).sort((a, b) => a.position - b.position)
+        .map(x => `<option value="${x.key}">${esc(x.label)}</option>`).join("");
+  sc.value = g && g.climate_key ? g.climate_key : "";
+  $("descClimat").textContent = c ? c.description : "";
+  $("decalClimat").textContent = c && (c.shift_spring || c.shift_autumn)
+    ? `Décalage appliqué au calendrier : ${demiEnTexte(c.shift_spring)} au premier semestre, ${demiEnTexte(c.shift_autumn)} au second.`
+    : "";
+  rendreZones();
+}
+
+const demiEnTexte = d => d === 0 ? "aucun"
+  : (d > 0 ? "plus tard de " : "plus tôt de ") + Math.abs(d) + (Math.abs(d) > 1 ? " quinzaines" : " quinzaine");
+
+function rendreZones() {
+  const z = $("listeZones");
+  if (!z) return;
+  z.innerHTML = "";
+  if (!zones.length) {
+    z.innerHTML = '<p class="vide">Aucune zone. Ajoutez-en une pour découper ce jardin.</p>';
+    return;
+  }
+  zones.forEach(zo => {
+    const membres = [...sel].filter(id => zonesDe(id).includes(zo.id))
+      .map(id => plantes.find(p => p.id === id)).filter(Boolean)
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    const d = document.createElement("div");
+    d.className = "carte-zone";
+    d.innerHTML = `<div class="tete-zone"><b>${esc(zo.name)}</b><span class="nb">${membres.length}</span>`
+      + `<button class="lien" data-act="renommer">Renommer</button>`
+      + `<button class="lien" data-act="supprimer">Supprimer</button></div>`;
+    const corps = document.createElement("div");
+    corps.className = "corps-zone";
+    membres.forEach(p => {
+      const r = (aff.get(p.id) || []).find(x => x.zone_id === zo.id) || {};
+      const l = document.createElement("div");
+      l.className = "ligne-zone";
+      l.innerHTML = `<span class="nom-zone">${esc(p.nom)}</span>`
+        + `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
+        + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`;
+      const enr = () => majAffectation(p.id, zo.id,
+        l.querySelector(".qte").value, l.querySelector(".notes").value);
+      l.querySelector(".qte").addEventListener("change", enr);
+      l.querySelector(".notes").addEventListener("change", enr);
+      corps.appendChild(l);
+    });
+    if (!membres.length) {
+      corps.innerHTML = '<p class="vide">Aucune plante rattachée. Ouvrez Ma sélection pour en rattacher.</p>';
+    }
+    d.appendChild(corps);
+    d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerZone(zo));
+    d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerZone(zo));
+    z.appendChild(d);
+  });
+}
+
+async function majAffectation(plantId, zoneId, qte, notes) {
+  const q = qte === "" ? null : Number(qte);
+  const n = notes.trim() === "" ? null : notes.trim();
+  const { error } = await db.from("garden_plant_zones").update({ quantity: q, notes: n })
+    .eq("garden_id", jardinId).eq("plant_id", plantId).eq("zone_id", zoneId);
+  if (error) { info("Enregistrement refusé : " + error.message, true); return; }
+  const r = (aff.get(plantId) || []).find(x => x.zone_id === zoneId);
+  if (r) { r.quantity = q; r.notes = n; }
+  info("");
+}
+
+async function creerZone(nom) {
+  const { data, error } = await db.from("zones")
+    .insert({ garden_id: jardinId, name: nom, position: zones.length }).select().single();
+  if (error) { info("Zone non créée : " + error.message, true); return; }
+  zones.push(data);
+  construireChips(); majJardinUI(); rendreTout();
+}
+
+async function renommerZone(zo) {
+  const nom = prompt("Nouveau nom de la zone", zo.name);
+  if (!nom || nom.trim() === "" || nom.trim() === zo.name) return;
+  const { error } = await db.from("zones").update({ name: nom.trim() }).eq("id", zo.id);
+  if (error) { info("Renommage refusé : " + error.message, true); return; }
+  zo.name = nom.trim();
+  construireChips(); majJardinUI(); rendreTout();
+}
+
+async function supprimerZone(zo) {
+  if (!confirm(`Supprimer la zone ${zo.name} ? Les plantes restent dans le jardin, elles deviennent non classées.`)) return;
+  const { error } = await db.from("zones").delete().eq("id", zo.id);
+  if (error) { info("Suppression refusée : " + error.message, true); return; }
+  zones = zones.filter(x => x.id !== zo.id);
+  aff.forEach((v, k) => aff.set(k, v.filter(r => r.zone_id !== zo.id)));
+  if (zoneChoisie === zo.id) zoneChoisie = null;
+  construireChips(); majJardinUI(); rendreTout();
+}
+
+$("form-zone").addEventListener("submit", e => {
+  e.preventDefault();
+  const n = $("nomZone").value.trim();
+  if (!n || !jardinId) return;
+  $("nomZone").value = "";
+  creerZone(n);
+});
+
+$("selJardin").addEventListener("change", async function () {
+  jardinId = this.value;
+  zoneChoisie = null;
+  await chargerContenuJardin();
+});
+
+$("selClimat").addEventListener("change", async function () {
+  const g = jardinActif();
+  if (!g) return;
+  const v = this.value || null;
+  const { error } = await db.from("gardens").update({ climate_key: v }).eq("id", g.id);
+  if (error) { info("Climat non enregistré : " + error.message, true); return; }
+  g.climate_key = v;
+  await chargerAdaptations();
+  majJardinUI(); rendreTout();
+});
+
+$("nouveauJardin").addEventListener("click", async () => {
+  const nom = prompt("Nom du nouveau jardin");
+  if (!nom || !nom.trim()) return;
+  const { data, error } = await db.rpc("create_garden", { p_name: nom.trim() });
+  if (error) { info("Jardin non créé : " + error.message, true); return; }
+  await listerJardins();
+  jardinId = data;
+  zoneChoisie = null;
+  await chargerContenuJardin();
+});
+
+$("renommerJardin").addEventListener("click", async () => {
+  const g = jardinActif();
+  if (!g) return;
+  const nom = prompt("Nouveau nom du jardin", g.name);
+  if (!nom || !nom.trim() || nom.trim() === g.name) return;
+  const { error } = await db.from("gardens").update({ name: nom.trim() }).eq("id", g.id);
+  if (error) { info("Renommage refusé : " + error.message, true); return; }
+  g.name = nom.trim();
+  majJardinUI();
+});
+
 /* ================== Amorçage ================== */
 
 function rendreTout() {
@@ -489,6 +819,7 @@ function rendreTout() {
   rendreSelection();
   rendreMaintenant();
   rendrePlanning();
+  rendreZones();
 }
 
 window.addEventListener("resize", () => { placerMarqueur(); majMois(); });
