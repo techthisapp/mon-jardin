@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607262132">
+<link rel="stylesheet" href="./styles.css?v=202607262147">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -24,22 +24,25 @@
 <header class="tete">
   <div class="tete-corps">
     <div class="tete-haut">
+      <span class="marque" aria-hidden="true">
+        <svg viewBox="0 0 1024 1024" focusable="false">
+          <path d="M 512 824 C 512 720 512 660 512 470" fill="none" stroke="currentColor" stroke-width="52" stroke-linecap="round"/>
+          <path d="M 512 620 C 466 522 372 448 268 452 C 300 560 386 632 512 620 Z" fill="currentColor" opacity=".62"/>
+          <path d="M 512 512 C 560 404 656 340 764 336 C 736 452 644 528 512 512 Z" fill="currentColor"/>
+        </svg>
+      </span>
       <h1>Mon jardin</h1>
-      <div class="compte-util">
-        <span id="utilisateur"></span>
-        <button class="lien-clair" id="btnConfig" type="button" aria-expanded="false">Réglages</button>
-        <button class="lien-clair" id="deconnexion" hidden type="button">Se déconnecter</button>
-      </div>
+      <button class="bouton-compte" id="btnConfig" type="button" aria-expanded="false">Réglages</button>
     </div>
-    <p class="tete-sous"><span id="tete-climat"></span><span class="pt-sep">·</span><span id="tete-total"></span></p>
+    <button class="puce-climat" id="puceClimat" type="button"></button>
   </div>
   <nav class="onglets" role="tablist">
     <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">En ce moment</button>
     <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">Planning</button>
   </nav>
   <nav class="sous-onglets" id="sousOnglets" role="tablist" hidden>
-    <button class="sous-onglet" role="tab" aria-selected="true"  data-ecran="selection">Mes plantes</button>
-    <button class="sous-onglet" role="tab" aria-selected="false" data-ecran="jardin">Jardin et espaces</button>
+    <button class="sous-onglet" role="tab" aria-selected="true"  data-ecran="jardin">Jardin et espaces</button>
+    <button class="sous-onglet" role="tab" aria-selected="false" data-ecran="selection">Mes plantes</button>
     <button class="lien-clair" id="fermerConfig" type="button">Retour</button>
   </nav>
 </header>
@@ -147,34 +150,54 @@
       <p class="note" id="note-connexion" hidden></p>
     </div>
     <div id="bloc-jardin" hidden>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Jardin</span>
-        <select id="selJardin"></select>
-        <button class="lien" id="nouveauJardin" type="button">Nouveau</button>
-        <button class="lien" id="renommerJardin" type="button">Renommer</button>
-      </div>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Reprise</span>
-        <button class="lien" id="genererReprise" type="button">Générer un code</button>
-      </div>
-      <p class="desc-clim" id="codeReprise" hidden></p>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Climat</span>
-        <select id="selClimat"></select>
-      </div>
-      <p class="desc-clim" id="descClimat"></p>
-      <p class="desc-clim" id="decalClimat"></p>
-      <form class="ligne-filtre" id="form-espace">
-        <span class="etiq-filtre">Espaces</span>
-        <input id="nomEspace" type="text" maxlength="40" placeholder="Nom de l'espace">
-        <button class="lien" type="submit">Ajouter</button>
-      </form>
-      <div id="listeEspaces"></div>
+
+      <section class="panneau">
+        <h2 class="titre-panneau">Jardin</h2>
+        <div class="ligne-reglage">
+          <label class="etiq-reglage" for="selJardin">Jardin actif</label>
+          <select id="selJardin"></select>
+          <button class="lien" id="nouveauJardin" type="button">Nouveau</button>
+          <button class="lien" id="renommerJardin" type="button">Renommer</button>
+        </div>
+        <div class="ligne-reglage">
+          <label class="etiq-reglage" for="selClimat">Climat</label>
+          <select id="selClimat"></select>
+        </div>
+        <p class="aide-reglage" id="descClimat"></p>
+        <p class="aide-reglage" id="decalClimat"></p>
+      </section>
+
+      <section class="panneau">
+        <h2 class="titre-panneau">Espaces</h2>
+        <p class="aide-reglage">Découpez le jardin pour filtrer le calendrier. Une plante peut appartenir à plusieurs espaces.</p>
+        <form class="ligne-reglage" id="form-espace">
+          <label class="etiq-reglage" for="nomEspace">Nouvel espace</label>
+          <input id="nomEspace" type="text" maxlength="40" placeholder="Potager, verger, terrasse">
+          <button class="lien" type="submit">Ajouter</button>
+        </form>
+        <div id="listeEspaces"></div>
+      </section>
+
+      <section class="panneau">
+        <h2 class="titre-panneau">Compte</h2>
+        <div class="ligne-reglage">
+          <span class="etiq-reglage">Connecté</span>
+          <span class="valeur-reglage" id="utilisateur"></span>
+          <button class="lien" id="deconnexion" hidden type="button">Se déconnecter</button>
+        </div>
+        <div class="ligne-reglage">
+          <span class="etiq-reglage">Autre appareil</span>
+          <button class="lien" id="genererReprise" type="button">Générer un code de reprise</button>
+        </div>
+        <p class="aide-reglage" id="codeReprise" hidden></p>
+        <p class="aide-reglage" id="tete-total"></p>
+      </section>
+
     </div>
   </section>
 
 </main>
 
-<script type="module" src="./app.js?v=202607262132"></script>
+<script type="module" src="./app.js?v=202607262147"></script>
 </body>
 </html>
