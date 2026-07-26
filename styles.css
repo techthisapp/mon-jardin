@@ -334,7 +334,7 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 
 /* ---------- Zones, jardins et climat ---------- */
 .item-bloc{display:flex;flex-direction:column;gap:4px}
-.zones-item{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 2px 30px}
+.espaces-item{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 2px 30px}
 .mini-chip{
   font:500 11.5px/1 "IBM Plex Sans",sans-serif;padding:4px 8px;border-radius:999px;
   border:1px solid #D5D2CB;background:#fff;color:#6B665D;cursor:pointer;
@@ -342,23 +342,23 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .mini-chip[aria-pressed="true"]{background:var(--terre);border-color:var(--terre);color:#fff}
 .mini-chip:focus-visible{outline:2px solid var(--terre);outline-offset:1px}
 
-#selJardin,#selClimat,#nomZone{
+#selJardin,#selClimat,#nomEspace{
   font:400 13.5px/1.3 "IBM Plex Sans",sans-serif;padding:6px 8px;
   border:1px solid #D5D2CB;border-radius:8px;background:#fff;color:#2E2B26;max-width:220px;
 }
 .desc-clim{margin:2px 0 0;font-size:12.5px;color:#6B665D;line-height:1.45}
 
-.carte-zone{border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;overflow:hidden}
-.tete-zone{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F5F3EE;border-bottom:1px solid #E3E0D9}
-.tete-zone b{font-size:13.5px}
-.tete-zone .lien{margin-left:auto;font-size:12px}
-.tete-zone .lien+.lien{margin-left:0}
-.corps-zone{padding:6px 10px 10px}
-.ligne-zone{display:flex;align-items:center;gap:6px;padding:4px 0}
-.nom-zone{flex:1;font-size:13px}
-.ligne-zone .qte{width:64px}
-.ligne-zone .notes{flex:2;min-width:80px}
-.ligne-zone input{
+.carte-espace{border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;overflow:hidden}
+.tete-espace{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F5F3EE;border-bottom:1px solid #E3E0D9}
+.tete-espace b{font-size:13.5px}
+.tete-espace .lien{margin-left:auto;font-size:12px}
+.tete-espace .lien+.lien{margin-left:0}
+.corps-espace{padding:6px 10px 10px}
+.ligne-espace{display:flex;align-items:center;gap:6px;padding:4px 0}
+.nom-espace{flex:1;font-size:13px}
+.ligne-espace .qte{width:64px}
+.ligne-espace .notes{flex:2;min-width:80px}
+.ligne-espace input{
   font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
   border:1px solid #D5D2CB;border-radius:6px;background:#fff;
 }
