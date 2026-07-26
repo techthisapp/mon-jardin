@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607261903">
+<link rel="stylesheet" href="./styles.css?v=202607262132">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -134,16 +134,16 @@
     <div id="zone-connexion" class="carte connexion" hidden>
       <h2>Accéder à votre jardin</h2>
       <p>Saisissez votre adresse électronique. Si vous avez déjà un jardin, vous le retrouvez tel que vous l'avez laissé. Sinon, il est créé à la première connexion. La même adresse ouvre toujours le même jardin, sans mot de passe.</p>
-      <p>Vous recevrez un lien et un code. Le lien s'ouvre dans le navigateur. Depuis l'application installée sur l'écran d'accueil, saisissez le code.</p>
+      <p>Vous recevrez un lien, à ouvrir dans le navigateur. Depuis l'application installée sur l'écran d'accueil, utilisez plutôt un code de reprise, généré depuis une session déjà ouverte, sans passer par le courrier électronique.</p>
       <form id="form-connexion">
         <input id="email" type="email" required placeholder="vous@exemple.fr" aria-label="Adresse électronique">
         <button class="bouton" type="submit">Recevoir le lien</button>
       </form>
-      <form id="form-code" hidden>
-        <input id="code" type="text" autocomplete="one-time-code" placeholder="Collez le lien, ou saisissez le code" aria-label="Lien ou code reçu par courrier électronique">
+      <form id="form-code">
+        <input id="code" type="text" autocomplete="one-time-code" placeholder="Code de reprise, code, ou lien collé" aria-label="Lien ou code reçu par courrier électronique">
         <button class="bouton" type="submit">Valider</button>
       </form>
-      <p class="note" id="aide-code" hidden>Depuis l'application installée, ne cliquez pas sur le lien du courriel. Appuyez dessus longuement, choisissez Copier le lien, puis collez-le ci-dessus.</p>
+      <p class="note" id="aide-code" hidden>Ce champ accepte trois formes : un code de reprise, un lien de connexion collé, ou un code à six chiffres.</p>
       <p class="note" id="note-connexion" hidden></p>
     </div>
     <div id="bloc-jardin" hidden>
@@ -153,6 +153,11 @@
         <button class="lien" id="nouveauJardin" type="button">Nouveau</button>
         <button class="lien" id="renommerJardin" type="button">Renommer</button>
       </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Reprise</span>
+        <button class="lien" id="genererReprise" type="button">Générer un code</button>
+      </div>
+      <p class="desc-clim" id="codeReprise" hidden></p>
       <div class="ligne-filtre">
         <span class="etiq-filtre">Climat</span>
         <select id="selClimat"></select>
@@ -170,6 +175,6 @@
 
 </main>
 
-<script type="module" src="./app.js?v=202607261903"></script>
+<script type="module" src="./app.js?v=202607262132"></script>
 </body>
 </html>
