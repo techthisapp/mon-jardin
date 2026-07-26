@@ -394,17 +394,29 @@ function rendreSelection() {
     zone.appendChild(g);
     return;
   }
-  categories.forEach(c => {
-    const sous = lot.filter(p => p.cat === c);
-    if (!sous.length) return;
-    const h = document.createElement("p");
-    h.className = "groupe-titre";
-    h.innerHTML = `<b>${esc(c)}</b><span class="nb">${sous.length}</span>`;
-    zone.appendChild(h);
-    const g = document.createElement("div");
-    g.className = "liste";
-    sous.forEach(p => g.appendChild(carteItem(p)));
-    zone.appendChild(g);
+  // Deux niveaux : le type d'abord, ses catégories ensuite.
+  ORDRE_TYPO.forEach(t => {
+    const dansType = lot.filter(p => typoDe(p.cat) === t);
+    if (!dansType.length) return;
+
+    const tete = document.createElement("p");
+    tete.className = "groupe-type";
+    tete.innerHTML = `<i class="pastille" style="background:${COUL_TYPO[t]}"></i>`
+      + `<b>${esc(t)}</b><span class="nb">${dansType.length}</span>`;
+    zone.appendChild(tete);
+
+    categories.filter(c => typoDe(c) === t).forEach(c => {
+      const sous = dansType.filter(p => p.cat === c);
+      if (!sous.length) return;
+      const h = document.createElement("p");
+      h.className = "groupe-titre";
+      h.innerHTML = `<b>${esc(c)}</b><span class="nb">${sous.length}</span>`;
+      zone.appendChild(h);
+      const g = document.createElement("div");
+      g.className = "liste";
+      sous.forEach(p => g.appendChild(carteItem(p)));
+      zone.appendChild(g);
+    });
   });
 }
 
