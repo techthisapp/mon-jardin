@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607261515">
+<link rel="stylesheet" href="./styles.css?v=202607261519">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -102,15 +102,7 @@
   </section>
 
   <section id="ec-selection" hidden>
-    <div id="zone-connexion" class="carte connexion" hidden>
-      <h2>Enregistrer votre jardin</h2>
-      <p>Votre sélection vous suit d'un appareil à l'autre. Saisissez votre adresse, vous recevrez un lien de connexion sans mot de passe.</p>
-      <form id="form-connexion">
-        <input id="email" type="email" required placeholder="vous@exemple.fr" aria-label="Adresse électronique">
-        <button class="bouton" type="submit">Recevoir le lien</button>
-      </form>
-      <p class="note" id="note-connexion" hidden></p>
-    </div>
+    <p class="vide" id="videSelection" hidden>Connectez-vous depuis Réglages puis Jardin et espaces pour enregistrer votre sélection.</p>
 
     <div class="filtres">
       <div class="ligne-rech">
@@ -139,7 +131,19 @@
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
   </section>
   <section id="ec-jardin" hidden>
-    <p class="vide" id="videJardin" hidden>Connectez-vous pour gérer vos jardins et vos espaces.</p>
+    <div id="zone-connexion" class="carte connexion" hidden>
+      <h2>Enregistrer votre jardin</h2>
+      <p>Vos jardins, vos espaces et votre sélection vous suivent d'un appareil à l'autre. Saisissez votre adresse, vous recevrez un lien de connexion et un code, sans mot de passe.</p>
+      <form id="form-connexion">
+        <input id="email" type="email" required placeholder="vous@exemple.fr" aria-label="Adresse électronique">
+        <button class="bouton" type="submit">Recevoir le lien</button>
+      </form>
+      <form id="form-code" hidden>
+        <input id="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="Code à 6 chiffres" aria-label="Code reçu par courrier électronique">
+        <button class="bouton" type="submit">Valider le code</button>
+      </form>
+      <p class="note" id="note-connexion" hidden></p>
+    </div>
     <div id="bloc-jardin" hidden>
       <div class="ligne-filtre">
         <span class="etiq-filtre">Jardin</span>
@@ -164,6 +168,6 @@
 
 </main>
 
-<script type="module" src="./app.js?v=202607261515"></script>
+<script type="module" src="./app.js?v=202607261519"></script>
 </body>
 </html>
