@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=7">
+<link rel="stylesheet" href="./styles.css?v=8">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -39,7 +39,7 @@
   </nav>
   <nav class="sous-onglets" id="sousOnglets" role="tablist" hidden>
     <button class="sous-onglet" role="tab" aria-selected="true"  data-ecran="selection">Mes plantes</button>
-    <button class="sous-onglet" role="tab" aria-selected="false" data-ecran="jardin">Jardin et zones</button>
+    <button class="sous-onglet" role="tab" aria-selected="false" data-ecran="jardin">Jardin et espaces</button>
     <button class="lien-clair" id="fermerConfig" type="button">Retour</button>
   </nav>
 </header>
@@ -53,7 +53,7 @@
       <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
     </div>
     <div class="ligne-filtre" id="ligneZoneM" hidden>
-      <span class="etiq-filtre">Zone</span>
+      <span class="etiq-filtre">Espace</span>
       <div class="jeu-chips" id="chipsZoneM"></div>
     </div>
     <div id="maintenant"></div>
@@ -81,7 +81,7 @@
         <div class="jeu-chips" id="chipsCatP"></div>
       </div>
       <div class="ligne-filtre" id="ligneZoneP" hidden>
-        <span class="etiq-filtre">Zone</span>
+        <span class="etiq-filtre">Espace</span>
         <div class="jeu-chips" id="chipsZoneP"></div>
       </div>
       </div>
@@ -139,7 +139,7 @@
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
   </section>
   <section id="ec-jardin" hidden>
-    <p class="vide" id="videJardin" hidden>Connectez-vous pour gérer vos jardins et vos zones.</p>
+    <p class="vide" id="videJardin" hidden>Connectez-vous pour gérer vos jardins et vos espaces.</p>
     <div id="bloc-jardin" hidden>
       <div class="ligne-filtre">
         <span class="etiq-filtre">Jardin</span>
@@ -154,8 +154,8 @@
       <p class="desc-clim" id="descClimat"></p>
       <p class="desc-clim" id="decalClimat"></p>
       <form class="ligne-filtre" id="form-zone">
-        <span class="etiq-filtre">Zones</span>
-        <input id="nomZone" type="text" maxlength="40" placeholder="Nom de la zone">
+        <span class="etiq-filtre">Espaces</span>
+        <input id="nomZone" type="text" maxlength="40" placeholder="Nom de l'espace">
         <button class="lien" type="submit">Ajouter</button>
       </form>
       <div id="listeZones"></div>
