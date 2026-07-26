@@ -550,9 +550,16 @@ function dansMois(p) {
 
 function segs(p) {
   let h = "";
+  // Un mois sélectionné ne conserve que les périodes qui le recouvrent.
+  const h1 = moisChoisi === null ? 0 : moisChoisi * 2 + 1;
+  const h2 = moisChoisi === null ? 0 : moisChoisi * 2 + 2;
   ORDRE.forEach(k => {
-    const seg = segsDe(p, k);
+    let seg = segsDe(p, k);
     if (!seg || !etatPhase[k] || !phases[k]) return;
+    if (moisChoisi !== null) {
+      seg = seg.filter(v => v[0] <= h2 && v[1] >= h1);
+      if (!seg.length) return;
+    }
     const v = seg.map(s => {
       const g = (s[0] - 1) / 24 * 100, w = (s[1] - s[0] + 1) / 24 * 100;
       return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[k].color}" title="${esc(phases[k].label)}"></span>`;
