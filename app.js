@@ -697,7 +697,7 @@ sur("form-connexion", "submit", async e => {
   const { error } = await db.auth.signInWithOtp({
     email, options: { emailRedirectTo: window.location.href.split("#")[0] },
   });
-  if (!error) { $("form-code").hidden = false; $("aide-code").hidden = false; $("code").focus(); }
+  if (!error) { $("aide-code").hidden = false; $("code").focus(); }
   const note = $("note-connexion");
   note.hidden = false;
   note.classList.toggle("erreur", Boolean(error));
@@ -712,7 +712,7 @@ db.auth.onAuthStateChange((_e, s) => {
   const connecte = Boolean(s);
   $("zone-connexion").hidden = connecte;
   $("videSelection").hidden = connecte;
-  if (connecte) { $("form-code").hidden = true; $("aide-code").hidden = true; $("code").value = ""; }
+  if (connecte) { $("aide-code").hidden = true; $("code").value = ""; $("codeReprise").hidden = true; }
   $("deconnexion").hidden = !connecte;
   $("utilisateur").textContent = connecte ? s.user.email : "";
   if (!$("etat").classList.contains("erreur")) info("");
@@ -898,9 +898,31 @@ if (!s0) $("zone-connexion").hidden = false;
 // Le lien reçu s'ouvre toujours dans le navigateur, jamais dans l'application ajoutée
 // à l'écran d'accueil, qui dispose de son propre stockage. Coller le lien, ou saisir le
 // code quand le modèle de courriel en fournit un, ouvre la session dans ce contexte.
+const CODE_REPRISE = /^[A-Z2-9]{9}$/;
+const nettoyerCode = v => (v || "").toUpperCase().replace(/[^A-Z2-9]/g, "");
+
+// Un code de reprise est échangé contre un jeton par la fonction de bord, qui seule
+// détient la clé de service. Aucun courriel n'intervient.
+async function reprendreParCode(code) {
+  const { data, error } = await db.functions.invoke("reprise", {
+    body: { action: "utiliser", code },
+  });
+  if (error) {
+    let detail = error.message;
+    try { detail = (await error.context.json()).error || detail; } catch (e) { /* corps illisible */ }
+    return { error: { message: detail } };
+  }
+  if (!data || !data.token_hash) return { error: { message: "réponse inattendue" } };
+  return db.auth.verifyOtp({ token_hash: data.token_hash, type: "magiclink" });
+}
+
 function validerEntree(valeur, email) {
   const v = valeur.trim();
   if (!/^https?:\/\//i.test(v)) {
+    const propre = nettoyerCode(v);
+    if (CODE_REPRISE.test(propre) && !/^\d{6}$/.test(v.replace(/\s+/g, ""))) {
+      return reprendreParCode(propre);
+    }
     if (!email) return Promise.resolve({ error: { message: "adresse électronique manquante" } });
     return db.auth.verifyOtp({ email, token: v.replace(/\s+/g, ""), type: "email" });
   }
@@ -931,4 +953,18 @@ sur("form-code", "submit", async e => {
     return;
   }
   n.hidden = true; n.textContent = "";
+});
+
+sur("genererReprise", "click", async () => {
+  const z = $("codeReprise");
+  z.hidden = false; z.classList.remove("erreur"); z.textContent = "Génération en cours.";
+  const { data, error } = await db.functions.invoke("reprise", { body: { action: "creer" } });
+  if (error || !data || !data.code) {
+    z.classList.add("erreur");
+    z.textContent = "Code non généré : " + ((error && error.message) || "réponse inattendue");
+    return;
+  }
+  const c = data.code;
+  z.innerHTML = `Code de reprise : <b class="code-reprise">${esc(c.slice(0, 3))} ${esc(c.slice(3, 6))} ${esc(c.slice(6))}</b>`
+    + `<br>Valable ${data.validite_minutes} minutes, une seule fois. Saisissez-le dans le champ de connexion de l'autre appareil.`;
 });
