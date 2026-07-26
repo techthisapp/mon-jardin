@@ -41,6 +41,8 @@ const etatTypoP = {}, etatCatP = {};                     // écran Planning
 ORDRE.forEach(k => etatPhase[k] = true);
 
 const $ = id => document.getElementById(id);
+// Un élément absent ne doit jamais interrompre le chargement du module.
+const sur = (id, ev, fn) => { const e = $(id); if (e) e.addEventListener(ev, fn); else console.warn("élément absent :", id); };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
 function info(msg, erreur = false) {
@@ -307,8 +309,8 @@ function afficher(ecran) {
 
 onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
 sousOnglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
-$("btnConfig").addEventListener("click", () => afficher(CONFIG.includes(ecranCourant) ? "maintenant" : ecranConfig));
-$("fermerConfig").addEventListener("click", () => afficher("maintenant"));
+sur("btnConfig", "click", () => afficher(CONFIG.includes(ecranCourant) ? "maintenant" : ecranConfig));
+sur("fermerConfig", "click", () => afficher("maintenant"));
 
 document.querySelectorAll(".segment").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
@@ -399,8 +401,8 @@ function rendreSelection() {
   });
 }
 
-$("rech").addEventListener("input", rendreSelection);
-$("vider").addEventListener("click", async () => {
+sur("rech", "input", rendreSelection);
+sur("vider", "click", async () => {
   if (!sel.size || !session) return;
   const copie = new Set(sel), copieAff = new Map(aff);
   sel = new Set(); aff = new Map(); majCompte(); construireChips(); rendreTout();
@@ -415,7 +417,7 @@ $("vider").addEventListener("click", async () => {
 
 const auj = new Date();
 const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
-$("dateJour").textContent =
+if ($("dateJour")) $("dateJour").textContent =
   auj.toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) +
   " · " + (auj.getDate() <= 15 ? "première" : "seconde") + " quinzaine";
 
@@ -656,17 +658,17 @@ function majCompteurFiltres() {
   $("basculeFiltres").setAttribute("aria-pressed", String(n > 0));
 }
 
-$("basculeFiltres").addEventListener("click", function () {
+sur("basculeFiltres", "click", function () {
   const ouvert = $("corpsFiltres").hidden;
   $("corpsFiltres").hidden = !ouvert;
   this.setAttribute("aria-expanded", String(ouvert));
 });
 
-$("razMois").addEventListener("click", () => {
+sur("razMois", "click", () => {
   moisChoisi = null; majMois(); rendrePlanning();
 });
 
-$("filtreJardin").addEventListener("click", function () {
+sur("filtreJardin", "click", function () {
   jardinSeul = !jardinSeul;
   this.setAttribute("aria-pressed", String(jardinSeul));
   rendrePlanning();
@@ -674,7 +676,7 @@ $("filtreJardin").addEventListener("click", function () {
 
 /* ================== Authentification ================== */
 
-$("form-connexion").addEventListener("submit", async e => {
+sur("form-connexion", "submit", async e => {
   e.preventDefault();
   const email = $("email").value.trim();
   if (!email) return;
@@ -687,7 +689,7 @@ $("form-connexion").addEventListener("submit", async e => {
                            : "Lien envoyé. Ouvrez votre boîte de réception.";
 });
 
-$("deconnexion").addEventListener("click", () => db.auth.signOut());
+sur("deconnexion", "click", () => db.auth.signOut());
 
 db.auth.onAuthStateChange((_e, s) => {
   session = s;
@@ -695,7 +697,7 @@ db.auth.onAuthStateChange((_e, s) => {
   $("zone-connexion").hidden = connecte;
   $("deconnexion").hidden = !connecte;
   $("utilisateur").textContent = connecte ? s.user.email : "";
-  info("");
+  if (!$("etat").classList.contains("erreur")) info("");
   chargerJardin();
 });
 
@@ -809,7 +811,7 @@ async function supprimerEspace(zo) {
   construireChips(); majJardinUI(); rendreTout();
 }
 
-$("form-espace").addEventListener("submit", e => {
+sur("form-espace", "submit", e => {
   e.preventDefault();
   const n = $("nomEspace").value.trim();
   if (!n || !jardinId) return;
@@ -817,13 +819,13 @@ $("form-espace").addEventListener("submit", e => {
   creerEspace(n);
 });
 
-$("selJardin").addEventListener("change", async function () {
+sur("selJardin", "change", async function () {
   jardinId = this.value;
   espaceChoisi = null;
   await chargerContenuJardin();
 });
 
-$("selClimat").addEventListener("change", async function () {
+sur("selClimat", "change", async function () {
   const g = jardinActif();
   if (!g) return;
   const v = this.value || null;
@@ -834,7 +836,7 @@ $("selClimat").addEventListener("change", async function () {
   majJardinUI(); rendreTout();
 });
 
-$("nouveauJardin").addEventListener("click", async () => {
+sur("nouveauJardin", "click", async () => {
   const nom = prompt("Nom du nouveau jardin");
   if (!nom || !nom.trim()) return;
   const { data, error } = await db.rpc("create_garden", { p_name: nom.trim() });
@@ -845,7 +847,7 @@ $("nouveauJardin").addEventListener("click", async () => {
   await chargerContenuJardin();
 });
 
-$("renommerJardin").addEventListener("click", async () => {
+sur("renommerJardin", "click", async () => {
   const g = jardinActif();
   if (!g) return;
   const nom = prompt("Nouveau nom du jardin", g.name);
@@ -868,6 +870,7 @@ function rendreTout() {
 
 window.addEventListener("resize", () => { placerMarqueur(); majMois(); });
 majCompte();
-await chargerCatalogue();
+try { await chargerCatalogue(); }
+catch (e) { info("Catalogue indisponible : " + e.message, true); }
 const { data: { session: s0 } } = await db.auth.getSession();
 if (!s0) $("zone-connexion").hidden = false;
