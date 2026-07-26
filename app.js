@@ -697,6 +697,7 @@ sur("form-connexion", "submit", async e => {
   const { error } = await db.auth.signInWithOtp({
     email, options: { emailRedirectTo: window.location.href.split("#")[0] },
   });
+  if (!error) { $("form-code").hidden = false; $("code").focus(); }
   const note = $("note-connexion");
   note.hidden = false;
   note.textContent = error ? "Envoi impossible : " + error.message
@@ -709,6 +710,8 @@ db.auth.onAuthStateChange((_e, s) => {
   session = s;
   const connecte = Boolean(s);
   $("zone-connexion").hidden = connecte;
+  $("videSelection").hidden = connecte;
+  if (connecte) { $("form-code").hidden = true; $("code").value = ""; }
   $("deconnexion").hidden = !connecte;
   $("utilisateur").textContent = connecte ? s.user.email : "";
   if (!$("etat").classList.contains("erreur")) info("");
@@ -720,7 +723,6 @@ db.auth.onAuthStateChange((_e, s) => {
 
 function majJardinUI() {
   const connecte = Boolean(session);
-  $("videJardin").hidden = connecte;
   $("bloc-jardin").hidden = !connecte;
   const g = jardinActif();
   const c = g && g.climate_key ? climats[g.climate_key] : null;
@@ -888,3 +890,22 @@ try { await chargerCatalogue(); }
 catch (e) { info("Catalogue indisponible : " + e.message, true); }
 const { data: { session: s0 } } = await db.auth.getSession();
 if (!s0) $("zone-connexion").hidden = false;
+
+// Le lien reçu par courrier électronique s'ouvre dans le navigateur, jamais dans
+// l'application ajoutée à l'écran d'accueil, qui dispose de son propre stockage.
+// La saisie du code ouvre la session dans le contexte où elle est saisie.
+sur("form-code", "submit", async e => {
+  e.preventDefault();
+  const email = $("email").value.trim();
+  const token = $("code").value.replace(/\s+/g, "");
+  if (!email || !token) return;
+  const n = $("note-connexion");
+  n.hidden = false; n.classList.remove("erreur"); n.textContent = "Vérification en cours.";
+  const { error } = await db.auth.verifyOtp({ email, token, type: "email" });
+  if (error) {
+    n.classList.add("erreur");
+    n.textContent = "Code refusé : " + error.message;
+    return;
+  }
+  n.hidden = true; n.textContent = "";
+});
