@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=8">
+<link rel="stylesheet" href="./styles.css?v=9">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -52,9 +52,9 @@
       <p class="date-jour" id="dateJour"></p>
       <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
     </div>
-    <div class="ligne-filtre" id="ligneZoneM" hidden>
+    <div class="ligne-filtre" id="ligneEspaceM" hidden>
       <span class="etiq-filtre">Espace</span>
-      <div class="jeu-chips" id="chipsZoneM"></div>
+      <div class="jeu-chips" id="chipsEspaceM"></div>
     </div>
     <div id="maintenant"></div>
   </section>
@@ -80,9 +80,9 @@
         <span class="etiq-filtre">Catégorie</span>
         <div class="jeu-chips" id="chipsCatP"></div>
       </div>
-      <div class="ligne-filtre" id="ligneZoneP" hidden>
+      <div class="ligne-filtre" id="ligneEspaceP" hidden>
         <span class="etiq-filtre">Espace</span>
-        <div class="jeu-chips" id="chipsZoneP"></div>
+        <div class="jeu-chips" id="chipsEspaceP"></div>
       </div>
       </div>
     </div>
@@ -153,12 +153,12 @@
       </div>
       <p class="desc-clim" id="descClimat"></p>
       <p class="desc-clim" id="decalClimat"></p>
-      <form class="ligne-filtre" id="form-zone">
+      <form class="ligne-filtre" id="form-espace">
         <span class="etiq-filtre">Espaces</span>
-        <input id="nomZone" type="text" maxlength="40" placeholder="Nom de l'espace">
+        <input id="nomEspace" type="text" maxlength="40" placeholder="Nom de l'espace">
         <button class="lien" type="submit">Ajouter</button>
       </form>
-      <div id="listeZones"></div>
+      <div id="listeEspaces"></div>
     </div>
   </section>
 
