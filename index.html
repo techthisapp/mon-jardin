@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=4">
+<link rel="stylesheet" href="./styles.css?v=5">
 </head>
 <body>
 
@@ -20,12 +20,13 @@
         <button class="lien-clair" id="deconnexion" hidden type="button">Se déconnecter</button>
       </div>
     </div>
-    <p class="tete-sous">Climat océanique frais<span class="pt-sep">·</span><span id="tete-total"></span></p>
+    <p class="tete-sous"><span id="tete-climat"></span><span class="pt-sep">·</span><span id="tete-total"></span></p>
   </div>
   <nav class="onglets" role="tablist">
     <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">En ce moment</button>
     <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">Planning</button>
     <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">Ma sélection</button>
+    <button class="onglet" role="tab" aria-selected="false" data-ecran="jardin">Jardin</button>
   </nav>
 </header>
 
@@ -36,6 +37,10 @@
     <div class="bandeau-date">
       <p class="date-jour" id="dateJour"></p>
       <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
+    </div>
+    <div class="ligne-filtre" id="ligneZoneM" hidden>
+      <span class="etiq-filtre">Zone</span>
+      <div class="jeu-chips" id="chipsZoneM"></div>
     </div>
     <div id="maintenant"></div>
   </section>
@@ -53,6 +58,10 @@
       <div class="ligne-filtre">
         <span class="etiq-filtre">Catégorie</span>
         <div class="jeu-chips" id="chipsCatP"></div>
+      </div>
+      <div class="ligne-filtre" id="ligneZoneP" hidden>
+        <span class="etiq-filtre">Zone</span>
+        <div class="jeu-chips" id="chipsZoneP"></div>
       </div>
       <div class="ligne-bilan">
         <button class="chip chip-jardin" id="filtreJardin" aria-pressed="false" type="button">Mon jardin seulement</button>
@@ -112,6 +121,30 @@
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
   </section>
+  <section id="ec-jardin" hidden>
+    <p class="vide" id="videJardin" hidden>Connectez-vous pour gérer vos jardins et vos zones.</p>
+    <div id="bloc-jardin" hidden>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Jardin</span>
+        <select id="selJardin"></select>
+        <button class="lien" id="nouveauJardin" type="button">Nouveau</button>
+        <button class="lien" id="renommerJardin" type="button">Renommer</button>
+      </div>
+      <div class="ligne-filtre">
+        <span class="etiq-filtre">Climat</span>
+        <select id="selClimat"></select>
+      </div>
+      <p class="desc-clim" id="descClimat"></p>
+      <p class="desc-clim" id="decalClimat"></p>
+      <form class="ligne-filtre" id="form-zone">
+        <span class="etiq-filtre">Zones</span>
+        <input id="nomZone" type="text" maxlength="40" placeholder="Nom de la zone">
+        <button class="lien" type="submit">Ajouter</button>
+      </form>
+      <div id="listeZones"></div>
+    </div>
+  </section>
+
 </main>
 
 <script type="module" src="./app.js?v=4"></script>
