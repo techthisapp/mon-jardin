@@ -371,3 +371,11 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .pastille-niv.niv-abri{background:#E3A99E}
 .pastille-niv.niv-deconseille{background:#C0566B}
 .note-clim{margin:6px 0 0;font-size:12.5px;color:#6B665D;line-height:1.45}
+
+/* ---------- Mode plein écran depuis l'écran d'accueil ---------- */
+.tete{padding-top:env(safe-area-inset-top)}
+main{
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+  padding-bottom:env(safe-area-inset-bottom);
+}
