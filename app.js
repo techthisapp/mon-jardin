@@ -295,11 +295,11 @@ function chipsEspaces(conteneur, ligne, apres) {
 /* ================== Onglets ================== */
 
 const ECRANS = ["maintenant", "planning", "selection", "jardin"];
-const CONFIG = ["selection", "jardin"];
+const CONFIG = ["jardin", "selection"];
 const onglets = [...document.querySelectorAll(".onglet")];
 const sousOnglets = [...document.querySelectorAll(".sous-onglet")];
 let ecranCourant = "maintenant";
-let ecranConfig = "selection";
+let ecranConfig = "jardin";
 
 function afficher(ecran) {
   ecranCourant = ecran;
@@ -727,7 +727,10 @@ function majJardinUI() {
   $("bloc-jardin").hidden = !connecte;
   const g = jardinActif();
   const c = g && g.climate_key ? climats[g.climate_key] : null;
-  $("tete-climat").textContent = c ? c.label : "Climat non renseigné";
+  const puce = $("puceClimat");
+  puce.textContent = c ? c.label : "Choisir un climat";
+  puce.classList.toggle("a-renseigner", !c);
+  puce.hidden = !connecte;
 
   const sj = $("selJardin");
   sj.innerHTML = jardins.map(j => `<option value="${j.id}">${esc(j.name)}</option>`).join("");
@@ -968,3 +971,5 @@ sur("genererReprise", "click", async () => {
   z.innerHTML = `Code de reprise : <b class="code-reprise">${esc(c.slice(0, 3))} ${esc(c.slice(3, 6))} ${esc(c.slice(6))}</b>`
     + `<br>Valable ${data.validite_minutes} minutes, une seule fois. Saisissez-le dans le champ de connexion de l'autre appareil.`;
 });
+
+sur("puceClimat", "click", () => afficher("jardin"));
