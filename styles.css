@@ -331,3 +331,43 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
   background:rgba(76,140,63,.09);border-left:1px solid rgba(76,140,63,.34);
   border-right:1px solid rgba(76,140,63,.34);
 }
+
+/* ---------- Zones, jardins et climat ---------- */
+.item-bloc{display:flex;flex-direction:column;gap:4px}
+.zones-item{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 2px 30px}
+.mini-chip{
+  font:500 11.5px/1 "IBM Plex Sans",sans-serif;padding:4px 8px;border-radius:999px;
+  border:1px solid #D5D2CB;background:#fff;color:#6B665D;cursor:pointer;
+}
+.mini-chip[aria-pressed="true"]{background:var(--terre);border-color:var(--terre);color:#fff}
+.mini-chip:focus-visible{outline:2px solid var(--terre);outline-offset:1px}
+
+#selJardin,#selClimat,#nomZone{
+  font:400 13.5px/1.3 "IBM Plex Sans",sans-serif;padding:6px 8px;
+  border:1px solid #D5D2CB;border-radius:8px;background:#fff;color:#2E2B26;max-width:220px;
+}
+.desc-clim{margin:2px 0 0;font-size:12.5px;color:#6B665D;line-height:1.45}
+
+.carte-zone{border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;overflow:hidden}
+.tete-zone{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F5F3EE;border-bottom:1px solid #E3E0D9}
+.tete-zone b{font-size:13.5px}
+.tete-zone .lien{margin-left:auto;font-size:12px}
+.tete-zone .lien+.lien{margin-left:0}
+.corps-zone{padding:6px 10px 10px}
+.ligne-zone{display:flex;align-items:center;gap:6px;padding:4px 0}
+.nom-zone{flex:1;font-size:13px}
+.ligne-zone .qte{width:64px}
+.ligne-zone .notes{flex:2;min-width:80px}
+.ligne-zone input{
+  font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;
+}
+
+.niv-protection{background:#FDF0DC;border-color:#E0B978;color:#8A5A12}
+.niv-abri{background:#FCE7E3;border-color:#E3A99E;color:#8C3A2A}
+.niv-deconseille{background:#F2E2E4;border-color:#C99AA1;color:#8C2E3C}
+.pastille-niv{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.pastille-niv.niv-protection{background:#E0B978}
+.pastille-niv.niv-abri{background:#E3A99E}
+.pastille-niv.niv-deconseille{background:#C0566B}
+.note-clim{margin:6px 0 0;font-size:12.5px;color:#6B665D;line-height:1.45}
