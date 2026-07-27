@@ -668,3 +668,17 @@ body.fige{overflow:hidden}
   width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;flex:none;
 }
 .tiroir .opt span{display:block;text-align:center;line-height:1.25}
+
+/* ---------- Lignes d'action : séparateur et confort tactile ---------- */
+/* Le séparateur se pose sur la rangée, qui ne bouge pas pendant le glissement,
+   et non sur l'action, devenue enfant unique de sa glissière. */
+.glissiere > .action{border-top:0}
+.rangee-tache + .rangee-tache{border-top:1px solid var(--filet-clair)}
+
+.glissiere > .action{
+  padding-block:14px;min-height:62px;
+  display:flex;flex-direction:column;justify-content:center;gap:4px;
+}
+.glissiere > .action .ligne-nom{align-items:center}
+.glissiere > .action b{margin-bottom:0}
+.glissiere > .action .dit-action{margin:0;color:#4A463F}
