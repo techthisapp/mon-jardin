@@ -573,6 +573,33 @@ function rendreMaintenant() {
   const brancherDetail = (racine, p) =>
     racine.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(p));
 
+  // Chaque ligne est posée sur une glissière, prête à recevoir un tiroir d'options
+  // révélé par un glissement vers la gauche. Le tiroir reste inactif tant que
+  // OPTIONS_ACTION est vide.
+  const poserRangee = (contenu, p, k) => {
+    const rangee = document.createElement("div");
+    rangee.className = "rangee-tache";
+    const glissiere = document.createElement("div");
+    glissiere.className = "glissiere";
+    glissiere.appendChild(contenu);
+    rangee.appendChild(glissiere);
+    if (OPTIONS_ACTION.length) {
+      const tiroir = document.createElement("div");
+      tiroir.className = "tiroir";
+      OPTIONS_ACTION.forEach(o => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "opt opt-" + o.cle;
+        b.textContent = o.libelle;
+        b.addEventListener("click", e => { e.stopPropagation(); o.action(p, k); fermerTiroirs(); });
+        tiroir.appendChild(b);
+      });
+      rangee.appendChild(tiroir);
+      brancherGlissement(rangee, glissiere, tiroir);
+    }
+    return rangee;
+  };
+
   blocs.forEach(({ k, lot }) => {
     const carte = document.createElement("div");
     carte.className = "carte-tache";
@@ -609,12 +636,13 @@ function rendreMaintenant() {
           const echeance = e === "derniere"
             ? '<span class="echeance urgente">dernière quinzaine</span>'
             : (fin <= 24 ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
-          const d = document.createElement("div");
-          d.className = "action" + (e ? " a-" + e : "");
-          d.innerHTML = `<button class="nom-action"><b>${nomAvecMarque(p)}</b>${echeance}</button>`
-            + `<p class="dit-action">${esc(texteAction(p, k))}</p>`;
-          brancherDetail(d, p);
-          corps.appendChild(d);
+          const d = document.createElement("button");
+          d.type = "button";
+          d.className = "action nom-action" + (e ? " a-" + e : "");
+          d.innerHTML = `<span class="ligne-nom"><b>${nomAvecMarque(p)}</b>${echeance}</span>`
+            + `<span class="dit-action">${esc(texteAction(p, k))}</span>`;
+          d.addEventListener("click", () => ouvrirFeuille(p));
+          corps.appendChild(poserRangee(d, p, k));
         });
     }
 
@@ -1118,3 +1146,59 @@ function fermerFeuille() {
 sur("voile", "click", fermerFeuille);
 sur("fermerFeuille", "click", fermerFeuille);
 document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuille(); });
+
+/* ================== Tiroir d'options par glissement ================== */
+
+// À remplir quand les options seront définies. Chaque entrée :
+// { cle: "identifiant", libelle: "Texte", action: (plante, tache) => {} }
+const OPTIONS_ACTION = [];
+
+let tiroirOuvert = null;
+
+function fermerTiroirs() {
+  if (!tiroirOuvert) return;
+  tiroirOuvert.style.transform = "";
+  tiroirOuvert.parentElement.classList.remove("tiroir-ouvert");
+  tiroirOuvert = null;
+}
+
+function brancherGlissement(rangee, glissiere, tiroir) {
+  let x0 = 0, y0 = 0, dx = 0, actif = false, largeur = 0;
+
+  glissiere.addEventListener("touchstart", e => {
+    if (tiroirOuvert && tiroirOuvert !== glissiere) fermerTiroirs();
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    dx = 0; actif = false;
+    largeur = tiroir.offsetWidth;
+    glissiere.style.transition = "none";
+  }, { passive: true });
+
+  glissiere.addEventListener("touchmove", e => {
+    const t = e.touches[0];
+    const ex = t.clientX - x0, ey = t.clientY - y0;
+    // On n'intercepte le geste qu'une fois l'horizontale clairement dominante.
+    if (!actif && Math.abs(ex) > 12 && Math.abs(ex) > Math.abs(ey) * 1.6) actif = true;
+    if (!actif) return;
+    const base = tiroirOuvert === glissiere ? -largeur : 0;
+    dx = Math.max(-largeur, Math.min(0, base + ex));
+    glissiere.style.transform = `translateX(${dx}px)`;
+  }, { passive: true });
+
+  glissiere.addEventListener("touchend", () => {
+    glissiere.style.transition = "";
+    if (!actif) return;
+    if (dx < -largeur / 2) {
+      glissiere.style.transform = `translateX(${-largeur}px)`;
+      rangee.classList.add("tiroir-ouvert");
+      tiroirOuvert = glissiere;
+    } else {
+      glissiere.style.transform = "";
+      rangee.classList.remove("tiroir-ouvert");
+      if (tiroirOuvert === glissiere) tiroirOuvert = null;
+    }
+  });
+}
+
+document.addEventListener("click", e => {
+  if (tiroirOuvert && !tiroirOuvert.parentElement.contains(e.target)) fermerTiroirs();
+}, true);
