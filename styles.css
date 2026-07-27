@@ -882,3 +882,6 @@ body.fige{overflow:hidden}
 
 /* L'en-tête collant doit annoncer que le contenu passe dessous */
 .entete-mois{box-shadow:0 3px 10px rgba(22,36,30,.22)}
+
+/* Filet d'ouverture de janvier, absent du dégradé qui ne trace qu'en fin de mois */
+.piste{box-shadow:inset 1px 0 0 var(--filet-clair)}
