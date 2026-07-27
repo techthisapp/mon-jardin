@@ -6,7 +6,11 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille", "multiplication", "fertilisation", "protection_ete", "protection"];
 // L'écran En ce moment suit l'ordre du geste au jardin : ce qu'on observe,
 // puis ce qu'on taille, ce qu'on met en terre, ce qu'on reproduit, ce qu'on récolte.
-const ORDRE_MAINTENANT = ["floraison", "taille", "abri", "terre", "plant", "multiplication", "recolte", "fertilisation", "protection_ete", "protection"];
+// Classement par coût de l'oubli, du plus irréversible au plus tolérant.
+// Récolte et floraison se constatent d'un coup d'oeil au jardin, elles ferment la liste.
+const ORDRE_MAINTENANT = ["taille", "fertilisation", "multiplication", "protection_ete",
+  "protection", "abri", "terre", "plant", "recolte", "floraison"];
+const REPLIES_PAR_DEFAUT = ["recolte", "floraison"];
 const ORDRE_TYPO = ["Légumes", "Fruits", "Aromatiques", "Ornement"];
 const COUL_TYPO = { "Légumes":"#4C8C3F", "Fruits":"#A23E4E", "Aromatiques":"#3E7C6B", "Ornement":"#B0559A" };
 // Ordre de lecture des catégories : par typologie, puis du plus courant au plus rare.
@@ -522,8 +526,6 @@ function rendreMaintenant() {
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
 
-  // Une fenêtre qui se termine à la quinzaine en cours ne se représentera pas
-  // avant un an. Une fenêtre qui commence maintenant vient de s'ouvrir.
   const etatFenetre = (p, k) => {
     const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
     if (!seg) return "";
@@ -532,17 +534,8 @@ function rendreMaintenant() {
     return "";
   };
 
-  const marqueurs = p => {
-    const ad = adapt[p.id];
-    let h = "";
-    if (ad && ad.level !== "adapte") {
-      h += `<span class="pastille-niv niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}"></span>`;
-    }
-    if (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite)) {
-      h += `<span class="marque-tox" title="${esc(p.attr.toxicite)}">toxique</span>`;
-    }
-    return h;
-  };
+  const losange = p => (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite))
+    ? `<span class="losange-tox" title="${esc(p.attr.toxicite)}" aria-label="Plante toxique">&#9670;</span>` : "";
 
   const blocs = [];
   ORDRE_MAINTENANT.forEach(k => {
@@ -564,33 +557,63 @@ function rendreMaintenant() {
     + (urgentes ? ` <span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
   zone.appendChild(bilan);
 
+  // Le détail d'une plante s'ouvre au clic sur son nom, sur tous les blocs.
+  const brancherDetail = (racine, p) => {
+    racine.querySelector(".nom-action").addEventListener("click", function () {
+      let d = racine.querySelector(".detail-action");
+      if (!d) {
+        d = document.createElement("div");
+        d.className = "detail-action";
+        d.innerHTML = ficheHTML(p);
+        racine.appendChild(d);
+      }
+      const o = racine.classList.toggle("ouverte");
+      this.setAttribute("aria-expanded", String(o));
+    });
+  };
+
   blocs.forEach(({ k, lot }) => {
     const carte = document.createElement("div");
     carte.className = "carte-tache";
-    const long = lot.length > 8;
-
-    const corps = k === "floraison"
-      ? `<div class="puces">${lot.map(p => `<span class="puce">${marqueurs(p)}${esc(p.nom)}</span>`).join("")}</div>`
-      : lot.map(p => {
-          const e = etatFenetre(p, k);
-          const drapeau = e === "derniere" ? '<span class="fin-fenetre">dernière quinzaine</span>'
-                        : e === "ouverture" ? '<span class="debut-fenetre">fenêtre ouverte</span>' : "";
-          return `<div class="action${e ? " a-" + e : ""}"><b>${marqueurs(p)}${esc(p.nom)}${drapeau}</b>`
-               + `${esc(texteAction(p, k))}</div>`;
-        }).join("");
+    const replie = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
 
     carte.innerHTML =
       `<h2><span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
       + `<span class="nb">${lot.length}</span>`
-      + (long ? '<button class="lien deplier" type="button" aria-expanded="false">Tout voir</button>' : "")
-      + `</h2><div class="corps-tache${long ? " replie" : ""}">${corps}</div>`;
+      + (replie ? '<button class="lien deplier" type="button" aria-expanded="false">Tout voir</button>' : "")
+      + `</h2><div class="corps-tache${replie ? " replie" : ""}"></div>`;
 
-    if (long) {
-      const b = carte.querySelector(".deplier"), c = carte.querySelector(".corps-tache");
+    const corps = carte.querySelector(".corps-tache");
+
+    if (k === "floraison") {
+      corps.classList.add("bloc-puces");
+      lot.forEach(p => {
+        const d = document.createElement("div");
+        d.className = "enveloppe-puce";
+        d.innerHTML = `<button class="puce nom-action" aria-expanded="false">${esc(p.nom)}${losange(p)}</button>`;
+        brancherDetail(d, p);
+        corps.appendChild(d);
+      });
+    } else {
+      lot.forEach(p => {
+        const e = etatFenetre(p, k);
+        const drapeau = e === "derniere" ? '<span class="fin-fenetre">dernière quinzaine</span>'
+                      : e === "ouverture" ? '<span class="debut-fenetre">fenêtre ouverte</span>' : "";
+        const d = document.createElement("div");
+        d.className = "action" + (e ? " a-" + e : "");
+        d.innerHTML = `<button class="nom-action" aria-expanded="false"><b>${esc(p.nom)}</b>${losange(p)}${drapeau}</button>`
+          + `<p class="dit-action">${esc(texteAction(p, k))}</p>`;
+        brancherDetail(d, p);
+        corps.appendChild(d);
+      });
+    }
+
+    if (replie) {
+      const b = carte.querySelector(".deplier");
       b.addEventListener("click", () => {
-        const ouvert = c.classList.toggle("replie");
-        b.textContent = ouvert ? "Tout voir" : "Réduire";
-        b.setAttribute("aria-expanded", String(!ouvert));
+        const ferme = corps.classList.toggle("replie");
+        b.textContent = ferme ? "Tout voir" : "Réduire";
+        b.setAttribute("aria-expanded", String(!ferme));
       });
     }
     zone.appendChild(carte);
