@@ -645,9 +645,12 @@ function rendreMaintenant() {
   const urgentes = audibles.filter(x => etatFenetre(x.p, x.k) === "derniere").length;
   const bilan = document.createElement("div");
   bilan.className = "bilan-moment";
-  bilan.innerHTML = `<span><b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
+  const texte = document.createElement("div");
+  texte.className = "bilan-texte";
+  texte.innerHTML = `<span><b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
     + `<b>${new Set(audibles.map(x => x.p.id)).size}</b> plantes</span>`
     + (urgentes ? `<span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
+  bilan.appendChild(texte);
 
   const bascule = document.createElement("div");
   bascule.className = "bascule-vue";
@@ -708,7 +711,8 @@ function rendreMaintenant() {
           bloc.className = "plante-groupe";
           const t = document.createElement("button");
           t.type = "button"; t.className = "tete-plante";
-          t.innerHTML = `<b>${nomAvecMarque(p)}</b><span class="voir-fiche" aria-hidden="true">fiche</span>`;
+          t.innerHTML = `<b>${nomAvecMarque(p)}</b>`
+            + `<span class="voir-fiche" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`;
           t.addEventListener("click", () => ouvrirFeuille(p));
           bloc.appendChild(t);
           lot.filter(x => x.p.id === p.id).forEach(x => bloc.appendChild(ligneAction(p, x.k, "espace")));
