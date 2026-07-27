@@ -559,10 +559,31 @@ main{
 .fin-fenetre{background:#FCE7E3;color:#8C3A2A}
 .debut-fenetre{background:#E9EFE3;color:#33502C}
 
-.marque-tox{
-  font-family:"IBM Plex Sans",sans-serif;font-size:10px;font-weight:600;
-  letter-spacing:.05em;text-transform:uppercase;
-  padding:2px 6px;border-radius:4px;margin-right:6px;
-  background:#F2E2E4;color:#8C2E3C;vertical-align:middle;
+
+/* ---------- Marqueur de toxicité, discret et après le nom ---------- */
+.losange-tox{
+  display:inline-block;margin-left:6px;font-size:9px;line-height:1;
+  color:#B03A4A;vertical-align:middle;cursor:help;
 }
-.puce .marque-tox{margin-right:5px}
+
+/* ---------- Détail d'une plante ouvert depuis En ce moment ---------- */
+.nom-action{
+  display:block;width:100%;text-align:left;border:0;background:none;padding:0;
+  font:inherit;color:inherit;cursor:pointer;
+}
+.nom-action b{font-weight:600}
+.nom-action::after{
+  content:"";display:inline-block;width:5px;height:5px;margin-left:8px;
+  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
+  transform:rotate(45deg) translateY(-2px);opacity:.5;
+}
+.ouverte > .nom-action::after{transform:rotate(-135deg) translateY(-1px);opacity:.9}
+.nom-action:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:4px}
+.dit-action{margin:2px 0 0}
+.detail-action{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--filet-clair)}
+.ouverte > .detail-action{display:block}
+
+.bloc-puces{display:flex;flex-wrap:wrap;gap:5px;align-items:flex-start}
+.enveloppe-puce.ouverte{flex:1 1 100%}
+.enveloppe-puce .puce{cursor:pointer;border:0;font:inherit}
+.enveloppe-puce .nom-action::after{width:4px;height:4px;margin-left:6px}
