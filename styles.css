@@ -447,24 +447,29 @@ main{
 
 /* ================= Refonte de l'en-tête et des réglages ================= */
 
-.tete-corps{padding-top:14px;padding-bottom:0}
-.tete-haut{display:flex;align-items:center;gap:10px}
-.marque{flex:none;width:26px;height:26px;color:#EFEFE8}
+.tete-corps{padding-top:18px;padding-bottom:2px}
+.tete-haut{display:flex;align-items:center;gap:13px}
+.marque{flex:none;width:36px;height:36px;color:#EFEFE8}
 .marque svg{display:block;width:100%;height:100%}
 .tete h1{
-  flex:1;min-width:0;font-size:19px;letter-spacing:.09em;white-space:nowrap;
+  flex:1;min-width:0;font-size:21px;letter-spacing:.06em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;
 }
 .bouton-compte{
-  flex:none;border:1px solid rgba(239,239,232,.34);background:none;color:#EFEFE8;
-  font:600 12px/1 "IBM Plex Sans",sans-serif;letter-spacing:.02em;
-  padding:7px 13px;border-radius:999px;cursor:pointer;
+  flex:none;width:38px;height:38px;border-radius:50%;cursor:pointer;
+  border:1px solid rgba(239,239,232,.22);background:rgba(239,239,232,.06);
+  color:#EFEFE8;display:flex;align-items:center;justify-content:center;
+  transition:background .18s ease, color .18s ease, border-color .18s ease;
+}
+.bouton-compte svg{
+  width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:round;
 }
 .bouton-compte[aria-expanded="true"]{background:#EFEFE8;color:var(--encre);border-color:#EFEFE8}
 .bouton-compte:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
 
 .puce-climat{
-  display:inline-block;margin-top:9px;
+  display:inline-block;margin:10px 0 4px 49px;
   border:1px solid rgba(239,239,232,.26);background:none;color:#EFEFE8;
   font:400 11px/1 "IBM Plex Mono",monospace;letter-spacing:.02em;
   padding:6px 11px;border-radius:999px;cursor:pointer;opacity:.78;
