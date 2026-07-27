@@ -833,3 +833,19 @@ body.fige{overflow:hidden}
 /* ---------- Densité de l'écran ---------- */
 .regle-annee{margin-bottom:12px}
 .ligne-filtre{margin-bottom:0}
+
+/* ---------- Barre de filtres de l'écran En ce moment ---------- */
+.filtres-moment{margin-bottom:14px}
+.filtres-moment .barre-filtres{align-items:flex-start;gap:10px}
+.filtres-moment #bilanMoment{flex:1;min-width:0}
+.filtres-moment .bilan-moment{margin-bottom:0}
+.filtres-moment #corpsFiltresM{
+  display:flex;flex-direction:column;gap:10px;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--filet-clair);
+}
+#basculeFiltresM{flex:none;align-self:flex-start}
+#basculeFiltresM[aria-pressed="true"]{border-color:var(--terre);color:var(--terre)}
+
+/* La règle des mois se resserre, elle situe sans devoir être lue */
+.bandeau-date{margin-bottom:12px}
+.regle-annee{margin-bottom:0}
