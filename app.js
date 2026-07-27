@@ -368,7 +368,7 @@ function carteItem(p) {
     r.className = "zones-item";
     const c = document.createElement("button");
     c.type = "button"; c.className = "mini-chip chip-sourdine";
-    c.textContent = `${muettes} tâche${muettes > 1 ? "s" : ""} en sourdine, réactiver`;
+    c.innerHTML = OEIL_BARRE + `<span>${muettes} tâche${muettes > 1 ? "s" : ""} masquée${muettes > 1 ? "s" : ""}, réafficher</span>`;
     c.addEventListener("click", () => leverToutesSourdines(p));
     r.appendChild(c);
     bloc.appendChild(r);
@@ -591,7 +591,7 @@ function rendreMaintenant() {
   if (muettes || voirSourdines) {
     const b = document.createElement("button");
     b.type = "button"; b.className = "lien bascule-sourdine";
-    b.textContent = voirSourdines ? "Masquer les sourdines" : `${muettes} en sourdine, afficher`;
+    b.innerHTML = OEIL_BARRE + `<span>${voirSourdines ? "Cacher les masquées" : `${muettes} masquée${muettes > 1 ? "s" : ""}, afficher`}</span>`;
     b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
     bilan.appendChild(b);
   }
@@ -600,9 +600,10 @@ function rendreMaintenant() {
   const brancherDetail = (racine, p) =>
     racine.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(p));
 
-  const bouton = (classe, libelle, fn) => {
+  const bouton = (classe, libelle, fn, picto) => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "opt " + classe; b.textContent = libelle;
+    b.type = "button"; b.className = "opt " + classe;
+    b.innerHTML = (picto || "") + `<span>${esc(libelle)}</span>`;
     b.addEventListener("click", e => { e.stopPropagation(); fermerTiroirs(); fn(); });
     return b;
   };
@@ -619,15 +620,15 @@ function rendreMaintenant() {
     if (muet) {
       gauche = document.createElement("div");
       gauche.className = "tiroir tiroir-gauche";
-      gauche.appendChild(bouton("opt-lever", "Réactiver", () => leverSourdine(p, k)));
+      gauche.appendChild(bouton("opt-lever", "Réafficher", () => leverSourdine(p, k)));
     } else {
       gauche = document.createElement("div");
       gauche.className = "tiroir tiroir-gauche";
-      gauche.appendChild(bouton("opt-quinzaine", "Cette quinzaine", () => mettreEnSourdine(p, k, "quinzaine")));
-      gauche.appendChild(bouton("opt-periode", "Cette période", () => mettreEnSourdine(p, k, "periode", finFenetre(p, k))));
+      gauche.appendChild(bouton("opt-quinzaine", "Cette quinzaine", () => mettreEnSourdine(p, k, "quinzaine"), OEIL_BARRE));
+      gauche.appendChild(bouton("opt-periode", "Cette période", () => mettreEnSourdine(p, k, "periode", finFenetre(p, k)), OEIL_BARRE));
       droite = document.createElement("div");
       droite.className = "tiroir tiroir-droite";
-      droite.appendChild(bouton("opt-toujours", "Ne plus afficher", () => mettreEnSourdine(p, k, "toujours")));
+      droite.appendChild(bouton("opt-toujours", "Ne plus afficher", () => mettreEnSourdine(p, k, "toujours"), OEIL_BARRE));
     }
 
     if (droite) rangee.appendChild(droite);
@@ -1190,6 +1191,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuill
 
 /* ================== Mise en sourdine ================== */
 
+const OEIL_BARRE = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path d="M2 12s3.6-6 10-6c2 0 3.7.6 5.1 1.4M22 12s-3.6 6-10 6c-2 0-3.7-.6-5.1-1.4"/>'
+  + '<circle cx="12" cy="12" r="2.6"/><path d="M3 21 21 3"/></svg>';
+
 const cleSourdine = (p, k) => p.id + "|" + k;
 const anneeCourante = () => new Date().getFullYear();
 
@@ -1216,7 +1221,7 @@ async function mettreEnSourdine(p, k, portee, fin) {
   sourdines.set(cleSourdine(p, k), ligne);
   rendreTout();
   const { error } = await db.from("sourdines").upsert(ligne, { onConflict: "garden_id,plant_id,phase" });
-  if (error) { sourdines.delete(cleSourdine(p, k)); rendreTout(); info("Sourdine non enregistrée : " + error.message, true); }
+  if (error) { sourdines.delete(cleSourdine(p, k)); rendreTout(); info("Masquage non enregistré : " + error.message, true); }
 }
 
 async function leverSourdine(p, k) {
@@ -1225,7 +1230,7 @@ async function leverSourdine(p, k) {
   rendreTout();
   const { error } = await db.from("sourdines").delete()
     .eq("garden_id", jardinId).eq("plant_id", p.id).eq("phase", k);
-  if (error && memo) { sourdines.set(cleSourdine(p, k), memo); rendreTout(); info("Levée refusée : " + error.message, true); }
+  if (error && memo) { sourdines.set(cleSourdine(p, k), memo); rendreTout(); info("Réaffichage refusé : " + error.message, true); }
 }
 
 async function leverToutesSourdines(p) {
@@ -1233,7 +1238,7 @@ async function leverToutesSourdines(p) {
   cles.forEach(c => sourdines.delete(c));
   rendreTout();
   const { error } = await db.from("sourdines").delete().eq("garden_id", jardinId).eq("plant_id", p.id);
-  if (error) info("Levée refusée : " + error.message, true);
+  if (error) info("Réaffichage refusé : " + error.message, true);
 }
 
 /* ================== Glissement latéral ================== */
