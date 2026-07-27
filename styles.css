@@ -752,3 +752,31 @@ body.fige{overflow:hidden}
   color:var(--encre-doux);white-space:nowrap;
 }
 .acte-texte{margin:0;font-size:13px;line-height:1.5;color:#4A463F}
+
+/* ---------- Bascule de vue et regroupement par espace ---------- */
+.bilan-moment{align-items:center}
+.bascule-vue{
+  display:inline-flex;margin-left:auto;
+  border:1px solid var(--filet);border-radius:999px;overflow:hidden;background:#fff;
+}
+.bascule-vue .vue{
+  border:0;background:none;cursor:pointer;padding:6px 12px;
+  font:600 11.5px/1 "IBM Plex Sans",sans-serif;letter-spacing:.02em;color:var(--encre-doux);
+}
+.bascule-vue .vue.active{background:var(--encre);color:#EFEFE8}
+.bascule-sourdine{flex:0 0 100%;margin-left:0;justify-content:flex-end}
+
+.tete-plante{
+  margin:14px 0 0;padding:0 0 5px;
+  border-bottom:1px solid var(--filet);
+}
+.corps-tache > .tete-plante:first-child{margin-top:4px}
+.tete-plante b{
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:13.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+}
+.tete-plante + .rangee-tache{border-top:0}
+.ligne-nom .pt{
+  display:inline-block;width:8px;height:8px;border-radius:50%;
+  margin-right:7px;vertical-align:middle;
+}
