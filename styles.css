@@ -643,3 +643,35 @@ body.fige{overflow:hidden}
   background:var(--terre);color:#fff;
 }
 .tiroir .opt + .opt{border-left:1px solid rgba(255,255,255,.28)}
+
+/* ---------- Tiroirs de sourdine ---------- */
+.rangee-tache{position:relative;overflow:hidden}
+.glissiere{
+  position:relative;z-index:1;background:var(--papier-haut);
+  transition:transform .22s cubic-bezier(.32,.72,0,1);
+  touch-action:pan-y;
+}
+.rangee-tache.en-glissement .glissiere{transition:none}
+.tiroir{position:absolute;top:0;bottom:0;z-index:0;display:flex;align-items:stretch}
+.tiroir-gauche{right:0}
+.tiroir-droite{left:0}
+.tiroir .opt{
+  border:0;cursor:pointer;padding:0 14px;min-width:96px;
+  font:600 12px/1.25 "IBM Plex Sans",sans-serif;letter-spacing:.02em;color:#fff;
+}
+.opt-quinzaine{background:#6E8C7A}
+.opt-periode{background:#4A6E86}
+.opt-toujours{background:#8A2E1E}
+.opt-lever{background:var(--terre)}
+
+/* ---------- Ligne mise en sourdine ---------- */
+.rangee-tache.en-sourdine .glissiere{background:var(--panneau)}
+.rangee-tache.en-sourdine .action{opacity:.45}
+.rangee-tache.en-sourdine .ligne-nom b::after{
+  content:"en sourdine";
+  font:500 10px/1 "IBM Plex Sans",sans-serif;letter-spacing:.05em;text-transform:uppercase;
+  margin-left:8px;padding:2px 6px;border-radius:4px;background:var(--filet);color:#6B665D;
+  vertical-align:middle;
+}
+.bascule-sourdine{margin-left:auto;font-size:12px}
+.chip-sourdine{border-style:dashed}
