@@ -548,11 +548,17 @@ main{
 
 .action.a-derniere{border-left:3px solid #C0566B;padding-left:9px}
 .action.a-ouverture{border-left:3px solid var(--terre);padding-left:9px}
-/* Le nom à gauche, l'échéance à droite, sur une seule ligne. */
-.action .nom-action{
+/* Toute la section d'une plante est cliquable, texte descriptif compris. */
+button.action{
+  display:block;width:100%;text-align:left;border:0;background:none;
+  font:inherit;color:inherit;cursor:pointer;
+}
+button.action:focus-visible{outline:2px solid var(--terre);outline-offset:-2px;border-radius:6px}
+.ligne-nom{
   display:flex;align-items:baseline;justify-content:space-between;gap:12px;width:100%;
 }
-.action .nom-action b{min-width:0}
+.ligne-nom b{min-width:0;font-weight:600}
+.dit-action{display:block}
 .echeance{
   flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;
   color:var(--encre-doux);white-space:nowrap;
@@ -619,3 +625,21 @@ body.fige{overflow:hidden}
   .feuille{left:50%;right:auto;width:560px;transform:translate(-50%,100%);border-radius:18px 18px 0 0}
   .feuille.ouverte{transform:translate(-50%,0)}
 }
+
+/* ---------- Glissement vers la gauche et tiroir d'options ---------- */
+.rangee-tache{position:relative;overflow:hidden}
+.glissiere{
+  position:relative;z-index:1;background:var(--papier-haut);
+  transition:transform .22s cubic-bezier(.32,.72,0,1);
+  touch-action:pan-y;
+}
+.tiroir{
+  position:absolute;inset:0 0 0 auto;z-index:0;
+  display:flex;align-items:stretch;
+}
+.tiroir .opt{
+  border:0;cursor:pointer;padding:0 16px;min-width:88px;
+  font:600 12.5px/1 "IBM Plex Sans",sans-serif;letter-spacing:.02em;
+  background:var(--terre);color:#fff;
+}
+.tiroir .opt + .opt{border-left:1px solid rgba(255,255,255,.28)}
