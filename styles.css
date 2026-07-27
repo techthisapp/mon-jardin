@@ -560,30 +560,58 @@ main{
 .debut-fenetre{background:#E9EFE3;color:#33502C}
 
 
-/* ---------- Marqueur de toxicité, discret et après le nom ---------- */
+
+/* ---------- Marqueur de toxicité ---------- */
 .losange-tox{
-  display:inline-block;margin-left:6px;font-size:9px;line-height:1;
-  color:#B03A4A;vertical-align:middle;cursor:help;
+  display:inline-block;margin-left:5px;font-size:8px;line-height:1;
+  color:#B03A4A;position:relative;top:-1px;cursor:help;
 }
 
-/* ---------- Détail d'une plante ouvert depuis En ce moment ---------- */
+/* ---------- Noms cliquables ---------- */
 .nom-action{
-  display:block;width:100%;text-align:left;border:0;background:none;padding:0;
-  font:inherit;color:inherit;cursor:pointer;
+  display:inline;border:0;background:none;padding:0;margin:0;
+  font:inherit;color:inherit;text-align:left;cursor:pointer;
 }
-.nom-action b{font-weight:600}
-.nom-action::after{
-  content:"";display:inline-block;width:5px;height:5px;margin-left:8px;
-  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
-  transform:rotate(45deg) translateY(-2px);opacity:.5;
-}
-.ouverte > .nom-action::after{transform:rotate(-135deg) translateY(-1px);opacity:.9}
+.action .nom-action{display:block}
 .nom-action:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:4px}
 .dit-action{margin:2px 0 0}
-.detail-action{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--filet-clair)}
-.ouverte > .detail-action{display:block}
-
-.bloc-puces{display:flex;flex-wrap:wrap;gap:5px;align-items:flex-start}
-.enveloppe-puce.ouverte{flex:1 1 100%}
+.bloc-puces{display:flex;flex-wrap:wrap;gap:5px}
 .enveloppe-puce .puce{cursor:pointer;border:0;font:inherit}
-.enveloppe-puce .nom-action::after{width:4px;height:4px;margin-left:6px}
+
+/* ---------- Feuille de détail ---------- */
+body.fige{overflow:hidden}
+.voile{
+  position:fixed;inset:0;z-index:40;background:rgba(22,36,30,.42);
+  opacity:0;transition:opacity .2s ease;
+}
+.voile.visible{opacity:1}
+.feuille{
+  position:fixed;left:0;right:0;bottom:0;z-index:41;
+  max-height:86vh;display:flex;flex-direction:column;
+  background:var(--papier-haut);border-radius:18px 18px 0 0;
+  box-shadow:0 -8px 40px rgba(22,36,30,.22);
+  transform:translateY(100%);transition:transform .22s cubic-bezier(.32,.72,0,1);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.feuille.ouverte{transform:translateY(0)}
+.poignee{
+  width:38px;height:4px;border-radius:999px;background:var(--filet);
+  margin:9px auto 4px;flex:none;
+}
+.feuille-tete{
+  display:flex;align-items:baseline;gap:12px;flex:none;
+  padding:6px 18px 10px;border-bottom:1px solid var(--filet-clair);
+}
+.feuille-tete h2{
+  flex:1;min-width:0;font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:19px;font-weight:700;letter-spacing:.02em;
+}
+.feuille-corps{
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 18px 22px;
+}
+.feuille-corps .fiche{display:block}
+@media (min-width:640px){
+  .feuille{left:50%;right:auto;width:560px;transform:translate(-50%,100%);border-radius:18px 18px 0 0}
+  .feuille.ouverte{transform:translate(-50%,0)}
+}
