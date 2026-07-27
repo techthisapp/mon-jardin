@@ -736,20 +736,21 @@ function rendreMaintenant() {
   }
   majFiltresMoment();
 
+  // Toute section se replie et se déploie au clic sur son en-tête, dans les deux vues.
   const carte = (titre, compteur, replieDefaut) => {
+    const ferme = Boolean(replieDefaut);
     const c = document.createElement("div");
     c.className = "carte-tache";
-    c.innerHTML = `<h2>${titre}<span class="nb">${compteur}</span>`
-      + (replieDefaut !== null ? `<button class="lien deplier" type="button" aria-expanded="${!replieDefaut}">${replieDefaut ? "Tout voir" : "Réduire"}</button>` : "")
-      + `</h2><div class="corps-tache${replieDefaut ? " replie" : ""}"></div>`;
-    if (replieDefaut !== null) {
-      const b = c.querySelector(".deplier"), corps = c.querySelector(".corps-tache");
-      b.addEventListener("click", () => {
-        const ferme = corps.classList.toggle("replie");
-        b.textContent = ferme ? "Tout voir" : "Réduire";
-        b.setAttribute("aria-expanded", String(!ferme));
-      });
-    }
+    c.innerHTML = `<h2 class="tete-section" role="button" tabindex="0" aria-expanded="${!ferme}">`
+      + `${titre}<span class="nb">${compteur}</span>`
+      + `<span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5 12 15.5 18 9.5"/></svg></span>`
+      + `</h2><div class="corps-tache${ferme ? " replie" : ""}"></div>`;
+    const h = c.querySelector("h2"), corps = c.querySelector(".corps-tache");
+    const basculer = () => h.setAttribute("aria-expanded", String(!corps.classList.toggle("replie")));
+    h.addEventListener("click", basculer);
+    h.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); basculer(); }
+    });
     return c;
   };
 
@@ -764,7 +765,7 @@ function rendreMaintenant() {
       const ids = [...new Set(paires.filter(x => dedans(x.p)).map(x => x.p.id))];
       if (!ids.length) return;
       const lot = paires.filter(x => dedans(x.p));
-      const c = carte(esc(g.nom), `${ids.length} plantes, ${lot.length} actions`, null);
+      const c = carte(esc(g.nom), `${ids.length} plantes, ${lot.length} actions`, false);
       c.classList.add("carte-espace");
       const corps = c.querySelector(".corps-tache");
       ids.map(id => plantes.find(p => p.id === id))
@@ -791,7 +792,7 @@ function rendreMaintenant() {
     if (!lot.length) return;
     const repliable = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
     const urgence = lot.some(x => etatFenetre(x.p, k) === "derniere");
-    const replie = repliable ? !urgence : null;
+    const replie = repliable && !urgence;
     const c = carte(`<span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`,
                     lot.length, replie);
     const corps = c.querySelector(".corps-tache");
