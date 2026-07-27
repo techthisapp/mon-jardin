@@ -521,23 +521,80 @@ function rendreMaintenant() {
     return;
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
-  let blocs = 0;
+
+  // Une fenêtre qui se termine à la quinzaine en cours ne se représentera pas
+  // avant un an. Une fenêtre qui commence maintenant vient de s'ouvrir.
+  const etatFenetre = (p, k) => {
+    const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
+    if (!seg) return "";
+    if (seg[1] === demi) return "derniere";
+    if (seg[0] === demi) return "ouverture";
+    return "";
+  };
+
+  const marqueurs = p => {
+    const ad = adapt[p.id];
+    let h = "";
+    if (ad && ad.level !== "adapte") {
+      h += `<span class="pastille-niv niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}"></span>`;
+    }
+    if (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite)) {
+      h += `<span class="marque-tox" title="${esc(p.attr.toxicite)}">toxique</span>`;
+    }
+    return h;
+  };
+
+  const blocs = [];
   ORDRE_MAINTENANT.forEach(k => {
     if (!phases[k]) return;
     const lot = mien.filter(p => actif(p, k));
-    if (!lot.length) return;
-    blocs++;
+    if (lot.length) blocs.push({ k, lot });
+  });
+
+  if (!blocs.length) {
+    zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
+    return;
+  }
+
+  const total = blocs.reduce((n, b) => n + b.lot.length, 0);
+  const urgentes = blocs.reduce((n, b) => n + b.lot.filter(p => etatFenetre(p, b.k) === "derniere").length, 0);
+  const bilan = document.createElement("p");
+  bilan.className = "bilan-moment";
+  bilan.innerHTML = `<b>${total}</b> action${total > 1 ? "s" : ""} sur <b>${new Set(blocs.flatMap(b => b.lot.map(p => p.id))).size}</b> plantes`
+    + (urgentes ? ` <span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
+  zone.appendChild(bilan);
+
+  blocs.forEach(({ k, lot }) => {
     const carte = document.createElement("div");
     carte.className = "carte-tache";
+    const long = lot.length > 8;
+
     const corps = k === "floraison"
-      ? `<div class="puces">${lot.map(p => `<span class="puce">${esc(p.nom)}</span>`).join("")}</div>`
-      : lot.map(p => `<div class="action"><b>${esc(p.nom)}</b>${esc(texteAction(p, k))}</div>`).join("");
+      ? `<div class="puces">${lot.map(p => `<span class="puce">${marqueurs(p)}${esc(p.nom)}</span>`).join("")}</div>`
+      : lot.map(p => {
+          const e = etatFenetre(p, k);
+          const drapeau = e === "derniere" ? '<span class="fin-fenetre">dernière quinzaine</span>'
+                        : e === "ouverture" ? '<span class="debut-fenetre">fenêtre ouverte</span>' : "";
+          return `<div class="action${e ? " a-" + e : ""}"><b>${marqueurs(p)}${esc(p.nom)}${drapeau}</b>`
+               + `${esc(texteAction(p, k))}</div>`;
+        }).join("");
+
     carte.innerHTML =
       `<h2><span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
-      + `<span class="nb">${lot.length}</span></h2><div class="corps-tache">${corps}</div>`;
+      + `<span class="nb">${lot.length}</span>`
+      + (long ? '<button class="lien deplier" type="button" aria-expanded="false">Tout voir</button>' : "")
+      + `</h2><div class="corps-tache${long ? " replie" : ""}">${corps}</div>`;
+
+    if (long) {
+      const b = carte.querySelector(".deplier"), c = carte.querySelector(".corps-tache");
+      b.addEventListener("click", () => {
+        const ouvert = c.classList.toggle("replie");
+        b.textContent = ouvert ? "Tout voir" : "Réduire";
+        b.setAttribute("aria-expanded", String(!ouvert));
+      });
+    }
     zone.appendChild(carte);
   });
-  if (!blocs) zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
 }
 
 /* ================== Écran 3 : planning ================== */
