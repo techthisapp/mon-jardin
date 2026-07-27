@@ -526,7 +526,9 @@ function rendreMaintenant() {
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
 
+  // La floraison ne demande aucun geste, elle n'a donc ni urgence ni ouverture.
   const etatFenetre = (p, k) => {
+    if (k === "floraison") return "";
     const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
     if (!seg) return "";
     if (seg[1] === demi) return "derniere";
