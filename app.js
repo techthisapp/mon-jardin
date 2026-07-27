@@ -893,15 +893,13 @@ function rendrePlanning() {
 
   lot.forEach(p => {
     const r = document.createElement("div");
-    r.className = "rangee" + (sel.has(p.id) ? " retenue" : "");
+    // Le liseré ne marque l'appartenance au jardin que si le catalogue entier est affiché.
+    r.className = "rangee" + (sel.has(p.id) && !jardinSeul ? " retenue" : "");
     r.innerHTML =
-      `<button class="nom-plante" aria-expanded="false">${esc(p.nom)}`
+      `<button class="nom-plante">${esc(p.nom)}`
       + `<small>${p.latin ? `<i>${esc(p.latin)}</i>` : esc(p.cat)}</small></button>`
-      + `<div class="piste">${segs(p)}</div>` + ficheHTML(p);
-    r.querySelector(".nom-plante").addEventListener("click", function () {
-      const o = r.classList.toggle("ouverte");
-      this.setAttribute("aria-expanded", String(o));
-    });
+      + `<div class="piste">${segs(p)}</div>`;
+    r.querySelector(".nom-plante").addEventListener("click", () => ouvrirFeuille(p));
     zone.appendChild(r);
   });
 
