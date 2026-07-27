@@ -35,6 +35,8 @@ let espaces = [];
 let aff = new Map();
 let adapt = {};
 let espaceChoisi = null;
+let sourdines = new Map();
+let voirSourdines = false;
 let categories = [];
 let sel = new Set();
 let jardinId = null;
@@ -166,11 +168,14 @@ async function chargerJardin() {
 
 async function chargerContenuJardin() {
   memoriserOuverture(jardinId);
-  const [rp, rz, ra] = await Promise.all([
+  const [rp, rz, ra, rs] = await Promise.all([
     db.from("garden_plants").select("plant_id").eq("garden_id", jardinId),
     db.from("espaces").select("*").eq("garden_id", jardinId).order("position").order("name"),
     db.from("garden_plant_espaces").select("plant_id,espace_id,quantity,notes").eq("garden_id", jardinId),
+    db.from("sourdines").select("*").eq("garden_id", jardinId),
   ]);
+  sourdines = new Map();
+  (rs.data || []).forEach(r => sourdines.set(r.plant_id + "|" + r.phase, r));
   if (rp.error) { info("Sélection illisible : " + rp.error.message, true); return; }
   sel = new Set((rp.data || []).map(r => r.plant_id));
   espaces = rz.data || [];
@@ -357,6 +362,17 @@ function carteItem(p) {
   b.innerHTML = `<span class="rond">${CHECK}</span><span>${marque}${esc(p.nom)}${sousTitre}</span>`;
   b.addEventListener("click", () => basculer(p.id));
   bloc.appendChild(b);
+  const muettes = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|")).length;
+  if (sel.has(p.id) && muettes) {
+    const r = document.createElement("div");
+    r.className = "zones-item";
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "mini-chip chip-sourdine";
+    c.textContent = `${muettes} tâche${muettes > 1 ? "s" : ""} en sourdine, réactiver`;
+    c.addEventListener("click", () => leverToutesSourdines(p));
+    r.appendChild(c);
+    bloc.appendChild(r);
+  }
   if (sel.has(p.id) && espaces.length) {
     const r = document.createElement("div");
     r.className = "espaces-item";
@@ -551,9 +567,13 @@ function rendreMaintenant() {
   const nomAvecMarque = p => `${esc(p.nom)}${losange(p)}`;
 
   const blocs = [];
+  let muettes = 0;
   ORDRE_MAINTENANT.forEach(k => {
     if (!phases[k]) return;
-    const lot = mien.filter(p => actif(p, k));
+    const tout = mien.filter(p => actif(p, k));
+    const audibles = tout.filter(p => !sourdineActive(p, k));
+    muettes += tout.length - audibles.length;
+    const lot = voirSourdines ? tout : audibles;
     if (lot.length) blocs.push({ k, lot });
   });
 
@@ -562,41 +582,58 @@ function rendreMaintenant() {
     return;
   }
 
-  const total = blocs.reduce((n, b) => n + b.lot.length, 0);
+  const total = blocs.reduce((n, b) => n + b.lot.filter(p => !sourdineActive(p, b.k)).length, 0);
   const urgentes = blocs.reduce((n, b) => n + b.lot.filter(p => etatFenetre(p, b.k) === "derniere").length, 0);
   const bilan = document.createElement("p");
   bilan.className = "bilan-moment";
   bilan.innerHTML = `<b>${total}</b> action${total > 1 ? "s" : ""} sur <b>${new Set(blocs.flatMap(b => b.lot.map(p => p.id))).size}</b> plantes`
     + (urgentes ? ` <span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
+  if (muettes || voirSourdines) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lien bascule-sourdine";
+    b.textContent = voirSourdines ? "Masquer les sourdines" : `${muettes} en sourdine, afficher`;
+    b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
+    bilan.appendChild(b);
+  }
   zone.appendChild(bilan);
 
   const brancherDetail = (racine, p) =>
     racine.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(p));
 
-  // Chaque ligne est posée sur une glissière, prête à recevoir un tiroir d'options
-  // révélé par un glissement vers la gauche. Le tiroir reste inactif tant que
-  // OPTIONS_ACTION est vide.
-  const poserRangee = (contenu, p, k) => {
+  const bouton = (classe, libelle, fn) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "opt " + classe; b.textContent = libelle;
+    b.addEventListener("click", e => { e.stopPropagation(); fermerTiroirs(); fn(); });
+    return b;
+  };
+
+  // Glissement à gauche : deux durées de sourdine. À droite : sourdine définitive.
+  const poserRangee = (contenu, p, k, muet) => {
     const rangee = document.createElement("div");
-    rangee.className = "rangee-tache";
+    rangee.className = "rangee-tache" + (muet ? " en-sourdine" : "");
     const glissiere = document.createElement("div");
     glissiere.className = "glissiere";
     glissiere.appendChild(contenu);
-    rangee.appendChild(glissiere);
-    if (OPTIONS_ACTION.length) {
-      const tiroir = document.createElement("div");
-      tiroir.className = "tiroir";
-      OPTIONS_ACTION.forEach(o => {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.className = "opt opt-" + o.cle;
-        b.textContent = o.libelle;
-        b.addEventListener("click", e => { e.stopPropagation(); o.action(p, k); fermerTiroirs(); });
-        tiroir.appendChild(b);
-      });
-      rangee.appendChild(tiroir);
-      brancherGlissement(rangee, glissiere, tiroir);
+
+    let gauche = null, droite = null;
+    if (muet) {
+      gauche = document.createElement("div");
+      gauche.className = "tiroir tiroir-gauche";
+      gauche.appendChild(bouton("opt-lever", "Réactiver", () => leverSourdine(p, k)));
+    } else {
+      gauche = document.createElement("div");
+      gauche.className = "tiroir tiroir-gauche";
+      gauche.appendChild(bouton("opt-quinzaine", "Cette quinzaine", () => mettreEnSourdine(p, k, "quinzaine")));
+      gauche.appendChild(bouton("opt-periode", "Cette période", () => mettreEnSourdine(p, k, "periode", finFenetre(p, k))));
+      droite = document.createElement("div");
+      droite.className = "tiroir tiroir-droite";
+      droite.appendChild(bouton("opt-toujours", "Ne plus afficher", () => mettreEnSourdine(p, k, "toujours")));
     }
+
+    if (droite) rangee.appendChild(droite);
+    rangee.appendChild(glissiere);
+    rangee.appendChild(gauche);
+    brancherGlissement(rangee, glissiere, gauche, droite);
     return rangee;
   };
 
@@ -636,13 +673,17 @@ function rendreMaintenant() {
           const echeance = e === "derniere"
             ? '<span class="echeance urgente">dernière quinzaine</span>'
             : (fin <= 24 ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
+          const muet = Boolean(sourdineActive(p, k));
           const d = document.createElement("button");
           d.type = "button";
-          d.className = "action nom-action" + (e ? " a-" + e : "");
-          d.innerHTML = `<span class="ligne-nom"><b>${nomAvecMarque(p)}</b>${echeance}</span>`
+          d.className = "action nom-action" + (e && !muet ? " a-" + e : "");
+          d.innerHTML = `<span class="ligne-nom"><b>${nomAvecMarque(p)}</b>${muet ? "" : echeance}</span>`
             + `<span class="dit-action">${esc(texteAction(p, k))}</span>`;
-          d.addEventListener("click", () => ouvrirFeuille(p));
-          corps.appendChild(poserRangee(d, p, k));
+          d.addEventListener("click", ev => {
+            if (ev.currentTarget.parentElement.dataset.glisse) return;
+            ouvrirFeuille(p);
+          });
+          corps.appendChild(poserRangee(d, p, k, muet));
         });
     }
 
@@ -1147,58 +1188,115 @@ sur("voile", "click", fermerFeuille);
 sur("fermerFeuille", "click", fermerFeuille);
 document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuille(); });
 
-/* ================== Tiroir d'options par glissement ================== */
+/* ================== Mise en sourdine ================== */
 
-// À remplir quand les options seront définies. Chaque entrée :
-// { cle: "identifiant", libelle: "Texte", action: (plante, tache) => {} }
-const OPTIONS_ACTION = [];
+const cleSourdine = (p, k) => p.id + "|" + k;
+const anneeCourante = () => new Date().getFullYear();
 
-let tiroirOuvert = null;
-
-function fermerTiroirs() {
-  if (!tiroirOuvert) return;
-  tiroirOuvert.style.transform = "";
-  tiroirOuvert.parentElement.classList.remove("tiroir-ouvert");
-  tiroirOuvert = null;
+// Une sourdine de quinzaine tombe au changement de quinzaine, une sourdine de
+// période tient jusqu'à la fin de la fenêtre, une sourdine définitive ne tombe jamais.
+function sourdineActive(p, k) {
+  const r = sourdines.get(cleSourdine(p, k));
+  if (!r) return null;
+  if (r.portee === "toujours") return r;
+  if (r.annee !== anneeCourante()) return null;
+  if (r.portee === "quinzaine") return r.demi === demi ? r : null;
+  if (r.portee === "periode") return demi <= r.fin ? r : null;
+  return null;
 }
 
-function brancherGlissement(rangee, glissiere, tiroir) {
-  let x0 = 0, y0 = 0, dx = 0, actif = false, largeur = 0;
+async function mettreEnSourdine(p, k, portee, fin) {
+  if (!jardinId) return;
+  const ligne = {
+    garden_id: jardinId, plant_id: p.id, phase: k, portee,
+    demi: portee === "quinzaine" ? demi : null,
+    fin: portee === "periode" ? fin : null,
+    annee: portee === "toujours" ? null : anneeCourante(),
+  };
+  sourdines.set(cleSourdine(p, k), ligne);
+  rendreTout();
+  const { error } = await db.from("sourdines").upsert(ligne, { onConflict: "garden_id,plant_id,phase" });
+  if (error) { sourdines.delete(cleSourdine(p, k)); rendreTout(); info("Sourdine non enregistrée : " + error.message, true); }
+}
 
-  glissiere.addEventListener("touchstart", e => {
-    if (tiroirOuvert && tiroirOuvert !== glissiere) fermerTiroirs();
+async function leverSourdine(p, k) {
+  const memo = sourdines.get(cleSourdine(p, k));
+  sourdines.delete(cleSourdine(p, k));
+  rendreTout();
+  const { error } = await db.from("sourdines").delete()
+    .eq("garden_id", jardinId).eq("plant_id", p.id).eq("phase", k);
+  if (error && memo) { sourdines.set(cleSourdine(p, k), memo); rendreTout(); info("Levée refusée : " + error.message, true); }
+}
+
+async function leverToutesSourdines(p) {
+  const cles = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|"));
+  cles.forEach(c => sourdines.delete(c));
+  rendreTout();
+  const { error } = await db.from("sourdines").delete().eq("garden_id", jardinId).eq("plant_id", p.id);
+  if (error) info("Levée refusée : " + error.message, true);
+}
+
+/* ================== Glissement latéral ================== */
+
+let glissiereOuverte = null;
+
+function fermerTiroirs() {
+  if (!glissiereOuverte) return;
+  glissiereOuverte.style.transform = "";
+  glissiereOuverte = null;
+}
+
+// Tolérance volontairement large : le geste est reconnu dès que l'horizontale
+// domine, même de peu, pour rester praticable sur une liste qui défile.
+function brancherGlissement(rangee, glissiere, gauche, droite) {
+  let x0 = 0, y0 = 0, dx = 0, actif = false, verrouVertical = false;
+  const lg = () => gauche ? gauche.offsetWidth : 0;
+  const ld = () => droite ? droite.offsetWidth : 0;
+
+  const debut = e => {
+    if (glissiereOuverte && glissiereOuverte !== glissiere) fermerTiroirs();
     x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
-    dx = 0; actif = false;
-    largeur = tiroir.offsetWidth;
+    dx = 0; actif = false; verrouVertical = false;
     glissiere.style.transition = "none";
-  }, { passive: true });
+  };
 
-  glissiere.addEventListener("touchmove", e => {
-    const t = e.touches[0];
-    const ex = t.clientX - x0, ey = t.clientY - y0;
-    // On n'intercepte le geste qu'une fois l'horizontale clairement dominante.
-    if (!actif && Math.abs(ex) > 12 && Math.abs(ex) > Math.abs(ey) * 1.6) actif = true;
-    if (!actif) return;
-    const base = tiroirOuvert === glissiere ? -largeur : 0;
-    dx = Math.max(-largeur, Math.min(0, base + ex));
+  const bouge = e => {
+    if (verrouVertical) return;
+    const ex = e.touches[0].clientX - x0, ey = e.touches[0].clientY - y0;
+    if (!actif) {
+      if (Math.abs(ey) > 16 && Math.abs(ey) > Math.abs(ex) * 1.5) { verrouVertical = true; return; }
+      if (Math.abs(ex) < 8) return;
+      actif = true;
+      rangee.classList.add("en-glissement");
+    }
+    const base = glissiereOuverte === glissiere ? (dx < 0 ? -lg() : ld()) : 0;
+    dx = Math.max(-lg(), Math.min(ld(), base + ex));
     glissiere.style.transform = `translateX(${dx}px)`;
-  }, { passive: true });
+  };
 
-  glissiere.addEventListener("touchend", () => {
+  const fin = () => {
     glissiere.style.transition = "";
+    rangee.classList.remove("en-glissement");
     if (!actif) return;
-    if (dx < -largeur / 2) {
-      glissiere.style.transform = `translateX(${-largeur}px)`;
-      rangee.classList.add("tiroir-ouvert");
-      tiroirOuvert = glissiere;
+    if (dx < -lg() / 2 && gauche) {
+      glissiere.style.transform = `translateX(${-lg()}px)`; glissiereOuverte = glissiere;
+    } else if (dx > ld() / 2 && droite) {
+      glissiere.style.transform = `translateX(${ld()}px)`; glissiereOuverte = glissiere;
     } else {
       glissiere.style.transform = "";
-      rangee.classList.remove("tiroir-ouvert");
-      if (tiroirOuvert === glissiere) tiroirOuvert = null;
+      if (glissiereOuverte === glissiere) glissiereOuverte = null;
     }
-  });
+    // Un glissement ne doit pas déclencher l'ouverture de la feuille.
+    glissiere.dataset.glisse = "1";
+    setTimeout(() => { delete glissiere.dataset.glisse; }, 320);
+  };
+
+  glissiere.addEventListener("touchstart", debut, { passive: true });
+  glissiere.addEventListener("touchmove", bouge, { passive: true });
+  glissiere.addEventListener("touchend", fin);
+  glissiere.addEventListener("touchcancel", fin);
 }
 
 document.addEventListener("click", e => {
-  if (tiroirOuvert && !tiroirOuvert.parentElement.contains(e.target)) fermerTiroirs();
+  if (glissiereOuverte && !glissiereOuverte.parentElement.contains(e.target)) fermerTiroirs();
 }, true);
