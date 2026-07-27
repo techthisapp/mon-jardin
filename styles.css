@@ -820,9 +820,6 @@ body.fige{overflow:hidden}
 .carte-espace .corps-tache{padding:6px 10px 12px}
 .carte-espace h2 .nb{font-size:11px}
 
-/* ---------- Bilan sur deux lignes au maximum ---------- */
-.bilan-moment{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:12px}
-.bilan-texte{flex:1 1 100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 
 /* ---------- En-tête d'espace ---------- */
 .carte-espace h2 .nb{
@@ -834,18 +831,37 @@ body.fige{overflow:hidden}
 .regle-annee{margin-bottom:12px}
 .ligne-filtre{margin-bottom:0}
 
-/* ---------- Barre de filtres de l'écran En ce moment ---------- */
-.filtres-moment{margin-bottom:14px}
-.filtres-moment .barre-filtres{align-items:flex-start;gap:10px}
-.filtres-moment #bilanMoment{flex:1;min-width:0}
-.filtres-moment .bilan-moment{margin-bottom:0}
-.filtres-moment #corpsFiltresM{
-  display:flex;flex-direction:column;gap:10px;
-  margin-top:10px;padding-top:10px;border-top:1px solid var(--filet-clair);
-}
-#basculeFiltresM{flex:none;align-self:flex-start}
-#basculeFiltresM[aria-pressed="true"]{border-color:var(--terre);color:var(--terre)}
 
 /* La règle des mois se resserre, elle situe sans devoir être lue */
 .bandeau-date{margin-bottom:12px}
 .regle-annee{margin-bottom:0}
+
+/* ---------- Barre de commandes de l'écran En ce moment ---------- */
+.filtres-moment{margin-bottom:10px;padding:8px 10px}
+.filtres-moment .barre-filtres{align-items:center;gap:8px;flex-wrap:nowrap}
+#basculeFiltresM{flex:none;white-space:nowrap}
+#basculeFiltresM[aria-pressed="true"]{border-color:var(--terre);color:var(--terre)}
+#basculeVue{flex:none}
+#zoneMasquees{margin-left:auto;flex:none;display:flex}
+.filtres-moment #corpsFiltresM{
+  display:flex;flex-direction:column;gap:10px;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--filet-clair);
+}
+
+.bascule-sourdine{
+  display:inline-flex;align-items:center;gap:5px;cursor:pointer;
+  border:1px solid var(--filet);border-radius:999px;background:#fff;
+  padding:6px 10px;color:var(--encre-doux);
+}
+.bascule-sourdine svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
+.bascule-sourdine .nb{font-family:"IBM Plex Mono",monospace;font-size:11px}
+.bascule-sourdine.active{background:var(--encre);border-color:var(--encre);color:#EFEFE8}
+
+/* Le décompte reprend sa pleine largeur sous la barre */
+.bilan-moment{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;
+  margin:0 0 12px;padding:0 2px;
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--encre-doux);
+}
+.bilan-moment b{color:var(--encre);font-weight:600}
+.bilan-moment:empty{display:none}
