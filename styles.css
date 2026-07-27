@@ -865,3 +865,21 @@ body.fige{overflow:hidden}
 }
 .bilan-moment b{color:var(--encre);font-weight:600}
 .bilan-moment:empty{display:none}
+
+/* ---------- Frise : voies empilées et colonne de noms adaptative ---------- */
+.voie{height:8px;margin-bottom:3px}
+.voie:last-child{margin-bottom:0}
+.seg{
+  height:8px;border-radius:4px;
+  box-shadow:0 0 0 1.5px var(--papier-haut);
+}
+.rangee{align-items:center}
+
+@media (max-width:520px){
+  :root{--col-nom:132px}
+  .nom-plante{font-size:13px;line-height:1.25}
+  .nom-plante small{font-size:10.5px}
+}
+@media (max-width:380px){
+  :root{--col-nom:112px}
+}
