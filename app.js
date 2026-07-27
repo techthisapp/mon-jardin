@@ -92,6 +92,7 @@ async function lireCatalogue() {
     id: p.id, slug: p.slug, nom: p.name, cat: p.category, typo: p.typology,
     espacement: p.spacing, prof: p.depth, assoc: p.companions, conseil: p.advice,
     attr: p.attributes || {}, phases: p.phases || {}, guide: p.guide || {},
+    latin: p.latin || "", famille: p.family || "",
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   try {
     localStorage.setItem(CACHE, JSON.stringify({
@@ -333,7 +334,10 @@ document.querySelectorAll(".segment").forEach(s => s.addEventListener("click", (
 function filtrerSel() {
   const q = $("rech").value.trim().toLowerCase();
   return plantes.filter(p =>
-    etatTypo[p.typo] && etatCat[p.cat] && (!q || p.nom.toLowerCase().includes(q)));
+    etatTypo[p.typo] && etatCat[p.cat]
+    && (!q || p.nom.toLowerCase().includes(q)
+           || p.latin.toLowerCase().includes(q)
+           || p.famille.toLowerCase().includes(q)));
 }
 
 function carteItem(p) {
@@ -610,6 +614,7 @@ function ficheHTML(p) {
     : "";
   const ligne = (t, v) => v ? `<dt>${t}</dt><dd>${esc(v)}</dd>` : "";
   return `<div class="fiche">
+    ${p.latin ? `<p class="binome"><i>${esc(p.latin)}</i>${p.famille ? `<span class="famille">${esc(p.famille)}</span>` : ""}</p>` : ""}
     <div class="tags">${tagClim}${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
     ${ad && ad.note ? `<p class="note-clim">${esc(ad.note)}</p>` : ""}
     <dl class="carac">
@@ -644,7 +649,8 @@ function rendrePlanning() {
     const r = document.createElement("div");
     r.className = "rangee" + (sel.has(p.id) ? " retenue" : "");
     r.innerHTML =
-      `<button class="nom-plante" aria-expanded="false">${esc(p.nom)}<small>${esc(p.cat)}</small></button>`
+      `<button class="nom-plante" aria-expanded="false">${esc(p.nom)}`
+      + `<small>${p.latin ? `<i>${esc(p.latin)}</i>` : esc(p.cat)}</small></button>`
       + `<div class="piste">${segs(p)}</div>` + ficheHTML(p);
     r.querySelector(".nom-plante").addEventListener("click", function () {
       const o = r.classList.toggle("ouverte");
