@@ -37,6 +37,9 @@ let adapt = {};
 let espaceChoisi = null;
 let sourdines = new Map();
 let voirSourdines = false;
+let vueMoment = (() => {
+  try { return localStorage.getItem("monjardin.vue") || "tache"; } catch (e) { return "tache"; }
+})();
 let categories = [];
 let sel = new Set();
 let jardinId = null;
@@ -542,7 +545,14 @@ function rendreMaintenant() {
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
 
-  // La floraison ne demande aucun geste, elle n'a donc ni urgence ni ouverture.
+  const MOIS_LONGS = ["janvier","février","mars","avril","mai","juin",
+    "juillet","août","septembre","octobre","novembre","décembre"];
+  const bornePrint = h => (h % 2 ? "mi-" : "fin ") + MOIS_LONGS[Math.ceil(h / 2) - 1];
+
+  const finFenetre = (p, k) => {
+    const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
+    return seg ? seg[1] : 99;
+  };
   const etatFenetre = (p, k) => {
     if (k === "floraison") return "";
     const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
@@ -551,54 +561,9 @@ function rendreMaintenant() {
     if (seg[0] === demi) return "ouverture";
     return "";
   };
-
-  const MOIS_LONGS = ["janvier","février","mars","avril","mai","juin",
-    "juillet","août","septembre","octobre","novembre","décembre"];
-  // Un demi-mois impair se termine au milieu du mois, un pair à sa fin.
-  const bornePrint = h => (h % 2 ? "mi-" : "fin ") + MOIS_LONGS[Math.ceil(h / 2) - 1];
-
-  const finFenetre = (p, k) => {
-    const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
-    return seg ? seg[1] : 99;
-  };
-
   const losange = p => (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite))
     ? `<span class="losange-tox" title="${esc(p.attr.toxicite)}" aria-label="Plante toxique">&#9670;</span>` : "";
   const nomAvecMarque = p => `${esc(p.nom)}${losange(p)}`;
-
-  const blocs = [];
-  let muettes = 0;
-  ORDRE_MAINTENANT.forEach(k => {
-    if (!phases[k]) return;
-    const tout = mien.filter(p => actif(p, k));
-    const audibles = tout.filter(p => !sourdineActive(p, k));
-    muettes += tout.length - audibles.length;
-    const lot = voirSourdines ? tout : audibles;
-    if (lot.length) blocs.push({ k, lot });
-  });
-
-  if (!blocs.length) {
-    zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
-    return;
-  }
-
-  const total = blocs.reduce((n, b) => n + b.lot.filter(p => !sourdineActive(p, b.k)).length, 0);
-  const urgentes = blocs.reduce((n, b) => n + b.lot.filter(p => etatFenetre(p, b.k) === "derniere").length, 0);
-  const bilan = document.createElement("p");
-  bilan.className = "bilan-moment";
-  bilan.innerHTML = `<b>${total}</b> action${total > 1 ? "s" : ""} sur <b>${new Set(blocs.flatMap(b => b.lot.map(p => p.id))).size}</b> plantes`
-    + (urgentes ? ` <span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
-  if (muettes || voirSourdines) {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "lien bascule-sourdine";
-    b.innerHTML = OEIL_BARRE + `<span>${voirSourdines ? "Cacher les masquées" : `${muettes} masquée${muettes > 1 ? "s" : ""}, afficher`}</span>`;
-    b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
-    bilan.appendChild(b);
-  }
-  zone.appendChild(bilan);
-
-  const brancherDetail = (racine, p) =>
-    racine.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(p));
 
   const bouton = (classe, libelle, fn, picto) => {
     const b = document.createElement("button");
@@ -608,14 +573,12 @@ function rendreMaintenant() {
     return b;
   };
 
-  // Glissement à gauche : deux durées de sourdine. À droite : sourdine définitive.
   const poserRangee = (contenu, p, k, muet) => {
     const rangee = document.createElement("div");
     rangee.className = "rangee-tache" + (muet ? " en-sourdine" : "");
     const glissiere = document.createElement("div");
     glissiere.className = "glissiere";
     glissiere.appendChild(contenu);
-
     let gauche = null, droite = null;
     if (muet) {
       gauche = document.createElement("div");
@@ -630,7 +593,6 @@ function rendreMaintenant() {
       droite.className = "tiroir tiroir-droite";
       droite.appendChild(bouton("opt-toujours", "Ne plus afficher", () => mettreEnSourdine(p, k, "toujours"), OEIL_BARRE));
     }
-
     if (droite) rangee.appendChild(droite);
     rangee.appendChild(glissiere);
     rangee.appendChild(gauche);
@@ -638,65 +600,143 @@ function rendreMaintenant() {
     return rangee;
   };
 
-  blocs.forEach(({ k, lot }) => {
-    const carte = document.createElement("div");
-    carte.className = "carte-tache";
-    const repliable = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
-    // Un bloc replié se déplie de lui-même s'il contient une fenêtre qui se ferme,
-    // sinon l'urgence serait comptée en tête sans être visible.
-    const urgence = lot.some(p => etatFenetre(p, k) === "derniere");
-    const replie = repliable && !urgence;
+  // Une ligne d'action, en tête soit le nom de la plante, soit le nom de la tâche.
+  const ligneAction = (p, k, mode) => {
+    const muet = Boolean(sourdineActive(p, k));
+    const e = etatFenetre(p, k);
+    const fin = finFenetre(p, k);
+    const echeance = e === "derniere"
+      ? '<span class="echeance urgente">dernière quinzaine</span>'
+      : (fin <= 24 && !muet ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
+    const tete = mode === "espace"
+      ? `<span class="pt" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
+      : nomAvecMarque(p);
+    const d = document.createElement("button");
+    d.type = "button";
+    d.className = "action nom-action" + (e && !muet ? " a-" + e : "");
+    d.innerHTML = `<span class="ligne-nom"><b>${tete}</b>${echeance}</span>`
+      + `<span class="dit-action">${esc(texteAction(p, k))}</span>`;
+    d.addEventListener("click", ev => {
+      if (ev.currentTarget.parentElement.dataset.glisse) return;
+      ouvrirFeuille(p);
+    });
+    return poserRangee(d, p, k, muet);
+  };
 
-    carte.innerHTML =
-      `<h2><span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
-      + `<span class="nb">${lot.length}</span>`
-      + (repliable ? `<button class="lien deplier" type="button" aria-expanded="${!replie}">${replie ? "Tout voir" : "Réduire"}</button>` : "")
-      + `</h2><div class="corps-tache${replie ? " replie" : ""}"></div>`;
+  // Toutes les actions du moment, filtrées des masquées.
+  const paires = [];
+  let muettes = 0;
+  ORDRE_MAINTENANT.forEach(k => {
+    if (!phases[k]) return;
+    mien.filter(p => actif(p, k)).forEach(p => {
+      const muet = Boolean(sourdineActive(p, k));
+      if (muet) muettes++;
+      if (!muet || voirSourdines) paires.push({ p, k, muet });
+    });
+  });
 
-    const corps = carte.querySelector(".corps-tache");
+  if (!paires.length) {
+    zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
+    return;
+  }
 
-    if (k === "floraison") {
-      corps.classList.add("bloc-puces");
-      lot.forEach(p => {
-        const d = document.createElement("div");
-        d.className = "enveloppe-puce";
-        d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(p)}</button>`;
-        brancherDetail(d, p);
-        corps.appendChild(d);
-      });
-    } else {
-      // Les échéances les plus proches remontent en tête du bloc.
-      lot.slice()
-        .sort((a, b) => finFenetre(a, k) - finFenetre(b, k) || a.nom.localeCompare(b.nom, "fr"))
-        .forEach(p => {
-          const e = etatFenetre(p, k);
-          const fin = finFenetre(p, k);
-          const echeance = e === "derniere"
-            ? '<span class="echeance urgente">dernière quinzaine</span>'
-            : (fin <= 24 ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
-          const muet = Boolean(sourdineActive(p, k));
-          const d = document.createElement("button");
-          d.type = "button";
-          d.className = "action nom-action" + (e && !muet ? " a-" + e : "");
-          d.innerHTML = `<span class="ligne-nom"><b>${nomAvecMarque(p)}</b>${muet ? "" : echeance}</span>`
-            + `<span class="dit-action">${esc(texteAction(p, k))}</span>`;
-          d.addEventListener("click", ev => {
-            if (ev.currentTarget.parentElement.dataset.glisse) return;
-            ouvrirFeuille(p);
-          });
-          corps.appendChild(poserRangee(d, p, k, muet));
-        });
-    }
+  const audibles = paires.filter(x => !x.muet);
+  const urgentes = audibles.filter(x => etatFenetre(x.p, x.k) === "derniere").length;
+  const bilan = document.createElement("div");
+  bilan.className = "bilan-moment";
+  bilan.innerHTML = `<span><b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
+    + `<b>${new Set(audibles.map(x => x.p.id)).size}</b> plantes</span>`
+    + (urgentes ? `<span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
 
-    if (repliable) {
-      const b = carte.querySelector(".deplier");
+  const bascule = document.createElement("div");
+  bascule.className = "bascule-vue";
+  [["tache", "Par tâche"], ["espace", "Par espace"]].forEach(([v, lib]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "vue" + (vueMoment === v ? " active" : "");
+    b.textContent = lib;
+    b.addEventListener("click", () => {
+      vueMoment = v;
+      try { localStorage.setItem("monjardin.vue", v); } catch (err) { /* stockage indisponible */ }
+      rendreMaintenant();
+    });
+    bascule.appendChild(b);
+  });
+  bilan.appendChild(bascule);
+
+  if (muettes || voirSourdines) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lien bascule-sourdine";
+    b.innerHTML = OEIL_BARRE + `<span>${voirSourdines ? "Cacher les masquées" : `${muettes} masquée${muettes > 1 ? "s" : ""}, afficher`}</span>`;
+    b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
+    bilan.appendChild(b);
+  }
+  zone.appendChild(bilan);
+
+  const carte = (titre, compteur, replieDefaut) => {
+    const c = document.createElement("div");
+    c.className = "carte-tache";
+    c.innerHTML = `<h2>${titre}<span class="nb">${compteur}</span>`
+      + (replieDefaut !== null ? `<button class="lien deplier" type="button" aria-expanded="${!replieDefaut}">${replieDefaut ? "Tout voir" : "Réduire"}</button>` : "")
+      + `</h2><div class="corps-tache${replieDefaut ? " replie" : ""}"></div>`;
+    if (replieDefaut !== null) {
+      const b = c.querySelector(".deplier"), corps = c.querySelector(".corps-tache");
       b.addEventListener("click", () => {
         const ferme = corps.classList.toggle("replie");
         b.textContent = ferme ? "Tout voir" : "Réduire";
         b.setAttribute("aria-expanded", String(!ferme));
       });
     }
-    zone.appendChild(carte);
+    return c;
+  };
+
+  if (vueMoment === "espace") {
+    const groupes = espaces.map(z => ({ cle: z.id, nom: z.name }))
+      .concat([{ cle: "0", nom: "Non classées" }]);
+    groupes.forEach(g => {
+      const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : espacesDe(p.id).indexOf(g.cle) !== -1;
+      const ids = [...new Set(paires.filter(x => dedans(x.p)).map(x => x.p.id))];
+      if (!ids.length) return;
+      const lot = paires.filter(x => dedans(x.p));
+      const c = carte(esc(g.nom), lot.length, null);
+      const corps = c.querySelector(".corps-tache");
+      ids.map(id => plantes.find(p => p.id === id))
+        .sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
+        .forEach(p => {
+          const t = document.createElement("p");
+          t.className = "tete-plante";
+          t.innerHTML = `<b>${nomAvecMarque(p)}</b>`;
+          corps.appendChild(t);
+          lot.filter(x => x.p.id === p.id).forEach(x => corps.appendChild(ligneAction(p, x.k, "espace")));
+        });
+      zone.appendChild(c);
+    });
+    return;
+  }
+
+  ORDRE_MAINTENANT.forEach(k => {
+    const lot = paires.filter(x => x.k === k);
+    if (!lot.length) return;
+    const repliable = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
+    const urgence = lot.some(x => etatFenetre(x.p, k) === "derniere");
+    const replie = repliable ? !urgence : null;
+    const c = carte(`<span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`,
+                    lot.length, replie);
+    const corps = c.querySelector(".corps-tache");
+    if (k === "floraison") {
+      corps.classList.add("bloc-puces");
+      lot.forEach(x => {
+        const d = document.createElement("div");
+        d.className = "enveloppe-puce";
+        d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(x.p)}</button>`;
+        d.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(x.p));
+        corps.appendChild(d);
+      });
+    } else {
+      lot.slice()
+        .sort((a, b) => finFenetre(a.p, k) - finFenetre(b.p, k) || a.p.nom.localeCompare(b.p.nom, "fr"))
+        .forEach(x => corps.appendChild(ligneAction(x.p, k, "tache")));
+    }
+    zone.appendChild(c);
   });
 }
 
