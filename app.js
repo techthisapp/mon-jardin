@@ -536,6 +536,16 @@ function rendreMaintenant() {
     return "";
   };
 
+  const MOIS_LONGS = ["janvier","février","mars","avril","mai","juin",
+    "juillet","août","septembre","octobre","novembre","décembre"];
+  // Un demi-mois impair se termine au milieu du mois, un pair à sa fin.
+  const bornePrint = h => (h % 2 ? "mi-" : "fin ") + MOIS_LONGS[Math.ceil(h / 2) - 1];
+
+  const finFenetre = (p, k) => {
+    const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
+    return seg ? seg[1] : 99;
+  };
+
   const losange = p => (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite))
     ? `<span class="losange-tox" title="${esc(p.attr.toxicite)}" aria-label="Plante toxique">&#9670;</span>` : "";
   const nomAvecMarque = p => `${esc(p.nom)}${losange(p)}`;
@@ -590,17 +600,22 @@ function rendreMaintenant() {
         corps.appendChild(d);
       });
     } else {
-      lot.forEach(p => {
-        const e = etatFenetre(p, k);
-        const drapeau = e === "derniere" ? '<span class="fin-fenetre">dernière quinzaine</span>'
-                      : e === "ouverture" ? '<span class="debut-fenetre">fenêtre ouverte</span>' : "";
-        const d = document.createElement("div");
-        d.className = "action" + (e ? " a-" + e : "");
-        d.innerHTML = `<button class="nom-action"><b>${nomAvecMarque(p)}</b>${drapeau}</button>`
-          + `<p class="dit-action">${esc(texteAction(p, k))}</p>`;
-        brancherDetail(d, p);
-        corps.appendChild(d);
-      });
+      // Les échéances les plus proches remontent en tête du bloc.
+      lot.slice()
+        .sort((a, b) => finFenetre(a, k) - finFenetre(b, k) || a.nom.localeCompare(b.nom, "fr"))
+        .forEach(p => {
+          const e = etatFenetre(p, k);
+          const fin = finFenetre(p, k);
+          const echeance = e === "derniere"
+            ? '<span class="echeance urgente">dernière quinzaine</span>'
+            : (fin <= 24 ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
+          const d = document.createElement("div");
+          d.className = "action" + (e ? " a-" + e : "");
+          d.innerHTML = `<button class="nom-action"><b>${nomAvecMarque(p)}</b>${echeance}</button>`
+            + `<p class="dit-action">${esc(texteAction(p, k))}</p>`;
+          brancherDetail(d, p);
+          corps.appendChild(d);
+        });
     }
 
     if (repliable) {
