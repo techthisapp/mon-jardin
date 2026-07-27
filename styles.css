@@ -777,7 +777,7 @@ body.fige{overflow:hidden}
 /* ---------- Bascule de vue et regroupement par espace ---------- */
 .bilan-moment{align-items:center}
 .bascule-vue{
-  display:inline-flex;margin-left:auto;
+  display:inline-flex;
   border:1px solid var(--filet);border-radius:999px;overflow:hidden;background:#fff;
 }
 .bascule-vue .vue{
@@ -785,7 +785,7 @@ body.fige{overflow:hidden}
   font:600 11.5px/1 "IBM Plex Sans",sans-serif;letter-spacing:.02em;color:var(--encre-doux);
 }
 .bascule-vue .vue.active{background:var(--encre);color:#EFEFE8}
-.bascule-sourdine{flex:0 0 100%;margin-left:0;justify-content:flex-end}
+.bascule-sourdine{margin-left:auto}
 
 /* Chaque plante forme un groupe visuel autonome dans la vue par espace. */
 .plante-groupe{
@@ -794,19 +794,20 @@ body.fige{overflow:hidden}
 }
 .plante-groupe:first-child{margin-top:2px}
 .tete-plante{
-  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
   width:100%;padding:9px 12px;border:0;cursor:pointer;text-align:left;
-  background:var(--panneau);
+  background:var(--panneau);color:var(--encre);font:inherit;
 }
 .tete-plante b{
   font-family:"IBM Plex Sans Condensed",sans-serif;
   font-size:14px;font-weight:700;letter-spacing:.03em;
 }
-.tete-plante .voir-fiche{
-  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
-  color:var(--encre-doux);text-transform:uppercase;
+.tete-plante .voir-fiche{flex:none;display:flex;color:var(--encre-doux);opacity:.7}
+.tete-plante .voir-fiche svg{
+  width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
 }
-.plante-groupe .rangee-tache{padding:0 12px}
+.plante-groupe .glissiere{padding:0 12px}
 .plante-groupe .rangee-tache + .rangee-tache{border-top:1px solid var(--filet-clair)}
 .plante-groupe .glissiere{background:var(--papier-haut)}
 .ligne-nom .pt{
@@ -818,3 +819,17 @@ body.fige{overflow:hidden}
 .glissiere > .action.sans-texte{min-height:46px;padding-block:11px}
 .carte-espace .corps-tache{padding:6px 10px 12px}
 .carte-espace h2 .nb{font-size:11px}
+
+/* ---------- Bilan sur deux lignes au maximum ---------- */
+.bilan-moment{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:12px}
+.bilan-texte{flex:1 1 100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ---------- En-tête d'espace ---------- */
+.carte-espace h2 .nb{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.02em;
+  text-transform:none;color:var(--encre-doux);
+}
+
+/* ---------- Densité de l'écran ---------- */
+.regle-annee{margin-bottom:12px}
+.ligne-filtre{margin-bottom:0}
