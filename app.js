@@ -365,10 +365,11 @@ function carteItem(p) {
   b.type = "button"; b.className = "item";
   b.setAttribute("aria-pressed", String(sel.has(p.id)));
   const ad = adapt[p.id];
+  // Un niveau d'adaptation s'écrit, une couleur seule n'est pas lisible.
   const marque = ad && ad.level !== "adapte"
-    ? `<span class="pastille-niv niv-${ad.level}" title="${esc(NIVEAUX[ad.level].long)}"></span>` : "";
+    ? `<span class="niv-mini niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}">${esc(NIVEAUX[ad.level].court)}</span>` : "";
   const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
-  b.innerHTML = `<span class="rond">${CHECK}</span><span>${marque}${esc(p.nom)}${sousTitre}</span>`;
+  b.innerHTML = `<span class="rond">${CHECK}</span><span>${esc(p.nom)}${marque}${sousTitre}</span>`;
   b.addEventListener("click", () => basculer(p.id));
   bloc.appendChild(b);
   const muettes = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|")).length;
@@ -522,10 +523,10 @@ function segsDe(p, k) {
 }
 
 const NIVEAUX = {
-  adapte:      { court: "Adaptée",  long: "Adaptée à ce climat" },
-  protection:  { court: "Protéger", long: "Cultivable avec précautions" },
-  abri:        { court: "Abri",     long: "Exige un abri ou une rentrée hivernale" },
-  deconseille: { court: "Déconseillée", long: "Déconseillée sous ce climat" },
+  adapte:      { court: "Adaptée",       long: "Adaptée à ce climat" },
+  protection:  { court: "à protéger",    long: "Cultivable avec précautions sous ce climat" },
+  abri:        { court: "abri l'hiver",  long: "Exige un abri ou une rentrée hivernale" },
+  deconseille: { court: "déconseillée",  long: "Déconseillée sous ce climat" },
 };
 
 function espacesDe(id) { return (aff.get(id) || []).map(r => r.espace_id); }
