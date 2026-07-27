@@ -703,8 +703,11 @@ function rendreMaintenant() {
   };
 
   if (vueMoment === "espace") {
-    const groupes = espaces.map(z => ({ cle: z.id, nom: z.name }))
+    // Un espace filtré ne doit afficher que lui, même si les plantes retenues
+    // appartiennent par ailleurs à d'autres espaces.
+    const tous = espaces.map(z => ({ cle: z.id, nom: z.name }))
       .concat([{ cle: "0", nom: "Non classées" }]);
+    const groupes = espaceChoisi === null ? tous : tous.filter(g => g.cle === espaceChoisi);
     groupes.forEach(g => {
       const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : espacesDe(p.id).indexOf(g.cle) !== -1;
       const ids = [...new Set(paires.filter(x => dedans(x.p)).map(x => x.p.id))];
