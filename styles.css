@@ -543,11 +543,8 @@ main{
 }
 
 .carte-tache h2 .deplier{margin-left:auto;font-size:12px}
-.corps-tache.replie{max-height:232px;overflow:hidden;position:relative}
-.corps-tache.replie::after{
-  content:"";position:absolute;left:0;right:0;bottom:0;height:56px;
-  background:linear-gradient(to bottom,rgba(251,250,247,0),var(--papier-haut));
-}
+/* Un bloc réduit ne montre plus rien, seul son en-tête et son compteur subsistent. */
+.corps-tache.replie{display:none}
 
 .action.a-derniere{border-left:3px solid #C0566B;padding-left:9px}
 .action.a-ouverture{border-left:3px solid var(--terre);padding-left:9px}
