@@ -276,10 +276,8 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
   font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--encre-doux);
 }
 .rangee.retenue .nom-plante{font-weight:700}
-.rangee.retenue .nom-plante::before{
-  content:"";position:absolute;left:0;width:3px;height:100%;background:var(--terre);
-}
-.rangee.retenue{position:relative}
+/* Liseré continu sur toute la hauteur, quelle que soit le nombre de voies. */
+.rangee.retenue{position:relative;box-shadow:inset 3px 0 0 var(--terre)}
 .piste{
   position:relative;padding:7px 0;display:flex;flex-direction:column;justify-content:center;gap:3px;
   min-height:36px;
@@ -867,13 +865,11 @@ body.fige{overflow:hidden}
 .bilan-moment:empty{display:none}
 
 /* ---------- Frise : voies empilées et colonne de noms adaptative ---------- */
-.voie{height:8px;margin-bottom:3px}
-.voie:last-child{margin-bottom:0}
+.voie{height:8px}
 .seg{
   height:8px;border-radius:4px;
   box-shadow:0 0 0 1.5px var(--papier-haut);
 }
-.rangee{align-items:center}
 
 @media (max-width:520px){
   :root{--col-nom:132px}
@@ -883,3 +879,6 @@ body.fige{overflow:hidden}
 @media (max-width:380px){
   :root{--col-nom:112px}
 }
+
+/* L'en-tête collant doit annoncer que le contenu passe dessous */
+.entete-mois{box-shadow:0 3px 10px rgba(22,36,30,.22)}
