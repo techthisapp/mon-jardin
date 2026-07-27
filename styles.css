@@ -447,13 +447,15 @@ main{
 
 /* ================= Refonte de l'en-tête et des réglages ================= */
 
-.tete-corps{padding-top:18px;padding-bottom:2px}
-.tete-haut{display:flex;align-items:center;gap:13px}
-.marque{flex:none;width:36px;height:36px;color:#EFEFE8}
+.tete-corps{padding-top:16px;padding-bottom:14px}
+.tete-haut{display:flex;align-items:center;gap:14px}
+.tete-textes{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+/* La marque occupe toute la hauteur du bandeau, titre et climat compris. */
+.marque{flex:none;width:46px;height:46px;color:#EFEFE8;align-self:center}
 .marque svg{display:block;width:100%;height:100%}
 .tete h1{
-  flex:1;min-width:0;font-size:21px;letter-spacing:.06em;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;font-size:21px;letter-spacing:.06em;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;line-height:1.05;
 }
 .bouton-compte{
   flex:none;width:38px;height:38px;border-radius:50%;cursor:pointer;
@@ -469,7 +471,7 @@ main{
 .bouton-compte:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
 
 .puce-climat{
-  display:inline-block;margin:10px 0 4px 49px;
+  display:inline-block;margin:0;
   border:1px solid rgba(239,239,232,.26);background:none;color:#EFEFE8;
   font:400 11px/1 "IBM Plex Mono",monospace;letter-spacing:.02em;
   padding:6px 11px;border-radius:999px;cursor:pointer;opacity:.78;
