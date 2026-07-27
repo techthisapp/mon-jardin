@@ -45,7 +45,7 @@ let sel = new Set();
 let jardinId = null;
 let session = null;
 let tri = "categorie";
-let jardinSeul = false;
+let jardinSeul = true;   // le jardin de la personne prime sur le catalogue
 let moisChoisi = null;
 
 const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Mes plantes
@@ -803,24 +803,34 @@ function dansMois(p) {
 }
 
 function segs(p) {
-  let h = "";
-  // Un mois sélectionné ne conserve que les périodes qui le recouvrent.
+  // Les périodes sont empilées sur le minimum de voies possible : une voie accueille
+  // plusieurs tâches tant qu'elles ne se chevauchent pas. Une plante à dix tâches
+  // tient ainsi sur deux ou trois lignes au lieu de dix.
   const h1 = moisChoisi === null ? 0 : moisChoisi * 2 + 1;
   const h2 = moisChoisi === null ? 0 : moisChoisi * 2 + 2;
+  const items = [];
   ORDRE.forEach(k => {
-    let seg = segsDe(p, k);
+    const seg = segsDe(p, k);
     if (!seg || !etatPhase[k] || !phases[k]) return;
-    if (moisChoisi !== null) {
-      seg = seg.filter(v => v[0] <= h2 && v[1] >= h1);
-      if (!seg.length) return;
-    }
-    const v = seg.map(s => {
-      const g = (s[0] - 1) / 24 * 100, w = (s[1] - s[0] + 1) / 24 * 100;
-      return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[k].color}" title="${esc(phases[k].label)}"></span>`;
-    }).join("");
-    h += `<div class="voie">${v}</div>`;
+    seg.forEach(v => {
+      if (moisChoisi !== null && !(v[0] <= h2 && v[1] >= h1)) return;
+      items.push({ k, s: v[0], e: v[1] });
+    });
   });
-  return h || '<div class="voie"></div>';
+  if (!items.length) return '<div class="voie"></div>';
+
+  items.sort((a, b) => a.s - b.s || a.e - b.e);
+  const voies = [];
+  items.forEach(it => {
+    let v = voies.find(L => L[L.length - 1].e < it.s);
+    if (!v) { v = []; voies.push(v); }
+    v.push(it);
+  });
+
+  return voies.map(L => `<div class="voie">` + L.map(it => {
+    const g = (it.s - 1) / 24 * 100, w = (it.e - it.s + 1) / 24 * 100;
+    return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[it.k].color}" title="${esc(phases[it.k].label)}"></span>`;
+  }).join("") + `</div>`).join("");
 }
 
 function ficheHTML(p) {
