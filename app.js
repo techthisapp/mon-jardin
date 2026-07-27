@@ -3,10 +3,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille", "multiplication"];
+const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille", "multiplication", "fertilisation", "protection"];
 // L'écran En ce moment suit l'ordre du geste au jardin : ce qu'on observe,
 // puis ce qu'on taille, ce qu'on met en terre, ce qu'on reproduit, ce qu'on récolte.
-const ORDRE_MAINTENANT = ["floraison", "taille", "abri", "terre", "plant", "multiplication", "recolte"];
+const ORDRE_MAINTENANT = ["floraison", "taille", "abri", "terre", "plant", "multiplication", "recolte", "fertilisation", "protection"];
 const ORDRE_TYPO = ["Légumes", "Fruits", "Aromatiques", "Ornement"];
 const COUL_TYPO = { "Légumes":"#4C8C3F", "Fruits":"#A23E4E", "Aromatiques":"#3E7C6B", "Ornement":"#B0559A" };
 // Ordre de lecture des catégories : par typologie, puis du plus courant au plus rare.
