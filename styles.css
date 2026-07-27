@@ -886,10 +886,56 @@ body.fige{overflow:hidden}
 /* Filet d'ouverture de janvier, absent du dégradé qui ne trace qu'en fin de mois */
 .piste{box-shadow:inset 1px 0 0 var(--filet-clair)}
 
-/* ---------- Niveau d'adaptation écrit plutôt que coloré ---------- */
-.niv-mini{
-  display:inline-block;margin-left:7px;padding:1px 6px;border-radius:4px;
-  font-family:"IBM Plex Sans",sans-serif;font-size:10px;font-weight:600;
-  letter-spacing:.03em;vertical-align:middle;white-space:nowrap;
+
+
+/* ---------- Jauge d'adaptation au climat ---------- */
+.jauge{
+  display:inline-flex;align-items:flex-end;gap:2px;height:14px;flex:none;
+  margin-left:8px;
 }
-.item[aria-pressed="true"] .niv-mini{font-weight:600}
+.jauge .cran{
+  display:block;width:3.5px;border-radius:1.5px;background:#E1DFD6;
+}
+.jauge .cran:nth-child(1){height:5px}
+.jauge .cran:nth-child(2){height:8px}
+.jauge .cran:nth-child(3){height:11px}
+.jauge .cran:nth-child(4){height:14px}
+.jauge.niv-adapte .cran.plein{background:#4C8C3F}
+.jauge.niv-protection .cran.plein{background:#D19A32}
+.jauge.niv-abri .cran.plein{background:#D2764F}
+.jauge.niv-deconseille .cran.plein{background:#B7455A}
+
+.item{align-items:center}
+.nom-item{flex:1;min-width:0}
+
+/* Légende, affichée seulement quand le jardin a un climat */
+.legende-clim{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+  margin:0 0 14px;padding:9px 12px;
+  border:1px solid var(--filet-clair);border-radius:10px;background:var(--papier-haut);
+  font-size:12px;color:var(--encre-doux);
+}
+.legende-clim .leg-titre{
+  flex:0 0 100%;font-family:"IBM Plex Sans",sans-serif;font-size:10.5px;font-weight:600;
+  letter-spacing:.10em;text-transform:uppercase;
+}
+.legende-clim .leg-item{display:inline-flex;align-items:center;gap:5px}
+.legende-clim .jauge{margin-left:0}
+
+/* Bloc climat dans la feuille de détail */
+.bloc-clim{
+  display:flex;align-items:flex-start;gap:11px;
+  margin:0 0 14px;padding:11px 13px;border-radius:10px;
+  background:var(--panneau);border:1px solid var(--filet-clair);
+}
+.bloc-clim .jauge{margin-left:0;margin-top:2px}
+.clim-titre{
+  margin:0 0 3px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  font-family:"IBM Plex Sans",sans-serif;font-size:13px;font-weight:600;color:var(--encre);
+}
+.clim-titre span{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:400;color:var(--encre-doux);
+}
+.clim-note{margin:0;font-size:12.5px;line-height:1.45;color:#4A463F}
+.bloc-clim.niv-deconseille{background:#F7E9EA;border-color:#E3C6CB}
+.bloc-clim.niv-abri{background:#FBEDE6;border-color:#EBD2C2}
