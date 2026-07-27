@@ -365,11 +365,10 @@ function carteItem(p) {
   b.type = "button"; b.className = "item";
   b.setAttribute("aria-pressed", String(sel.has(p.id)));
   const ad = adapt[p.id];
-  // Un niveau d'adaptation s'écrit, une couleur seule n'est pas lisible.
-  const marque = ad && ad.level !== "adapte"
-    ? `<span class="niv-mini niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}">${esc(NIVEAUX[ad.level].court)}</span>` : "";
   const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
-  b.innerHTML = `<span class="rond">${CHECK}</span><span>${esc(p.nom)}${marque}${sousTitre}</span>`;
+  b.innerHTML = `<span class="rond">${CHECK}</span>`
+    + `<span class="nom-item">${esc(p.nom)}${sousTitre}</span>`
+    + (ad ? jaugeClim(ad.level, ad.note) : "");
   b.addEventListener("click", () => basculer(p.id));
   bloc.appendChild(b);
   const muettes = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|")).length;
@@ -415,7 +414,20 @@ async function basculerEspace(plantId, espaceId) {
   construireChips(); rendreTout();
 }
 
+function majLegendeClim() {
+  const e = $("legendeClim");
+  if (!e) return;
+  const g = jardinActif();
+  const c = g && g.climate_key ? climats[g.climate_key] : null;
+  if (!c) { e.hidden = true; return; }
+  e.hidden = false;
+  e.innerHTML = `<span class="leg-titre">Adaptation au climat ${esc(c.label.toLowerCase())}</span>`
+    + ["adapte", "protection", "abri", "deconseille"]
+        .map(n => `<span class="leg-item">${jaugeClim(n)}${esc(NIVEAUX[n].court)}</span>`).join("");
+}
+
 function rendreSelection() {
+  majLegendeClim();
   const zone = $("listes");
   zone.innerHTML = "";
   const lot = filtrerSel();
@@ -523,11 +535,21 @@ function segsDe(p, k) {
 }
 
 const NIVEAUX = {
-  adapte:      { court: "Adaptée",       long: "Adaptée à ce climat" },
-  protection:  { court: "à protéger",    long: "Cultivable avec précautions sous ce climat" },
-  abri:        { court: "abri l'hiver",  long: "Exige un abri ou une rentrée hivernale" },
-  deconseille: { court: "déconseillée",  long: "Déconseillée sous ce climat" },
+  adapte:      { court: "adaptée",      crans: 4, long: "Adaptée à ce climat, aucune précaution particulière" },
+  protection:  { court: "à protéger",   crans: 3, long: "Reste en place, moyennant une précaution : paillage, voile, ombrage ou arrosage selon le climat" },
+  abri:        { court: "à hiverner",   crans: 2, long: "Ne passe pas l'hiver en pleine terre sous ce climat, à rentrer ou à traiter en annuelle" },
+  deconseille: { court: "déconseillée", crans: 1, long: "Déconseillée sous ce climat" },
 };
+
+// Jauge à quatre crans, toujours à la même place pour être lisible en balayage.
+function jaugeClim(niveau, titre) {
+  const n = NIVEAUX[niveau];
+  if (!n) return "";
+  const crans = [1, 2, 3, 4].map(i =>
+    `<i class="cran${i <= n.crans ? " plein" : ""}"></i>`).join("");
+  return `<span class="jauge niv-${niveau}" title="${esc(titre || n.long)}" `
+    + `role="img" aria-label="${esc(n.court)}">${crans}</span>`;
+}
 
 function espacesDe(id) { return (aff.get(id) || []).map(r => r.espace_id); }
 
@@ -854,15 +876,16 @@ function ficheHTML(p) {
 
   const tag = v => v ? `<span class="tag">${esc(v)}</span>` : "";
   const ad = adapt[p.id];
-  const tagClim = ad
-    ? `<span class="tag niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}">${esc(NIVEAUX[ad.level].court)}</span>`
-    : "";
   const tox = a.toxicite && !/^non toxique/i.test(a.toxicite);
   const bloc = (t, v) => v ? `<div class="carac-bloc"><dt>${t}</dt><dd>${esc(v)}</dd></div>` : "";
 
   return `<div class="fiche">
-    <div class="tags">${tagClim}${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
-    ${ad && ad.note ? `<p class="note-clim">${esc(ad.note)}</p>` : ""}
+    ${ad ? `<div class="bloc-clim niv-${ad.level}">
+      ${jaugeClim(ad.level, ad.note)}
+      <div><p class="clim-titre">${esc(NIVEAUX[ad.level].court)}<span>climat ${esc((climats[(jardinActif() || {}).climate_key] || {}).label || "")}</span></p>
+      <p class="clim-note">${esc(ad.note || NIVEAUX[ad.level].long)}</p></div>
+    </div>` : ""}
+    <div class="tags">${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
     ${tox ? `<p class="avis-tox"><span class="losange-tox">&#9670;</span>${esc(a.toxicite)}</p>` : ""}
     ${p.conseil ? `<p class="cgen">${esc(p.conseil)}</p>` : ""}
     <dl class="carac">
