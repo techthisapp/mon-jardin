@@ -682,3 +682,10 @@ body.fige{overflow:hidden}
 .glissiere > .action .ligne-nom{align-items:center}
 .glissiere > .action b{margin-bottom:0}
 .glissiere > .action .dit-action{margin:0;color:#4A463F}
+
+/* ---------- Texte descriptif tronqué dans la liste ---------- */
+/* Le texte intégral reste consultable dans la feuille de détail, ouverte au clic. */
+.glissiere > .action .dit-action{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
