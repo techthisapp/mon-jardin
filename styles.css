@@ -766,17 +766,34 @@ body.fige{overflow:hidden}
 .bascule-vue .vue.active{background:var(--encre);color:#EFEFE8}
 .bascule-sourdine{flex:0 0 100%;margin-left:0;justify-content:flex-end}
 
-.tete-plante{
-  margin:14px 0 0;padding:0 0 5px;
-  border-bottom:1px solid var(--filet);
+/* Chaque plante forme un groupe visuel autonome dans la vue par espace. */
+.plante-groupe{
+  border:1px solid var(--filet-clair);border-radius:10px;
+  overflow:hidden;margin:10px 0;background:var(--papier-haut);
 }
-.corps-tache > .tete-plante:first-child{margin-top:4px}
+.plante-groupe:first-child{margin-top:2px}
+.tete-plante{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  width:100%;padding:9px 12px;border:0;cursor:pointer;text-align:left;
+  background:var(--panneau);
+}
 .tete-plante b{
   font-family:"IBM Plex Sans Condensed",sans-serif;
-  font-size:13.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  font-size:14px;font-weight:700;letter-spacing:.03em;
 }
-.tete-plante + .rangee-tache{border-top:0}
+.tete-plante .voir-fiche{
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
+  color:var(--encre-doux);text-transform:uppercase;
+}
+.plante-groupe .rangee-tache{padding:0 12px}
+.plante-groupe .rangee-tache + .rangee-tache{border-top:1px solid var(--filet-clair)}
+.plante-groupe .glissiere{background:var(--papier-haut)}
 .ligne-nom .pt{
   display:inline-block;width:8px;height:8px;border-radius:50%;
   margin-right:7px;vertical-align:middle;
 }
+
+/* Une action sans conseil rédigé tient sur une seule ligne */
+.glissiere > .action.sans-texte{min-height:46px;padding-block:11px}
+.carte-espace .corps-tache{padding:6px 10px 12px}
+.carte-espace h2 .nb{font-size:11px}
