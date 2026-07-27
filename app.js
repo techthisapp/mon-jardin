@@ -1051,6 +1051,7 @@ function majJardinUI() {
   $("bloc-jardin").hidden = !connecte;
   const g = jardinActif();
   const c = g && g.climate_key ? climats[g.climate_key] : null;
+  $("titreJardin").textContent = g && g.name ? g.name : "Mon jardin";
   const puce = $("puceClimat");
   puce.textContent = c ? c.label : "Choisir un climat";
   puce.classList.toggle("a-renseigner", !c);
