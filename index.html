@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607272124">
+<link rel="stylesheet" href="./styles.css?v=202607272127">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -31,8 +31,13 @@
           <path d="M 512 512 C 560 404 656 340 764 336 C 736 452 644 528 512 512 Z" fill="currentColor"/>
         </svg>
       </span>
-      <h1>Mon jardin</h1>
-      <button class="bouton-compte" id="btnConfig" type="button" aria-expanded="false">Réglages</button>
+      <h1 id="titreJardin">Mon jardin</h1>
+      <button class="bouton-compte" id="btnConfig" type="button" aria-expanded="false" aria-label="Réglages" title="Réglages">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/>
+          <circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>
+        </svg>
+      </button>
     </div>
     <button class="puce-climat" id="puceClimat" type="button"></button>
   </div>
@@ -209,7 +214,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=202607272124"></script>
+<script type="module" src="./app.js?v=202607272127"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
