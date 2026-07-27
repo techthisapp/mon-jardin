@@ -518,3 +518,15 @@ main{
 /* Sous ce niveau, la catégorie s'efface d'un cran */
 .groupe-type + .groupe-titre{margin-top:12px}
 .groupe-titre b{font-size:11.5px;color:var(--encre-doux)}
+
+/* ---------- Nomenclature ---------- */
+.binome{
+  display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;
+  margin:0 0 8px;font-size:13.5px;color:var(--encre-doux);
+}
+.binome i{font-style:italic}
+.binome .famille{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.04em;
+  padding:2px 7px;border:1px solid var(--filet);border-radius:999px;color:#6B665D;
+}
+.nom-plante small i{font-style:italic;letter-spacing:0}
