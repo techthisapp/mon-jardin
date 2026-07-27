@@ -763,29 +763,43 @@ function segs(p) {
 
 function ficheHTML(p) {
   const a = p.attr || {};
+  const MOIS_C = ["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
+  const borne = h => (h % 2 ? "mi-" : "fin ") + MOIS_C[Math.ceil(h / 2) - 1];
+  const depart = h => (h % 2 ? "début " : "mi-") + MOIS_C[Math.ceil(h / 2) - 1];
+
   const actes = ORDRE.filter(k => p.phases[k] && phases[k]).map(k => {
     const t = texteAction(p, k);
-    return t ? `<li><span class="pt" style="background:${phases[k].color}"></span><span><b>${esc(phases[k].label)}.</b> ${esc(t)}</span></li>` : "";
+    const seg = segsDe(p, k) || [];
+    const quand = seg.map(v => depart(v[0]) + " à " + borne(v[1])).join(", ");
+    return `<li>
+      <span class="pt" style="background:${phases[k].color}"></span>
+      <div>
+        <p class="acte-tete"><b>${esc(phases[k].label)}</b>${quand ? `<span class="acte-quand">${esc(quand)}</span>` : ""}</p>
+        ${t ? `<p class="acte-texte">${esc(t)}</p>` : ""}
+      </div></li>`;
   }).join("");
+
   const tag = v => v ? `<span class="tag">${esc(v)}</span>` : "";
   const ad = adapt[p.id];
   const tagClim = ad
     ? `<span class="tag niv-${ad.level}" title="${esc(ad.note || NIVEAUX[ad.level].long)}">${esc(NIVEAUX[ad.level].court)}</span>`
     : "";
-  const ligne = (t, v) => v ? `<dt>${t}</dt><dd>${esc(v)}</dd>` : "";
+  const tox = a.toxicite && !/^non toxique/i.test(a.toxicite);
+  const bloc = (t, v) => v ? `<div class="carac-bloc"><dt>${t}</dt><dd>${esc(v)}</dd></div>` : "";
+
   return `<div class="fiche">
-    ${p.latin ? `<p class="binome"><i>${esc(p.latin)}</i>${p.famille ? `<span class="famille">${esc(p.famille)}</span>` : ""}</p>` : ""}
     <div class="tags">${tagClim}${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
     ${ad && ad.note ? `<p class="note-clim">${esc(ad.note)}</p>` : ""}
-    <dl class="carac">
-      ${ligne("Famille", a.famille)}${ligne("Hauteur", a.hauteur)}${ligne("Couleur", a.couleur)}
-      ${ligne("Parfum", a.parfum)}${ligne("Espacement", p.espacement)}${ligne("Profondeur", p.prof)}
-      ${ligne("Arrosage", a.arrosage)}${ligne("Fertilisation", a.fertilisation)}
-      ${p.phases.taille ? "" : ligne("Taille", a.taille)}
-      ${ligne("Toxicité", a.toxicite)}${ligne("Multiplication", a.multiplication)}
-      ${ligne("Associations", p.assoc)}
-    </dl>
+    ${tox ? `<p class="avis-tox"><span class="losange-tox">&#9670;</span>${esc(a.toxicite)}</p>` : ""}
     ${p.conseil ? `<p class="cgen">${esc(p.conseil)}</p>` : ""}
+    <dl class="carac">
+      ${bloc("Hauteur", a.hauteur)}${bloc("Espacement", p.espacement)}
+      ${bloc("Profondeur", p.prof)}${bloc("Arrosage", a.arrosage)}
+      ${bloc("Sol", a.fertilisation)}${bloc("Couleur", a.couleur)}
+      ${bloc("Parfum", a.parfum)}${bloc("Multiplication", a.multiplication)}
+      ${p.phases.taille ? "" : bloc("Taille", a.taille)}
+      ${bloc("Associations", p.assoc)}
+    </dl>
     ${actes ? `<p class="titre-actes">Calendrier et conseils</p><ul class="actes">${actes}</ul>` : ""}
   </div>`;
 }
@@ -1164,7 +1178,8 @@ sur("puceClimat", "click", () => afficher("jardin"));
 /* ================== Feuille de détail ================== */
 
 function ouvrirFeuille(p) {
-  $("feuille-titre").textContent = p.nom;
+  $("feuille-titre").innerHTML = esc(p.nom)
+    + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
   $("feuille-corps").innerHTML = ficheHTML(p);
   $("feuille-corps").scrollTop = 0;
   $("voile").hidden = false;
@@ -1173,7 +1188,7 @@ function ouvrirFeuille(p) {
   requestAnimationFrame(() => {
     $("voile").classList.add("visible");
     $("feuille").classList.add("ouverte");
-    $("fermerFeuille").focus();
+    $("feuille").focus();
   });
 }
 
