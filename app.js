@@ -3,10 +3,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille", "multiplication", "fertilisation", "protection"];
+const ORDRE = ["abri", "terre", "plant", "floraison", "recolte", "taille", "multiplication", "fertilisation", "protection_ete", "protection"];
 // L'écran En ce moment suit l'ordre du geste au jardin : ce qu'on observe,
 // puis ce qu'on taille, ce qu'on met en terre, ce qu'on reproduit, ce qu'on récolte.
-const ORDRE_MAINTENANT = ["floraison", "taille", "abri", "terre", "plant", "multiplication", "recolte", "fertilisation", "protection"];
+const ORDRE_MAINTENANT = ["floraison", "taille", "abri", "terre", "plant", "multiplication", "recolte", "fertilisation", "protection_ete", "protection"];
 const ORDRE_TYPO = ["Légumes", "Fruits", "Aromatiques", "Ornement"];
 const COUL_TYPO = { "Légumes":"#4C8C3F", "Fruits":"#A23E4E", "Aromatiques":"#3E7C6B", "Ornement":"#B0559A" };
 // Ordre de lecture des catégories : par typologie, puis du plus courant au plus rare.
@@ -472,8 +472,14 @@ const borne = v => Math.min(24, Math.max(1, v));
 
 // Un segment ancré au premier semestre suit le décalage de printemps, sinon celui d'automne.
 function segsDe(p, k) {
-  const base = p.phases[k];
-  if (!base) return null;
+  const brut = p.phases[k];
+  if (!brut) return null;
+  const g = jardinActif();
+  const cle = g && g.climate_key ? g.climate_key : null;
+  // Une fenêtre sans liste de climats vaut partout. Une fenêtre restreinte ne
+  // s'affiche que si le jardin est calé sur l'un des climats concernés.
+  const base = brut.filter(v => !v[2] || (cle && v[2].indexOf(cle) !== -1));
+  if (!base.length) return null;
   const sh = shiftPour(k);
   if (!sh.s && !sh.a) return base;
   return base.map(v => {
