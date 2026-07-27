@@ -566,12 +566,16 @@ function rendreMaintenant() {
   blocs.forEach(({ k, lot }) => {
     const carte = document.createElement("div");
     carte.className = "carte-tache";
-    const replie = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
+    const repliable = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
+    // Un bloc replié se déplie de lui-même s'il contient une fenêtre qui se ferme,
+    // sinon l'urgence serait comptée en tête sans être visible.
+    const urgence = lot.some(p => etatFenetre(p, k) === "derniere");
+    const replie = repliable && !urgence;
 
     carte.innerHTML =
       `<h2><span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
       + `<span class="nb">${lot.length}</span>`
-      + (replie ? '<button class="lien deplier" type="button" aria-expanded="false">Tout voir</button>' : "")
+      + (repliable ? `<button class="lien deplier" type="button" aria-expanded="${!replie}">${replie ? "Tout voir" : "Réduire"}</button>` : "")
       + `</h2><div class="corps-tache${replie ? " replie" : ""}"></div>`;
 
     const corps = carte.querySelector(".corps-tache");
@@ -599,7 +603,7 @@ function rendreMaintenant() {
       });
     }
 
-    if (replie) {
+    if (repliable) {
       const b = carte.querySelector(".deplier");
       b.addEventListener("click", () => {
         const ferme = corps.classList.toggle("replie");
