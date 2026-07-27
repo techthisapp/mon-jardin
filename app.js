@@ -49,8 +49,9 @@ let jardinSeul = false;
 let moisChoisi = null;
 
 const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Mes plantes
-const etatTypoP = {}, etatCatP = {};                     // écran Planning
-ORDRE.forEach(k => etatPhase[k] = true);
+const etatTypoP = {}, etatCatP = {};                     // écran Calendrier
+const etatPhaseM = {};                                    // écran En ce moment
+ORDRE.forEach(k => { etatPhase[k] = true; etatPhaseM[k] = true; });
 
 const $ = id => document.getElementById(id);
 // Un élément absent ne doit jamais interrompre le chargement du module.
@@ -277,6 +278,11 @@ function construireChips() {
   groupeChips($("chipsCatP"), catsVisibles(etatTypoP), etatCatP, {
     nb: c => compte(p => p.cat === c),
     apres: () => { construireChips(); rendrePlanning(); },
+  });
+  groupeChips($("chipsPhaseM"), ORDRE_MAINTENANT.filter(k => phases[k]), etatPhaseM, {
+    libelle: k => phases[k].label,
+    couleur: k => phases[k].color,
+    apres: () => { construireChips(); rendreMaintenant(); },
   });
   chipsEspaces($("chipsEspaceM"), $("ligneEspaceM"), rendreMaintenant);
   chipsEspaces($("chipsEspaceP"), $("ligneEspaceP"), rendrePlanning);
@@ -628,7 +634,7 @@ function rendreMaintenant() {
   const paires = [];
   let muettes = 0;
   ORDRE_MAINTENANT.forEach(k => {
-    if (!phases[k]) return;
+    if (!phases[k] || !etatPhaseM[k]) return;
     mien.filter(p => actif(p, k)).forEach(p => {
       const muet = Boolean(sourdineActive(p, k));
       if (muet) muettes++;
@@ -637,6 +643,8 @@ function rendreMaintenant() {
   });
 
   if (!paires.length) {
+    $("bilanMoment").innerHTML = "";
+    majFiltresMoment();
     zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
     return;
   }
@@ -674,7 +682,9 @@ function rendreMaintenant() {
     b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
     bilan.appendChild(b);
   }
-  zone.appendChild(bilan);
+  $("bilanMoment").innerHTML = "";
+  $("bilanMoment").appendChild(bilan);
+  majFiltresMoment();
 
   const carte = (titre, compteur, replieDefaut) => {
     const c = document.createElement("div");
@@ -1370,3 +1380,21 @@ function brancherGlissement(rangee, glissiere, gauche, droite) {
 document.addEventListener("click", e => {
   if (glissiereOuverte && !glissiereOuverte.parentElement.contains(e.target)) fermerTiroirs();
 }, true);
+
+function majFiltresMoment() {
+  const cles = ORDRE_MAINTENANT.filter(k => phases[k]);
+  let n = 0;
+  if (cles.length && cles.some(k => !etatPhaseM[k])) n++;
+  if (espaceChoisi !== null) n++;
+  const e = $("nbFiltresM");
+  if (!e) return;
+  e.textContent = n;
+  e.hidden = n === 0;
+  $("basculeFiltresM").setAttribute("aria-pressed", String(n > 0));
+}
+
+sur("basculeFiltresM", "click", function () {
+  const ouvert = $("corpsFiltresM").hidden;
+  $("corpsFiltresM").hidden = !ouvert;
+  this.setAttribute("aria-expanded", String(ouvert));
+});
