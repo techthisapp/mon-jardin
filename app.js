@@ -644,6 +644,8 @@ function rendreMaintenant() {
 
   if (!paires.length) {
     $("bilanMoment").innerHTML = "";
+    $("basculeVue").innerHTML = "";
+    $("zoneMasquees").innerHTML = "";
     majFiltresMoment();
     zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
     return;
@@ -651,18 +653,14 @@ function rendreMaintenant() {
 
   const audibles = paires.filter(x => !x.muet);
   const urgentes = audibles.filter(x => etatFenetre(x.p, x.k) === "derniere").length;
-  const bilan = document.createElement("div");
-  bilan.className = "bilan-moment";
-  const texte = document.createElement("div");
-  texte.className = "bilan-texte";
-  texte.innerHTML = `<span><b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
+  $("bilanMoment").innerHTML =
+    `<span><b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
     + `<b>${new Set(audibles.map(x => x.p.id)).size}</b> plantes</span>`
     + (urgentes ? `<span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
-  bilan.appendChild(texte);
 
-  const bascule = document.createElement("div");
-  bascule.className = "bascule-vue";
-  [["tache", "Par tâche"], ["espace", "Par espace"]].forEach(([v, lib]) => {
+  const bascule = $("basculeVue");
+  bascule.innerHTML = "";
+  [["tache", "Tâche"], ["espace", "Espace"]].forEach(([v, lib]) => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "vue" + (vueMoment === v ? " active" : "");
     b.textContent = lib;
@@ -673,17 +671,18 @@ function rendreMaintenant() {
     });
     bascule.appendChild(b);
   });
-  bilan.appendChild(bascule);
 
+  const zm = $("zoneMasquees");
+  zm.innerHTML = "";
   if (muettes || voirSourdines) {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "lien bascule-sourdine";
-    b.innerHTML = OEIL_BARRE + `<span>${voirSourdines ? "Cacher les masquées" : `${muettes} masquée${muettes > 1 ? "s" : ""}, afficher`}</span>`;
+    b.type = "button";
+    b.className = "bascule-sourdine" + (voirSourdines ? " active" : "");
+    b.title = voirSourdines ? "Cacher les actions masquées" : "Afficher les actions masquées";
+    b.innerHTML = OEIL_BARRE + (muettes ? `<span class="nb">${muettes}</span>` : "");
     b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
-    bilan.appendChild(b);
+    zm.appendChild(b);
   }
-  $("bilanMoment").innerHTML = "";
-  $("bilanMoment").appendChild(bilan);
   majFiltresMoment();
 
   const carte = (titre, compteur, replieDefaut) => {
