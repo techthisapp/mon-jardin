@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607272134">
+<link rel="stylesheet" href="./styles.css?v=202607272140">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -22,15 +22,15 @@
 <body>
 
 <header class="tete">
+  <span class="filigrane" aria-hidden="true">
+    <svg viewBox="0 0 1024 1024" focusable="false">
+      <path d="M 512 824 C 512 720 512 660 512 470" fill="none" stroke="currentColor" stroke-width="52" stroke-linecap="round"/>
+      <path d="M 512 620 C 466 522 372 448 268 452 C 300 560 386 632 512 620 Z" fill="currentColor" opacity=".62"/>
+      <path d="M 512 512 C 560 404 656 340 764 336 C 736 452 644 528 512 512 Z" fill="currentColor"/>
+    </svg>
+  </span>
   <div class="tete-corps">
     <div class="tete-haut">
-      <span class="marque" aria-hidden="true">
-        <svg viewBox="0 0 1024 1024" focusable="false">
-          <path d="M 512 824 C 512 720 512 660 512 470" fill="none" stroke="currentColor" stroke-width="52" stroke-linecap="round"/>
-          <path d="M 512 620 C 466 522 372 448 268 452 C 300 560 386 632 512 620 Z" fill="currentColor" opacity=".62"/>
-          <path d="M 512 512 C 560 404 656 340 764 336 C 736 452 644 528 512 512 Z" fill="currentColor"/>
-        </svg>
-      </span>
       <div class="tete-textes">
         <h1 id="titreJardin">Mon jardin</h1>
         <button class="puce-climat" id="puceClimat" type="button"></button>
@@ -216,7 +216,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=202607272134"></script>
+<script type="module" src="./app.js?v=202607272140"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
