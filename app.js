@@ -54,6 +54,22 @@ const etatPhaseM = {};                                    // écran En ce moment
 ORDRE.forEach(k => { etatPhase[k] = true; etatPhaseM[k] = true; });
 
 const $ = id => document.getElementById(id);
+
+const attendre = ms => new Promise(r => setTimeout(r, ms));
+const TRANSITOIRE = /issued at future|clock|jwt expired|fetch|network|timeout/i;
+
+async function avecReprise(faire, essais = 3) {
+  let dernier = null;
+  for (let i = 0; i < essais; i++) {
+    const r = await faire();
+    if (!r.error) return r;
+    dernier = r;
+    if (!TRANSITOIRE.test(r.error.message || "")) return r;
+    await attendre(400 * (i + 1));
+  }
+  return dernier;
+}
+
 // Un élément absent ne doit jamais interrompre le chargement du module.
 const sur = (id, ev, fn) => { const e = $(id); if (e) e.addEventListener(ev, fn); else console.warn("élément absent :", id); };
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
@@ -84,11 +100,11 @@ async function chargerCatalogue() {
 
 async function lireCatalogue() {
   const [rp, rl, rm, rc, rs] = await Promise.all([
-    db.from("phases").select("*").order("position"),
-    db.from("plants_full").select("*").eq("is_active", true),
-    db.from("catalog_meta").select("*").single(),
-    db.from("climates").select("*").order("position"),
-    db.from("climate_phase_shifts").select("*"),
+    avecReprise(() => db.from("phases").select("*").order("position")),
+    avecReprise(() => db.from("plants_full").select("*").eq("is_active", true)),
+    avecReprise(() => db.from("catalog_meta").select("*").single()),
+    avecReprise(() => db.from("climates").select("*").order("position")),
+    avecReprise(() => db.from("climate_phase_shifts").select("*")),
   ]);
   climats = {}; shifts = {};
   (rc.data || []).forEach(c => climats[c.key] = c);
@@ -145,12 +161,16 @@ function memoriserOuverture(id) {
     .then(({ error }) => { if (error) console.warn("dernier jardin non mémorisé :", error.message); });
 }
 
+// Un décalage d'horloge de quelques secondes entre l'appareil et le serveur fait
+// rejeter le jeton avec « JWT issued at future ». C'est transitoire, une seconde
+// tentative après une courte attente suffit.
 async function listerJardins() {
-  const { data, error } = await db.from("gardens").select(COL_JARDIN)
+  const { data, error } = await avecReprise(() => db.from("gardens").select(COL_JARDIN)
     .order("last_opened_at", { ascending: false, nullsFirst: false })
-    .order("created_at");
+    .order("created_at"));
   if (error) { info("Jardins inaccessibles : " + error.message, true); return false; }
   jardins = data || [];
+  info("");
   return true;
 }
 
@@ -172,15 +192,23 @@ async function chargerJardin() {
 
 async function chargerContenuJardin() {
   memoriserOuverture(jardinId);
-  const [rp, rz, ra, rs] = await Promise.all([
-    db.from("garden_plants").select("plant_id").eq("garden_id", jardinId),
-    db.from("espaces").select("*").eq("garden_id", jardinId).order("position").order("name"),
-    db.from("garden_plant_espaces").select("plant_id,espace_id,quantity,notes").eq("garden_id", jardinId),
-    db.from("sourdines").select("*").eq("garden_id", jardinId),
+  // Le climat est déjà connu, la table d'adaptation part donc dans le même lot
+  // que le reste : quatre allers-retours au lieu de cinq en série.
+  const cle = (jardinActif() || {}).climate_key || null;
+  const [rp, rz, ra, rs, rc] = await Promise.all([
+    avecReprise(() => db.from("garden_plants").select("plant_id").eq("garden_id", jardinId)),
+    avecReprise(() => db.from("espaces").select("*").eq("garden_id", jardinId).order("position").order("name")),
+    avecReprise(() => db.from("garden_plant_espaces").select("plant_id,espace_id,quantity,notes").eq("garden_id", jardinId)),
+    avecReprise(() => db.from("sourdines").select("*").eq("garden_id", jardinId)),
+    cle ? avecReprise(() => db.from("plant_climates").select("plant_id,level,note").eq("climate_key", cle))
+        : Promise.resolve({ data: [] }),
   ]);
+  adapt = {};
+  (rc.data || []).forEach(r => adapt[r.plant_id] = r);
   sourdines = new Map();
   (rs.data || []).forEach(r => sourdines.set(r.plant_id + "|" + r.phase, r));
   if (rp.error) { info("Sélection illisible : " + rp.error.message, true); return; }
+  info("");
   sel = new Set((rp.data || []).map(r => r.plant_id));
   espaces = rz.data || [];
   aff = new Map();
@@ -189,7 +217,6 @@ async function chargerContenuJardin() {
     aff.get(r.plant_id).push(r);
   });
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
-  await chargerAdaptations();
   majCompte(); majJardinUI(); construireChips(); rendreTout();
 }
 
@@ -197,7 +224,8 @@ async function chargerAdaptations() {
   adapt = {};
   const g = jardinActif();
   if (!g || !g.climate_key) return;
-  const { data } = await db.from("plant_climates").select("plant_id,level,note").eq("climate_key", g.climate_key);
+  const { data } = await avecReprise(() =>
+    db.from("plant_climates").select("plant_id,level,note").eq("climate_key", g.climate_key));
   (data || []).forEach(r => adapt[r.plant_id] = r);
 }
 
