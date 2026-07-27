@@ -25,7 +25,24 @@ body{
 }
 
 /* ---------- Tête ---------- */
-.tete{background:var(--encre);color:#EFEFE8}
+.tete{
+  position:relative;overflow:hidden;color:#EFEFE8;
+  background:linear-gradient(176deg,#1E322A 0%,var(--encre) 58%);
+  box-shadow:inset 0 -1px 0 rgba(239,239,232,.10);
+}
+/* Lumière rasante venue du haut gauche, pour donner du relief au bandeau. */
+.tete::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(130% 100% at 6% -10%, rgba(239,239,232,.085), transparent 62%);
+}
+/* La pousse devient une architecture : surdimensionnée, débordante, en filigrane. */
+.filigrane{
+  position:absolute;left:-72px;top:50%;
+  transform:translateY(-50%) rotate(-9deg);
+  width:236px;height:236px;color:#EFEFE8;opacity:.085;
+  pointer-events:none;z-index:0;
+}
+.filigrane svg{display:block;width:100%;height:100%}
 .tete-corps{max-width:1060px;margin:0 auto;padding:16px 16px 0}
 .tete-haut{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
 .tete h1{
@@ -447,19 +464,18 @@ main{
 
 /* ================= Refonte de l'en-tête et des réglages ================= */
 
-.tete-corps{padding-top:16px;padding-bottom:14px}
+.tete-corps{position:relative;z-index:1;padding-top:18px;padding-bottom:16px}
 .tete-haut{display:flex;align-items:center;gap:14px}
-.tete-textes{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px}
-/* La marque occupe toute la hauteur du bandeau, titre et climat compris. */
-.marque{flex:none;width:46px;height:46px;color:#EFEFE8;align-self:center}
-.marque svg{display:block;width:100%;height:100%}
+.tete-textes{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .tete h1{
-  max-width:100%;font-size:21px;letter-spacing:.06em;white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis;line-height:1.05;
+  max-width:100%;font-size:23px;letter-spacing:.05em;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;line-height:1.02;
 }
 .bouton-compte{
-  flex:none;width:38px;height:38px;border-radius:50%;cursor:pointer;
-  border:1px solid rgba(239,239,232,.22);background:rgba(239,239,232,.06);
+  flex:none;width:40px;height:40px;border-radius:50%;cursor:pointer;
+  border:1px solid rgba(239,239,232,.26);
+  background:rgba(239,239,232,.07);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
   color:#EFEFE8;display:flex;align-items:center;justify-content:center;
   transition:background .18s ease, color .18s ease, border-color .18s ease;
 }
@@ -481,7 +497,7 @@ main{
 .puce-climat:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
 
 /* La sous-navigation se distingue de la navigation principale par son fond */
-.sous-onglets{background:#1D2E26}
+.sous-onglets{position:relative;z-index:1;background:rgba(239,239,232,.05);box-shadow:inset 0 1px 0 rgba(239,239,232,.08)}
 
 /* ---------- Panneaux de réglage ---------- */
 .panneau{
@@ -962,3 +978,24 @@ body.fige{overflow:hidden}
 }
 .tete-section[aria-expanded="false"] .chevron{transform:rotate(-90deg)}
 .carte-espace .tete-section .nb{margin-left:auto}
+
+/* ---------- Bandeau : accords fins ---------- */
+/* Le titre respire au-dessus du filigrane sans jamais le heurter. */
+.tete-haut{padding-left:6px}
+.puce-climat{
+  border-color:rgba(239,239,232,.22);
+  background:rgba(239,239,232,.05);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+  opacity:.92;
+}
+.puce-climat:hover,.puce-climat:active{opacity:1;background:rgba(239,239,232,.10)}
+
+/* Sur écran large, la pousse peut s'étirer davantage sans gêner la lecture. */
+@media (min-width:700px){
+  .filigrane{left:-86px;width:300px;height:300px;opacity:.075}
+  .tete-haut{padding-left:14px}
+}
+@media (max-width:400px){
+  .filigrane{left:-64px;width:206px;height:206px}
+  .tete h1{font-size:21px}
+}
