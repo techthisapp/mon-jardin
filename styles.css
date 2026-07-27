@@ -939,3 +939,19 @@ body.fige{overflow:hidden}
 .clim-note{margin:0;font-size:12.5px;line-height:1.45;color:#4A463F}
 .bloc-clim.niv-deconseille{background:#F7E9EA;border-color:#E3C6CB}
 .bloc-clim.niv-abri{background:#FBEDE6;border-color:#EBD2C2}
+
+/* ---------- En-tête de section repliable ---------- */
+.tete-section{cursor:pointer;user-select:none;-webkit-user-select:none}
+.tete-section:hover{background:var(--filet-clair)}
+.tete-section:focus-visible{outline:2px solid var(--terre);outline-offset:-2px}
+.tete-section .nb{margin-left:auto}
+.chevron{
+  flex:none;display:flex;margin-left:10px;color:var(--encre-doux);
+  transition:transform .18s ease;
+}
+.chevron svg{
+  width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.tete-section[aria-expanded="false"] .chevron{transform:rotate(-90deg)}
+.carte-espace .tete-section .nb{margin-left:auto}
