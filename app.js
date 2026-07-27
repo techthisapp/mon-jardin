@@ -611,11 +611,12 @@ function rendreMaintenant() {
     const tete = mode === "espace"
       ? `<span class="pt" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
       : nomAvecMarque(p);
+    const texte = texteAction(p, k);
     const d = document.createElement("button");
     d.type = "button";
-    d.className = "action nom-action" + (e && !muet ? " a-" + e : "");
+    d.className = "action nom-action" + (e && !muet ? " a-" + e : "") + (texte ? "" : " sans-texte");
     d.innerHTML = `<span class="ligne-nom"><b>${tete}</b>${echeance}</span>`
-      + `<span class="dit-action">${esc(texteAction(p, k))}</span>`;
+      + (texte ? `<span class="dit-action">${esc(texte)}</span>` : "");
     d.addEventListener("click", ev => {
       if (ev.currentTarget.parentElement.dataset.glisse) return;
       ouvrirFeuille(p);
@@ -697,16 +698,21 @@ function rendreMaintenant() {
       const ids = [...new Set(paires.filter(x => dedans(x.p)).map(x => x.p.id))];
       if (!ids.length) return;
       const lot = paires.filter(x => dedans(x.p));
-      const c = carte(esc(g.nom), lot.length, null);
+      const c = carte(esc(g.nom), `${ids.length} plantes, ${lot.length} actions`, null);
+      c.classList.add("carte-espace");
       const corps = c.querySelector(".corps-tache");
       ids.map(id => plantes.find(p => p.id === id))
         .sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
         .forEach(p => {
-          const t = document.createElement("p");
-          t.className = "tete-plante";
-          t.innerHTML = `<b>${nomAvecMarque(p)}</b>`;
-          corps.appendChild(t);
-          lot.filter(x => x.p.id === p.id).forEach(x => corps.appendChild(ligneAction(p, x.k, "espace")));
+          const bloc = document.createElement("div");
+          bloc.className = "plante-groupe";
+          const t = document.createElement("button");
+          t.type = "button"; t.className = "tete-plante";
+          t.innerHTML = `<b>${nomAvecMarque(p)}</b><span class="voir-fiche" aria-hidden="true">fiche</span>`;
+          t.addEventListener("click", () => ouvrirFeuille(p));
+          bloc.appendChild(t);
+          lot.filter(x => x.p.id === p.id).forEach(x => bloc.appendChild(ligneAction(p, x.k, "espace")));
+          corps.appendChild(bloc);
         });
       zone.appendChild(c);
     });
