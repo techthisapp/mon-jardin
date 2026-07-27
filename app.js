@@ -536,6 +536,7 @@ function rendreMaintenant() {
 
   const losange = p => (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite))
     ? `<span class="losange-tox" title="${esc(p.attr.toxicite)}" aria-label="Plante toxique">&#9670;</span>` : "";
+  const nomAvecMarque = p => `${esc(p.nom)}${losange(p)}`;
 
   const blocs = [];
   ORDRE_MAINTENANT.forEach(k => {
@@ -557,20 +558,8 @@ function rendreMaintenant() {
     + (urgentes ? ` <span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
   zone.appendChild(bilan);
 
-  // Le détail d'une plante s'ouvre au clic sur son nom, sur tous les blocs.
-  const brancherDetail = (racine, p) => {
-    racine.querySelector(".nom-action").addEventListener("click", function () {
-      let d = racine.querySelector(".detail-action");
-      if (!d) {
-        d = document.createElement("div");
-        d.className = "detail-action";
-        d.innerHTML = ficheHTML(p);
-        racine.appendChild(d);
-      }
-      const o = racine.classList.toggle("ouverte");
-      this.setAttribute("aria-expanded", String(o));
-    });
-  };
+  const brancherDetail = (racine, p) =>
+    racine.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(p));
 
   blocs.forEach(({ k, lot }) => {
     const carte = document.createElement("div");
@@ -590,7 +579,7 @@ function rendreMaintenant() {
       lot.forEach(p => {
         const d = document.createElement("div");
         d.className = "enveloppe-puce";
-        d.innerHTML = `<button class="puce nom-action" aria-expanded="false">${esc(p.nom)}${losange(p)}</button>`;
+        d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(p)}</button>`;
         brancherDetail(d, p);
         corps.appendChild(d);
       });
@@ -601,7 +590,7 @@ function rendreMaintenant() {
                       : e === "ouverture" ? '<span class="debut-fenetre">fenêtre ouverte</span>' : "";
         const d = document.createElement("div");
         d.className = "action" + (e ? " a-" + e : "");
-        d.innerHTML = `<button class="nom-action" aria-expanded="false"><b>${esc(p.nom)}</b>${losange(p)}${drapeau}</button>`
+        d.innerHTML = `<button class="nom-action"><b>${nomAvecMarque(p)}</b>${drapeau}</button>`
           + `<p class="dit-action">${esc(texteAction(p, k))}</p>`;
         brancherDetail(d, p);
         corps.appendChild(d);
@@ -1080,3 +1069,31 @@ sur("genererReprise", "click", async () => {
 });
 
 sur("puceClimat", "click", () => afficher("jardin"));
+
+/* ================== Feuille de détail ================== */
+
+function ouvrirFeuille(p) {
+  $("feuille-titre").textContent = p.nom;
+  $("feuille-corps").innerHTML = ficheHTML(p);
+  $("feuille-corps").scrollTop = 0;
+  $("voile").hidden = false;
+  $("feuille").hidden = false;
+  document.body.classList.add("fige");
+  requestAnimationFrame(() => {
+    $("voile").classList.add("visible");
+    $("feuille").classList.add("ouverte");
+    $("fermerFeuille").focus();
+  });
+}
+
+function fermerFeuille() {
+  if ($("feuille").hidden) return;
+  $("voile").classList.remove("visible");
+  $("feuille").classList.remove("ouverte");
+  document.body.classList.remove("fige");
+  setTimeout(() => { $("feuille").hidden = true; $("voile").hidden = true; }, 220);
+}
+
+sur("voile", "click", fermerFeuille);
+sur("fermerFeuille", "click", fermerFeuille);
+document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuille(); });
