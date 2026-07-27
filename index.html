@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=202607271951">
+<link rel="stylesheet" href="./styles.css?v=202607271956">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -51,9 +51,21 @@
       <p class="date-jour" id="dateJour"></p>
       <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
     </div>
-    <div class="ligne-filtre" id="ligneEspaceM" hidden>
-      <span class="etiq-filtre">Espace</span>
-      <div class="jeu-chips" id="chipsEspaceM"></div>
+    <div class="filtres filtres-moment">
+      <div class="barre-filtres">
+        <button class="chip" id="basculeFiltresM" type="button" aria-expanded="false" aria-controls="corpsFiltresM">Filtres<span class="nb" id="nbFiltresM" hidden></span></button>
+        <div id="bilanMoment"></div>
+      </div>
+      <div id="corpsFiltresM" hidden>
+        <div class="ligne-filtre">
+          <span class="etiq-filtre">Tâche</span>
+          <div class="jeu-chips" id="chipsPhaseM"></div>
+        </div>
+        <div class="ligne-filtre" id="ligneEspaceM" hidden>
+          <span class="etiq-filtre">Espace</span>
+          <div class="jeu-chips" id="chipsEspaceM"></div>
+        </div>
+      </div>
     </div>
     <div id="maintenant"></div>
   </section>
@@ -194,7 +206,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=202607271951"></script>
+<script type="module" src="./app.js?v=202607271956"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
