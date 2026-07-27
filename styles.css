@@ -548,13 +548,20 @@ main{
 
 .action.a-derniere{border-left:3px solid #C0566B;padding-left:9px}
 .action.a-ouverture{border-left:3px solid var(--terre);padding-left:9px}
-.fin-fenetre,.debut-fenetre{
+/* Le nom à gauche, l'échéance à droite, sur une seule ligne. */
+.action .nom-action{
+  display:flex;align-items:baseline;justify-content:space-between;gap:12px;width:100%;
+}
+.action .nom-action b{min-width:0}
+.echeance{
+  flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;
+  color:var(--encre-doux);white-space:nowrap;
+}
+.echeance.urgente{
   font-family:"IBM Plex Sans",sans-serif;font-size:10.5px;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;
-  padding:2px 7px;border-radius:999px;margin-left:8px;vertical-align:middle;
+  padding:2px 7px;border-radius:999px;background:#FCE7E3;color:#8C3A2A;
 }
-.fin-fenetre{background:#FCE7E3;color:#8C3A2A}
-.debut-fenetre{background:#E9EFE3;color:#33502C}
 
 
 
