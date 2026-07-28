@@ -296,34 +296,13 @@ La colonne `verification` de `plant_advice` porte quatre états, du plus faible 
 
 Un jeton d'accès personnel GitHub reste actif tant qu'il n'est pas révoqué, depuis `https://github.com/settings/tokens?type=beta`.
 
-### Poser le contrôle en intégration continue
+### Le contrôle en intégration continue
 
-Le fichier `.github/workflows/verification.yml` rejouerait le contrôle avant dépôt à chaque poussée, y compris depuis un clone où le crochet n'est pas installé. GitHub refuse qu'un jeton sans la permission `Workflows` crée ou modifie un fichier sous `.github/workflows/`. Deux voies.
+`.github/workflows/verification.yml` rejoue le contrôle avant dépôt à chaque poussée sur `main` et sur chaque demande de fusion, y compris depuis un clone où le crochet n'est pas installé. Posé le 28 juillet 2026, première exécution verte sur `b1634b7`.
 
-**Par l'interface, sans toucher au jeton.** Sur le dépôt, onglet Actions, puis « set up a workflow yourself ». Nommer le fichier `verification.yml`, coller le contenu ci-dessous, valider par « Commit changes ». C'est le plus rapide, la permission du jeton n'entre pas en jeu.
+Le fichier a été créé depuis l'interface GitHub, onglet Actions. GitHub refuse qu'un jeton sans la permission `Workflows` crée ou modifie un fichier sous `.github/workflows/`. Pour le modifier depuis un outil, il faut passer `Workflows` à Read and write sur `https://github.com/settings/tokens?type=beta`, section Repository permissions.
 
-**Par un jeton élargi.** Sur `https://github.com/settings/tokens?type=beta`, éditer le jeton ou en créer un nouveau, section Repository permissions, passer `Workflows` à Read and write. Enregistrer, puis créer le fichier et le pousser normalement.
-
-```yaml
-name: Controle avant depot
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  verifier:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - run: node outils/verification.mjs
-```
-
-Le contrôle échoue si les empreintes de version ne correspondent pas au contenu. C'est voulu : sur la machine de travail, le crochet les corrige avant le dépôt.
+Le contrôle échoue si les empreintes de version ne correspondent pas au contenu. C'est voulu : sur la machine de travail, le crochet les corrige avant le dépôt. Une poussée directe sans crochet fait donc rougir l'intégration continue, ce qui est le comportement recherché.
 
 La fonction de bord accepte une variable d'environnement `SEL_TENTATIVES` pour saler les empreintes d'adresse. En son absence, la clé de service sert de sel. Poser cette variable rend le sel indépendant d'une éventuelle rotation de la clé.
 
@@ -360,8 +339,6 @@ Le filtre adaptées à mon climat dans Mes plantes, proposé et jamais fait. C'e
 ### Fiabilité du travail
 
 Le contrôle avant dépôt et le versionnage automatique des actifs sont en place. Le plafonnement des tentatives sur la fonction `reprise` est déployé.
-
-Reste à poser le filet d'intégration continue, qui rejouerait le contrôle à chaque poussée, y compris depuis un clone où le crochet n'est pas installé. Il demande un jeton portant la permission `Workflows`.
 
 Le contrôle ne couvre que le statique. Rien ne vérifie qu'une requête vers la base rend bien les colonnes attendues, ni qu'un enchaînement d'écrans se déroule sans exception.
 
