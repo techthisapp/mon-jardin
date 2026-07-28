@@ -999,3 +999,40 @@ body.fige{overflow:hidden}
   .filigrane{left:-64px;width:206px;height:206px}
   .tete h1{font-size:21px}
 }
+
+/* ================= Registre visuel : couleur, saison, mouvement ================= */
+
+/* La teinte de la tâche colore son bandeau de titre. */
+.carte-tache h2{background:var(--ton-tache, #EFEDE6)}
+.carte-tache{transition:border-color .2s ease}
+
+/* Entrée des cartes, discrète et décalée. */
+@keyframes apparait{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.anime{animation:apparait .24s cubic-bezier(.32,.72,0,1) both}
+@media (prefers-reduced-motion:reduce){
+  .anime{animation:none}
+  .feuille{transition:none}
+}
+
+/* La chasse fixe est réservée aux dates. Le reste revient au sans-serif. */
+.bilan-moment,.echeance,.acte-quand,.nb,.valeur-reglage,
+.legende-clim,.carte-espace h2 .nb,.bascule-sourdine .nb,.bilan{
+  font-family:"IBM Plex Sans",sans-serif;
+}
+.bilan-moment{font-size:13px}
+.echeance{font-size:12px}
+.acte-quand{font-size:11.5px}
+
+/* Un état vide qui accueille au lieu de constater. */
+.vide-soigne{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:44px 24px 52px;color:var(--encre-doux);
+}
+.vide-soigne svg{
+  width:78px;height:78px;margin-bottom:16px;color:var(--terre);opacity:.34;
+}
+.vide-soigne p{margin:0;font-size:13.5px;line-height:1.55;max-width:34ch}
+.vide-soigne b{
+  display:block;margin-bottom:5px;font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:17px;font-weight:700;letter-spacing:.02em;color:var(--encre);
+}
