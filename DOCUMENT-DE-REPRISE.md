@@ -239,6 +239,20 @@ Première exécution, le 28 juillet 2026 : treize écarts, dont une erreur syst�
 
 Après affinage des groupes, cinq écarts subsistent, tous légitimes et documentés comme tels : l'alysse odorante, couvre-sol basse et large ; le maïs doux et le tournesol, grosses graines parmi des semis de surface ; la marjolaine et la stévia, gélives au milieu de familles rustiques. Un détecteur qui ne signalerait plus rien serait suspect.
 
+## Corrections du 28 juillet, seconde série
+
+Douze corrections issues d'une relecture des correspondances automatiques, et non des contrôles.
+
+**Confusion entre « sans fumure fraîche » et « aucun apport ».** Neuf fiches de légumes racines et de salades portaient une exigence de fertilisation nulle alors que leur note ne proscrivait que le fumier frais. Le compost mûr leur convient. Betterave, carotte, navet, panais, radis, salsifis, scorsonère et endive passent à faible, la scarole à moyenne. L'ail et l'échalote restent à aucune, c'est juste pour eux.
+
+**Profondeur de l'artichaut.** Un centimètre, valeur du semis en godet, qui est la pratique portée par la fiche puisqu'elle a une tâche de semis à l'abri. Les deux à trois centimètres relevés dans les sources valent pour un semis en place.
+
+**Multiplication des bulbes.** Le glaïeul et le lis étaient donnés multipliables par semis. Le glaïeul se multiplie par caïeux, le lis par écailles ou bulbilles ; le semis existe mais demande trois à quatre ans avant floraison, ce n'est pas la méthode du jardinier. Le cyclamen de Naples se met en place par tubercule et se multiplie par semis spontané.
+
+Un contrôle nouveau ferme cette famille d'erreurs : une plante mise en place par bulbe, tubercule, rhizome ou griffe ne peut pas déclarer le semis comme mode de multiplication.
+
+**Cas laissés en l'état.** L'hysope et la valériane rouge restent en sol calcaire : leur note dit « pauvre et calcaire », la clé n'en porte qu'une, et le calcaire est l'information qui décide d'une plantation.
+
 ## Portée réelle de la campagne du 26 juillet
 
 La campagne a porté sur 310 fiches réparties en neuf lots, chaque lot vérifiant des champs précis et non la fiche entière. `plants.verified_at` vaut pourtant pour la fiche entière, ce qui a longtemps masqué cette limite.
