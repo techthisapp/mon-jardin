@@ -104,7 +104,7 @@ Le retrait d'une plante du référentiel se fait par `is_active` à faux, avec `
 | Familles botaniques | 84 |
 | Tâches | 10 |
 | Périodes | 2052, dont 459 conditionnées au climat |
-| Conseils rédigés | 1667 sur fiches actives : 1287 relus un à un, 380 couverts au niveau de la fiche, aucun laissé dans sa rédaction d'origine |
+| Conseils rédigés | 1691 sur fiches actives : 1311 relus un à un, 380 couverts au niveau de la fiche, aucun laissé dans sa rédaction d'origine |
 | Adaptations climatiques | 1580 |
 | Climats | 5 |
 | Exposition normalisée | 315 sur 315 |
@@ -151,6 +151,20 @@ Les `slug` des trois fiches d'origine ont donc changé. Rien dans l'application 
 
 L'opération inverse a été menée le même jour sur les groseilles. `groseille` et `groseille-blanche` portaient toutes deux Ribes rubrum, soit deux couleurs d'une même espèce. `groseille` devient « Groseille à grappes », enrichie de la floraison et de la taille que seule l'autre fiche portait, et `groseille-blanche` passe à `is_active` faux avec `replaced_by` vers elle.
 
+## Ce que dit un conseil de floraison
+
+La floraison est un constat plus qu'une action, ce qui rend la tâche particulière à rédiger. Les 215 conseils suivent cinq registres, et un texte qui n'entre dans aucun n'a probablement rien à dire.
+
+**Ce que la floraison déclenche ailleurs.** La pomme de terre en fleur signale que les primeurs sont bonnes à arracher. La première fleur nouée de la tomate marque le passage à un apport riche en potasse. Le thym et la lavande sont à leur maximum de parfum juste avant l'épanouissement.
+
+**Ce qu'elle interdit pendant sa durée.** Ne pas tailler sous peine de supprimer la fructification, ne pas traiter pour préserver les pollinisateurs.
+
+**Ce qu'elle révèle.** La couleur de l'hortensia donne le pH du sol. La période de floraison d'une clématite indique son groupe de taille. Une reprise de floraison désigne un rosier ou une framboise remontants, ce qui décide de la taille.
+
+**Ce qui peut mal tourner.** Une gelée sur les fleurs de fraisier noircit le cœur et supprime le fruit. Le pollen de tomate devient stérile au-dessus de trente-cinq degrés. La courgette avorte ses fruits faute de pollinisateurs.
+
+**L'alerte de montaison.** Pour le basilic, la laitue ou la rhubarbe, la floraison annonce la fin de la production et appelle une correction immédiate.
+
 ## Portée réelle de la campagne du 26 juillet
 
 La campagne a porté sur 310 fiches réparties en neuf lots, chaque lot vérifiant des champs précis et non la fiche entière. `plants.verified_at` vaut pourtant pour la fiche entière, ce qui a longtemps masqué cette limite.
@@ -178,6 +192,8 @@ Le reste du référentiel a été relu un à un le 28 juillet 2026. Il ne subsis
 `select * from controle_bilan` donne le nombre de cas par contrôle et par gravité. `controle_detail` liste chaque cas.
 
 Douze contrôles : conseil incohérent avec sa période, fenêtre sans conseil, fenêtre aberrante, plante sans aucune tâche, nomenclature absente, exposition hors vocabulaire, recouvrement entre tâches, espacement non normalisé, hauteur absente ou non normalisée, texte trop répété, conseil orphelin, conseil jamais relu.
+
+Le contrôle « fenêtre sans conseil » excluait la floraison depuis l'origine. L'exclusion a été levée le 28 juillet 2026 : elle masquait 24 plantes, parmi les plus consultées du catalogue, dont la barre de floraison s'affichait sans rien à lire.
 
 Les contrôles agrégés, texte répété, hauteur et conseil jamais relu, remontent une ligne de synthèse plutôt qu'une ligne par plante.
 
@@ -314,7 +330,7 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 Les dix tâches ont été passées le 28 juillet 2026. Plus aucun conseil n'est dans sa rédaction générée d'origine.
 
-1287 conseils sont relus un à un, avec source et date propres. Les 380 restants sont à l'état `fiche` : la multiplication, couverte par les neuf lots de la campagne du 26 juillet, et la taille des ligneuses, couverte par les lots arbustes d'ornement, arbres fruitiers et grimpantes. Ce sont les champs les mieux vérifiés de la base, leur granularité seule reste plus grossière.
+1311 conseils sont relus un à un, avec source et date propres. Les 380 restants sont à l'état `fiche` : la multiplication, couverte par les neuf lots de la campagne du 26 juillet, et la taille des ligneuses, couverte par les lots arbustes d'ornement, arbres fruitiers et grimpantes. Ce sont les champs les mieux vérifiés de la base, leur granularité seule reste plus grossière.
 
 La relecture porte sur le texte distinct, pas sur la ligne : douze textes couvraient les 191 conseils de floraison, sept textes en couvraient 142 sur les 259 de la plantation. Les erreurs trouvées étaient de quatre natures.
 
