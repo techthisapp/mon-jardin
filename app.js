@@ -594,6 +594,7 @@ const texteAction = (p, k) =>
   : (p.guide[k] || "");
 
 function rendreMaintenant() {
+  appliquerSaison();
   const zone = $("maintenant");
   zone.innerHTML = "";
   if (!sel.size) {
@@ -698,7 +699,12 @@ function rendreMaintenant() {
     $("basculeVue").innerHTML = "";
     $("zoneMasquees").innerHTML = "";
     majFiltresMoment();
-    zone.innerHTML = '<p class="vide">Rien à faire en ce moment sur ces plantes. Période de repos ou de simple surveillance.</p>';
+    zone.innerHTML = '<div class="vide-soigne">'
+      + '<svg viewBox="0 0 1024 1024" aria-hidden="true">'
+      + '<path d="M 512 824 C 512 720 512 660 512 470" fill="none" stroke="currentColor" stroke-width="52" stroke-linecap="round"/>'
+      + '<path d="M 512 620 C 466 522 372 448 268 452 C 300 560 386 632 512 620 Z" fill="currentColor" opacity=".55"/>'
+      + '<path d="M 512 512 C 560 404 656 340 764 336 C 736 452 644 528 512 512 Z" fill="currentColor"/></svg>'
+      + '<p><b>Rien à faire cette quinzaine</b>Le jardin travaille sans vous. Période de repos ou de simple surveillance.</p></div>';
     return;
   }
 
@@ -737,10 +743,17 @@ function rendreMaintenant() {
   majFiltresMoment();
 
   // Toute section se replie et se déploie au clic sur son en-tête, dans les deux vues.
-  const carte = (titre, compteur, replieDefaut) => {
+  let rang = 0;
+  const carte = (titre, compteur, replieDefaut, couleur) => {
     const ferme = Boolean(replieDefaut);
     const c = document.createElement("div");
-    c.className = "carte-tache";
+    c.className = "carte-tache anime";
+    c.style.animationDelay = Math.min(rang++, 8) * 45 + "ms";
+    if (couleur) {
+      c.style.boxShadow = `inset 3px 0 0 ${couleur}`;
+      c.style.borderColor = teinte(couleur, .22);
+      c.style.setProperty("--ton-tache", teinte(couleur, .10));
+    }
     c.innerHTML = `<h2 class="tete-section" role="button" tabindex="0" aria-expanded="${!ferme}">`
       + `${titre}<span class="nb">${compteur}</span>`
       + `<span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5 12 15.5 18 9.5"/></svg></span>`
@@ -765,7 +778,8 @@ function rendreMaintenant() {
       const ids = [...new Set(paires.filter(x => dedans(x.p)).map(x => x.p.id))];
       if (!ids.length) return;
       const lot = paires.filter(x => dedans(x.p));
-      const c = carte(esc(g.nom), `${ids.length} plantes, ${lot.length} actions`, false);
+      const c = carte(esc(g.nom), `${ids.length} plantes, ${lot.length} actions`, false,
+        (espaces.find(z => z.id === g.cle) || {}).color || "#4C8C3F");
       c.classList.add("carte-espace");
       const corps = c.querySelector(".corps-tache");
       ids.map(id => plantes.find(p => p.id === id))
@@ -794,7 +808,7 @@ function rendreMaintenant() {
     const urgence = lot.some(x => etatFenetre(x.p, k) === "derniere");
     const replie = repliable && !urgence;
     const c = carte(`<span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`,
-                    lot.length, replie);
+                    lot.length, replie, phases[k].color);
     const corps = c.querySelector(".corps-tache");
     if (k === "floraison") {
       corps.classList.add("bloc-puces");
@@ -1333,6 +1347,23 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuill
 const OEIL_BARRE = '<svg viewBox="0 0 24 24" aria-hidden="true">'
   + '<path d="M2 12s3.6-6 10-6c2 0 3.7.6 5.1 1.4M22 12s-3.6 6-10 6c-2 0-3.7-.6-5.1-1.4"/>'
   + '<circle cx="12" cy="12" r="2.6"/><path d="M3 21 21 3"/></svg>';
+
+// Une teinte très pâle de la couleur, posée sur le papier.
+function teinte(hex, a) {
+  const h = (hex || "#000000").replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+// Le fond de page suit la saison, à saturation très faible.
+const SAISONS = [
+  { fin: 4,  ton: "#EEF0F1" }, { fin: 10, ton: "#EFF4EA" },
+  { fin: 16, ton: "#F5F3EA" }, { fin: 22, ton: "#F5EFE7" }, { fin: 24, ton: "#EEF0F1" },
+];
+function appliquerSaison() {
+  const s = SAISONS.find(x => demi <= x.fin) || SAISONS[0];
+  document.documentElement.style.setProperty("--papier", s.ton);
+}
 
 const cleSourdine = (p, k) => p.id + "|" + k;
 const anneeCourante = () => new Date().getFullYear();
