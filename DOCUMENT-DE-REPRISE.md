@@ -1,6 +1,6 @@
 # Document de reprise, projet Mon jardin
 
-Établi le 25 juillet 2026, mis à jour le 27 juillet 2026.
+Établi le 25 juillet 2026, mis à jour le 28 juillet 2026.
 
 ## Objet
 
@@ -135,6 +135,20 @@ L'application est pilotée par la base. Les couleurs des tâches viennent de `ph
 
 Toute modification exige d'incrémenter l'empreinte de version dans les balises `app.js?v=` et `styles.css?v=` de `index.html`. Sans cela, Safari sert un fichier en cache et l'application peut se retrouver avec un HTML récent et un script ancien.
 
+### Registre visuel
+
+L'identité repose sur trois familles IBM Plex, Sans, Sans Condensed et Mono, et sur une palette de pierre froide. Trois principes ont été posés lors de la reprise graphique.
+
+**La chasse fixe est réservée aux dates.** Ligne de date, règle des mois, code de reprise. Partout ailleurs elle donnait un air de terminal.
+
+**Chaque tâche porte sa couleur.** Bandeau de titre teinté à 10 pour cent, filet vertical de 3 pixels en pleine couleur, pictogramme au trait dans la même couleur. Dans la vue par espace, la couleur vient de `espaces.color`, avec le vert de l'application en repli.
+
+**Le fond suit la saison.** Cinq paliers calculés à partir de la quinzaine en cours, de saturation très faible, appliqués à la variable `--papier`.
+
+Le bandeau haut est construit autour de la pousse en filigrane, à 236 pixels, débordant de 72 pixels à gauche et coupée par le bord de l'écran, à 8,5 pour cent d'opacité. Il porte un dégradé, une lumière rasante radiale depuis le coin haut gauche, et un filet en pied. Le titre affiche le nom du jardin actif.
+
+Les cartes entrent en fondu montant décalé de 45 millisecondes, plafonné à huit, désactivé si le système demande une réduction des animations.
+
 ### Écrans
 
 Deux écrans principaux, accessibles par une barre flottante translucide en bas d'écran.
@@ -163,6 +177,20 @@ Les lectures passent par une reprise automatique, jusqu'à trois tentatives espa
 
 Les enregistrements d'événements passent par une fonction qui ignore un élément absent du document, pour qu'un identifiant manquant n'interrompe pas le chargement du module.
 
+## Pièges rencontrés, à ne pas reproduire
+
+**La version des actifs.** Les balises `app.js?v=` et `styles.css?v=` doivent être incrémentées à chaque dépôt. Une omission a fait servir par Safari un `app.js` en cache avec un `index.html` récent : le script cherchait un élément renommé, recevait `null`, et l'exception interrompait le module avant le chargement du catalogue. Les onglets répondaient encore, ce qui rendait le diagnostic trompeur.
+
+**L'ordre de déclaration des constantes.** Une constante n'est pas remontée en tête de module comme l'est une déclaration de fonction. Le rendu étant déclenché par l'événement d'authentification, enregistré avant la fin de l'évaluation du module, toute constante utilisée par le rendu doit être déclarée en tête de fichier. Un bloc dédié les regroupe, précédé d'un commentaire.
+
+**Le survol sur écran tactile.** Un état de survol qui remplace une couleur de fond persiste après l'appui et fait disparaître cette couleur. Utiliser une ombre intérieure qui se superpose, et réserver le survol aux appareils qui en disposent par `@media (hover:hover)`.
+
+**Les marges sur un conteneur à positionnement absolu.** Une marge horizontale posée sur la rangée d'un tiroir de glissement décale la glissière et découvre le tiroir en permanence. La marge doit aller sur l'élément qui glisse.
+
+**Les règles de zone sûre.** `padding-left: env(safe-area-inset-left)` écrase la marge définie plus haut et vaut zéro en portrait. Utiliser `calc(16px + env(...))`.
+
+**GitHub Pages.** La reconstruction prend parfois plusieurs minutes. Vérifier que le statut de la dernière publication vaut `built` sur le bon commit avant d'annoncer un déploiement.
+
 ## Points de vigilance
 
 Le dépôt GitHub contient l'interface et ce document. Le schéma de base et les données du référentiel n'y figurent pas, ils vivent dans Supabase.
@@ -175,13 +203,29 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ## Chantiers ouverts
 
-La traçabilité par champ. `source` et `verified_at` valent pour la fiche entière, rien ne distingue un conseil de semis jamais relu d'un conseil de taille vérifié.
+### Justesse du référentiel
+
+Les conseils de semis, sous les quatre tâches concernées, et ceux de floraison n'ont jamais été relus. Environ 400 entrées restent dans leur rédaction générée d'origine. Les contrôles automatiques ne détectent que les incohérences de date, pas une profondeur de semis ou un espacement erronés. C'est le seul chantier dont l'inaction laisse une erreur potentielle en place.
+
+La traçabilité par champ. `source` et `verified_at` valent pour la fiche entière, rien ne distingue un conseil jamais relu d'un conseil vérifié.
 
 Le vocabulaire contrôlé. Dix-neuf formulations différentes pour l'exposition, texte libre pour la hauteur et l'espacement.
 
-Le journal des actions réalisées. Rien ne permet de marquer une tâche comme faite, la liste est identique le lendemain.
+Trois fiches groupent deux espèces sous un seul binôme : origan et marjolaine, salsifis et scorsonère, chicorée frisée et scarole. Candidates naturelles à une séparation.
 
-Trois fiches groupent deux espèces sous un seul binôme : origan et marjolaine, salsifis et scorsonère, chicorée frisée et scarole. Elles sont les candidates naturelles à une séparation.
+### Fonctionnalités
+
+Le journal des actions réalisées. Le masquage sert aujourd'hui de substitut à « c'est fait », ce qui est un détournement. Une table d'historique permettrait de dater la dernière taille, d'exploiter enfin les familles botaniques pour la rotation des cultures, et de se passer de mémoire.
+
+Les rappels. L'application ne peut pas joindre son utilisateur, il faut penser à l'ouvrir.
+
+Le filtre adaptées à mon climat dans Mes plantes, proposé et jamais fait. C'est l'usage réellement actionnable de la jauge.
+
+### Fiabilité du travail
+
+Aucun test automatisé. Deux régressions de production en une soirée, toutes deux détectables : version d'actif non incrémentée, constante déclarée trop bas. Un contrôle avant dépôt vérifiant les identifiants HTML référencés par le script, l'ordre de déclaration des constantes et la cohérence des versions d'actifs éviterait de découvrir les régressions à l'écran.
+
+Le versionnage des actifs reste manuel.
 
 ## Historique des décisions principales
 
