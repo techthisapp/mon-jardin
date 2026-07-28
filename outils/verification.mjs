@@ -3,7 +3,9 @@
 // Sans dépendance. Usage : node outils/verification.mjs [--corriger]
 // L'option --corriger réécrit les empreintes de version dans index.html.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, copyFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -25,6 +27,21 @@ const lignes = appJs.split("\n");
 // Le fichier est indenté : une instruction de niveau module commence en colonne 0.
 const NIVEAU_MODULE = n => /^\S/.test(lignes[n]);
 const COMMENTAIRE = t => /^\s*(\/\/|\/\*|\*)/.test(t);
+
+/* ------------------------------------------------------------------ */
+/* Contrôle 0 : syntaxe du module                                      */
+/* ------------------------------------------------------------------ */
+// Une erreur de syntaxe ne se voit qu'au chargement de la page, et le module
+// s'interrompt alors sans un mot dans l'interface.
+
+try {
+  const copie = join(mkdtempSync(join(tmpdir(), "monjardin-")), "app.mjs");
+  copyFileSync(join(RACINE, "app.js"), copie);
+  execFileSync(process.execPath, ["--check", copie], { stdio: "pipe" });
+} catch (e) {
+  const sortie = (e.stderr || "").toString().split("\n").filter(Boolean).slice(0, 4).join(" ");
+  faute("syntaxe", `app.js : ${sortie || e.message}`);
+}
 
 /* ------------------------------------------------------------------ */
 /* Contrôle 1 : identifiants HTML référencés par le script             */

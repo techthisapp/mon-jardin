@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=dbbca7ec78">
+<link rel="stylesheet" href="./styles.css?v=2d5b5a19f3">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -142,6 +142,7 @@
         <div class="jeu-chips" id="chipsCat"></div>
       </div>
       <div class="ligne-bilan">
+        <button class="chip chip-clim" id="filtreClimat" aria-pressed="false" type="button" hidden>Adaptées à mon climat</button>
         <span class="bilan" id="bilanSel"></span>
         <span class="bilan fort" id="compte"></span>
         <button class="lien" id="vider" type="button">Tout décocher</button>
@@ -216,7 +217,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=9d253fb48b"></script>
+<script type="module" src="./app.js?v=a7f764dec7"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

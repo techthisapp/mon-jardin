@@ -145,6 +145,10 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .chip-jardin[aria-pressed="true"]{background:var(--terre);color:#fff;opacity:1}
 .chip-jardin[aria-pressed="false"]{opacity:1}
 
+.chip-clim{border-color:var(--terre);color:var(--terre)}
+.chip-clim[aria-pressed="true"]{background:var(--terre);color:#fff;opacity:1}
+.chip-clim[aria-pressed="false"]{opacity:1}
+
 .ligne-bilan{
   display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   margin-top:9px;padding-top:9px;border-top:1px solid var(--filet-clair);

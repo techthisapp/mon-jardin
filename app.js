@@ -46,6 +46,7 @@ let jardinId = null;
 let session = null;
 let tri = "categorie";
 let jardinSeul = true;   // le jardin de la personne prime sur le catalogue
+let climatSeul = false;  // Mes plantes, restreint aux plantes adaptées au climat du jardin
 let moisChoisi = null;
 
 const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Mes plantes
@@ -437,6 +438,7 @@ function filtrerSel() {
   const q = $("rech").value.trim().toLowerCase();
   return plantes.filter(p =>
     etatTypo[p.typo] && etatCat[p.cat]
+    && (!climatSeul || (adapt[p.id] || {}).level === "adapte")
     && (!q || p.nom.toLowerCase().includes(q)
            || p.latin.toLowerCase().includes(q)
            || p.famille.toLowerCase().includes(q)));
@@ -503,6 +505,13 @@ function majLegendeClim() {
   if (!e) return;
   const g = jardinActif();
   const c = g && g.climate_key ? climats[g.climate_key] : null;
+  // Le filtre climatique n'a de sens que si un jardin déclare son climat.
+  const b = $("filtreClimat");
+  if (b) {
+    if (!c) climatSeul = false;
+    b.hidden = !c;
+    b.setAttribute("aria-pressed", String(climatSeul));
+  }
   if (!c) { e.hidden = true; return; }
   e.hidden = false;
   e.innerHTML = `<span class="leg-titre">Adaptation au climat ${esc(c.label.toLowerCase())}</span>`
@@ -554,6 +563,7 @@ function rendreSelection() {
 }
 
 sur("rech", "input", rendreSelection);
+sur("filtreClimat", "click", () => { climatSeul = !climatSeul; rendreSelection(); });
 sur("vider", "click", async () => {
   if (!sel.size || !session) return;
   const copie = new Set(sel), copieAff = new Map(aff);
