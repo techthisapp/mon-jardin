@@ -104,7 +104,7 @@ Le retrait d'une plante du référentiel se fait par `is_active` à faux, avec `
 | Familles botaniques | 84 |
 | Tâches | 10 |
 | Périodes | 2052, dont 459 conditionnées au climat |
-| Conseils rédigés | 1667 sur fiches actives : 615 relus un à un, 380 couverts au niveau de la fiche, 248 réécrits sans source, 424 jamais relus |
+| Conseils rédigés | 1667 sur fiches actives : 1287 relus un à un, 380 couverts au niveau de la fiche, aucun laissé dans sa rédaction d'origine |
 | Adaptations climatiques | 1580 |
 | Climats | 5 |
 | Exposition normalisée | 315 sur 315 |
@@ -171,7 +171,7 @@ Sources par lot : Gerbeaud et PagesJaunes Jardinage pour l'horticulture généra
 
 Cette portée a été reportée dans `plant_advice.verification` le 28 juillet 2026 : la multiplication passe à `fiche` pour les 310 fiches, la taille passe à `fiche` pour les arbustes d'ornement, les arbres fruitiers et les grimpantes. Les conseils de fertilisation, refaits le 27 juillet sans vérification de source, passent à `reecrit`.
 
-Restent 424 conseils jamais relus, concentrés sur Récolte 153, Protection hivernale 179, Taille des non ligneuses 76, Protection estivale 14, et deux multiplications hors campagne.
+Le reste du référentiel a été relu un à un le 28 juillet 2026. Il ne subsiste plus aucun conseil à l'état `aucune`.
 
 ## Les contrôles permanents
 
@@ -183,7 +183,7 @@ Les contrôles agrégés, texte répété, hauteur et conseil jamais relu, remon
 
 La détection d'incohérence de date ne porte que sur la première phrase du conseil, celle qui contient la consigne. Les mentions de saison qui suivent renvoient à d'autres opérations et produiraient des faux positifs.
 
-Au 28 juillet 2026, aucun défaut de gravité haute ou moyenne. En gravité basse subsistent dix textes partagés par plus de vingt plantes, justifiés par une identité réelle de besoin, deux espacements non normalisables, le cresson alénois semé à la volée et l'ortie sans espacement, une hauteur non chiffrable, et six tâches dont les conseils n'ont pas encore été relus un à un.
+Au 28 juillet 2026, aucun défaut de gravité haute ou moyenne. En gravité basse subsistent des textes partagés par plus de vingt plantes, justifiés par une identité réelle de besoin, deux espacements non normalisables, le cresson alénois semé à la volée et l'ortie sans espacement, et une hauteur non chiffrable.
 
 `select * from relecture_bilan` donne l'avancement de la relecture par tâche.
 
@@ -312,9 +312,9 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Justesse du référentiel
 
-Les quatre tâches visées par ce chantier, Semis à l'abri, Semis en pleine terre, Plantation et repiquage, et Floraison, ont été relues un à un le 28 juillet 2026, soit 602 conseils sur fiches actives. Le report de la portée de la campagne du 26 juillet couvre en plus la multiplication et la taille des ligneuses.
+Les dix tâches ont été passées le 28 juillet 2026. Plus aucun conseil n'est dans sa rédaction générée d'origine.
 
-Restent 424 conseils jamais relus : Protection hivernale 179, Récolte 153, Taille des non ligneuses 76, Protection estivale 14, deux multiplications hors campagne. S'y ajoutent 248 conseils de fertilisation à l'état `reecrit`, refaits sans source, qui demandent une vérification et non une réécriture.
+1287 conseils sont relus un à un, avec source et date propres. Les 380 restants sont à l'état `fiche` : la multiplication, couverte par les neuf lots de la campagne du 26 juillet, et la taille des ligneuses, couverte par les lots arbustes d'ornement, arbres fruitiers et grimpantes. Ce sont les champs les mieux vérifiés de la base, leur granularité seule reste plus grossière.
 
 La relecture porte sur le texte distinct, pas sur la ligne : douze textes couvraient les 191 conseils de floraison, sept textes en couvraient 142 sur les 259 de la plantation. Les erreurs trouvées étaient de quatre natures.
 
@@ -325,6 +325,10 @@ La relecture porte sur le texte distinct, pas sur la ligne : douze textes couvra
 **Une donnée chiffrée fausse.** L'artichaut et le cardon semés « en surface » au lieu de deux centimètres, la mâche à un centimètre alors que son propre conseil demandait de ne pas enterrer.
 
 **Un fait manquant qui prime sur le conseil donné.** Le sol acide du camélia, du rhododendron, de l'azalée, du piéris et de l'airelle, plus décisif que la technique de plantation. La profondeur des yeux de la pivoine, qui décide de la floraison. Le statut réglementaire de l'herbe de la pampa.
+
+**Un conseil actif nuisible.** Le paillage du collet sur quinze centimètres, posé sur la lavande, le romarin, le thym, la sauge officinale, la sarriette et l'hysope. Ces sous-arbrisseaux méditerranéens meurent d'humidité hivernale et non de froid : le paillage du collet les fait pourrir. C'est le seul cas trouvé où suivre le conseil abîmait la plante.
+
+**Une protection posée sur des plantes qui n'en ont pas besoin.** Buttage, paillage sur trente centimètres et voile d'hivernage double prescrits à des annuelles comme le zinnia ou le cosmos. Récolte avant les fortes gelées prescrite à l'ail et à l'échalote, plantés à l'automne et rustiques en terre.
 
 Les contrôles automatiques ne détectent que les incohérences de date. Une profondeur de semis ou un espacement erronés leur échappent, seule la relecture les trouve.
 
@@ -352,4 +356,4 @@ Le référentiel a été étendu en trois temps jusqu'à 317 plantes, puis inté
 
 L'interface a été reprise plusieurs fois : filtrage par catégorie fine, tri alphabétique, identité visuelle, filtrage par mois, espaces, multi-jardins, feuille de détail modale, barre de navigation flottante, masquage par glissement, jauge d'adaptation climatique, filtre par adaptation au climat.
 
-Le 28 juillet 2026, une session a posé le contrôle avant dépôt et le versionnage par empreinte, plafonné les tentatives de reprise, ouvert la traçabilité au niveau du conseil, séparé les trois fiches à deux espèces, normalisé l'exposition, la hauteur et l'espacement, ajouté le filtre par adaptation au climat, et relu les 603 conseils des quatre tâches de semis, de plantation et de floraison.
+Le 28 juillet 2026, une session a posé le contrôle avant dépôt et le versionnage par empreinte, plafonné les tentatives de reprise, ouvert la traçabilité au niveau du conseil, séparé les trois fiches à deux espèces, fusionné les deux fiches de groseille, normalisé l'exposition, la hauteur et l'espacement, ajouté le filtre par adaptation au climat, posé le contrôle en intégration continue, et relu la totalité des conseils du référentiel.
