@@ -1,0 +1,10 @@
+#!/bin/sh
+# Contrôle avant dépôt. Installer une fois par clone :
+#   git config core.hooksPath .githooks
+set -e
+node outils/verification.mjs --corriger
+if ! git diff --quiet -- index.html; then
+  git add index.html
+  echo "index.html réindexé avec les nouvelles empreintes de version."
+fi
+node outils/verification.mjs
