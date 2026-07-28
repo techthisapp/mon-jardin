@@ -61,7 +61,7 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 | `phases` | Les dix tâches du calendrier. Clé, libellé, couleur, position |
 | `plants` | Une ligne par plante. `slug` stable, nom, nom latin, famille, genre calculé, catégorie, typologie, espacement, profondeur, associations, conseil général, attributs `jsonb`, rusticité normalisée, source, date de vérification, `is_active`, `replaced_by`. Champs normalisés : `exposure`, `exposure_note`, `spacing_cm`, `row_cm`, `height_min_cm`, `height_max_cm` |
 | `plant_phases` | Périodes par plante et par tâche, en demi-mois de 1 pour le début janvier à 24 pour la fin décembre, avec une liste de climats facultative |
-| `plant_advice` | Conseil rédigé par couple plante et tâche, avec `source`, `verified_at` et `verification` |
+| `plant_advice` | Conseil rédigé par couple plante et tâche, avec `source`, `verified_at` et `verification` à quatre états |
 | `expositions` | Vocabulaire contrôlé de l'exposition, cinq valeurs |
 | `plant_climates` | Niveau d'adaptation de chaque plante à chaque climat, avec note et indicateur de dérivation |
 | `climates` | Les cinq climats français, avec décalage saisonnier |
@@ -99,17 +99,17 @@ Le retrait d'une plante du référentiel se fait par `is_active` à faux, avec `
 
 | Élément | Valeur |
 |---|---|
-| Plantes actives | 316 |
-| Plantes désactivées | 4 |
+| Plantes actives | 315 |
+| Plantes désactivées | 5 |
 | Familles botaniques | 84 |
 | Tâches | 10 |
-| Périodes | 2050, dont 459 conditionnées au climat |
-| Conseils rédigés | 1683, dont 603 relus un à un |
+| Périodes | 2052, dont 459 conditionnées au climat |
+| Conseils rédigés | 1667 sur fiches actives : 615 relus un à un, 380 couverts au niveau de la fiche, 248 réécrits sans source, 424 jamais relus |
 | Adaptations climatiques | 1580 |
 | Climats | 5 |
-| Exposition normalisée | 316 sur 316 |
-| Espacement normalisé | 314 sur 316 |
-| Hauteur normalisée | 228 sur 316 |
+| Exposition normalisée | 315 sur 315 |
+| Espacement normalisé | 313 sur 315 |
+| Hauteur normalisée | 227 sur 315 |
 
 ## Le calendrier
 
@@ -148,6 +148,30 @@ Trois fiches groupaient deux espèces sous un seul binôme. Elles ont été sép
 | `chicoree-frisee-scarole` | `chicoree-frisee`, Cichorium endivia var. crispum | `scarole`, Cichorium endivia var. latifolium, plus tardive et plus rustique |
 
 Les `slug` des trois fiches d'origine ont donc changé. Rien dans l'application ne dépend du `slug`, les jardins référencent l'identifiant technique.
+
+L'opération inverse a été menée le même jour sur les groseilles. `groseille` et `groseille-blanche` portaient toutes deux Ribes rubrum, soit deux couleurs d'une même espèce. `groseille` devient « Groseille à grappes », enrichie de la floraison et de la taille que seule l'autre fiche portait, et `groseille-blanche` passe à `is_active` faux avec `replaced_by` vers elle.
+
+## Portée réelle de la campagne du 26 juillet
+
+La campagne a porté sur 310 fiches réparties en neuf lots, chaque lot vérifiant des champs précis et non la fiche entière. `plants.verified_at` vaut pourtant pour la fiche entière, ce qui a longtemps masqué cette limite.
+
+| Lot | Périmètre | Fiches | Champs vérifiés |
+|---|---|---|---|
+| 1 | Arbustes d'ornement | 38 | Multiplication, toxicité, taille |
+| 2 | Aromatiques | 40 | Multiplication, toxicité |
+| 3 | Fleurs vivaces | 37 | Multiplication, toxicité |
+| 4 et 5 | Fleurs annuelles, bulbes à fleurs | 51 | Multiplication, toxicité |
+| 6 | Arbres fruitiers | 21 | Greffe et multiplication, taille, plantation |
+| 6 | Petits fruits | 15 | Multiplication, toxicité |
+| 7 | Grimpantes | 13 | Multiplication, taille |
+| 7 | Graminées, fleurs bisannuelles | 22 | Multiplication |
+| 8 | Légumes | 73 | Multiplication, production de semences, toxicité |
+
+Sources par lot : Gerbeaud et PagesJaunes Jardinage pour l'horticulture générale, Centre antipoison de Lille et ANSES pour les toxicités, Domaine de Merval pour le calendrier de greffe, Lubera pour la division des graminées, Jardiner Malin et Curiosités Florales pour la taille, SEMAE pour les semences potagères, Truffaut et Gamm vert en recoupement.
+
+Cette portée a été reportée dans `plant_advice.verification` le 28 juillet 2026 : la multiplication passe à `fiche` pour les 310 fiches, la taille passe à `fiche` pour les arbustes d'ornement, les arbres fruitiers et les grimpantes. Les conseils de fertilisation, refaits le 27 juillet sans vérification de source, passent à `reecrit`.
+
+Restent 424 conseils jamais relus, concentrés sur Récolte 153, Protection hivernale 179, Taille des non ligneuses 76, Protection estivale 14, et deux multiplications hors campagne.
 
 ## Les contrôles permanents
 
@@ -259,15 +283,47 @@ Le dépôt GitHub contient l'interface et ce document. Le schéma de base et les
 
 Les scripts Python d'origine, qui avaient servi à générer le référentiel, sont désynchronisés de la base depuis la campagne de vérification. Toute reprise de cette voie exigerait de les réaligner.
 
-L'herbe de la pampa, Cortaderia selloana, est interdite à la culture en France métropolitaine par l'arrêté ministériel du 2 mars 2023, qui en interdit aussi la détention, le transport, la vente et l'achat. Son conseil de plantation le dit désormais, mais la fiche reste active dans le catalogue. La passer à `is_active` faux relève d'une décision, elle retirerait la plante à tout le monde.
+L'herbe de la pampa, Cortaderia selloana, est interdite à la culture en France métropolitaine par l'arrêté ministériel du 2 mars 2023, qui en interdit aussi la détention, le transport, la vente et l'achat. La fiche est conservée volontairement, son conseil de plantation portant l'interdiction en toutes lettres. Le choix est de renseigner plutôt que de retirer.
 
-Les fiches `groseille` et `groseille-blanche` portent le même nom latin, Ribes rubrum. Ce sont deux couleurs d'une même espèce, comme la frisée et la scarole. À clarifier ou à fusionner.
+La colonne `verification` de `plant_advice` porte quatre états, du plus faible au plus fort.
 
-La colonne `verification` de `plant_advice` vaut `aucune` pour tous les conseils non encore relus un à un, y compris ceux que la campagne de vérification du 26 juillet 2026 a pu couvrir au niveau de la fiche. Le sens sûr a été retenu : mieux vaut relire deux fois que tenir pour vérifié un texte qui ne l'est pas. La valeur `fiche` reste disponible pour les tâches dont la couverture par la campagne serait confirmée.
+| État | Sens |
+|---|---|
+| `aucune` | Le texte n'a jamais été relu, il est dans sa rédaction générée d'origine |
+| `reecrit` | Le texte a été refait, sans vérification de source |
+| `fiche` | La campagne du 26 juillet 2026 a couvert ce champ au niveau de la fiche |
+| `conseil` | Le texte a été relu pour lui-même, `source` et `verified_at` lui sont propres |
 
 Un jeton d'accès personnel GitHub reste actif tant qu'il n'est pas révoqué, depuis `https://github.com/settings/tokens?type=beta`.
 
-Le jeton utilisé le 28 juillet 2026 ne porte pas la permission `Workflows`. Le fichier `.github/workflows/verification.yml`, qui rejouerait le contrôle avant dépôt à chaque poussée, a donc été refusé par GitHub. À reprendre avec un jeton élargi.
+### Poser le contrôle en intégration continue
+
+Le fichier `.github/workflows/verification.yml` rejouerait le contrôle avant dépôt à chaque poussée, y compris depuis un clone où le crochet n'est pas installé. GitHub refuse qu'un jeton sans la permission `Workflows` crée ou modifie un fichier sous `.github/workflows/`. Deux voies.
+
+**Par l'interface, sans toucher au jeton.** Sur le dépôt, onglet Actions, puis « set up a workflow yourself ». Nommer le fichier `verification.yml`, coller le contenu ci-dessous, valider par « Commit changes ». C'est le plus rapide, la permission du jeton n'entre pas en jeu.
+
+**Par un jeton élargi.** Sur `https://github.com/settings/tokens?type=beta`, éditer le jeton ou en créer un nouveau, section Repository permissions, passer `Workflows` à Read and write. Enregistrer, puis créer le fichier et le pousser normalement.
+
+```yaml
+name: Controle avant depot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node outils/verification.mjs
+```
+
+Le contrôle échoue si les empreintes de version ne correspondent pas au contenu. C'est voulu : sur la machine de travail, le crochet les corrige avant le dépôt.
 
 La fonction de bord accepte une variable d'environnement `SEL_TENTATIVES` pour saler les empreintes d'adresse. En son absence, la clé de service sert de sel. Poser cette variable rend le sel indépendant d'une éventuelle rotation de la clé.
 
@@ -277,7 +333,9 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Justesse du référentiel
 
-Les quatre tâches visées par ce chantier, Semis à l'abri, Semis en pleine terre, Plantation et repiquage, et Floraison, ont été relues un à un le 28 juillet 2026, soit 603 conseils. Restent 1057 conseils dans leur rédaction générée d'origine, sous six tâches : Multiplication et division 311, Fertilisation 249, Protection hivernale 179, Récolte 154, Taille et entretien 149, Protection estivale 15.
+Les quatre tâches visées par ce chantier, Semis à l'abri, Semis en pleine terre, Plantation et repiquage, et Floraison, ont été relues un à un le 28 juillet 2026, soit 602 conseils sur fiches actives. Le report de la portée de la campagne du 26 juillet couvre en plus la multiplication et la taille des ligneuses.
+
+Restent 424 conseils jamais relus : Protection hivernale 179, Récolte 153, Taille des non ligneuses 76, Protection estivale 14, deux multiplications hors campagne. S'y ajoutent 248 conseils de fertilisation à l'état `reecrit`, refaits sans source, qui demandent une vérification et non une réécriture.
 
 La relecture porte sur le texte distinct, pas sur la ligne : douze textes couvraient les 191 conseils de floraison, sept textes en couvraient 142 sur les 259 de la plantation. Les erreurs trouvées étaient de quatre natures.
 
