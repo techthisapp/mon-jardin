@@ -996,6 +996,7 @@ function ficheHTML(p) {
       ${bloc("Couleur", a.couleur)}${bloc("Feuillage", a.feuillage)}
       ${bloc("Résiste jusqu'à", a.gel)}${bloc("Parfum", a.parfum)}
       ${bloc("Mellifère", a.mellifere)}
+      ${bloc("Première récolte", a.recolte)}${bloc("Pollinisation", a.pollinisation)}
       ${bloc("Multiplication", a.multiplication)}${bloc("Usage", a.usage)}
       ${p.phases.taille ? "" : bloc("Taille", a.taille)}
       ${bloc("Associations", p.assoc)}

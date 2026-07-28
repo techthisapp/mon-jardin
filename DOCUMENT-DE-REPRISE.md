@@ -196,7 +196,7 @@ Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par
 | `height_min_cm`, `height_max_cm` | centimètres | 315 |
 | `depth_cm` | centimètres, 0 pour un semis en surface | 179 |
 | `frost_min_c` | degrés Celsius | 265, la totalité de celles qui restent en terre |
-| `first_harvest_year` | années | à renseigner |
+| `first_harvest_year` | années après plantation, 0 pour une récolte la première année | 72 pérennes comestibles |
 
 La vue `plants_full` reconstruit l'objet `attributes` attendu par l'application à partir de ces colonnes et des libellés du vocabulaire. Le contrat de lecture reste donc stable, la normalisation n'a rien cassé côté application.
 
@@ -206,7 +206,9 @@ La vue `plants_full` reconstruit l'objet `attributes` attendu par l'application 
 
 Le plus utile croise `frost_min_c` avec le climat déclaré : une plante qui reste en terre et dont la limite de rusticité dépasse le minimum habituel de son climat ne peut pas être déclarée adaptée. Ce contrôle a fait apparaître cinq surestimations, laurier-tin, lavande, oranger du Mexique et camélia en semi-continental, nérine en océanique dégradé, toutes passées au niveau à protéger. Il rend vérifiables les 1580 lignes d'adaptation climatique jusque-là tenues à la main.
 
-Les quatre autres portent sur la toxicité non statuée, la pollinisation absente sur un fruitier, la température de gel absente et la profondeur de semis absente malgré une tâche de semis.
+Les cinq autres portent sur la toxicité non statuée, la pollinisation absente sur un fruitier, le délai de première récolte absent sur une pérenne comestible, la température de gel absente et la profondeur de semis absente malgré une tâche de semis.
+
+Les contrôles agrégés se taisent quand ils n'ont rien à signaler, au lieu de rendre une ligne à zéro cas.
 
 ## Portée réelle de la campagne du 26 juillet
 
@@ -371,7 +373,7 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Homogénéité des fiches
 
-La normalisation a été menée le 28 juillet 2026. L'inventaire de départ et l'analyse figurent dans `PLAN-UNIFICATION-DES-FICHES.md`. Reste à renseigner `first_harvest_year`, le délai avant première récolte des plantes pérennes.
+La normalisation a été menée le 28 juillet 2026. L'inventaire de départ et l'analyse figurent dans `PLAN-UNIFICATION-DES-FICHES.md`. Les neuf lots du plan sont traités.
 
 Les bornes basses de hauteur de 222 fiches ont été reconstruites à partir des références horticoles et non des données d'origine. Le premier analyseur ne captait que le nombre porteur de l'unité : « 5 à 10 m » donnait 1000 et 1000. Le défaut est passé inaperçu jusqu'à la suppression du texte source, qui a rendu la valeur d'origine irrécupérable. Les bornes hautes n'ont jamais été touchées.
 
