@@ -106,6 +106,24 @@ function appliquerSaison() {
   document.documentElement.style.setProperty("--papier", s.ton);
 }
 
+// Un pictogramme au trait par tâche, dessiné dans la couleur de la tâche.
+const PICTOS = {
+  abri:            '<path d="M4 19.5h16"/><path d="M6 19.5a6 6 0 0 1 12 0"/><path d="M12 14V9.5"/><circle cx="12" cy="7.6" r="1.7"/>',
+  terre:           '<path d="M3 18.5h18"/><circle cx="8" cy="7" r="1.2"/><circle cx="12.6" cy="5.2" r="1.2"/><circle cx="16.6" cy="8" r="1.2"/><path d="M8 9.5v3.5M12.6 7.5v5.5M16.6 10.5v2.5"/>',
+  plant:           '<path d="M6 12.5h12l-1.4 8H7.4z"/><path d="M12 12.5V8"/><path d="M12 9.2c2.4 0 3.9-1.5 3.9-3.9-2.4 0-3.9 1.5-3.9 3.9z"/>',
+  floraison:       '<circle cx="12" cy="11" r="2"/><ellipse cx="12" cy="6.4" rx="1.8" ry="2.5"/><ellipse cx="12" cy="15.6" rx="1.8" ry="2.5"/><ellipse cx="7.4" cy="11" rx="2.5" ry="1.8"/><ellipse cx="16.6" cy="11" rx="2.5" ry="1.8"/>',
+  recolte:         '<path d="M4 10.5h16l-2 9.5H6z"/><path d="M8 10.5a4 4 0 0 1 8 0"/>',
+  taille:          '<path d="M7 3.5 14.5 13M17 3.5 9.5 13"/><circle cx="7.6" cy="17.4" r="2.6"/><circle cx="16.4" cy="17.4" r="2.6"/>',
+  multiplication:  '<path d="M12 20.5v-6"/><path d="M12 14.5 7.6 9.4M12 14.5l4.4-5.1"/><circle cx="6.8" cy="7.8" r="2.2"/><circle cx="17.2" cy="7.8" r="2.2"/>',
+  fertilisation:   '<path d="M3 18.5h18"/><path d="M6 18.5c0-3.2 2.6-5.4 6-5.4s6 2.2 6 5.4"/><circle cx="9" cy="8" r="1.1"/><circle cx="13" cy="5.6" r="1.1"/><circle cx="15.6" cy="9.4" r="1.1"/>',
+  protection:      '<path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/>',
+  protection_ete:  '<circle cx="12" cy="12" r="3.8"/><path d="M12 3.4v2M12 18.6v2M3.4 12h2M18.6 12h2M6 6l1.4 1.4M16.6 16.6 18 18M18 6l-1.4 1.4M7.4 16.6 6 18"/>',
+};
+
+const picto = k => PICTOS[k]
+  ? `<span class="picto-tache" aria-hidden="true"><svg viewBox="0 0 24 24">${PICTOS[k]}</svg></span>`
+  : `<span class="pastille"></span>`;
+
 const cleSourdine = (p, k) => p.id + "|" + k;
 
 const anneeCourante = () => new Date().getFullYear();
@@ -783,6 +801,7 @@ function rendreMaintenant() {
       c.style.boxShadow = `inset 3px 0 0 ${couleur}`;
       c.style.borderColor = teinte(couleur, .22);
       c.style.setProperty("--ton-tache", teinte(couleur, .10));
+      c.style.setProperty("--couleur-tache", couleur);
     }
     c.innerHTML = `<h2 class="tete-section" role="button" tabindex="0" aria-expanded="${!ferme}">`
       + `${titre}<span class="nb">${compteur}</span>`
@@ -837,8 +856,7 @@ function rendreMaintenant() {
     const repliable = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
     const urgence = lot.some(x => etatFenetre(x.p, k) === "derniere");
     const replie = repliable && !urgence;
-    const c = carte(`<span class="pastille" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`,
-                    lot.length, replie, phases[k].color);
+    const c = carte(`${picto(k)}${esc(phases[k].label)}`, lot.length, replie, phases[k].color);
     const corps = c.querySelector(".corps-tache");
     if (k === "floraison") {
       corps.classList.add("bloc-puces");
