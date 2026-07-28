@@ -59,7 +59,8 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 | Table ou vue | Contenu |
 |---|---|
 | `phases` | Les dix tâches du calendrier. Clé, libellé, couleur, position |
-| `plants` | Une ligne par plante. `slug` stable, nom, nom latin, famille, genre calculé, catégorie, typologie, espacement, profondeur, associations, conseil général, attributs `jsonb`, rusticité normalisée, source, date de vérification, `is_active`, `replaced_by`. Champs normalisés : `exposure`, `exposure_note`, `spacing_cm`, `row_cm`, `height_min_cm`, `height_max_cm` |
+| `plants` | Une ligne par plante. Identité, nomenclature, classement, associations, conseil général, source et date de vérification. Champs normalisés listés plus bas. `attributes` ne porte plus que les notes libres non modélisées |
+| `vocabulaires` | Vocabulaire contrôlé de tout le référentiel. Une ligne par valeur admise, groupée par domaine |
 | `plant_phases` | Périodes par plante et par tâche, en demi-mois de 1 pour le début janvier à 24 pour la fin décembre, avec une liste de climats facultative |
 | `plant_advice` | Conseil rédigé par couple plante et tâche, avec `source`, `verified_at` et `verification` à quatre états |
 | `expositions` | Vocabulaire contrôlé de l'exposition, cinq valeurs |
@@ -68,7 +69,8 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 | `climate_phase_shifts` | Décalage fin par climat et par tâche |
 | `plants_full` | Vue lue par le site, assemble plante, périodes et conseils |
 | `catalog_meta` | Vue calculée, empreinte du catalogue pour le cache |
-| `controle_detail`, `controle_bilan` | Vues de contrôle de cohérence du référentiel |
+| `controle_detail`, `controle_bilan` | Vues de contrôle de cohérence des conseils et des périodes |
+| `controle_modele`, `controle_modele_bilan` | Vues de contrôle de cohérence du modèle normalisé |
 | `relecture_bilan` | Vue calculée, avancement de la relecture des conseils par tâche |
 
 ### Schéma, données personnelles
@@ -164,6 +166,47 @@ La floraison est un constat plus qu'une action, ce qui rend la tâche particuli�
 **Ce qui peut mal tourner.** Une gelée sur les fleurs de fraisier noircit le cœur et supprime le fruit. Le pollen de tomate devient stérile au-dessus de trente-cinq degrés. La courgette avorte ses fruits faute de pollinisateurs.
 
 **L'alerte de montaison.** Pour le basilic, la laitue ou la rhubarbe, la floraison annonce la fin de la production et appelle une correction immédiate.
+
+## Modèle normalisé du référentiel
+
+Chaque notion se lit sur une clé de vocabulaire contrôlé, la nuance restant dans une note libre facultative. La table `vocabulaires` porte toutes les valeurs admises, groupées par domaine, et l'intégrité est assurée par des clés étrangères composites vers `vocabulaires(domaine, cle)`. Le domaine est porté par une colonne générée constante, ce qui évite une table de référence par notion tout en gardant une contrainte vérifiée par la base.
+
+Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par une valeur par défaut, ce qui évite de classer une annuelle comme rustique.
+
+| Colonne | Domaine de vocabulaire | Renseigné |
+|---|---|---|
+| `exposure`, `exposure_note` | exposition | 315 |
+| `life_cycle` | cycle | 315 |
+| `habit` | port | 315 |
+| `conduite` | conduite | 39 |
+| `soil`, `soil_note` | sol | 315 |
+| `fertility_need` | fertilite | 315 |
+| `water_need`, `water_note` | eau | 315 |
+| `propagation` | multiplication | 315 |
+| `planting_mode` | plantation | 315 |
+| `toxicity`, `toxicity_note` | toxicite | 315 |
+| `nectar`, `nectar_season` | nectar, nectar_saison | 87 |
+| `fragrance`, `fragrance_organ` | parfum, parfum_organe | 30 |
+| `pollination` | pollinisation | 35 fruitiers |
+| `wintering` | hivernage | 202 |
+
+| Colonne numérique | Unité | Renseigné |
+|---|---|---|
+| `spacing_cm`, `row_cm` | centimètres | 313, 311 |
+| `height_min_cm`, `height_max_cm` | centimètres | 227 |
+| `depth_cm` | centimètres, 0 pour un semis en surface | 177 |
+| `frost_min_c` | degrés Celsius | 116 |
+| `first_harvest_year` | années | à renseigner |
+
+La vue `plants_full` reconstruit l'objet `attributes` attendu par l'application à partir de ces colonnes et des libellés du vocabulaire. Le contrat de lecture reste donc stable, la normalisation n'a rien cassé côté application.
+
+### Contrôles du modèle
+
+`controle_modele` et `controle_modele_bilan` ajoutent cinq contrôles que la normalisation rend possibles.
+
+Le plus utile croise `frost_min_c` avec le climat déclaré : une plante qui reste en terre et dont la limite de rusticité dépasse le minimum habituel de son climat ne peut pas être déclarée adaptée. Ce contrôle a fait apparaître cinq surestimations, laurier-tin, lavande, oranger du Mexique et camélia en semi-continental, nérine en océanique dégradé, toutes passées au niveau à protéger. Il rend vérifiables les 1580 lignes d'adaptation climatique jusque-là tenues à la main.
+
+Les quatre autres portent sur la toxicité non statuée, la pollinisation absente sur un fruitier, la température de gel absente et la profondeur de semis absente malgré une tâche de semis.
 
 ## Portée réelle de la campagne du 26 juillet
 
@@ -328,7 +371,7 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Homogénéité des fiches
 
-Les attributs descriptifs sont inégalement renseignés et inégalement disciplinés. L'inventaire complet, l'analyse et le plan de reprise en neuf lots figurent dans `PLAN-UNIFICATION-DES-FICHES.md`.
+La normalisation a été menée le 28 juillet 2026. L'inventaire de départ et l'analyse figurent dans `PLAN-UNIFICATION-DES-FICHES.md`. Restent à renseigner la température de gel des plantes qui ne sont ni gélives ni peu rustiques, et la hauteur des 88 fiches qui n'en portent pas.
 
 ### Justesse du référentiel
 
