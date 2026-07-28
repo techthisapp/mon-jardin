@@ -71,6 +71,9 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 | `catalog_meta` | Vue calculée, empreinte du catalogue pour le cache |
 | `controle_detail`, `controle_bilan` | Vues de contrôle de cohérence des conseils et des périodes |
 | `controle_modele`, `controle_modele_bilan` | Vues de contrôle de cohérence du modèle normalisé |
+| `controle_anomalies` | Vue de détection d'écarts par comparaison entre plantes voisines |
+| `historique` | Journal des modifications du référentiel, alimenté par déclencheur |
+| `historique_lisible` | Vue du journal, un enregistrement par champ modifié |
 | `relecture_bilan` | Vue calculée, avancement de la relecture des conseils par tâche |
 
 ### Schéma, données personnelles
@@ -209,6 +212,32 @@ Le plus utile croise `frost_min_c` avec le climat déclaré : une plante qui res
 Les cinq autres portent sur la toxicité non statuée, la pollinisation absente sur un fruitier, le délai de première récolte absent sur une pérenne comestible, la température de gel absente et la profondeur de semis absente malgré une tâche de semis.
 
 Les contrôles agrégés se taisent quand ils n'ont rien à signaler, au lieu de rendre une ligne à zéro cas.
+
+## Historisation
+
+Toute modification des tables `plants`, `plant_advice`, `plant_phases`, `plant_climates` et `vocabulaires` est enregistrée dans `historique` par un déclencheur : l'état avant, l'état après, la liste des champs réellement modifiés, l'auteur et l'horodatage. Une mise à jour qui ne change rien n'écrit rien.
+
+Les tables personnelles ne sont pas historisées.
+
+Un motif peut être attaché à une série de modifications par la variable de session `app.motif`, à poser en tête de migration.
+
+```sql
+set local app.motif = 'correction de la profondeur des bulbes';
+```
+
+`historique_lisible` déplie le journal à raison d'une ligne par champ modifié, avec le nom de la plante, l'ancienne et la nouvelle valeur.
+
+Cette table existe parce qu'elle a manqué. Le 28 juillet 2026, la suppression d'une colonne source avant validation de la valeur dérivée a rendu 222 bornes de hauteur irrécupérables. Le journal aurait permis de les restituer.
+
+## Détection d'anomalies
+
+`controle_anomalies` signale une valeur qui s'écarte de plus de deux écarts-types de celles de son groupe. Ce contrôle ne connaît rien au jardinage, il ne compare que des nombres, et c'est ce qui fait son intérêt : il trouve des erreurs sans avoir besoin d'une source.
+
+Le choix du groupe décide de tout. Croiser la famille botanique avec le mode de plantation évite de comparer un tubercule enterré à dix centimètres et une graine semée à un. L'espacement se compare rapporté à la hauteur, sans quoi toute grande plante est signalée. La température de gel se compare à cycle de vie égal.
+
+Première exécution, le 28 juillet 2026 : treize écarts, dont une erreur systématique réelle. Vingt-deux bulbes et tubercules étaient classés en `planting_mode` valant semis, parce que la correspondance depuis l'ancienne colonne `depth` retenait « semis » dès que le texte était une mesure, or la profondeur d'un bulbe est une profondeur de mise en place. Corrigé, et le commentaire de `depth_cm` précise désormais qu'il s'agit d'une profondeur de mise en place quel que soit le mode.
+
+Après affinage des groupes, cinq écarts subsistent, tous légitimes et documentés comme tels : l'alysse odorante, couvre-sol basse et large ; le maïs doux et le tournesol, grosses graines parmi des semis de surface ; la marjolaine et la stévia, gélives au milieu de familles rustiques. Un détecteur qui ne signalerait plus rien serait suspect.
 
 ## Portée réelle de la campagne du 26 juillet
 
@@ -370,6 +399,30 @@ La fonction de bord accepte une variable d'environnement `SEL_TENTATIVES` pour s
 Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'expéditeur est une adresse iCloud, domaine dont la politique DMARC interdit l'émission par un tiers, ce qui provoque un rejet systématique. Revenir au SMTP par défaut de Supabase, ou acheter un domaine et l'authentifier.
 
 ## Chantiers ouverts
+
+### Fiabilisation du référentiel
+
+Par ordre d'intérêt décroissant, ce qui reste à faire pour rendre la base plus sûre.
+
+**Confrontation de la nomenclature à une autorité.** Les 315 noms latins n'ont jamais été confrontés à GBIF, POWO ou Tela Botanica. L'audit interne du 28 juillet 2026 est propre : familles toutes en `-aceae`, aucun genre rattaché à deux familles, aucun doublon injustifié, les 21 formes signalées étant des hybrides et des fiches au niveau du genre parfaitement valides. Restent invisibles sans autorité externe l'épithète mal orthographiée mais plausible, le nom devenu synonyme, le genre déplacé par une révision récente.
+
+L'appel à `api.gbif.org` est refusé par le bac à sable, réponse 403 et `x-deny-reason: host_not_allowed`. Ajouter `api.gbif.org` et `api.tela-botanica.org` aux domaines autorisés dans les paramètres réseau débloque une passe automatique sur les 315 noms, qui rend pour chacun le statut accepté ou synonyme et le nom accepté correspondant. Seuls les synonymes demanderaient un arbitrage entre révision taxonomique et nom d'usage.
+
+**Les associations n'ont jamais été relues.** 312 fiches, 267 formulations, aucun contrôle. C'est la dernière zone de contenu intacte, et le compagnonnage mêle des faits établis à des affirmations qui ne résistent pas à l'examen.
+
+**La traçabilité est nominale.** 1700 conseils portent une source, mais seulement trente sources distinctes, sous forme de listes du type « Gerbeaud, Terre Vivante, Au Jardin, SNHF ». C'est une liste de ce qui a été consulté, pas une attestation vérifiable. Pour les affirmations chiffrées, profondeur, espacement, température, délai, une URL par affirmation et sa date de consultation changeraient la nature de la garantie. Ne jamais stocker le texte de la source, seulement le fait et le lien.
+
+**Aucun niveau de confiance par champ.** Rien ne distingue une température issue d'une référence d'une température déduite de la bande de rusticité, ni une hauteur mesurée d'une des 222 reconstruites. Une provenance par valeur, mesurée, déduite ou reconstruite, dirait où porter l'effort suivant.
+
+**Aucun retour du terrain.** L'application sait quand une tâche est cochée. Un écart systématique entre la date réelle et la fenêtre annoncée est le seul signal qui ne vienne pas d'une source écrite.
+
+**Aucun test de bout en bout.** Le contrôle avant dépôt est purement statique. Rien ne vérifie qu'une fiche s'affiche, que le calendrier rend des segments cohérents, qu'un décalage climatique produit des dates plausibles.
+
+**Aucun audit tournant.** Rien ne se dégrade seul, mais rien ne se re-vérifie non plus. Dix fiches par mois reconfrontées aux sources maintiennent la qualité sans campagne.
+
+**Le point de faiblesse de fond.** Tout le référentiel a été relu en une journée, par un seul relecteur, avec une seule méthode. Les contrôles automatiques attrapent les incohérences internes, pas les erreurs partagées : une erreur portant sur une famille entière ne serait signalée par rien. Un second regard sur un échantillon vaut plus que le dixième contrôle automatique.
+
+**Sur la qualité des sources.** La majorité du contenu jardinage francophone en ligne se recopie. Cinq sites d'accord ne font pas cinq confirmations. La hiérarchie retenue : autorités d'abord, ANSES et centres antipoison pour la toxicité, SEMAE pour les semences, GBIF, POWO et Tela Botanica pour la nomenclature, INRAE et chambres d'agriculture pour la conduite ; éditeurs à comité ensuite, Terre Vivante et SNHF ; sites généralistes en recoupement seulement ; marchands et blogs comme indices, jamais comme preuves.
 
 ### Homogénéité des fiches
 
