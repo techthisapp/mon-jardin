@@ -193,9 +193,9 @@ Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par
 | Colonne numérique | Unité | Renseigné |
 |---|---|---|
 | `spacing_cm`, `row_cm` | centimètres | 313, 311 |
-| `height_min_cm`, `height_max_cm` | centimètres | 227 |
-| `depth_cm` | centimètres, 0 pour un semis en surface | 177 |
-| `frost_min_c` | degrés Celsius | 116 |
+| `height_min_cm`, `height_max_cm` | centimètres | 315 |
+| `depth_cm` | centimètres, 0 pour un semis en surface | 179 |
+| `frost_min_c` | degrés Celsius | 265, la totalité de celles qui restent en terre |
 | `first_harvest_year` | années | à renseigner |
 
 La vue `plants_full` reconstruit l'objet `attributes` attendu par l'application à partir de ces colonnes et des libellés du vocabulaire. Le contrat de lecture reste donc stable, la normalisation n'a rien cassé côté application.
@@ -371,7 +371,9 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Homogénéité des fiches
 
-La normalisation a été menée le 28 juillet 2026. L'inventaire de départ et l'analyse figurent dans `PLAN-UNIFICATION-DES-FICHES.md`. Restent à renseigner la température de gel des plantes qui ne sont ni gélives ni peu rustiques, et la hauteur des 88 fiches qui n'en portent pas.
+La normalisation a été menée le 28 juillet 2026. L'inventaire de départ et l'analyse figurent dans `PLAN-UNIFICATION-DES-FICHES.md`. Reste à renseigner `first_harvest_year`, le délai avant première récolte des plantes pérennes.
+
+Les bornes basses de hauteur de 222 fiches ont été reconstruites à partir des références horticoles et non des données d'origine. Le premier analyseur ne captait que le nombre porteur de l'unité : « 5 à 10 m » donnait 1000 et 1000. Le défaut est passé inaperçu jusqu'à la suppression du texte source, qui a rendu la valeur d'origine irrécupérable. Les bornes hautes n'ont jamais été touchées.
 
 ### Justesse du référentiel
 
