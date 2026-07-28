@@ -298,7 +298,7 @@ Un jeton d'accès personnel GitHub reste actif tant qu'il n'est pas révoqué, d
 
 ### Le contrôle en intégration continue
 
-`.github/workflows/verification.yml` rejoue le contrôle avant dépôt à chaque poussée sur `main` et sur chaque demande de fusion, y compris depuis un clone où le crochet n'est pas installé. Posé le 28 juillet 2026, première exécution verte sur `b1634b7`.
+`.github/workflows/verification.yml` rejoue le contrôle avant dépôt à chaque poussée sur `main` et sur chaque demande de fusion, y compris depuis un clone où le crochet n'est pas installé. Posé le 28 juillet 2026, vérifié dans les deux sens : vert sur `b1634b7`, et rouge sur une demande de fusion portant volontairement la régression historique, l'identifiant `bilanMoment` renommé dans `index.html`. L'étape en échec est bien `Run node outils/verification.mjs`. La branche d'essai a été supprimée et la demande de fusion fermée sans fusionner.
 
 Le fichier a été créé depuis l'interface GitHub, onglet Actions. GitHub refuse qu'un jeton sans la permission `Workflows` crée ou modifie un fichier sous `.github/workflows/`. Pour le modifier depuis un outil, il faut passer `Workflows` à Read and write sur `https://github.com/settings/tokens?type=beta`, section Repository permissions.
 
