@@ -26,7 +26,29 @@ Tableau de bord : `https://supabase.com/dashboard/project/ocsjpojdddmltluzmmwv`
 
 URL du projet : `https://ocsjpojdddmltluzmmwv.supabase.co`
 
-La clé publique anon est intégrée dans `config.js` et envoyée au navigateur de chaque visiteur. La protection repose sur les règles RLS, pas sur son secret. Le mot de passe de la base et la clé `service_role` n'ont jamais été communiqués.
+Clé publique anon, intégrée dans `config.js` :
+
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9jc2pwb2pkZGRtbHRsdXptbXd2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5MDUzOTksImV4cCI6MjEwMDQ4MTM5OX0.s6im4aTShDe_xNkcQAIUw7gmWV3msNFtEPLnyQBnPx4
+```
+
+Elle porte le rôle `anon`, expire en 2036, et est envoyée au navigateur de chaque visiteur. La protection repose sur les règles RLS, pas sur son secret. Le mot de passe de la base et la clé `service_role` n'ont jamais été communiqués.
+
+### Périmètre réel de la clé publique
+
+Audit mené le 28 juillet 2026 en exécutant des lectures sous le rôle `anon` : 317 plantes du catalogue lisibles, zéro jardin, zéro sélection, zéro espace, zéro masquage.
+
+Les treize tables ont RLS activée. Cinq tables du référentiel autorisent la lecture sans condition, ce qui est voulu. Cinq tables personnelles n'autorisent que des opérations conditionnées à la propriété du jardin. `reprises` n'a aucune politique et reste inaccessible à tout rôle autre que celui de service. Aucune table n'autorise d'écriture sans condition.
+
+Ce que la clé permet malgré tout, et qui relève de la nuisance plutôt que de la faille :
+
+**Copier l'intégralité du catalogue.** 317 plantes, périodes, conseils et adaptations climatiques. Question de propriété du contenu, pas de sécurité.
+
+**Solliciter des envois de courriels.** L'API d'authentification accepte une demande de lien vers une adresse arbitraire. Supabase plafonne le débit, deux par heure sur l'expéditeur par défaut, trente avec un SMTP personnalisé.
+
+**Appeler la fonction de bord `reprise`.** La clé anon est un jeton valide, un attaquant peut donc tenter des codes. Neuf caractères sur trente-deux valeurs représentent environ 45 bits, hors de portée d'une recherche exhaustive, mais aucune limite de tentatives n'est posée côté fonction. C'est le seul point à renforcer.
+
+Les secrets véritables sont ailleurs : la clé `service_role`, qui contourne toutes les règles RLS et n'est accessible qu'à la fonction de bord par variable d'environnement, et le jeton d'accès GitHub, qui autorise l'écriture sur le dépôt.
 
 ### Accès par API
 
@@ -222,6 +244,8 @@ Les rappels. L'application ne peut pas joindre son utilisateur, il faut penser �
 Le filtre adaptées à mon climat dans Mes plantes, proposé et jamais fait. C'est l'usage réellement actionnable de la jauge.
 
 ### Fiabilité du travail
+
+Limiter les tentatives sur la fonction `reprise`. Un compteur d'échecs par adresse, ou une table de tentatives horodatées, fermerait le seul vecteur d'attaque par force brute identifié. La longueur du code rend l'attaque impraticable aujourd'hui, mais rien ne l'empêche d'être tentée.
 
 Aucun test automatisé. Deux régressions de production en une soirée, toutes deux détectables : version d'actif non incrémentée, constante déclarée trop bas. Un contrôle avant dépôt vérifiant les identifiants HTML référencés par le script, l'ordre de déclaration des constantes et la cohérence des versions d'actifs éviterait de découvrir les régressions à l'écran.
 
