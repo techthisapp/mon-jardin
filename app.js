@@ -72,6 +72,44 @@ async function avecReprise(faire, essais = 3) {
 
 // Un élément absent ne doit jamais interrompre le chargement du module.
 const sur = (id, ev, fn) => { const e = $(id); if (e) e.addEventListener(ev, fn); else console.warn("élément absent :", id); };
+
+const NIVEAUX = {
+  adapte:      { court: "adaptée",      crans: 4, long: "Adaptée à ce climat, aucune précaution particulière" },
+  protection:  { court: "à protéger",   crans: 3, long: "Reste en place, moyennant une précaution : paillage, voile, ombrage ou arrosage selon le climat" },
+  abri:        { court: "à hiverner",   crans: 2, long: "Ne passe pas l'hiver en pleine terre sous ce climat, à rentrer ou à traiter en annuelle" },
+  deconseille: { court: "déconseillée", crans: 1, long: "Déconseillée sous ce climat" },
+};
+
+const auj = new Date();
+const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
+
+/* Constantes partagées, déclarées avant tout rendu : une constante n'est pas
+   remontée en tête de module comme l'est une déclaration de fonction. */
+const OEIL_BARRE = '<svg viewBox="0 0 24 24" aria-hidden="true">'
+  + '<path d="M2 12s3.6-6 10-6c2 0 3.7.6 5.1 1.4M22 12s-3.6 6-10 6c-2 0-3.7-.6-5.1-1.4"/>'
+  + '<circle cx="12" cy="12" r="2.6"/><path d="M3 21 21 3"/></svg>';
+
+// Une teinte très pâle de la couleur, posée sur le papier.
+function teinte(hex, a) {
+  const h = (hex || "#000000").replace("#", "");
+  const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+// Le fond de page suit la saison, à saturation très faible.
+const SAISONS = [
+  { fin: 4,  ton: "#EEF0F1" }, { fin: 10, ton: "#EFF4EA" },
+  { fin: 16, ton: "#F5F3EA" }, { fin: 22, ton: "#F5EFE7" }, { fin: 24, ton: "#EEF0F1" },
+];
+function appliquerSaison() {
+  const s = SAISONS.find(x => demi <= x.fin) || SAISONS[0];
+  document.documentElement.style.setProperty("--papier", s.ton);
+}
+
+const cleSourdine = (p, k) => p.id + "|" + k;
+
+const anneeCourante = () => new Date().getFullYear();
+
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
 function info(msg, erreur = false) {
@@ -511,8 +549,6 @@ sur("vider", "click", async () => {
 
 /* ================== Écran 2 : en ce moment ================== */
 
-const auj = new Date();
-const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
 if ($("dateJour")) $("dateJour").textContent =
   auj.toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) +
   " · " + (auj.getDate() <= 15 ? "première" : "seconde") + " quinzaine";
@@ -562,12 +598,6 @@ function segsDe(p, k) {
   });
 }
 
-const NIVEAUX = {
-  adapte:      { court: "adaptée",      crans: 4, long: "Adaptée à ce climat, aucune précaution particulière" },
-  protection:  { court: "à protéger",   crans: 3, long: "Reste en place, moyennant une précaution : paillage, voile, ombrage ou arrosage selon le climat" },
-  abri:        { court: "à hiverner",   crans: 2, long: "Ne passe pas l'hiver en pleine terre sous ce climat, à rentrer ou à traiter en annuelle" },
-  deconseille: { court: "déconseillée", crans: 1, long: "Déconseillée sous ce climat" },
-};
 
 // Jauge à quatre crans, toujours à la même place pour être lisible en balayage.
 function jaugeClim(niveau, titre) {
@@ -1087,8 +1117,11 @@ function majJardinUI() {
   rendreEspaces();
 }
 
-const demiEnTexte = d => d === 0 ? "aucun"
-  : (d > 0 ? "plus tard de " : "plus tôt de ") + Math.abs(d) + (Math.abs(d) > 1 ? " quinzaines" : " quinzaine");
+function demiEnTexte(d) {
+  if (d === 0) return "aucun";
+  return (d > 0 ? "plus tard de " : "plus tôt de ")
+    + Math.abs(d) + (Math.abs(d) > 1 ? " quinzaines" : " quinzaine");
+}
 
 function rendreEspaces() {
   const z = $("listeEspaces");
@@ -1344,29 +1377,9 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuill
 
 /* ================== Mise en sourdine ================== */
 
-const OEIL_BARRE = '<svg viewBox="0 0 24 24" aria-hidden="true">'
-  + '<path d="M2 12s3.6-6 10-6c2 0 3.7.6 5.1 1.4M22 12s-3.6 6-10 6c-2 0-3.7-.6-5.1-1.4"/>'
-  + '<circle cx="12" cy="12" r="2.6"/><path d="M3 21 21 3"/></svg>';
 
-// Une teinte très pâle de la couleur, posée sur le papier.
-function teinte(hex, a) {
-  const h = (hex || "#000000").replace("#", "");
-  const n = parseInt(h.length === 3 ? h.split("").map(c => c + c).join("") : h, 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
-}
 
-// Le fond de page suit la saison, à saturation très faible.
-const SAISONS = [
-  { fin: 4,  ton: "#EEF0F1" }, { fin: 10, ton: "#EFF4EA" },
-  { fin: 16, ton: "#F5F3EA" }, { fin: 22, ton: "#F5EFE7" }, { fin: 24, ton: "#EEF0F1" },
-];
-function appliquerSaison() {
-  const s = SAISONS.find(x => demi <= x.fin) || SAISONS[0];
-  document.documentElement.style.setProperty("--papier", s.ton);
-}
 
-const cleSourdine = (p, k) => p.id + "|" + k;
-const anneeCourante = () => new Date().getFullYear();
 
 // Une sourdine de quinzaine tombe au changement de quinzaine, une sourdine de
 // période tient jusqu'à la fin de la fenêtre, une sourdine définitive ne tombe jamais.
