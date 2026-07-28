@@ -104,7 +104,7 @@ Le retrait d'une plante du référentiel se fait par `is_active` à faux, avec `
 | Familles botaniques | 84 |
 | Tâches | 10 |
 | Périodes | 2050, dont 459 conditionnées au climat |
-| Conseils rédigés | 1683, dont 359 relus un à un |
+| Conseils rédigés | 1683, dont 603 relus un à un |
 | Adaptations climatiques | 1580 |
 | Climats | 5 |
 | Exposition normalisée | 316 sur 316 |
@@ -159,7 +159,7 @@ Les contrôles agrégés, texte répété, hauteur et conseil jamais relu, remon
 
 La détection d'incohérence de date ne porte que sur la première phrase du conseil, celle qui contient la consigne. Les mentions de saison qui suivent renvoient à d'autres opérations et produiraient des faux positifs.
 
-Au 28 juillet 2026, aucun défaut de gravité haute ou moyenne. En gravité basse subsistent dix textes partagés par plus de vingt plantes, justifiés par une identité réelle de besoin, deux espacements non normalisables, le cresson alénois semé à la volée et l'ortie sans espacement, une hauteur non chiffrable, et sept tâches dont les conseils n'ont pas encore été relus un à un.
+Au 28 juillet 2026, aucun défaut de gravité haute ou moyenne. En gravité basse subsistent dix textes partagés par plus de vingt plantes, justifiés par une identité réelle de besoin, deux espacements non normalisables, le cresson alénois semé à la volée et l'ortie sans espacement, une hauteur non chiffrable, et six tâches dont les conseils n'ont pas encore été relus un à un.
 
 `select * from relecture_bilan` donne l'avancement de la relecture par tâche.
 
@@ -259,6 +259,10 @@ Le dépôt GitHub contient l'interface et ce document. Le schéma de base et les
 
 Les scripts Python d'origine, qui avaient servi à générer le référentiel, sont désynchronisés de la base depuis la campagne de vérification. Toute reprise de cette voie exigerait de les réaligner.
 
+L'herbe de la pampa, Cortaderia selloana, est interdite à la culture en France métropolitaine par l'arrêté ministériel du 2 mars 2023, qui en interdit aussi la détention, le transport, la vente et l'achat. Son conseil de plantation le dit désormais, mais la fiche reste active dans le catalogue. La passer à `is_active` faux relève d'une décision, elle retirerait la plante à tout le monde.
+
+Les fiches `groseille` et `groseille-blanche` portent le même nom latin, Ribes rubrum. Ce sont deux couleurs d'une même espèce, comme la frisée et la scarole. À clarifier ou à fusionner.
+
 La colonne `verification` de `plant_advice` vaut `aucune` pour tous les conseils non encore relus un à un, y compris ceux que la campagne de vérification du 26 juillet 2026 a pu couvrir au niveau de la fiche. Le sens sûr a été retenu : mieux vaut relire deux fois que tenir pour vérifié un texte qui ne l'est pas. La valeur `fiche` reste disponible pour les tâches dont la couverture par la campagne serait confirmée.
 
 Un jeton d'accès personnel GitHub reste actif tant qu'il n'est pas révoqué, depuis `https://github.com/settings/tokens?type=beta`.
@@ -273,9 +277,17 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Justesse du référentiel
 
-Les tâches Semis à l'abri, Semis en pleine terre et Floraison ont été relues un à un le 28 juillet 2026, soit 344 conseils. Restent 1324 conseils dans leur rédaction générée d'origine, sous sept tâches. La plus lourde est Plantation et repiquage, 259 conseils pour 126 textes distincts. C'est le seul chantier dont l'inaction laisse une erreur potentielle en place.
+Les quatre tâches visées par ce chantier, Semis à l'abri, Semis en pleine terre, Plantation et repiquage, et Floraison, ont été relues un à un le 28 juillet 2026, soit 603 conseils. Restent 1057 conseils dans leur rédaction générée d'origine, sous six tâches : Multiplication et division 311, Fertilisation 249, Protection hivernale 179, Récolte 154, Taille et entretien 149, Protection estivale 15.
 
-La relecture porte sur le texte distinct, pas sur la ligne : douze textes couvraient les 191 conseils de floraison. Les erreurs trouvées étaient de trois natures. Un texte générique appliqué à des plantes qu'il dessert, par exemple « couper les hampes pour prolonger la production » posé sur l'anis, le carvi et le cumin, qui se récoltent en graines. Une séquence inversée, par exemple « laisser le feuillage jaunir après la floraison » posé sur le colchique et le cyclamen de Naples, dont le feuillage suit la fleur au lieu de la précéder. Une donnée chiffrée fausse, par exemple l'artichaut semé « en surface » au lieu de deux centimètres.
+La relecture porte sur le texte distinct, pas sur la ligne : douze textes couvraient les 191 conseils de floraison, sept textes en couvraient 142 sur les 259 de la plantation. Les erreurs trouvées étaient de quatre natures.
+
+**Un texte générique appliqué à des plantes qu'il dessert.** « Couper les hampes pour prolonger la production » posé sur l'anis, le carvi et le cumin, qui se récoltent en graines. « Repiquer sans enterrer le collet » posé sur des rhizomes et des tubercules qui se plantent à cinq ou dix centimètres. « Installer le support avant la plantation » posé sur le lierre, la vigne vierge et l'hortensia grimpant, qui s'accrochent seuls. « Repiquer en sol réchauffé » posé sur des bisannuelles rustiques qui se mettent en place avant la saison froide.
+
+**Une séquence inversée.** « Laisser le feuillage jaunir après la floraison » posé sur le colchique, le cyclamen de Naples et la nérine, dont le feuillage suit la fleur au lieu de la précéder.
+
+**Une donnée chiffrée fausse.** L'artichaut et le cardon semés « en surface » au lieu de deux centimètres, la mâche à un centimètre alors que son propre conseil demandait de ne pas enterrer.
+
+**Un fait manquant qui prime sur le conseil donné.** Le sol acide du camélia, du rhododendron, de l'azalée, du piéris et de l'airelle, plus décisif que la technique de plantation. La profondeur des yeux de la pivoine, qui décide de la floraison. Le statut réglementaire de l'herbe de la pampa.
 
 Les contrôles automatiques ne détectent que les incohérences de date. Une profondeur de semis ou un espacement erronés leur échappent, seule la relecture les trouve.
 
@@ -305,4 +317,4 @@ Le référentiel a été étendu en trois temps jusqu'à 317 plantes, puis inté
 
 L'interface a été reprise plusieurs fois : filtrage par catégorie fine, tri alphabétique, identité visuelle, filtrage par mois, espaces, multi-jardins, feuille de détail modale, barre de navigation flottante, masquage par glissement, jauge d'adaptation climatique, filtre par adaptation au climat.
 
-Le 28 juillet 2026, une session a posé le contrôle avant dépôt et le versionnage par empreinte, plafonné les tentatives de reprise, ouvert la traçabilité au niveau du conseil, séparé les trois fiches à deux espèces, normalisé l'exposition, la hauteur et l'espacement, et relu les conseils de semis et de floraison.
+Le 28 juillet 2026, une session a posé le contrôle avant dépôt et le versionnage par empreinte, plafonné les tentatives de reprise, ouvert la traçabilité au niveau du conseil, séparé les trois fiches à deux espèces, normalisé l'exposition, la hauteur et l'espacement, ajouté le filtre par adaptation au climat, et relu les 603 conseils des quatre tâches de semis, de plantation et de floraison.
