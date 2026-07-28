@@ -326,6 +326,10 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ## Chantiers ouverts
 
+### Homogénéité des fiches
+
+Les attributs descriptifs sont inégalement renseignés et inégalement disciplinés. L'inventaire complet, l'analyse et le plan de reprise en neuf lots figurent dans `PLAN-UNIFICATION-DES-FICHES.md`.
+
 ### Justesse du référentiel
 
 Les dix tâches ont été passées le 28 juillet 2026. Plus aucun conseil n'est dans sa rédaction générée d'origine.
