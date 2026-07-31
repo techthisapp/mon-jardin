@@ -24,7 +24,7 @@ const ORDRE_CAT = [
 const MOIS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const ABR  = ["Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc"];
 const CHECK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-const CACHE = "monjardin.catalogue.v4";
+const CACHE = "monjardin.catalogue.v5";
 
 let phases = {};
 let plantes = [];
@@ -211,6 +211,36 @@ const demiTexte = q => (q % 2 ? "début " : "fin ") + MOIS_PLEIN[Math.ceil(q / 2
 // Motif de typologie, agrandi puis fondu : il tient lieu d'illustration sans
 // prétendre représenter l'espèce.
 
+// Un verbe par tâche, pour écrire la synthèse d'accueil en phrases.
+// La multiplication prend le verbe exact du mode porté par la fiche.
+const VERBE = {
+  taille: "Tailler", fertilisation: "Amender", recolte: "Récolter",
+  abri: "Semer à l'abri", terre: "Semer", plant: "Planter",
+  protection: "Protéger", protection_ete: "Ombrer", multiplication: "Multiplier",
+};
+const VERBE_MULTI = {
+  division: "Diviser", tubercule: "Diviser", bouture: "Bouturer",
+  marcotte: "Marcotter", greffe: "Greffer",
+};
+const verbeDe = (p, k) => k === "multiplication"
+  ? (VERBE_MULTI[p.propagation] || VERBE.multiplication) : VERBE[k];
+
+// « la glycine », « l'ail », « le pommier ». Sans article connu, le nom seul.
+function nomAvecArticle(p) {
+  const nom = p.nom.split(",")[0].toLowerCase();
+  if (!p.article) return nom;
+  return p.article === "l'" ? "l'" + nom : p.article + " " + nom;
+}
+
+// Trois plantes nommées, puis le compte : au delà, la synthèse redevient une liste.
+function enumerer(noms, max) {
+  const n = max || 3;
+  const vus = noms.slice(0, n), reste = noms.length - vus.length;
+  let t = vus.length > 1 ? vus.slice(0, -1).join(", ") + " et " + vus[vus.length - 1] : vus[0];
+  if (reste) t = vus.join(", ") + " et " + reste + " autre" + (reste > 1 ? "s" : "");
+  return t;
+}
+
 // Une teinte très pâle de la couleur, posée sur le papier.
 function teinte(hex, a) {
   const h = (hex || "#000000").replace("#", "");
@@ -302,6 +332,7 @@ async function lireCatalogue() {
     nectar: p.nectar || "", pollen: p.pollen || "", gel: p.frost_min_c,
     hmin: p.height_min_cm, hmax: p.height_max_cm,
     couleurs: p.flower_colors || [], pic: p.floraison_pic_q, picNote: p.floraison_pic_note || "",
+    article: p.nom_article || "", propagation: p.propagation || "",
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   try {
     localStorage.setItem(CACHE, JSON.stringify({
@@ -400,6 +431,7 @@ async function chargerContenuJardin() {
     aff.get(r.plant_id).push(r);
   });
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
+  await lireEauDuJour(cle);
   majCompte(); majJardinUI(); construireChips(); rendreTout();
 }
 
@@ -885,6 +917,7 @@ function rendreMaintenant() {
 
   if (!paires.length) {
     $("bilanMoment").innerHTML = "";
+    $("synthese").hidden = true;
     $("basculeVue").innerHTML = "";
     $("zoneMasquees").innerHTML = "";
     majFiltresMoment();
@@ -896,6 +929,8 @@ function rendreMaintenant() {
       + '<p><b>Rien à faire cette quinzaine</b>Le jardin travaille sans vous. Période de repos ou de simple surveillance.</p></div>';
     return;
   }
+
+  rendreSynthese(paires);
 
   const audibles = paires.filter(x => !x.muet);
   const urgentes = audibles.filter(x => etatFenetre(x.p, x.k) === "derniere").length;
@@ -1503,6 +1538,94 @@ function ficheHTML(p) {
     <div class="f-pan f-pan-moment">${ficheMoment(p)}</div>
     <div class="f-pan f-pan-annee" hidden>${ficheAnnee(p)}${ficheBlocs(p)}</div>
   </div>`;
+}
+
+/* ================== Synthèse d'accueil ==================
+   Ce qu'il y a à faire, en phrases. Une action qui se termine cette quinzaine
+   ouvre la synthèse, le reste suit en lignes de verbe. La floraison n'est pas
+   un geste, elle passe en pied. L'eau est un chiffre, elle a sa ligne. */
+
+function rendreSynthese(paires) {
+  const z = $("synthese");
+  if (!z) return;
+  const audibles = paires.filter(x => !x.muet);
+  if (!audibles.length) { z.hidden = true; z.innerHTML = ""; return; }
+
+  // Regroupement par tâche, dans l'ordre du coût de l'oubli.
+  const parTache = [];
+  ORDRE_MAINTENANT.forEach(k => {
+    const lot = audibles.filter(x => x.k === k);
+    if (!lot.length || !phases[k]) return;
+    const plantes = [...new Map(lot.map(x => [x.p.id, x.p])).values()]
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    // Une action presse quand la fenêtre qui court se ferme à cette quinzaine.
+    const ferme = x => (segsDe(x.p, x.k) || [])
+      .some(t => dansFenetre(demi, t[0], t[1]) && t[1] === demi);
+    parTache.push({ k, plantes, urgent: lot.some(ferme) });
+  });
+  const gestes = parTache.filter(t => ETATS_FICHE.indexOf(t.k) === -1);
+  const etats = parTache.filter(t => ETATS_FICHE.indexOf(t.k) !== -1);
+  if (!gestes.length && !etats.length) { z.hidden = true; z.innerHTML = ""; return; }
+
+  // La phrase de tête prend ce qui presse, sinon la première tâche de l'ordre.
+  const presse = gestes.filter(t => t.urgent);
+  const tete = (presse.length ? presse : gestes.slice(0, 1)).slice(0, 2);
+  const suite = gestes.filter(t => tete.indexOf(t) === -1);
+
+  const bout = t => enumerer(t.plantes.map(nomAvecArticle));
+
+  const h = [];
+  if (tete.length) {
+    const phrases = tete.map(t => `<b>${esc(verbeDe(t.plantes[0], t.k).toLowerCase())}</b> ${esc(bout(t))}`
+      + (t.urgent ? ' <span class="fin">avant la fin de la quinzaine</span>' : ""));
+    h.push(`<p class="syn-tete">En ce moment, ${phrases.join(", et ")}.</p>`);
+  }
+  if (suite.length) {
+    h.push('<div class="syn-lignes">' + suite.map(t =>
+      `<button type="button" class="syn-ligne" data-tache="${esc(t.k)}">`
+      + `<i style="background:${TEINTE[t.k] || phases[t.k].color}"></i>`
+      + `<span class="v">${esc(verbeDe(t.plantes[0], t.k))}</span>`
+      + `<span class="l">${esc(bout(t))}</span></button>`).join("") + "</div>");
+  }
+
+  const pied = [];
+  etats.forEach(t => pied.push(enumerer(t.plantes.map(nomAvecArticle))
+    + (t.plantes.length > 1 ? " sont en fleur" : " est en fleur")));
+  const eau = besoinEauDuJour();
+  if (eau) pied.push(`compter <b>${esc(eau)}</b> et par jour sur les cultures arrosées`);
+  if (pied.length) {
+    const t = pied.join(", ");
+    h.push(`<p class="syn-pied">${t.charAt(0).toUpperCase() + t.slice(1)}.</p>`);
+  }
+
+  z.innerHTML = h.join("");
+  z.hidden = false;
+  // Un clic sur une ligne restreint la liste du dessous à cette tâche.
+  z.querySelectorAll(".syn-ligne").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.tache;
+    const seul = ORDRE.every(x => etatPhaseM[x] === (x === k));
+    ORDRE.forEach(x => etatPhaseM[x] = seul ? true : x === k);
+    majFiltresMoment(); rendreMaintenant();
+  }));
+}
+
+// Besoin en eau de la quinzaine, une seule ligne par plante retenue.
+let eauJour = [];
+
+async function lireEauDuJour(cle) {
+  eauJour = [];
+  if (!cle || !sel.size) return;
+  const { data } = await avecReprise(() => db.from("arrosage_plante_quinzaine")
+    .select("plant_id,litres_jour_m2").eq("climate_key", cle).eq("quinzaine", demi)
+    .in("plant_id", [...sel]));
+  eauJour = (data || []).filter(r => r.litres_jour_m2 !== null);
+}
+
+// Moyenne des besoins calculés, les plantes sans calcul ne comptent pas.
+function besoinEauDuJour() {
+  if (!eauJour.length) return "";
+  const m = eauJour.reduce((a, r) => a + Number(r.litres_jour_m2), 0) / eauJour.length;
+  return m.toFixed(1).replace(".", ",") + " L par m²";
 }
 
 function rendrePlanning() {

@@ -1177,3 +1177,27 @@ body.fige{overflow:hidden}
   border:0;background:none;padding:0;font:inherit;color:var(--encre);text-align:left;cursor:pointer;
 }
 .ligne-espace .nom-espace:hover{text-decoration:underline}
+
+/* ---------- Synthèse d'accueil ---------- */
+.synthese{
+  background:var(--papier-haut);border:1px solid var(--filet);border-radius:var(--rayon);
+  padding:14px 16px 13px;margin:0 0 14px;
+}
+.syn-tete{font-size:19px;line-height:1.44;letter-spacing:-.005em}
+.syn-tete b{font-weight:700}
+.syn-tete .fin{color:var(--alerte);font-weight:600;white-space:nowrap}
+.syn-lignes{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding-top:11px;
+  border-top:1px solid var(--filet-clair)}
+.syn-ligne{
+  display:flex;align-items:baseline;gap:9px;width:100%;text-align:left;
+  border:0;background:none;padding:0;font-family:inherit;cursor:pointer;color:inherit;
+}
+.syn-ligne i{width:8px;height:8px;border-radius:50%;flex:0 0 auto;transform:translateY(-1px)}
+.syn-ligne .v{font-weight:700;font-size:15px;white-space:nowrap}
+.syn-ligne .l{font-size:14.5px;color:var(--encre-doux)}
+@media (hover:hover){ .syn-ligne:hover .l{color:var(--encre)} }
+.syn-pied{
+  margin-top:12px;padding-top:11px;border-top:1px solid var(--filet-clair);
+  font-size:13.5px;color:var(--encre-doux);
+}
+.syn-pied b{color:var(--encre);font-weight:600}
