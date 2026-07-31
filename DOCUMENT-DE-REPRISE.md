@@ -1,6 +1,8 @@
 # Document de reprise, projet Mon jardin
 
-Établi le 25 juillet 2026, mis à jour le 28 juillet 2026.
+Établi le 25 juillet 2026, mis à jour le 31 juillet 2026.
+
+Les chiffres de ce document sont recomptés en base à la date de mise à jour. Une valeur reprise d'une note antérieure sans recomptage est signalée comme telle.
 
 ## Objet
 
@@ -72,8 +74,14 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 | `controle_detail`, `controle_bilan` | Contrôles de cohérence des conseils et des périodes |
 | `controle_modele`, `controle_modele_bilan` | Contrôles de cohérence du modèle normalisé |
 | `controle_anomalies` | Détection d'écarts par comparaison entre plantes voisines |
+| `controle_coherence` | Confrontation de la fiche à une source externe déjà chargée, baseflor, et contenance du pic de floraison dans sa période |
 | `relecture_bilan` | Avancement de la relecture des conseils par tâche |
 | `historique_lisible` | Vue du journal, un enregistrement par champ modifié |
+| `conseil_par_periode` | Conseil résolu pour chaque période, le conseil propre à la période l'emportant sur celui de la tâche |
+| `et0_reference` | Évapotranspiration de référence par climat et par quinzaine, fiches climatologiques de Météo-France |
+| `saison_vegetation` | Bornes de la saison de végétation par climat |
+| `plant_kc_quinzaine` | Coefficient cultural par plante, climat et quinzaine, dérivé des stades du bulletin FAO 56 |
+| `arrosage_plante_quinzaine` | Besoin en eau restitué, litres par jour et par mètre carré, dose et intervalle de reprise |
 
 ### Schéma, données personnelles
 
@@ -117,10 +125,29 @@ Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par
 | `propagation` | multiplication | 315 |
 | `planting_mode` | plantation | 315 |
 | `toxicity`, `toxicity_note` | toxicite | 315 |
-| `wintering` | hivernage | 202 |
-| `nectar`, `nectar_season` | nectar, nectar_saison | 87 |
-| `fragrance`, `fragrance_organ` | parfum, parfum_organe | 30 |
-| `pollination` | pollinisation | 35 fruitiers |
+| `wintering` | hivernage | 209 |
+| `nectar`, `nectar_season` | nectar, nectar_saison | 315, dont 146 sourcées |
+| `pollen` | pollen | 315, dont 86 sourcées |
+| `fragrance` | parfum | 315 |
+| `fragrance_organ` | parfum_organe | 127 |
+| `foliage`, `foliage_note` | feuillage | 117 hors annuelles |
+| `pollination` | pollinisation | 42 fruitiers |
+| `pollination_vector` | pollinisation_vecteur | 168 |
+| `uses` | usage | 91 |
+| `irrigation_mode` | irrigation | 315, dont 170 calculées, 68 à la reprise seule, 77 sans arrosage |
+| `kc_modele` | kc_modele | 315 |
+
+Colonnes ajoutées depuis le 28 juillet, hors vocabulaire contrôlé.
+
+| Colonne | Type | Rôle | Renseigné |
+|---|---|---|---|
+| `flower_colors`, `flower_color_note` | text[], text | Couleurs de floraison et libellé d'origine | 257 |
+| `floraison_pic_q`, `floraison_pic_note` | smallint, text | Quinzaine du maximum de floraison, écrite seulement quand elle est sourcée, jamais déduite du milieu de la période | 12 |
+| `frost_note` | text | Nuance de la limite de rusticité, variétés comprises | 10 |
+| `humidite_hivernale` | boolean | Craint l'excès d'eau hivernal plutôt que le froid | 14 |
+| `nectar_ug_fleur`, `pollen_um3_fleur` | numeric | Mesures citées, par fleur, distinctes de l'appréciation apicole | 74 et 36 |
+| `groupe_cultivars` | text | Groupe de cultivars quand le rang botanique est en litige | 3 |
+| `kc_ini`, `kc_mid`, `kc_end`, `cycle_*_j`, `contenant_litres_defaut` | numeric, int | Paramètres du calcul d'arrosage | 315 |
 
 | Colonne numérique | Unité | Renseigné |
 |---|---|---|
@@ -132,6 +159,8 @@ Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par
 
 La vue `plants_full` reconstruit l'objet `attributes` attendu par l'application à partir de ces colonnes et des libellés du vocabulaire. Le contrat de lecture est donc stable : la normalisation du stockage n'a rien cassé côté application.
 
+Le 31 juillet, cinq colonnes ont été ajoutées en fin de vue, pour la fiche détaillée : `pollen`, `flower_colors`, `flower_color_note`, `floraison_pic_q`, `floraison_pic_note`. L'ajout se fait en queue de liste, aucune colonne existante n'est déplacée, et l'application lit la vue par `select *`.
+
 ### Contenu
 
 | Élément | Valeur |
@@ -140,16 +169,22 @@ La vue `plants_full` reconstruit l'objet `attributes` attendu par l'application 
 | Plantes retirées | 5 |
 | Familles botaniques | 84 |
 | Tâches | 10 |
-| Périodes | 2052, dont 459 conditionnées au climat |
-| Conseils rédigés | 1691, dont 1311 relus un à un et 380 couverts au niveau de la fiche. Aucun dans sa rédaction d'origine |
+| Périodes | 2009, dont 446 conditionnées au climat |
+| Conseils rédigés | 1761, dont 1281 relus un à un, 385 couverts au niveau de la fiche et 16 rattachés à une période précise |
 | Adaptations climatiques | 1580, dont 56 posées à la main |
 | Climats | 5 |
+| Vocabulaire contrôlé | 131 valeurs, 24 domaines |
+| Journal du référentiel | 3652 enregistrements |
+
+Le nombre de périodes a baissé de 2052 à 2009 sans perte de contenu : 82 paires de lignes décrivant une même fenêtre à cheval sur le 1er janvier, l'une finissant à la quinzaine 24 et l'autre commençant à la 1, ont été fusionnées en une seule ligne dont la borne de début dépasse la borne de fin. Quatre-vingts fenêtres sont aujourd'hui dans ce cas.
 
 ## Le calendrier
 
 Dix tâches : semis à l'abri, semis en pleine terre, plantation et repiquage, floraison, récolte, taille et entretien, multiplication et division, fertilisation et amendement, protection hivernale, protection estivale.
 
 Les périodes s'expriment en demi-mois. Une fenêtre sans liste de climats vaut partout, une fenêtre restreinte ne s'applique qu'aux climats cités. Le décalage saisonnier propre au climat du jardin s'applique ensuite, différent pour les fenêtres ancrées au premier et au second semestre.
+
+Une fenêtre peut être à cheval sur le 1er janvier, et s'écrit alors sur une seule ligne dont la borne de début dépasse la borne de fin, par exemple 19 à 6 pour une plantation d'octobre à mars. Tout code qui lit `plant_phases` doit traiter ce cas : un test d'appartenance s'écrit `début <= fin ? q entre début et fin : q >= début ou q <= fin`. C'est l'écriture retenue depuis la fusion des quatre-vingt-deux paires qui décrivaient une même fenêtre en deux lignes.
 
 ## Le climat
 
@@ -251,6 +286,60 @@ La normalisation a produit ses propres erreurs, toutes détectées et corrigées
 
 **Mode de multiplication.** Le glaïeul et le lis étaient donnés multipliables par semis. Le glaïeul se multiplie par caïeux, le lis par écailles ou bulbilles ; le semis demande trois à quatre ans avant floraison, ce n'est pas la méthode du jardinier. Le cyclamen de Naples se met en place par tubercule et se multiplie par semis spontané.
 
+## Travaux du 28 au 31 juillet 2026
+
+### Confrontation de la nomenclature, faite
+
+Les 316 fiches portant un nom latin ont été confrontées à GBIF, à POWO par le jeu World Checklist of Vascular Plants de Kew, et à Tela Botanica par la base BDTFX. L'état de chaque confrontation est stocké dans les colonnes `gbif_*`, `powo_*` et `tela_*`, datées au 28 juillet 2026. Ces colonnes sont de la métadonnée technique et ne sont pas journalisées.
+
+Résultat : 263 noms acceptés à la fois par GBIF et POWO, 37 synonymes pour les deux, 15 en divergence de statut entre les deux. Côté Tela Botanica, 265 noms retenus dans la flore de France, 18 non retenus, 32 absents, essentiellement des exotiques et des cultivars hors flore de France.
+
+Une seule correction de contenu en est sortie, l'Estragon de Russie, dont le latin passe d'`Artemisia dracunculoides` à `Artemisia dracunculus`, aucune source ne retenant la première forme. Le libellé français est conservé.
+
+Politique de nommage confirmée : le champ `latin` suit l'usage français et horticole quand Tela Botanica retient le nom, le nom accepté mondial étant stocké en parallèle. Les référentiels mondiaux fusionnent volontiers les taxons horticoles dans l'espèce sauvage, ce que la base ne suit pas. Les reclassements récents de genre, Pisum en Lathyrus, Anemone en Eriocapitella, Hyssopus en Dracocephalum et les autres, sont stockés sans être appliqués.
+
+Accès aux référentiels, vérifié le 31 juillet 2026. `api.gbif.org` et `api.tela-botanica.org` répondent depuis le conteneur, le blocage décrit dans les versions antérieures de ce document n'existe plus. GBIF s'interroge par `species/match`, et POWO par `species/search?datasetKey=f382f0ce-323a-4091-bb9f-add557f3a9a2` faute d'accès direct au site de Kew. Tela Botanica n'accepte que le masque générique, `?masque=NOM&recherche=stricte` ; la variante `masque.nom` est ignorée et renvoie le catalogue entier, ce qui se lit comme une absence de correspondance si l'on n'y prend pas garde. Le `canonicalName` de GBIF supprime les marqueurs de rang, il faut les retirer des deux côtés avant comparaison.
+
+### Arrosage, calcul FAO 56
+
+Le besoin en eau n'est plus un libellé mais un calcul. Trois tables et une vue le portent.
+
+`et0_reference` donne l'évapotranspiration de référence par climat et par quinzaine, 120 lignes, depuis les fiches climatologiques de Météo-France. `saison_vegetation` borne la saison par climat. `plant_kc_quinzaine` porte le coefficient cultural par plante, climat et quinzaine, 37 800 lignes, dérivé des longueurs de stade et des coefficients du bulletin FAO 56. La vue `arrosage_plante_quinzaine` restitue les litres par jour, les litres par jour et par mètre carré, l'unité d'affichage, le niveau, et pour les plantes qui ne s'arrosent qu'à l'installation, la dose et l'intervalle de reprise.
+
+Quatre modes d'arrosage sont portés par `irrigation_mode` : calculé pour 170 fiches, reprise seule pour 68, sans arrosage pour 77, contenant pour les cultures en pot. Le mode décide de ce que l'application affiche, un chiffre quotidien n'ayant aucun sens pour un arbre installé.
+
+### Pic de floraison
+
+Colonne `floraison_pic_q`, quinzaine du maximum de floraison, avec `floraison_pic_note` pour la source. Douze fiches sourcées, aucune dérivée.
+
+La valeur vient des observations françaises de l'Observatoire des Saisons, moissonnées par l'API TEMPO de `data.pheno.fr`, stade BBCH 65, défini comme le moment où la moitié des fleurs sont épanouies. La médiane est calculée sur les observations postérieures à 2000 quand l'effectif le permet, afin de décrire le climat actuel. Noisetier, Amandier, Laurier-tin, Abricotier, Forsythia, Prunier, Cerisier, Poirier, Pommier, Lilas, Noyer, Sureau noir.
+
+Le pic n'est jamais déduit du milieu de la période. La règle de dérivation a été écrite avant d'être mesurée, puis rejetée : l'accord avec les valeurs sourcées plafonne entre 67 et 70 pour cent dans la zone où la règle discrimine, et la validation en deux moitiés ne converge pas vers le même seuil. Une plante sans pic sourcé n'affiche donc rien, plutôt qu'une valeur fausse.
+
+Deux périodes de floraison ont été corrigées à cette occasion, le pic observé précédant la période enregistrée : Lilas de 9-11 à 7-11, Sureau noir de 11-13 à 9-13.
+
+### Conseil rattaché à une période
+
+Une plante dont une tâche revient deux fois dans l'année recevait le même texte aux deux dates. `plant_advice` porte maintenant une clé propre, `id`, et une clé étrangère facultative `phase_id` vers `plant_phases`, avec unicité sur le triplet plante, tâche, période. Un conseil sans `phase_id` vaut pour toute la tâche, un conseil avec `phase_id` ne vaut que pour cette période et l'emporte sur le premier.
+
+La vue `conseil_par_periode` résout la règle et donne, pour chaque période, le texte à afficher et sa portée. Seize conseils propres à une période sont écrits, quatorze tailles sur sept fiches et deux fertilisations sur la Tomate. Cent vingt-deux tâches à périodes multiples restent à traiter, dont 60 plantations et 25 fertilisations.
+
+### Couleurs de fleur et seuils de gel
+
+Vingt-deux couleurs de fleur écrites sur les vingt-trois fiches qui en manquaient, chacune confirmée par deux sources indépendantes. La Casseille reste vide, aucune seconde source ne renseignant la couleur florale de cet hybride. Trois pièges écartés, où la couleur annoncée désignait autre chose que la fleur : les rameaux du Cornouiller à bois rouge, les jeunes feuilles du Photinia, les pétioles de la Rhubarbe. Le périmètre passe à 257 fiches sur les 315.
+
+Dix seuils de gel écrits. Le contrôle qui croisait le seuil avec la classe de rusticité signalait dix contradictions ; l'examen a montré une cause unique et non dix erreurs, deux échelles de rusticité coexistant dans la base, l'une pour les ligneux et l'autre pour les potagères, un chou rustique à moins dix degrés et un arbuste rustique à moins quinze n'ayant pas le même sens. Le contrôle est désormais scindé selon le port.
+
+### Sourçage apicole du nectar et du pollen
+
+Les colonnes `nectar` et `pollen` sont renseignées sur les 315 fiches, dont 146 et 86 par une source apicole nommée, contre 87 et rien au 28 juillet.
+
+Deux jeux de données quantitatifs ont été essayés et écartés, la mesure de sucre nectarifère de Tew et coauteurs et la mesure de volume pollinique du jeu AgriLand. La règle de conversion, écrite avant d'être appliquée, a été validée sur les valeurs déjà sourcées qui n'avaient pas servi à l'établir. Elle échoue deux fois, avec la même signature : corrélation de rang de 0,107 sur le nectar et de 0,168 sur le pollen, et inversion des médianes par classe. La cause est identifiée, ces jeux mesurent par fleur quand l'appréciation apicole intègre le nombre de fleurs portées et la durée de floraison. Le Noisetier le montre sans ambiguïté, dernier du classement mesuré et ressource pollinique majeure de février.
+
+Les mesures sont conservées dans deux colonnes distinctes de l'appréciation, `nectar_ug_fleur` et `pollen_um3_fleur`, avec leur citation et leur DOI en commentaire de colonne. Trois corrections de nectar ont été appliquées sur la foi d'un zéro mesuré, l'Anémone du Japon, l'Anémone blanda et le Bégonia des jardins, dépourvus de nectaires.
+
+Les valeurs sourcées viennent des listes apicoles, Bienenroute, la table de Gembloux et la liste des plantes mellifères d'Europe. Un contrôle est désormais appliqué avant tout usage d'une table apicole, sur cinq espèces au comportement non discutable, Saule marsault, Noisetier, Coquelicot, Thym et Lavande. Une table qui échoue sur ces cinq lignes n'est pas exploitée : c'est ce contrôle qui a rattrapé une inversion de colonnes lors d'une réextraction.
+
 ## Les contrôles
 
 ### Contrôles de contenu
@@ -297,9 +386,31 @@ set local app.motif = 'correction de la profondeur des bulbes';
 
 Cette table existe parce qu'elle a manqué. Le 28 juillet, la suppression d'une colonne source avant validation de la valeur dérivée a rendu 222 bornes de hauteur irrécupérables. Le journal aurait permis de les restituer.
 
-### État au 28 juillet 2026
+### Confrontation à une source externe
 
-Aucun défaut de gravité haute ou moyenne sur les trois jeux de contrôles. En gravité basse subsistent huit textes partagés par plus de vingt plantes, justifiés par une identité réelle de besoin, et deux espacements non chiffrables, le cresson alénois semé à la volée et l'ortie.
+`controle_coherence` confronte la fiche à baseflor, déjà chargé dans la base, et vérifie la contenance du pic de floraison dans la période enregistrée. Elle ne renvoie plus qu'un cas, documenté : la Baie de mai, dont la floraison de février est correcte en plaine et décalée dans la chorologie montagnarde de baseflor.
+
+Le contrôle qui compare la période de floraison de la base à celle de baseflor porte sur la position, jamais sur la largeur. Baseflor décrit une enveloppe territoriale, la somme des floraisons observées sur toute la France, et non la floraison d'un pied au jardin. Un écart de largeur n'est donc pas un défaut.
+
+### Correction des contrôles après la fusion des fenêtres à cheval, 31 juillet 2026
+
+La fusion des 82 paires de périodes a rendu légitime une fenêtre dont la borne de début dépasse la borne de fin. Deux contrôles la lisaient encore comme un défaut et produisaient 119 faux positifs de gravité haute.
+
+`fenêtre aberrante` testait `start_half > end_half`. La condition est retirée, le contrôle ne teste plus que le dépassement des bornes 1 et 24. Soixante-dix-sept cas éteints.
+
+`conseil incohérent avec sa période` compare la saison citée dans la première phrase du conseil à la fenêtre. Son test de recouvrement supposait un intervalle croissant. Il devient circulaire : sur une fenêtre à cheval, une mention recouvre la fenêtre si elle touche le début ou la fin. Quarante-deux cas ramenés à six.
+
+Enseignement à retenir : une écriture nouvelle dans les données oblige à relire les contrôles qui la lisent. Le défaut ne s'est pas vu au moment de la fusion parce que les contrôles ne sont pas rejoués automatiquement.
+
+### État au 31 juillet 2026
+
+Sept cas subsistent sur les quatre jeux de contrôles, tous instruits.
+
+Six conseils sont signalés incohérents avec leur période. Trois sont des conseils de semis portés par la tâche de plantation, Arroche, Chou chinois et Fenouil bulbe, dont le texte cite le mois de semis alors que la fenêtre est celle de la mise en place. Le Pois cite février dans une fenêtre qui commence en mars pour les variétés à grains ridés. L'Hibiscus des marais et le Rosier citent la période des fortes gelées dans une consigne de protection dont la fenêtre commence plus tôt. Aucun n'est une erreur de contenu, tous relèvent de la même limite du contrôle, qui lit une saison citée sans savoir à quoi elle se rapporte.
+
+Un recouvrement entre tâches subsiste, la division de l'Aster d'automne mentionnée dans son conseil de taille.
+
+En gravité basse subsistent les textes partagés par plus de vingt plantes, justifiés par une identité réelle de besoin, et deux espacements non chiffrables, le cresson alénois semé à la volée et l'ortie.
 
 ## Application web
 
@@ -431,11 +542,28 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Fiabilisation du référentiel
 
-Par ordre d'intérêt décroissant.
+Couverture au 31 juillet 2026, dans le périmètre où le champ s'applique. Un vide n'est pas une valeur douteuse : les quatre champs qui portent encore une mention d'estimation explicite sont le parfum, le pollen, le nectar et l'intensité du parfum.
 
-**Confrontation de la nomenclature à une autorité.** Les 315 noms latins n'ont jamais été confrontés à GBIF, POWO ou Tela Botanica. L'audit interne du 28 juillet est propre : familles toutes en `-aceae`, aucun genre rattaché à deux familles, aucun doublon injustifié, les 21 formes signalées étant des hybrides et des fiches au niveau du genre parfaitement valides. Restent invisibles sans autorité externe l'épithète mal orthographiée mais plausible, le nom devenu synonyme, le genre déplacé par une révision récente.
+| Champ | Périmètre | Renseigné | Taux |
+|---|---|---|---|
+| Toxicité, exposition, sol, eau, fertilité, multiplication, plantation, port, cycle | 315 | 315 | 100 % |
+| Seuil de gel | 315 | 295 | 94 % |
+| Hivernage, hors annuelles | 244 | 209 | 86 % |
+| Couleur de fleur | 258 | 257 | 99,6 % |
+| Première récolte, pérennes comestibles | 86 | 72 | 84 % |
+| Organe du parfum | 127 | 127 | 100 % |
+| Profondeur de mise en place | 315 | 177 | 56 % |
+| Vecteur de pollinisation | 315 | 168 | 53 % |
+| Feuillage, hors annuelles | 244 | 117 | 48 % |
+| Nectar sourcé | 315 | 146 | 46 % |
+| Usages | 315 | 91 | 29 % |
+| Pollen sourcé | 315 | 86 | 27 % |
+| Pollinisation, fiches à récolte | 156 | 42 | 27 % |
+| Pic de floraison | 215 | 12 | 6 % |
 
-L'appel à `api.gbif.org` est refusé par le bac à sable, réponse 403 et `x-deny-reason: host_not_allowed`. Les domaines autorisés sont attribués au conteneur à sa création : ajouter `api.gbif.org` et `api.tela-botanica.org` dans les réglages de capacités ne prend effet qu'à la session suivante. La passe complète ne demande alors que le connecteur Supabase, ni dépôt ni jeton.
+Actions ouvertes dont la source est identifiée : le feuillage sur 127 fiches hors annuelles, la profondeur sur 138, la pollinisation sur 115 fiches à récolte, la première récolte sur 15 pérennes, l'hivernage sur 35. Actions sans source identifiée à ce jour : le pic de floraison sur 203 fiches, faute d'observations suffisantes hors des espèces suivies par les réseaux phénologiques, et le vecteur de pollinisation sur 147.
+
+Le reste par ordre d'intérêt décroissant.
 
 **Les associations n'ont jamais été relues.** 312 fiches, 267 formulations, aucun contrôle. C'est la dernière zone de contenu intacte, et le compagnonnage mêle des faits établis à des affirmations qui ne résistent pas à l'examen.
 
@@ -480,3 +608,7 @@ Le référentiel a été étendu en trois temps jusqu'à 317 plantes, puis inté
 L'interface a été reprise plusieurs fois : filtrage par catégorie fine, tri alphabétique, identité visuelle, filtrage par mois, espaces, multi-jardins, feuille de détail modale, barre de navigation flottante, masquage par glissement, jauge d'adaptation climatique, filtre par adaptation au climat.
 
 Le 28 juillet 2026, une session a posé le contrôle avant dépôt, le versionnage par empreinte et l'intégration continue, plafonné les tentatives de reprise, ouvert la traçabilité au niveau du conseil, relu la totalité des conseils du référentiel, séparé les trois fiches à deux espèces et fusionné les deux fiches de groseille, normalisé seize notions en vocabulaire contrôlé, ajouté le filtre par adaptation au climat, et mis en place l'historisation et la détection d'anomalies.
+
+Du 28 au 31 juillet 2026, la base a reçu la confrontation de la nomenclature à GBIF, POWO et Tela Botanica, le calcul d'arrosage par la méthode FAO 56 avec ses trois tables et sa vue de restitution, le pic de floraison sourcé sur douze fiches et démontré non dérivable, le rattachement d'un conseil à une période précise, le sourçage apicole du nectar et du pollen après l'échec documenté de deux jeux quantitatifs, la fusion des quatre-vingt-deux paires de fenêtres à cheval sur le 1er janvier, la confrontation à baseflor par la vue `controle_coherence`, et la correction des deux contrôles que la fusion des fenêtres avait rendus faux.
+
+Le design de la fiche de plante a été repris en parallèle, hors dépôt, sous forme de maquette : rangée de jauges normalisées, calendrier annuel en ruban ou en roue avec une teinte par action, courbe de besoin en eau, taille à maturité rapportée à une silhouette humaine, motif par typologie. L'intégration dans l'application est le chantier en cours au 31 juillet.
