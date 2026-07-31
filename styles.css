@@ -1056,3 +1056,124 @@ body.fige{overflow:hidden}
   stroke-linecap:round;stroke-linejoin:round;
 }
 .carte-tache h2{gap:10px}
+
+/* ---------- Fiche de plante, rendu détaillé ---------- */
+.fiche-v2{
+  --f-ink:var(--encre); --f-ink2:var(--encre-doux); --f-ink3:#8A9089;
+  --f-grille:#E4E3DA; --f-carte:#fff; --f-plan:var(--papier); --f-filet:var(--filet-clair);
+  display:flex;flex-direction:column;gap:14px;
+}
+.f-svg{width:100%;height:auto;display:block;overflow:visible}
+.f-tk{font-size:9.5px;fill:var(--f-ink3);font-variant-numeric:tabular-nums}
+.f-lane{font-size:9.8px;fill:var(--f-ink2)}
+.f-ic{color:var(--f-ink3)}
+.f-cote{font-size:10px;fill:var(--f-ink3)}
+.f-cote.fort{font-weight:600;fill:var(--f-ink)}
+.f-pic{font-size:15px;font-weight:600;fill:var(--f-ink)}
+.f-centre{font-size:12px;font-weight:600;fill:var(--f-ink)}
+
+.f-entete{position:relative;overflow:hidden;border-radius:var(--rayon);padding:2px 0 4px}
+.f-motif{
+  position:absolute;top:-26px;right:-30px;width:190px;height:190px;color:var(--terre);
+  pointer-events:none;
+  -webkit-mask-image:radial-gradient(circle at 62% 38%, #000 42%, transparent 74%);
+  mask-image:radial-gradient(circle at 62% 38%, #000 42%, transparent 74%);
+}
+.f-motif svg{width:100%;height:100%;fill:currentColor}
+.f-chips{display:flex;flex-wrap:wrap;gap:6px;position:relative}
+.f-chip{
+  border:1px solid var(--filet);border-radius:999px;padding:2px 10px;
+  font-size:12px;color:var(--f-ink2);background:rgba(255,255,255,.6);
+}
+.f-jauges{
+  position:relative;margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;
+  padding:10px 12px;border-radius:var(--rayon);border:1px solid var(--filet-clair);
+  background:rgba(255,255,255,.52);backdrop-filter:blur(3px);
+}
+.f-jauge{display:flex;align-items:center;gap:7px;min-width:0}
+.f-ji{flex:0 0 auto;color:var(--f-ink2)}
+.f-ji svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.f-pips{display:inline-flex;gap:2.5px;flex:0 0 auto;position:relative}
+.f-pips i{width:5px;height:5px;border-radius:50%;background:var(--f-ink3);opacity:.28}
+.f-pips i.plein{opacity:1;background:var(--f-ink2)}
+.f-pips.zero::before{
+  content:"";position:absolute;left:0;right:0;top:50%;height:1.4px;background:var(--f-ink3);opacity:.5;
+}
+.f-jt{font-size:12.5px;color:var(--f-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f-tox{
+  position:relative;margin-top:8px;font-size:13px;color:var(--alerte);
+  display:flex;gap:7px;align-items:baseline;
+}
+
+.f-onglets{display:flex;gap:18px;border-bottom:1px solid var(--filet);margin-top:2px}
+.f-onglets button{
+  border:0;background:none;padding:8px 0 9px;font-family:inherit;font-size:14.5px;
+  color:var(--f-ink3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.f-onglets button.actif{color:var(--f-ink);font-weight:600;border-bottom-color:var(--f-ink)}
+
+.f-pan{display:flex;flex-direction:column;gap:12px}
+.f-carte{
+  background:var(--f-carte);border:1px solid var(--filet-clair);
+  border-radius:var(--rayon);padding:12px 14px 14px;
+}
+.f-carte-tete{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
+.f-carte-tete h3{font-size:15px;font-weight:700;line-height:1.25}
+.f-sub{font-weight:400;color:var(--f-ink3);margin-left:6px;font-size:13px}
+.f-seg{display:flex;background:var(--panneau);border-radius:999px;padding:2px;flex:0 0 auto}
+.f-seg button{
+  border:0;background:none;padding:4px 12px;border-radius:999px;cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:var(--f-ink3);
+}
+.f-seg button.actif{background:#fff;color:var(--f-ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.f-legende{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--f-ink2)}
+.f-legende i{width:11px;height:11px;border-radius:3px;border:1px solid transparent;flex:0 0 auto}
+.f-txt{font-size:13.5px;color:var(--f-ink2)}
+.f-note{font-size:12.5px;color:var(--f-ink3);margin-top:6px}
+.f-vide{font-size:13.5px;color:var(--f-ink3);padding:6px 0}
+
+.f-hero{
+  background:var(--f-carte);border:1px solid var(--filet-clair);
+  border-radius:var(--rayon);padding:12px 14px;
+}
+.f-lbl{font-size:13px;color:var(--f-ink3)}
+.f-val{display:flex;align-items:baseline;gap:8px;margin-top:2px}
+.f-num{font-size:34px;font-weight:700;line-height:1.05;letter-spacing:-.01em}
+.f-unit{font-size:13.5px;color:var(--f-ink2)}
+
+.f-etat{display:flex;align-items:center;gap:9px;padding:9px 2px;border-bottom:1px solid var(--filet-clair)}
+.f-ai svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.4;display:block}
+.f-et{font-size:14.5px;color:var(--f-ink)}
+.f-ed{margin-left:auto;font-size:12.5px;color:var(--f-ink3)}
+
+.f-gestes{display:flex;flex-direction:column;gap:10px}
+.f-acte{
+  display:flex;gap:11px;background:var(--f-carte);border:1px solid var(--filet-clair);
+  border-radius:var(--rayon);padding:12px 14px;
+}
+.f-acte h4{font-size:15px;font-weight:700;margin-bottom:7px}
+.f-acte p{font-size:13.5px;color:var(--f-ink2);margin-top:8px}
+.f-prog{display:block}
+.f-track{position:relative;height:4px;border-radius:2px;background:var(--filet-clair)}
+.f-track i{position:absolute;left:0;top:0;bottom:0;border-radius:2px;background:currentColor;opacity:.55}
+.f-track b{
+  position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:currentColor;
+  transform:translate(-50%,-50%);
+}
+.f-bornes{display:flex;justify-content:space-between;margin-top:4px;font-size:11.5px;color:var(--f-ink3)}
+
+.f-bloc{border-top:1px solid var(--filet);padding-top:10px}
+.f-bloc h3{font-size:13px;font-weight:700;margin-bottom:6px}
+.f-kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13.5px}
+.f-kv dt{color:var(--f-ink3)}
+.f-kv dd{text-align:right;color:var(--f-ink)}
+
+/* Le nom ouvre la fiche, le rond coche : la flèche annonce le premier geste. */
+.item .voir-fiche{margin-left:auto;color:var(--f-ink3);display:flex;align-items:center}
+.item .voir-fiche svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.ligne-espace .nom-espace{
+  border:0;background:none;padding:0;font:inherit;color:var(--encre);text-align:left;cursor:pointer;
+}
+.ligne-espace .nom-espace:hover{text-decoration:underline}

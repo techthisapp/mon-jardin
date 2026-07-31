@@ -24,7 +24,7 @@ const ORDRE_CAT = [
 const MOIS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const ABR  = ["Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc"];
 const CHECK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-const CACHE = "monjardin.catalogue.v3";
+const CACHE = "monjardin.catalogue.v4";
 
 let phases = {};
 let plantes = [];
@@ -89,6 +89,127 @@ const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
 const OEIL_BARRE = '<svg viewBox="0 0 24 24" aria-hidden="true">'
   + '<path d="M2 12s3.6-6 10-6c2 0 3.7.6 5.1 1.4M22 12s-3.6 6-10 6c-2 0-3.7-.6-5.1-1.4"/>'
   + '<circle cx="12" cy="12" r="2.6"/><path d="M3 21 21 3"/></svg>';
+
+/* Tracés repris de la maquette, sans retouche. */
+
+const GLF = {
+  "abri": "<path d=\"M2.6 16.4h14.8\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/><path d=\"M4.4 16.4a5.6 5.6 0 0 1 11.2 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M10 16.4v-3.8\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><path d=\"M10 13.6c0-1.7-1.3-3-3-3 0 1.7 1.3 3 3 3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/>",
+  "semis": "<path d=\"M2.4 15.2h15.2\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/><ellipse cx=\"6.2\" cy=\"8.6\" rx=\"1.8\" ry=\"2.4\" transform=\"rotate(-22 6.2 8.6)\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.35\"/><ellipse cx=\"10\" cy=\"5.2\" rx=\"1.8\" ry=\"2.4\" transform=\"rotate(8 10 5.2)\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.35\"/><ellipse cx=\"13.8\" cy=\"9\" rx=\"1.8\" ry=\"2.4\" transform=\"rotate(26 13.8 9)\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.35\"/>",
+  "plant": "<path d=\"M2.4 16.4h15.2\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/><path d=\"M10 16.4V7.4\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><path d=\"M10 9.6C10 6.8 8 4.8 5.2 4.8c0 2.8 2 4.8 4.8 4.8z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/><path d=\"M10 11.4c0-2.4 1.8-4.2 4.2-4.2 0 2.4-1.8 4.2-4.2 4.2z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linejoin=\"round\"/>",
+  "bouture": "<path d=\"M1.4 17.0h6.6M12.0 17.0h6.6\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/><path d=\"M4.8 17.0V8.6\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><path d=\"M4.8 11.0C4.8 8.8 3.0 7.0 0.8 7.0c0 2.2 1.8 4.0 4.0 4.0z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M4.8 9.0c0-1.6 1.3-2.9 2.9-2.9 0 1.6-1.3 2.9-2.9 2.9z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.25\" stroke-linejoin=\"round\"/><path d=\"M15.2 17.0V8.6\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><path d=\"M15.2 11.0c0-2.2 1.8-4.0 4.0-4.0 0 2.2-1.8 4.0-4.0 4.0z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linejoin=\"round\"/><path d=\"M15.2 9.0c0-1.6-1.3-2.9-2.9-2.9 0 1.6 1.3 2.9 2.9 2.9z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.25\" stroke-linejoin=\"round\"/>",
+  "secateur": "<path d=\"M4.4 0.5C6.4 2.1 8.0 4.2 9.2 6.6L5.6 6.7C5.2 4.6 4.7 2.5 4.4 0.5Z\" fill=\"currentColor\"/><path d=\"M0.2 2.4C1.4 4.8 3.2 6.9 5.5 8.4L4.2 10.5C1.9 8.8 0.6 5.9 0.2 2.4Z\" fill=\"currentColor\"/><path d=\"M4.6 6.5L10.5 6.1L10.5 10.5L5.6 10.6Z M5.6 9.8L8.6 9.8L9.0 12.4L6.2 12.8Z M6.65 8.2a0.95 0.95 0 1 0 1.9 0a0.95 0.95 0 1 0 -1.9 0Z\" fill=\"currentColor\" fill-rule=\"evenodd\"/><path d=\"M10.5 5.8h1.8v5.0h-1.8z\" fill=\"currentColor\"/><path d=\"M12.6 7.6C15.4 7.8 17.6 8.6 18.9 10.0\" stroke=\"currentColor\" stroke-width=\"2.8\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M7.4 12.0C8.4 14.4 9.5 16.6 10.6 18.6\" stroke=\"currentColor\" stroke-width=\"2.8\" stroke-linecap=\"round\" fill=\"none\"/>",
+  "engrais": "<path d=\"M2.6 16.6h14.8\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/><path d=\"M4.6 16.6c0-3 2.4-5.4 5.4-5.4s5.4 2.4 5.4 5.4z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><circle cx=\"6.3\" cy=\"6.6\" r=\"1.15\" fill=\"currentColor\"/><circle cx=\"10\" cy=\"4.3\" r=\"1.15\" fill=\"currentColor\"/><circle cx=\"13.7\" cy=\"7\" r=\"1.15\" fill=\"currentColor\"/>",
+  "flocon": "<path d=\"M10 1.8v16.4M2.9 5.9l14.2 8.2M17.1 5.9 2.9 14.1\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/><path d=\"M10 5.4 8.1 3.5M10 5.4l1.9-1.9M10 14.6l-1.9 1.9M10 14.6l1.9 1.9\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/><path d=\"M5.2 7.2 4.5 4.6M5.2 7.2 2.6 7.9M14.8 12.8l.7 2.6M14.8 12.8l2.6.7\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/><path d=\"M14.8 7.2l.7-2.6M14.8 7.2l2.6.7M5.2 12.8l-.7 2.6M5.2 12.8l-2.6.7\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\"/>",
+  "ombrage": "<circle cx=\"10\" cy=\"7.4\" r=\"3.2\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/><path d=\"M10 1.6v1.8M4.6 2.6l1.3 1.3M15.4 2.6l-1.3 1.3M2 7.4h1.8M16.2 7.4H18\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><path d=\"M2.8 14.4h14.4\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/><path d=\"M5.6 17.4l1.6-2.4M10 17.4l1.6-2.4M14.4 17.4l1.6-2.4\" stroke=\"currentColor\" stroke-width=\"1.25\" stroke-linecap=\"round\"/>",
+  "fleur": "<g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.35\"><ellipse cx=\"10\" cy=\"5.1\" rx=\"1.9\" ry=\"3\"/><ellipse cx=\"14.66\" cy=\"8.49\" rx=\"1.9\" ry=\"3\" transform=\"rotate(72 14.66 8.49)\"/><ellipse cx=\"12.88\" cy=\"13.96\" rx=\"1.9\" ry=\"3\" transform=\"rotate(144 12.88 13.96)\"/><ellipse cx=\"7.12\" cy=\"13.96\" rx=\"1.9\" ry=\"3\" transform=\"rotate(216 7.12 13.96)\"/><ellipse cx=\"5.34\" cy=\"8.49\" rx=\"1.9\" ry=\"3\" transform=\"rotate(288 5.34 8.49)\"/></g><circle cx=\"10\" cy=\"10\" r=\"1.9\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"/>",
+  "panier": "<path d=\"M2.8 8h14.4l-1.5 8.2a1.8 1.8 0 0 1-1.8 1.5H6.1a1.8 1.8 0 0 1-1.8-1.5z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.55\" stroke-linejoin=\"round\"/><path d=\"M6.6 8a3.4 3.4 0 0 1 6.8 0\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\"/><path d=\"M7.6 11.2v3.4M10 11.2v3.4M12.4 11.2v3.4\" stroke=\"currentColor\" stroke-width=\"1.2\" stroke-linecap=\"round\"/>",
+};
+
+const MOTIF = {
+  "arbre": "<path d=\"M100 22c23 0 42 12 48 29 17 4 28 19 28 36 0 23-19 40-44 40H68c-25 0-44-17-44-40 0-17 11-32 28-36 6-17 25-29 48-29z\" opacity=\".13\"/><path d=\"M100 40c16 0 30 9 34 21 12 3 20 13 20 26 0 16-14 28-32 28H78c-18 0-32-12-32-28 0-13 8-23 20-26 4-12 18-21 34-21z\" opacity=\".07\"/><path d=\"M93 120h14v70a7 7 0 0 1-14 0z\" opacity=\".22\"/><path d=\"M100 152l-24-18 5-7 19 15 19-15 5 7z\" opacity=\".18\"/>",
+  "fruit": "<path d=\"M100 34c35 0 61 25 61 56 0 33-27 58-61 58s-61-25-61-58c0-31 26-56 61-56z\" opacity=\".12\"/><path d=\"M100 52c22 0 39 17 39 39 0 23-17 40-39 40s-39-17-39-40c0-22 17-39 39-39z\" opacity=\".07\"/><path d=\"M96 138h9v52h-9z\" opacity=\".20\"/><path d=\"M100 168l-20-16 4-6 16 13 16-13 4 6z\" opacity=\".16\"/><circle cx=\"76\" cy=\"126\" r=\"9.5\" opacity=\".23\"/><circle cx=\"126\" cy=\"104\" r=\"9.5\" opacity=\".23\"/><circle cx=\"103\" cy=\"146\" r=\"8\" opacity=\".21\"/>",
+  "ornement": "<g opacity=\".12\"><ellipse cx=\"104\" cy=\"42\" rx=\"17\" ry=\"30\"/><ellipse cx=\"139\" cy=\"61\" rx=\"17\" ry=\"30\" transform=\"rotate(60 139 61)\"/><ellipse cx=\"139\" cy=\"99\" rx=\"17\" ry=\"30\" transform=\"rotate(120 139 99)\"/><ellipse cx=\"104\" cy=\"118\" rx=\"17\" ry=\"30\"/><ellipse cx=\"69\" cy=\"99\" rx=\"17\" ry=\"30\" transform=\"rotate(60 69 99)\"/><ellipse cx=\"69\" cy=\"61\" rx=\"17\" ry=\"30\" transform=\"rotate(120 69 61)\"/></g><circle cx=\"104\" cy=\"80\" r=\"19\" opacity=\".23\"/><path d=\"M99 98h10v92H99z\" opacity=\".17\"/><path d=\"M104 158c-33-6-51-29-51-53 33 2 51 25 51 53z\" opacity=\".11\"/>",
+  "legume": "<path d=\"M100 192c-40-8-64-40-64-78 0-22 10-40 24-50 0 34 8 76 40 128z\" opacity=\".10\"/><path d=\"M100 192c40-8 64-40 64-78 0-22-10-40-24-50 0 34-8 76-40 128z\" opacity=\".10\"/><path d=\"M100 192c-18-26-28-60-28-92 0-24 10-44 28-56 18 12 28 32 28 56 0 32-10 66-28 92z\" opacity=\".17\"/><path d=\"M96 34h9v22h-9z\" opacity=\".23\"/>",
+  "aromatique": "<path d=\"M96 44h9v146h-9z\" opacity=\".19\"/><g opacity=\".12\"><ellipse cx=\"60\" cy=\"84\" rx=\"34\" ry=\"16\" transform=\"rotate(-24 60 84)\"/><ellipse cx=\"141\" cy=\"106\" rx=\"34\" ry=\"16\" transform=\"rotate(24 141 106)\"/><ellipse cx=\"62\" cy=\"134\" rx=\"30\" ry=\"14\" transform=\"rotate(-24 62 134)\"/><ellipse cx=\"139\" cy=\"154\" rx=\"30\" ry=\"14\" transform=\"rotate(24 139 154)\"/></g>",
+};
+
+const MOTIF_SPAN = {
+  "arbre": [22, 190],
+  "fruit": [34, 190],
+  "ornement": [12, 190],
+  "legume": [34, 192],
+  "aromatique": [44, 190],
+};
+
+const FLEUR = {
+  "blanc": ["#ffffff", "#a8a498"],
+  "creme": ["#fdf6e3", "#b5ac8c"],
+  "beige": ["#e8dcc0", "#c3b48c"],
+  "jaune": ["#f2c018", "#c99a00"],
+  "orange": ["#ee8b2b", "#c56a12"],
+  "rouge": ["#d33d3d", "#a52a2a"],
+  "rose": ["#e88bb0", "#c4638a"],
+  "mauve": ["#b58ad4", "#8f66ae"],
+  "violet": ["#7a5cc4", "#5b3fa0"],
+  "pourpre": ["#8c3f6b", "#6d2d52"],
+  "bleu": ["#4f8fd8", "#2f6cb0"],
+  "vert": ["#6aa84f", "#4d7f38"],
+  "brun": ["#8a6a4a", "#6b5037"],
+  "noir": ["#3a3a38", "#1c1c1a"],
+  "multicolore": ["#d9a6c9", "#a97a9a"],
+};
+
+const TEINTE = {
+  "abri": "#9cbf3a",
+  "terre": "#22a352",
+  "plant": "#0f9187",
+  "multiplication": "#1f6b46",
+  "taille": "#3f7fd0",
+  "fertilisation": "#7d5ad4",
+  "protection": "#59b4d8",
+  "protection_ete": "#1f4f8f",
+  "floraison": "#d96aa8",
+  "recolte": "#eb6834",
+};
+
+const GJ = {
+  "soleil": "<circle cx=\"10\" cy=\"10\" r=\"4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/><path d=\"M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5M4 4l1.8 1.8M14.2 14.2 16 16M16 4l-1.8 1.8M5.8 14.2 4 16\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/>",
+  "goutte": "<path d=\"M10 2.4c3.5 4 5.5 6.8 5.5 9.3a5.5 5.5 0 0 1-11 0c0-2.5 2-5.3 5.5-9.3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linejoin=\"round\"/>",
+  "butineur": "<ellipse cx=\"10\" cy=\"12.2\" rx=\"3.6\" ry=\"4.4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\"/><path d=\"M6.6 11.2h6.8M7 14h6\" stroke=\"currentColor\" stroke-width=\"1.4\"/><path d=\"M7.5 8.2C5.1 5.6 2.3 6.4 2.8 8.7c.4 1.9 2.8 2.5 4.7 1.3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M12.5 8.2c2.4-2.6 5.2-1.8 4.7.5-.4 1.9-2.8 2.5-4.7 1.3z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linejoin=\"round\"/><path d=\"M8.8 7.4 8 5.3M11.2 7.4 12 5.3\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/>",
+  "flocon": "<path d=\"M10 1.8v16.4M2.9 5.9l14.2 8.2M17.1 5.9 2.9 14.1\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/><path d=\"M10 5.4 8.1 3.5M10 5.4l1.9-1.9M10 14.6l-1.9 1.9M10 14.6l1.9 1.9\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><path d=\"M5.2 7.2 4.5 4.6M5.2 7.2 2.6 7.9M14.8 12.8l.7 2.6M14.8 12.8l2.6.7\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/><path d=\"M14.8 7.2l.7-2.6M14.8 7.2l2.6.7M5.2 12.8l-.7 2.6M5.2 12.8l-2.6.7\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\"/>",
+};
+
+const ADJ = {
+  "blanc": "blanches",
+  "creme": "crème",
+  "beige": "beiges",
+  "jaune": "jaunes",
+  "orange": "orange",
+  "rouge": "rouges",
+  "rose": "roses",
+  "mauve": "mauves",
+  "violet": "violettes",
+  "pourpre": "pourpres",
+  "bleu": "bleues",
+  "vert": "vertes",
+  "brun": "brunes",
+  "noir": "noires",
+  "multicolore": "multicolores",
+};
+
+const PHF = {
+  "abri": ["Semis à l'abri", "place", "abri"],
+  "terre": ["Semis en pleine terre", "place", "semis"],
+  "plant": ["Plantation", "place", "plant"],
+  "multiplication": ["Multiplication", "place", "bouture"],
+  "taille": ["Taille", "tend", "secateur"],
+  "fertilisation": ["Fertilisation", "tend", "engrais"],
+  "protection": ["Protection hiver", "tend", "flocon"],
+  "protection_ete": ["Protection été", "tend", "ombrage"],
+  "floraison": ["Floraison", "yield", "fleur"],
+  "recolte": ["Récolte", "yield", "panier"],
+};
+
+const ORDRE_FICHE = ["abri", "terre", "plant", "multiplication", "taille",
+  "fertilisation", "protection", "protection_ete", "floraison", "recolte"];
+const ETATS_FICHE = ["floraison"];
+const MOIS_ABR = ["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
+const MOIS_PLEIN = ["janvier","février","mars","avril","mai","juin","juillet","août",
+  "septembre","octobre","novembre","décembre"];
+
+const PIPS_EXPO = { soleil: 3, soleil_mi_ombre: 3, mi_ombre: 2, mi_ombre_ombre: 2, ombre: 1 };
+const PIPS_EAU  = { faible: 1, modere: 2, regulier: 3, soutenu: 3 };
+const PIPS_BUT  = { nul: 0, faible: 1, moyen: 2, fort: 3 };
+const MOTIF_TYPO = { "Ornement": "ornement", "Aromatiques": "aromatique", "Légumes": "legume" };
+
+// Une fenêtre peut être à cheval sur le 1er janvier, sa borne de début dépasse
+// alors sa borne de fin. Tout test d'appartenance passe par ici.
+const dansFenetre = (q, s, e) => (s <= e ? (q >= s && q <= e) : (q >= s || q <= e));
+
+const demiTexte = q => (q % 2 ? "début " : "fin ") + MOIS_PLEIN[Math.ceil(q / 2) - 1];
+
+// Motif de typologie, agrandi puis fondu : il tient lieu d'illustration sans
+// prétendre représenter l'espèce.
 
 // Une teinte très pâle de la couleur, posée sur le papier.
 function teinte(hex, a) {
@@ -176,6 +297,11 @@ async function lireCatalogue() {
     espacement: p.spacing, prof: p.depth, assoc: p.companions, conseil: p.advice,
     attr: p.attributes || {}, phases: p.phases || {}, guide: p.guide || {},
     latin: p.latin || "", famille: p.family || "",
+    // colonnes lues par la fiche détaillée
+    port: p.habit || "", expo: p.exposure || "", eauNiv: p.water_need || "",
+    nectar: p.nectar || "", pollen: p.pollen || "", gel: p.frost_min_c,
+    hmin: p.height_min_cm, hmax: p.height_max_cm,
+    couleurs: p.flower_colors || [], pic: p.floraison_pic_q, picNote: p.floraison_pic_note || "",
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   try {
     localStorage.setItem(CACHE, JSON.stringify({
@@ -454,8 +580,13 @@ function carteItem(p) {
   const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
   b.innerHTML = `<span class="rond">${CHECK}</span>`
     + `<span class="nom-item">${esc(p.nom)}${sousTitre}</span>`
-    + (ad ? jaugeClim(ad.level, ad.note) : "");
-  b.addEventListener("click", () => basculer(p.id));
+    + (ad ? jaugeClim(ad.level, ad.note) : "")
+    + `<span class="voir-fiche" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`;
+  // Le rond coche, le nom ouvre la fiche : deux gestes sur la même rangée.
+  b.addEventListener("click", ev => {
+    if (ev.target.closest(".rond")) { basculer(p.id); return; }
+    ouvrirFeuille(p);
+  });
   bloc.appendChild(b);
   const muettes = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|")).length;
   if (sel.has(p.id) && muettes) {
@@ -645,7 +776,7 @@ function passeEspace(p) {
   return espaceChoisi === "0" ? z.length === 0 : z.includes(espaceChoisi);
 }
 
-const actif = (p, k) => (segsDe(p, k) || []).some(v => v[0] <= demi && v[1] >= demi);
+const actif = (p, k) => (segsDe(p, k) || []).some(v => dansFenetre(demi, v[0], v[1]));
 const texteAction = (p, k) =>
   k === "taille" ? (p.guide.taille || p.attr.taille || "")
   : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
@@ -666,12 +797,12 @@ function rendreMaintenant() {
   const bornePrint = h => (h % 2 ? "mi-" : "fin ") + MOIS_LONGS[Math.ceil(h / 2) - 1];
 
   const finFenetre = (p, k) => {
-    const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
+    const seg = (segsDe(p, k) || []).find(v => dansFenetre(demi, v[0], v[1]));
     return seg ? seg[1] : 99;
   };
   const etatFenetre = (p, k) => {
     if (k === "floraison") return "";
-    const seg = (segsDe(p, k) || []).find(v => v[0] <= demi && v[1] >= demi);
+    const seg = (segsDe(p, k) || []).find(v => dansFenetre(demi, v[0], v[1]));
     if (!seg) return "";
     if (seg[1] === demi) return "derniere";
     if (seg[0] === demi) return "ouverture";
@@ -952,56 +1083,425 @@ function segs(p) {
   });
 
   return voies.map(L => `<div class="voie">` + L.map(it => {
-    const g = (it.s - 1) / 24 * 100, w = (it.e - it.s + 1) / 24 * 100;
-    return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[it.k].color}" title="${esc(phases[it.k].label)}"></span>`;
+    // Une fenêtre à cheval sur le 1er janvier se dessine en deux morceaux.
+    const morceaux = it.s <= it.e ? [[it.s, it.e]] : [[it.s, 24], [1, it.e]];
+    return morceaux.map(([a, b]) => {
+      const g = (a - 1) / 24 * 100, w = (b - a + 1) / 24 * 100;
+      return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[it.k].color}" title="${esc(phases[it.k].label)}"></span>`;
+    }).join("");
   }).join("") + `</div>`).join("");
 }
 
-function ficheHTML(p) {
+/* ================== Fiche de plante, rendu détaillé ==================
+   Repris de la maquette validée : motif de typologie fondu dans l'en-tête,
+   jauges normalisées, calendrier annuel en ruban ou en roue avec une teinte
+   par action, besoin en eau, taille à maturité rapportée à une silhouette. */
+
+function cleMotif(p) {
+  if (p.typo === "Fruits") return p.port === "arbre" ? "arbre" : "fruit";
+  return MOTIF_TYPO[p.typo] || "ornement";
+}
+
+function motifFiche(p) {
+  const m = MOTIF[cleMotif(p)];
+  if (!m) return "";
+  return `<span class="f-motif" aria-hidden="true"><svg viewBox="0 0 200 200">${m}</svg></span>`;
+}
+
+function pips(n, max) {
+  let s = "";
+  for (let i = 1; i <= (max || 3); i++) s += `<i class="${i <= n ? "plein" : ""}"></i>`;
+  return `<span class="f-pips${n === 0 ? " zero" : ""}">${s}</span>`;
+}
+
+function jaugesFiche(p) {
+  const g = [];
+  const ligne = (icone, n, texte) => `<div class="f-jauge">`
+    + `<span class="f-ji" aria-hidden="true"><svg viewBox="0 0 20 20">${GJ[icone]}</svg></span>`
+    + pips(n) + `<span class="f-jt">${esc(texte)}</span></div>`;
+
+  if (p.expo) g.push(ligne("soleil", PIPS_EXPO[p.expo] || 2, p.attr.exposition || ""));
+  if (p.eauNiv) {
+    const t = { faible: "Arrosage faible", modere: "Besoin modéré",
+      regulier: "Arrosage régulier", soutenu: "Arrosage soutenu" }[p.eauNiv] || "";
+    g.push(ligne("goutte", PIPS_EAU[p.eauNiv] || 2, t));
+  }
+  if (p.nectar || p.pollen) {
+    const n = PIPS_BUT[p.nectar] || 0, po = PIPS_BUT[p.pollen] || 0;
+    const t = (n && po) ? "Nectar et pollen" : n ? "Surtout du nectar"
+      : po ? "Surtout du pollen" : "Rien pour les butineurs";
+    g.push(ligne("butineur", Math.max(n, po), t));
+  }
+  if (p.gel !== null && p.gel !== undefined) {
+    const v = Number(p.gel);
+    const t = v >= 0 ? "Gèle dès " + v.toString().replace(".", ",") + " °C"
+      : "Tient " + ("−" + Math.abs(v).toString().replace(".", ",")) + " °C";
+    g.push(ligne("flocon", v <= -15 ? 3 : v <= -7 ? 2 : 1, t));
+  }
+  return g.length ? `<div class="f-jauges">${g.join("")}</div>` : "";
+}
+
+// Une voie par action, dans un ordre fixe d'une fiche à l'autre, pour que deux
+// plantes se comparent d'un coup d'oeil.
+function voiesFiche(p) {
+  const out = [];
+  ORDRE_FICHE.forEach(k => {
+    if (!phases[k]) return;
+    const seg = segsDe(p, k);
+    if (seg && seg.length) out.push({ k, seg });
+  });
+  return out;
+}
+
+const couleurAction = (p, k) => k === "floraison"
+  ? (FLEUR[(p.couleurs || [])[0]] || FLEUR.rose) : [TEINTE[k], TEINTE[k]];
+
+function rubanSVG(p) {
+  const V = voiesFiche(p);
+  if (!V.length) return "";
+  const G = 102, W = 242, LH = 23, H = V.length * LH + 20;
+  const x = r => G + (r - 1) / 24 * W;
+  const s = [`<svg class="f-svg" viewBox="0 0 ${G + W} ${H + 14}" role="img" aria-label="Calendrier annuel">`];
+  for (let m = 0; m < 12; m++) {
+    const r = m * 2 + 1;
+    s.push(`<line x1="${x(r).toFixed(1)}" y1="0" x2="${x(r).toFixed(1)}" y2="${H - 6}" stroke="var(--f-grille)"/>`);
+    if (m % 2 === 0) s.push(`<text class="f-tk" x="${(x(r) + W / 24).toFixed(1)}" y="${H + 8}" text-anchor="middle">${MOIS_ABR[m]}</text>`);
+  }
+  s.push(`<rect x="${x(demi).toFixed(1)}" y="-3" width="${(W / 24).toFixed(1)}" height="${H}" fill="#14140f" opacity=".07"/>`);
+  [x(demi), x(demi) + W / 24].forEach(xb =>
+    s.push(`<line x1="${xb.toFixed(1)}" y1="-4" x2="${xb.toFixed(1)}" y2="${H - 2}" stroke="var(--f-ink3)" stroke-width="1.2"/>`));
+
+  V.forEach((v, i) => {
+    const y = i * LH + 4, gl = PHF[v.k][2];
+    const on = v.seg.some(t => dansFenetre(demi, t[0], t[1]));
+    const flo = v.k === "floraison";
+    const [col, cerne] = couleurAction(p, v.k);
+    s.push(`<rect x="${G}" y="${y}" width="${W}" height="14" rx="4" fill="#14140f" opacity=".035"/>`);
+    v.seg.forEach(t => {
+      const parts = t[0] <= t[1] ? [[t[0], t[1]]] : [[t[0], 24], [1, t[1]]];
+      parts.forEach(q => {
+        const X = x(q[0]), Wd = x(q[1] + 1) - x(q[0]);
+        s.push(`<rect x="${X.toFixed(1)}" y="${y}" width="${Math.max(Wd - 2, 5).toFixed(1)}" height="14" rx="4"`
+          + ` fill="${col}" stroke="${cerne}" stroke-width="${flo ? 1 : 0}" opacity="${on ? 1 : .82}"/>`);
+      });
+    });
+    if (flo && p.pic) s.push(`<circle cx="${(x(p.pic) + W / 48).toFixed(1)}" cy="${y + 7}" r="3.4" fill="${cerne}"/>`);
+    s.push(`<g transform="translate(2,${y + 1}) scale(0.62)" class="f-ic">${GLF[gl]}</g>`);
+    // Le libellé de la tâche porte parfois deux mots séparés par une virgule,
+    // la voie n'en garde que le premier, la légende de la roue les garde tous.
+    const lbl = phases[v.k].label.split(",")[0];
+    const gras = on ? ' style="fill:var(--f-ink);font-weight:600"' : "";
+    if (lbl.length <= 13 || lbl.indexOf(" ") === -1) {
+      s.push(`<text class="f-lane" x="${G - 8}" y="${y + 11}" text-anchor="end"${gras}>${esc(lbl)}</text>`);
+    } else {
+      const c = lbl.indexOf(" ");
+      s.push(`<text class="f-lane" x="${G - 8}" y="${y + 3.5}" text-anchor="end"${gras}>${esc(lbl.slice(0, c))}`
+        + `<tspan x="${G - 8}" dy="9.2">${esc(lbl.slice(c + 1))}</tspan></text>`);
+    }
+  });
+  return s.join("") + "</svg>";
+}
+
+function roueSVG(p) {
+  const V = voiesFiche(p);
+  if (!V.length) return "";
+  const n = V.length, R0 = 44, anneau = 11, ecart = 3.4, LEG = 132;
+  const Rmax = R0 + n * (anneau + ecart), S = 2 * (Rmax + 24), C = S / 2;
+  const ang = q => (q - 1) / 24 * 2 * Math.PI - Math.PI / 2;
+  const pt = (r, a) => [C + r * Math.cos(a), C + r * Math.sin(a)];
+  const f = v => v.toFixed(1);
+  const s = [`<svg class="f-svg" viewBox="0 0 ${(S + LEG).toFixed(0)} ${S.toFixed(0)}" role="img" aria-label="Année en roue">`];
+
+  const a1 = ang(demi), a2 = ang(demi + 1);
+  const [p1, p2, p3, p4] = [pt(R0 - 8, a1), pt(Rmax + 7, a1), pt(Rmax + 7, a2), pt(R0 - 8, a2)];
+  s.push(`<path d="M ${f(p1[0])} ${f(p1[1])} L ${f(p2[0])} ${f(p2[1])} A ${f(Rmax + 7)} ${f(Rmax + 7)} 0 0 1 `
+    + `${f(p3[0])} ${f(p3[1])} L ${f(p4[0])} ${f(p4[1])} Z" fill="#14140f" opacity=".09"/>`);
+  for (let m = 0; m < 12; m++) {
+    const a = ang(m * 2 + 1), q1 = pt(R0 - 8, a), q2 = pt(Rmax + 7, a);
+    s.push(`<line x1="${f(q1[0])}" y1="${f(q1[1])}" x2="${f(q2[0])}" y2="${f(q2[1])}" stroke="var(--f-grille)"/>`);
+    const t = pt(Rmax + 18, ang(m * 2 + 2));
+    s.push(`<text class="f-tk" x="${f(t[0])}" y="${f(t[1] + 3)}" text-anchor="middle">${MOIS_ABR[m]}</text>`);
+  }
+  [a1, a2].forEach(a => {
+    const q1 = pt(R0 - 8, a), q2 = pt(Rmax + 7, a);
+    s.push(`<line x1="${f(q1[0])}" y1="${f(q1[1])}" x2="${f(q2[0])}" y2="${f(q2[1])}" stroke="var(--f-ink3)" stroke-width="1.2"/>`);
+  });
+
+  V.forEach((v, i) => {
+    const r = Rmax - i * (anneau + ecart), gl = PHF[v.k][2];
+    const on = v.seg.some(t => dansFenetre(demi, t[0], t[1]));
+    const flo = v.k === "floraison";
+    const [col, cerne] = couleurAction(p, v.k);
+    const op = on ? 1 : .82;
+    s.push(`<circle cx="${f(C)}" cy="${f(C)}" r="${f(r)}" fill="none" stroke="#14140f" stroke-width="${anneau}" opacity=".05"/>`);
+    v.seg.forEach(t => {
+      const b = t[0] <= t[1] ? t[1] : 24 + t[1];
+      if (b + 1 - t[0] >= 24) {
+        if (flo) s.push(`<circle cx="${f(C)}" cy="${f(C)}" r="${f(r)}" fill="none" stroke="${cerne}" stroke-width="${anneau + 2}" opacity="${op}"/>`);
+        s.push(`<circle cx="${f(C)}" cy="${f(C)}" r="${f(r)}" fill="none" stroke="${col}" stroke-width="${anneau}" opacity="${op}"/>`);
+        return;
+      }
+      const A1 = ang(t[0]), A2 = ang(b + 1);
+      const s1 = pt(r, A1), s2 = pt(r, A2), big = (A2 - A1) > Math.PI ? 1 : 0;
+      if (flo) s.push(`<path d="M ${f(s1[0])} ${f(s1[1])} A ${f(r)} ${f(r)} 0 ${big} 1 ${f(s2[0])} ${f(s2[1])}" `
+        + `fill="none" stroke="${cerne}" stroke-width="${anneau + 2}" stroke-linecap="round" opacity="${op}"/>`);
+      s.push(`<path d="M ${f(s1[0])} ${f(s1[1])} A ${f(r)} ${f(r)} 0 ${big} 1 ${f(s2[0])} ${f(s2[1])}" `
+        + `fill="none" stroke="${col}" stroke-width="${anneau}" stroke-linecap="round" opacity="${op}"/>`);
+    });
+    if (flo && p.pic) {
+      const mp = pt(r, ang(p.pic) + 2 * Math.PI / 48);
+      s.push(`<circle cx="${f(mp[0])}" cy="${f(mp[1])}" r="3.2" fill="${cerne}" stroke="var(--f-carte)" stroke-width="1.2"/>`);
+    }
+    const mk = pt(r, ang(1)), rr = anneau / 2 + 1.6;
+    s.push(`<circle cx="${f(mk[0])}" cy="${f(mk[1])}" r="${f(rr)}" fill="var(--f-carte)" stroke="${cerne}" stroke-width="1.1"/>`);
+    s.push(`<g transform="translate(${f(mk[0] - 5.2)},${f(mk[1] - 5.2)}) scale(0.52)" style="color:${cerne}">${GLF[gl]}</g>`);
+  });
+
+  const y0 = C - (n * 19) / 2 + 9;
+  s.push(`<text class="f-tk" x="${(S + 6).toFixed(0)}" y="${f(y0 - 15)}">de l'extérieur au centre</text>`);
+  V.forEach((v, i) => {
+    const [, cerne] = couleurAction(p, v.k), yy = y0 + i * 19, gl = PHF[v.k][2];
+    s.push(`<circle cx="${(S + 12).toFixed(0)}" cy="${f(yy - 2)}" r="7.6" fill="var(--f-carte)" stroke="${cerne}" stroke-width="1.1"/>`);
+    s.push(`<g transform="translate(${f(S + 6.8)},${f(yy - 7.2)}) scale(0.52)" style="color:${cerne}">${GLF[gl]}</g>`);
+    s.push(`<text class="f-lane" x="${(S + 24).toFixed(0)}" y="${f(yy + 2)}">${esc(phases[v.k].label)}</text>`);
+  });
+
+  const ra = R0 - 1, e1 = ang(1) - 1.28, e2 = ang(1) + 1.14;
+  const q1 = pt(ra, e1), q2 = pt(ra, e2);
+  s.push(`<path d="M ${f(q1[0])} ${f(q1[1])} A ${f(ra)} ${f(ra)} 0 0 1 ${f(q2[0])} ${f(q2[1])}" `
+    + `fill="none" stroke="var(--f-ink3)" stroke-width="1.6" opacity=".5"/>`);
+  const h1 = pt(ra - 3.6, e2), h2 = pt(ra + 3.6, e2), h3 = pt(ra, e2 + 0.145);
+  s.push(`<path d="M ${f(h1[0])} ${f(h1[1])} L ${f(h2[0])} ${f(h2[1])} L ${f(h3[0])} ${f(h3[1])} Z" fill="var(--f-ink3)" opacity=".5"/>`);
+  s.push(`<circle cx="${f(C)}" cy="${f(C)}" r="${f(R0 - 12)}" fill="var(--f-plan)"/>`);
+  s.push(`<text x="${f(C)}" y="${f(C - 3)}" text-anchor="middle" class="f-tk">quinzaine</text>`);
+  s.push(`<text x="${f(C)}" y="${f(C + 12)}" text-anchor="middle" class="f-centre">${demiTexte(demi)}</text>`);
+  return s.join("") + "</svg>";
+}
+
+// Silhouette d'une seule pièce, tracée dans un repère de hauteur 100.
+const CORPS_HUMAIN = "M-1.6 0.6C2.4 -0.6 5.6 2.4 5.8 7.2C6.0 11.0 5.0 14.4 3.4 17.0"
+  + "C3.6 19.0 3.9 20.6 4.6 21.6C8.8 22.8 11.4 25.8 12.0 30.6"
+  + "C12.6 35.4 12.2 42.0 11.4 48.4C11.0 52.0 10.4 55.4 10.0 58.6"
+  + "C10.4 66.0 9.8 75.4 9.0 83.6C8.5 89.4 8.0 94.8 7.6 99.4L2.8 99.6"
+  + "C2.4 92.0 2.0 84.2 1.4 76.8C1.2 73.6 0.6 71.8 0.2 70.6"
+  + "C-0.3 71.8 -0.9 73.6 -1.2 76.8C-1.8 84.2 -2.4 92.0 -2.8 99.6L-7.6 99.4"
+  + "C-8.0 94.8 -8.5 89.4 -9.0 83.6C-9.8 75.4 -10.4 66.0 -10.0 58.6"
+  + "C-10.4 55.4 -11.0 52.0 -11.4 48.4C-12.2 42.0 -12.6 35.4 -12.0 30.6"
+  + "C-11.4 25.8 -8.8 22.8 -4.6 21.6C-3.9 20.6 -3.6 19.0 -3.4 17.0"
+  + "C-5.0 14.4 -6.0 11.0 -5.8 7.2C-5.6 2.4 -4.0 0.0 -1.6 0.6Z";
+
+// Le motif est densifié : fondu dans l'écran il disparaîtrait à cette taille.
+function densifie(m, k) {
+  return m.replace(/opacity="\.(\d+)"/g, (t, d) =>
+    `opacity="${Math.min(0.85, (Number("0." + d) * k)).toFixed(3)}"`);
+}
+
+function matureSVG(p) {
+  if (!p.hmin || !p.hmax) return "";
+  const W = 344, H = 104, G = 102;
+  const hautMax = Math.max(p.hmax, 180) * 1.12;
+  const y = cm => H - Math.min(H - 6, (cm / hautMax) * (H - 6));
+  const s = [`<svg class="f-svg" viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Taille à maturité">`];
+  s.push(`<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="var(--f-ink3)" opacity=".45"/>`);
+  const yh = y(p.hmax), yb = y(p.hmin);
+  s.push(`<rect x="${G}" y="${yh.toFixed(1)}" width="${296 - G}" height="${(yb - yh).toFixed(1)}" fill="${TEINTE.plant}" opacity=".12"/>`);
+  s.push(`<line x1="${G}" y1="${yh.toFixed(1)}" x2="296" y2="${yh.toFixed(1)}" stroke="${TEINTE.plant}" stroke-width="2"/>`);
+  s.push(`<text class="f-cote fort" x="304" y="${(yh + 4).toFixed(1)}">${(p.hmax / 100).toFixed(1).replace(".", ",")} m</text>`);
+  if (p.hmin !== p.hmax) {
+    s.push(`<line x1="${G}" y1="${yb.toFixed(1)}" x2="296" y2="${yb.toFixed(1)}" stroke="${TEINTE.plant}" stroke-width="2" stroke-dasharray="4 3"/>`);
+    s.push(`<text class="f-cote" x="304" y="${(yb + 4).toFixed(1)}">${(p.hmin / 100).toFixed(1).replace(".", ",")} m</text>`);
+  }
+  // silhouette humaine à l'échelle, 1,70 m
+  const kh = (H - y(170)) / 100;
+  s.push(`<g transform="translate(46,${(H - (H - y(170))).toFixed(2)}) scale(${kh.toFixed(4)})" fill="var(--f-ink3)"><path d="${CORPS_HUMAIN}"/></g>`);
+  s.push(`<text class="f-cote" x="46" y="${(y(170) - 6).toFixed(1)}" text-anchor="middle">1,70 m</text>`);
+  // motif de la plante, sommet calé sur le milieu de la plage
+  const cle = cleMotif(p), sp = MOTIF_SPAN[cle] || [20, 190];
+  const milieu = (p.hmin + p.hmax) / 2;
+  const k = (H - y(milieu)) / (sp[1] - sp[0]);
+  s.push(`<g transform="translate(${(196 - 100 * k).toFixed(2)},${(H - sp[1] * k).toFixed(2)}) scale(${k.toFixed(4)})" `
+    + `fill="${TEINTE.plant}">${densifie(MOTIF[cle], 2.8)}</g>`);
+  return s.join("") + "</svg>";
+}
+
+function eauSVG(p, lignes) {
+  const G = 102, W = 242, H = 92, hm = 72;
+  const vals = [];
+  for (let q = 1; q <= 24; q++) {
+    const r = lignes.find(l => l.quinzaine === q);
+    vals.push(r && r.litres_jour_m2 !== null ? Number(r.litres_jour_m2) : null);
+  }
+  const dispo = vals.filter(v => v !== null);
+  if (!dispo.length) return "";
+  const mx = Math.max(...dispo);
+  const x = q => G + (q - 1) / 24 * W + W / 48;
+  const y = v => H - (v / mx) * hm;
+  const s = [`<svg class="f-svg" viewBox="0 0 ${G + W} ${H + 26}" role="img" aria-label="Besoin en eau">`];
+  for (let m = 0; m < 12; m++) {
+    const q = m * 2 + 1;
+    s.push(`<line x1="${(G + (q - 1) / 24 * W).toFixed(1)}" y1="0" x2="${(G + (q - 1) / 24 * W).toFixed(1)}" y2="${H}" stroke="var(--f-grille)"/>`);
+    if (m % 2 === 0) s.push(`<text class="f-tk" x="${x(q + 1).toFixed(1)}" y="${H + 14}" text-anchor="middle">${MOIS_ABR[m]}</text>`);
+  }
+  s.push(`<rect x="${(G + (demi - 1) / 24 * W).toFixed(1)}" y="0" width="${(W / 24).toFixed(1)}" height="${H}" fill="#14140f" opacity=".07"/>`);
+  [G + (demi - 1) / 24 * W, G + demi / 24 * W].forEach(xb =>
+    s.push(`<line x1="${xb.toFixed(1)}" y1="0" x2="${xb.toFixed(1)}" y2="${H}" stroke="var(--f-ink3)" stroke-width="1.2"/>`));
+  s.push(`<line x1="0" y1="${H}" x2="${G + W}" y2="${H}" stroke="var(--f-ink3)" opacity=".45"/>`);
+
+  let d = "", aire = "", debut = null, fin = null;
+  vals.forEach((v, i) => {
+    if (v === null) return;
+    const q = i + 1;
+    d += (d ? " L " : "M ") + x(q).toFixed(1) + " " + y(v).toFixed(1);
+    if (debut === null) debut = q;
+    fin = q;
+  });
+  if (debut !== null) {
+    aire = `M ${x(debut).toFixed(1)} ${H} L ` + d.slice(2) + ` L ${x(fin).toFixed(1)} ${H} Z`;
+    s.push(`<path d="${aire}" fill="${TEINTE.taille}" opacity=".14"/>`);
+    s.push(`<path d="${d}" fill="none" stroke="${TEINTE.taille}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`);
+  }
+  const qp = vals.indexOf(mx) + 1;
+  s.push(`<circle cx="${x(qp).toFixed(1)}" cy="${y(mx).toFixed(1)}" r="3.4" fill="${TEINTE.taille}"/>`);
+  s.push(`<text class="f-tk" x="${G - 8}" y="${(H - hm - 9).toFixed(1)}" text-anchor="end">pic</text>`);
+  s.push(`<text class="f-pic" x="${G - 8}" y="${(H - hm + 8).toFixed(1)}" text-anchor="end">`
+    + `${mx.toFixed(1).replace(".", ",")} L</text>`);
+  s.push(`<text class="f-tk" x="${G - 8}" y="${(H - hm + 22).toFixed(1)}" text-anchor="end">${demiTexte(qp)}</text>`);
+  return s.join("") + "</svg>";
+}
+
+// Barre d'avancement dans la fenêtre du geste, repère à la quinzaine en cours.
+function avancement(seg, teinte) {
+  const [d, f] = seg;
+  const total = ((f - d) % 24 + 24) % 24 + 1;
+  const fait = ((demi - d) % 24 + 24) % 24 + 1;
+  const pct = Math.max(4, Math.min(100, Math.round(fait / total * 100)));
+  return `<div class="f-prog" style="color:${teinte}"><div class="f-track"><i style="width:${pct}%"></i>`
+    + `<b style="left:${pct}%"></b></div>`
+    + `<div class="f-bornes"><span>${demiTexte(d)}</span><span>${demiTexte(f)}</span></div></div>`;
+}
+
+function ficheMoment(p) {
+  const h = [];
+  const actives = [];
+  ORDRE_MAINTENANT.forEach(k => {
+    if (!phases[k]) return;
+    (segsDe(p, k) || []).forEach(t => { if (dansFenetre(demi, t[0], t[1])) actives.push({ k, t }); });
+  });
+  if (p.eauMode === "sans_arrosage" || (p.eauLignes && !p.eauLignes.length)) {
+    h.push(`<div class="f-hero"><div class="f-lbl">Besoin en eau</div>`
+      + `<div class="f-val"><span class="f-num">0</span><span class="f-unit">arrosage à prévoir</span></div>`
+      + `<p class="f-note">Plante installée, aucun arrosage prévu</p></div>`);
+  } else if (p.eauLignes && p.eauLignes.length) {
+    const r = p.eauLignes.find(l => l.quinzaine === demi);
+    const vals = p.eauLignes.map(l => Number(l.litres_jour_m2 || 0));
+    const mx = Math.max(...vals, 0);
+    if (r && r.litres_jour_m2) {
+      const v = Number(r.litres_jour_m2);
+      h.push(`<div class="f-hero"><div class="f-lbl">Besoin en eau aujourd'hui</div>`
+        + `<div class="f-val"><span class="f-num">${v.toFixed(1).replace(".", ",")}</span>`
+        + `<span class="f-unit">L par jour et par m²</span></div>`
+        + `<p class="f-note">${mx ? Math.round(v / mx * 100) + " % du pic de l'année" : ""}</p></div>`);
+    } else if (r && r.reprise_dose_litres) {
+      h.push(`<div class="f-hero"><div class="f-lbl">Besoin en eau</div>`
+        + `<div class="f-val"><span class="f-num">${Number(r.reprise_dose_litres).toFixed(0)}</span>`
+        + `<span class="f-unit">L à la plantation</span></div>`
+        + `<p class="f-note">Arrosage à la reprise seulement, tous les ${r.reprise_intervalle_jours || 10} jours la première saison</p></div>`);
+    } else {
+      h.push(`<div class="f-hero"><div class="f-lbl">Besoin en eau</div>`
+        + `<div class="f-val"><span class="f-num">0</span><span class="f-unit">arrosage à prévoir</span></div>`
+        + `<p class="f-note">Hors de la période où la plante demande de l'eau</p></div>`);
+    }
+  }
+
+  actives.filter(a => ETATS_FICHE.indexOf(a.k) !== -1).forEach(a => {
+    const [, cerne] = couleurAction(p, a.k);
+    h.push(`<div class="f-etat"><span class="f-ai" style="color:${cerne}"><svg viewBox="0 0 20 20">${GLF[PHF[a.k][2]]}</svg></span>`
+      + `<span class="f-et">${esc(phases[a.k].label)} en cours</span>`
+      + `<span class="f-ed">${demiTexte(a.t[0])} à ${demiTexte(a.t[1])}</span></div>`);
+  });
+
+  const gestes = actives.filter(a => ETATS_FICHE.indexOf(a.k) === -1);
+  if (gestes.length) {
+    h.push('<div class="f-gestes">');
+    gestes.forEach(a => {
+      const t = texteAction(p, a.k), c = TEINTE[a.k];
+      h.push(`<div class="f-acte"><div class="f-ai" style="color:${c}"><svg viewBox="0 0 20 20">${GLF[PHF[a.k][2]]}</svg></div><div>`
+        + `<h4>${esc(phases[a.k].label)}</h4>${avancement(a.t, c)}${t ? `<p>${esc(t)}</p>` : ""}</div></div>`);
+    });
+    h.push("</div>");
+  }
+  if (!actives.length) h.push('<p class="f-vide">Rien à faire sur cette plante en ce moment.</p>');
+  return h.join("");
+}
+
+function ficheAnnee(p) {
+  const h = [];
+  const seg = `<div class="f-seg"><button type="button" class="actif" data-forme="ruban">Ruban</button>`
+    + `<button type="button" data-forme="roue">Roue</button></div>`;
+  const clim = (climats[(jardinActif() || {}).climate_key] || {}).label;
+  h.push(`<div class="f-carte"><div class="f-carte-tete"><h3>L'année de la plante`
+    + (clim ? `<span class="f-sub">climat ${esc(clim.toLowerCase())}</span>` : "") + `</h3>${seg}</div>`
+    + `<div class="f-forme f-ruban">${rubanSVG(p)}</div>`
+    + `<div class="f-forme f-roue" hidden>${roueSVG(p)}</div>`);
+  const c = (p.couleurs || [])[0];
+  const flo = (segsDe(p, "floraison") || [])[0];
+  if (c && flo) {
+    const [rempli, cerne] = FLEUR[c] || FLEUR.rose;
+    h.push(`<p class="f-legende"><i style="background:${rempli};border-color:${cerne}"></i>`
+      + `Fleurs ${esc(ADJ[c] || c)}, de ${demiTexte(flo[0])} à ${demiTexte(flo[1])}</p>`);
+  }
+  h.push("</div>");
+
+  h.push(`<div class="f-carte f-eau"><div class="f-carte-tete"><h3>Besoin en eau`
+    + `<span class="f-sub">L par jour et par m²</span></h3></div>`
+    + `<div class="f-eau-corps"><p class="f-note">Lecture en cours.</p></div></div>`);
+
+  if (p.pic) {
+    h.push(`<div class="f-carte"><div class="f-carte-tete"><h3>Pic de floraison</h3></div>`
+      + `<p class="f-txt">Le point marque le pic, ${demiTexte(p.pic)}.`
+      + (p.picNote ? " " + esc(p.picNote) : "") + `</p></div>`);
+  }
+  const mat = matureSVG(p);
+  if (mat) h.push(`<div class="f-carte"><div class="f-carte-tete"><h3>Taille à maturité</h3></div>${mat}</div>`);
+  return h.join("");
+}
+
+function ficheBlocs(p) {
   const a = p.attr || {};
-  const MOIS_C = ["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
-  const borne = h => (h % 2 ? "mi-" : "fin ") + MOIS_C[Math.ceil(h / 2) - 1];
-  const depart = h => (h % 2 ? "début " : "mi-") + MOIS_C[Math.ceil(h / 2) - 1];
+  const kv = rows => rows.filter(r => r[1]).map(r =>
+    `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("");
+  const bloc = (titre, rows) => {
+    const c = kv(rows);
+    return c ? `<section class="f-bloc"><h3>${esc(titre)}</h3><dl class="f-kv">${c}</dl></section>` : "";
+  };
+  return bloc("Identité", [
+    ["Famille", p.famille], ["Cycle", a.type], ["Hauteur", a.hauteur],
+    ["Écartement", p.espacement], ["Première récolte", a.recolte],
+  ]) + bloc("Culture", [
+    ["Sol", a.sol], ["Eau", a.arrosage], ["Fertilité", a.fertilisation],
+    ["Profondeur", p.prof], ["Pollinisation", a.pollinisation], ["Multiplication", a.multiplication],
+  ]) + bloc("Au jardin", [
+    ["Nectar", a.mellifere], ["Parfum", a.parfum], ["Fleurs", a.couleur],
+    ["Feuillage", a.feuillage], ["Usage", a.usage], ["Associations", p.assoc],
+  ]);
+}
 
-  const actes = ORDRE.filter(k => p.phases[k] && phases[k]).map(k => {
-    const t = texteAction(p, k);
-    const seg = segsDe(p, k) || [];
-    const quand = seg.map(v => depart(v[0]) + " à " + borne(v[1])).join(", ");
-    return `<li>
-      <span class="pt" style="background:${phases[k].color}"></span>
-      <div>
-        <p class="acte-tete"><b>${esc(phases[k].label)}</b>${quand ? `<span class="acte-quand">${esc(quand)}</span>` : ""}</p>
-        ${t ? `<p class="acte-texte">${esc(t)}</p>` : ""}
-      </div></li>`;
-  }).join("");
-
-  const tag = v => v ? `<span class="tag">${esc(v)}</span>` : "";
+function ficheHTML(p) {
   const ad = adapt[p.id];
-  const tox = a.toxicite && !/^non toxique/i.test(a.toxicite);
-  const bloc = (t, v) => v ? `<div class="carac-bloc"><dt>${t}</dt><dd>${esc(v)}</dd></div>` : "";
-
-  return `<div class="fiche">
-    ${ad ? `<div class="bloc-clim niv-${ad.level}">
-      ${jaugeClim(ad.level, ad.note)}
-      <div><p class="clim-titre">${esc(NIVEAUX[ad.level].court)}<span>climat ${esc((climats[(jardinActif() || {}).climate_key] || {}).label || "")}</span></p>
-      <p class="clim-note">${esc(ad.note || NIVEAUX[ad.level].long)}</p></div>
-    </div>` : ""}
-    <div class="tags">${tag(a.type || p.cat)}${tag(a.exposition)}${tag(a.rusticite)}</div>
-    ${tox ? `<p class="avis-tox"><span class="losange-tox">&#9670;</span>${esc(a.toxicite)}</p>` : ""}
-    ${p.conseil ? `<p class="cgen">${esc(p.conseil)}</p>` : ""}
-    <dl class="carac">
-      ${bloc("Hauteur", a.hauteur)}${bloc("Espacement", p.espacement)}
-      ${bloc("Profondeur", p.prof)}${bloc("Arrosage", a.arrosage)}
-      ${bloc("Sol", a.sol)}${bloc("Fertilisation", a.fertilisation)}
-      ${bloc("Couleur", a.couleur)}${bloc("Feuillage", a.feuillage)}
-      ${bloc("Résiste jusqu'à", a.gel)}${bloc("Parfum", a.parfum)}
-      ${bloc("Mellifère", a.mellifere)}
-      ${bloc("Première récolte", a.recolte)}${bloc("Pollinisation", a.pollinisation)}
-      ${bloc("Multiplication", a.multiplication)}${bloc("Usage", a.usage)}
-      ${p.phases.taille ? "" : bloc("Taille", a.taille)}
-      ${bloc("Associations", p.assoc)}
-    </dl>
-    ${actes ? `<p class="titre-actes">Calendrier et conseils</p><ul class="actes">${actes}</ul>` : ""}
+  const tox = p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite);
+  return `<div class="fiche-v2">
+    <div class="f-entete">${motifFiche(p)}
+      <div class="f-chips"><span class="f-chip">${esc(p.typo || p.cat)}</span>
+      ${ad ? `<span class="f-chip">${esc(NIVEAUX[ad.level].court)} sous ce climat</span>` : ""}</div>
+      ${jaugesFiche(p)}
+      ${tox ? `<p class="f-tox"><span aria-hidden="true">&#9670;</span>${esc(p.attr.toxicite)}</p>` : ""}
+    </div>
+    <div class="f-onglets" role="tablist">
+      <button type="button" role="tab" class="actif" data-pan="moment">En ce moment</button>
+      <button type="button" role="tab" data-pan="annee">Toute l'année</button>
+    </div>
+    <div class="f-pan f-pan-moment">${ficheMoment(p)}</div>
+    <div class="f-pan f-pan-annee" hidden>${ficheAnnee(p)}${ficheBlocs(p)}</div>
   </div>`;
 }
 
@@ -1178,9 +1678,10 @@ function rendreEspaces() {
       const r = (aff.get(p.id) || []).find(x => x.espace_id === zo.id) || {};
       const l = document.createElement("div");
       l.className = "ligne-espace";
-      l.innerHTML = `<span class="nom-espace">${esc(p.nom)}</span>`
+      l.innerHTML = `<button type="button" class="nom-espace">${esc(p.nom)}</button>`
         + `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
         + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`;
+      l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
       const enr = () => majAffectation(p.id, zo.id,
         l.querySelector(".qte").value, l.querySelector(".notes").value);
       l.querySelector(".qte").addEventListener("change", enr);
@@ -1380,10 +1881,56 @@ sur("puceClimat", "click", () => afficher("jardin"));
 
 /* ================== Feuille de détail ================== */
 
+// Le besoin en eau se lit à l'ouverture, une requête par plante et par climat.
+async function chargerEau(p) {
+  const g = jardinActif();
+  const cle = (g && g.climate_key) || "oceanique_degrade";
+  if (p.eauCle === cle) return;
+  const { data } = await avecReprise(() => db.from("arrosage_plante_quinzaine")
+    .select("quinzaine,litres_jour_m2,unite,niveau,irrigation_mode,reprise_dose_litres,reprise_intervalle_jours")
+    .eq("plant_id", p.id).eq("climate_key", cle).order("quinzaine"));
+  p.eauCle = cle;
+  p.eauLignes = data || [];
+  p.eauMode = p.eauLignes.length ? p.eauLignes[0].irrigation_mode : null;
+}
+
+function brancherFiche(p) {
+  const c = $("feuille-corps");
+  const onglets = [...c.querySelectorAll(".f-onglets button")];
+  onglets.forEach(b => b.addEventListener("click", () => {
+    onglets.forEach(x => x.classList.toggle("actif", x === b));
+    c.querySelector(".f-pan-moment").hidden = b.dataset.pan !== "moment";
+    c.querySelector(".f-pan-annee").hidden = b.dataset.pan !== "annee";
+  }));
+  const formes = [...c.querySelectorAll(".f-seg button")];
+  formes.forEach(b => b.addEventListener("click", () => {
+    formes.forEach(x => x.classList.toggle("actif", x === b));
+    c.querySelector(".f-ruban").hidden = b.dataset.forme !== "ruban";
+    c.querySelector(".f-roue").hidden = b.dataset.forme !== "roue";
+  }));
+}
+
+// Le besoin en eau arrive après le premier rendu, seules deux zones changent.
+function majEau(p) {
+  const c = $("feuille-corps");
+  if (!c) return;
+  const carte = c.querySelector(".f-eau");
+  const svg = p.eauLignes && p.eauLignes.length ? eauSVG(p, p.eauLignes) : "";
+  if (carte) {
+    if (svg) carte.querySelector(".f-eau-corps").innerHTML = svg
+      + '<p class="f-note">Calcul FAO 56, évapotranspiration Météo-France.</p>';
+    else carte.hidden = true;
+  }
+  const m = c.querySelector(".f-pan-moment");
+  if (m) m.innerHTML = ficheMoment(p);
+}
+
 function ouvrirFeuille(p) {
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
   $("feuille-corps").innerHTML = ficheHTML(p);
+  brancherFiche(p);
+  chargerEau(p).then(() => majEau(p)).catch(() => {});
   $("feuille-corps").scrollTop = 0;
   $("voile").hidden = false;
   $("feuille").hidden = false;
