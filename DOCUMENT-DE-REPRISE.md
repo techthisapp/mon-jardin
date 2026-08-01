@@ -89,6 +89,8 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 |---|---|
 | `gardens` | Plusieurs jardins par compte. Nom, climat, altitude, date de dernière ouverture, code postal et position, texture du sol |
 | `releves_eau` | Mesures du jardinier, une ligne par jardin et par jour : pluie relevée au pluviomètre et arrosage apporté, en millimètres |
+| `stations_meteo` | Catalogue des postes de mesure de Météo-France. Lecture ouverte, écriture réservée à la collecte |
+| `pluie_station` | Lame d'eau quotidienne mesurée au poste, avec son code qualité. Fenêtre glissante de 120 jours |
 | `espaces` | Découpage d'un jardin. Nom, type, couleur, position |
 | `garden_plants` | Plantes retenues dans un jardin |
 | `garden_plant_espaces` | Affectation d'une plante à un ou plusieurs espaces, avec quantité et note |
@@ -322,6 +324,18 @@ La dose recommandée est plafonnée à la fraction facilement utilisable. Au-del
 La table `releves_eau` porte ce que le jardinier mesure. Le relevé de pluviomètre prime sur la lame d'eau du modèle, jour par jour, et l'arrosage saisi entre dans le bilan. La saisie couvre les trois derniers jours, depuis la feuille de l'eau. Sans relevé, le calcul ignore les arrosages non enregistrés et surestime donc le déficit, ce que la feuille énonce.
 
 La fenêtre météo passe de sept à trente jours pour que l'état initial du réservoir, posé à la moitié de la capacité, ne pèse plus sur le résultat. Contrôlé : après trente jours, le résultat est identique quel que soit l'état de départ.
+
+### Pluie mesurée aux postes de Météo-France, 1er août 2026
+
+La clé du portail API de Météo-France s'est révélée inutile. Le même contenu est publié en fichiers ouverts sur data.gouv.fr, jeu « Données climatologiques de base, quotidiennes », un fichier par département, deux ans d'antériorité, environ 230 ko compressés, déposé chaque matin vers 6 h. Aucun compte, aucune clé.
+
+La fonction Edge `pluie-stations` résout l'adresse du fichier par l'interface de data.gouv, le nom portant la période courante et changeant d'année en année. Elle le décompresse, le lit, et met à jour `stations_meteo` et les 120 derniers jours de `pluie_station`. Les départements suivis sont déduits des codes postaux des jardins situés. Une tâche `cron` nommée `collecte-pluie` l'appelle à 6 h 40 UTC.
+
+Un déclencheur sur `gardens` rattache le jardin au poste le plus proche à moins de quarante kilomètres, à la création comme au changement de commune. La fonction `station_la_plus_proche` porte le calcul.
+
+La lame d'eau du jour se lit désormais dans trois sources, par ordre de confiance décroissante : le relevé du pluviomètre du jardinier, puis le poste rattaché, puis le modèle. Les valeurs de code qualité supérieur à 1 sont écartées. Le poste publiant avec deux jours de retard, le modèle couvre toujours les journées les plus récentes.
+
+Ce que la mesure change, contrôlé sur le jardin de Fain-lès-Moutiers et le poste de Montbard, à 10,1 km. Sur juillet 2026, le total est presque identique, 38,6 mm mesurés contre 37,3 mm modélisés. Le jour ne l'est pas : le poste a mesuré 9,2 mm le 13 juillet, dont le modèle ne voit rien, et le modèle place 4,7 mm le 16 juillet, où le poste n'a rien mesuré. Pour un réservoir, la date d'un remplissage compte autant que son volume.
 
 ### Trois correctifs météo, 1er août 2026
 

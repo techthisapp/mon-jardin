@@ -1518,3 +1518,8 @@ body.fige{overflow:hidden}
 @media (hover:hover){ .cp-choix:hover{background:var(--f-plan, var(--papier))} }
 .cp-choix:focus-visible{outline:2px solid var(--terre);outline-offset:-2px}
 .mt-form input{flex:1;min-width:0}
+
+/* La provenance de la lame d'eau se lit dans la barre. */
+.mt-bp.poste{background:#2E6FB0}
+.mt-leg i.s{background:#2E6FB0}
+.mt-leg i.m{background:#1F4F8F}

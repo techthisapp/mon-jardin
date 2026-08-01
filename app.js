@@ -51,6 +51,9 @@ let obsSections = null;
 // Coefficient cultural moyen du jardin par quinzaine, et mesures du jardinier.
 let kcParQuinzaine = {};
 let releves = new Map();
+// Pluie mesurée au poste rattaché au jardin, et signalement du poste.
+let pluieStation = new Map();
+let station = null;
 
 /* Réserve utile du sol, en millimètres par mètre de profondeur. Milieux des
    fourchettes du tableau 19 du bulletin FAO 56, recoupées par les capacités de
@@ -396,7 +399,7 @@ const compte = f => plantes.filter(f).length;
 
 /* ================== Jardin ================== */
 
-const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at,code_postal,commune,lat,lon,sol_texture";
+const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at,code_postal,commune,lat,lon,sol_texture,station_num";
 const jardinActif = () => jardins.find(g => g.id === jardinId) || null;
 // iOS isole le stockage local de l'application ajoutée à l'écran d'accueil de celui
 // de Safari. Le jardin actif est donc mémorisé en base, où il suit le compte.
@@ -464,7 +467,7 @@ async function chargerContenuJardin() {
   });
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
   await lireEauDuJour(cle);
-  await lireReleves();
+  await Promise.all([lireReleves(), lireStation()]);
   majCompte(); majJardinUI(); construireChips(); rendreTout();
   // La météo arrive après le premier rendu : la synthèse doit être refaite,
   // son pied porte la décision d'arrosage tirée du bilan du sol.
@@ -1841,13 +1844,18 @@ function quinzaineDe(iso) {
   return j.getMonth() * 2 + (j.getDate() <= 15 ? 1 : 2);
 }
 
-// Lame d'eau du jour : le relevé du jardinier prime sur la sortie du modèle.
+/* Lame d'eau du jour, par ordre de confiance décroissante : ce que le jardinier
+   a lu dans son pluviomètre, puis ce qu'a mesuré le poste rattaché, puis la
+   sortie du modèle. Le poste publie avec deux jours de retard, le modèle couvre
+   donc toujours les journées les plus récentes. */
 function lameDuJour(iso, modele) {
   const r = releves.get(iso);
-  const mesure = r && r.pluie_mm !== null && r.pluie_mm !== undefined ? Number(r.pluie_mm) : null;
-  return { pluie: mesure === null ? (modele || 0) : mesure,
-           arrosage: r && r.arrosage_mm !== null && r.arrosage_mm !== undefined ? Number(r.arrosage_mm) : 0,
-           mesuree: mesure !== null };
+  const perso = r && r.pluie_mm !== null && r.pluie_mm !== undefined ? Number(r.pluie_mm) : null;
+  const poste = pluieStation.has(iso) ? pluieStation.get(iso) : null;
+  const source = perso !== null ? "pluviometre" : poste !== null ? "station" : "modele";
+  const pluie = perso !== null ? perso : poste !== null ? poste : (modele || 0);
+  return { pluie, source, mesuree: source !== "modele",
+           arrosage: r && r.arrosage_mm !== null && r.arrosage_mm !== undefined ? Number(r.arrosage_mm) : 0 };
 }
 
 /* Bilan hydrique du bulletin FAO 56, chapitre 8. Le sol est un réservoir dont on
@@ -1872,7 +1880,7 @@ function bilanHydrique() {
     const et0 = Number(d.et0_fao_evapotranspiration[k]) || 0;
     const etc = et0 * kcDe(d.time[k]);
     dr = Math.min(taw, Math.max(0, dr - l.pluie - l.arrosage + etc));
-    serie.push({ jour: d.time[k], pluie: l.pluie, mesuree: l.mesuree,
+    serie.push({ jour: d.time[k], pluie: l.pluie, mesuree: l.mesuree, source: l.source,
                  arrosage: l.arrosage, et0, etc, dr });
   }
 
@@ -2097,14 +2105,17 @@ function vueEau() {
     const e = (d.et0_fao_evapotranspiration[k] || 0)
       * (kcParQuinzaine[quinzaineDe(d.time[k])] || kcParQuinzaine[demi] || 0.85);
     const m = Math.max(8, pl, e);
+    const ton = k > i ? "" : l.source === "pluviometre" ? " mesure"
+      : l.source === "station" ? " poste" : "";
     barres.push(`<div class="mt-col${k === i ? " ce-jour" : ""}${k > i ? " a-venir" : ""}">`
       + `<span class="mt-duo">`
-      + `<i class="mt-bp${l.mesuree && k <= i ? " mesure" : ""}" style="height:${(pl / m * 46).toFixed(0)}px" `
+      + `<i class="mt-bp${ton}" style="height:${(pl / m * 46).toFixed(0)}px" `
       + `title="${nombreFr(pl)} mm"></i>`
       + `<i class="mt-be" style="height:${(e / m * 46).toFixed(0)}px" title="${nombreFr(e)} mm repris"></i>`
       + `</span><span class="mt-j">${esc(jourCourt(d.time[k]))}</span></div>`);
   }
 
+  const nbMesures = b.serie.slice(-30).filter(x => x.source === "station").length;
   const pleine = Math.round(b.reserve * 100);
   const seuil = Math.round((1 - b.raw / b.taw) * 100);
   const conseil = b.etat === "arroser"
@@ -2142,10 +2153,20 @@ function vueEau() {
       + `</div>`
       + `<p class="f-txt">${conseil}</p>`
       + `<div class="f-carte"><div class="mt-barres">${barres.join("")}</div>`
-      + `<p class="mt-leg"><i class="p"></i>pluie et arrosage <i class="e"></i>consommation</p></div>`
+      + `<p class="mt-leg"><i class="p"></i>modèle <i class="s"></i>poste `
+      + `<i class="m"></i>votre relevé <i class="e"></i>consommation</p></div>`
       + `<p class="f-txt">Sur sept jours, <b>${nombreFr(b.pluie7)} mm</b> sont tombés`
       + (b.apporte7 ? ` et <b>${nombreFr(b.apporte7)} mm</b> ont été apportés` : "")
       + `, les cultures en ont repris <b>${nombreFr(b.demande7)} mm</b>.</p>`
+      + (station
+        ? `<div class="f-carte"><div class="f-carte-tete"><h3>Poste de mesure</h3></div>`
+          + `<p class="f-txt"><b>${esc(station.libelle)}</b>, à ${nombreFr(station.km)} km. `
+          + `${nbMesures} des trente derniers jours viennent de ses relevés, le reste du modèle, `
+          + `le poste publiant avec deux jours de retard.</p>`
+          + `<p class="f-note">Fichiers ouverts de Météo-France publiés sur data.gouv.fr, `
+          + `relevés chaque matin. Les valeurs douteuses sont écartées.</p></div>`
+        : `<p class="f-note">Aucun poste de mesure rattaché à ce jardin, la pluie vient du modèle. `
+          + `Renseignez la commune pour rattacher le poste le plus proche.</p>`)
       + `<div class="f-carte"><div class="f-carte-tete"><h3>Vos relevés</h3></div>`
       + `<p class="f-note">Un millimètre vaut un litre par mètre carré. Ce que vous mesurez `
       + `remplace la lame d'eau du modèle. Le calcul ne connaît que ce qui est enregistré, `
@@ -2473,6 +2494,41 @@ async function lireEauDuJour(cle) {
   qs.forEach(q => {
     const v = lot.filter(r => r.quinzaine === q && r.kc !== null).map(r => Number(r.kc));
     if (v.length) kcParQuinzaine[q] = v.reduce((s, x) => s + x, 0) / v.length;
+  });
+}
+
+// Distance à vol d'oiseau entre deux points, en kilomètres.
+const distanceKm = (la, lo, lb, ob) => {
+  const r = Math.PI / 180;
+  return 6371 * Math.acos(Math.min(1,
+    Math.sin(la * r) * Math.sin(lb * r) +
+    Math.cos(la * r) * Math.cos(lb * r) * Math.cos((ob - lo) * r)));
+};
+
+// Poste de mesure du jardin et sa pluie sur la fenêtre du bilan. Le poste est
+// rattaché en base au plus proche de la commune, à moins de quarante kilomètres.
+async function lireStation() {
+  pluieStation = new Map(); station = null;
+  const g = jardinActif();
+  if (!g || !g.station_num) return;
+  const depuis = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10);
+  const [rs, rp] = await Promise.all([
+    avecReprise(() => db.from("stations_meteo")
+      .select("num,nom,lat,lon,dernier_jour").eq("num", g.station_num).single()),
+    avecReprise(() => db.from("pluie_station")
+      .select("jour,rr_mm,qualite").eq("num", g.station_num).gte("jour", depuis)),
+  ]);
+  if (rs && rs.data) {
+    station = rs.data;
+    station.km = Math.round(distanceKm(g.lat, g.lon, station.lat, station.lon) * 10) / 10;
+    // Le nom du poste est écrit en capitales dans la source, avec des suffixes
+    // de réseau qui n'apprennent rien au jardinier.
+    station.libelle = String(station.nom).replace(/_[A-Z]+$/, "")
+      .toLowerCase().replace(/(^|[\s-])([a-zà-ÿ])/g, (m, s, c) => s + c.toUpperCase());
+  }
+  // Une valeur douteuse ou filtrée n'entre pas dans le bilan.
+  (rp && rp.data ? rp.data : []).forEach(r => {
+    if (r.rr_mm !== null && (r.qualite === null || r.qualite <= 1)) pluieStation.set(r.jour, Number(r.rr_mm));
   });
 }
 
