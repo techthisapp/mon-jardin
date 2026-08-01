@@ -525,7 +525,13 @@ Le contrôle échoue si les empreintes de version ne correspondent pas au conten
 
 Les termes horticoles précis sont conservés, ils sont ceux de la littérature. Ils sont glosés à leur première apparition quand ils ne sont pas d'usage courant : « les cannes, les tiges du framboisier ». Le mot canne est bien le terme du métier, employé notamment par Gerbeaud qui le glose de la même façon.
 
-D'autres termes du référentiel mériteraient le même traitement, notamment œilleton, marcotte, praliner, nouaison, gourmand, collet et terre ressuyée. Un glossaire consultable depuis la fiche serait plus économique qu'une glose répétée dans chaque conseil.
+Le reste du vocabulaire passe par un glossaire plutôt que par une glose répétée dans chaque conseil. La table `glossaire` porte quarante-quatre entrées, chacune avec ses formes fléchies dans `variantes` et une définition d'une à deux phrases. Le vocabulaire a été relevé dans le corpus des deux mille conseils, par comptage des candidats, et non deviné : compost mûr apparaît cent quatre-vingt-neuf fois, collet cent soixante-deux, rabattre cent quatre.
+
+Le repérage se fait à l'affichage, dans la fiche de plante seulement, sur le conseil de la tâche en cours et sur les blocs d'attributs. Une seule expression régulière porte les cent trente-cinq formes, les plus longues en tête pour que porte-greffe l'emporte sur greffe. Le mot est borné par des caractères qui ne sont ni lettre ni trait d'union, la limite de mot des expressions régulières ignorant les lettres accentuées : sans cela œilleton serait marqué comme œil.
+
+Les rangées de l'écran du moment ne portent pas le repérage. Ce sont des boutons, un bouton ne peut pas en contenir un autre, et la rangée entière sert déjà de cible pour ouvrir la fiche. Le lecteur y accède en une touche.
+
+La définition s'ouvre sous le mot, dans le repère du corps de la feuille pour qu'elle suive le défilement, bornée à la largeur de la feuille et basculée au-dessus du mot quand le bas est trop proche. Elle porte le terme canonique, non la forme rencontrée : toucher « Marcotter » affiche l'entrée marcottage.
 
 ### Registre visuel
 

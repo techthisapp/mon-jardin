@@ -343,6 +343,50 @@ const anneeCourante = () => new Date().getFullYear();
 
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 
+/* ================== Glossaire du métier ==================
+   Le référentiel emploie des mots précis, canne, collet, éclat, praliner. Les
+   gloser dans chaque texte alourdirait la lecture. Ils sont repérés dans les
+   textes de la fiche, leur définition s'ouvre au toucher. */
+const LETTRE_FR = "A-Za-zÀ-ÖØ-öø-ÿŒœ";
+let glossaire = [];
+let regGloss = null;
+let gloseOuverte = null;
+const formeGloss = new Map();
+const defGloss = new Map();
+
+/* Une seule expression pour tout le vocabulaire, les formes les plus longues en
+   tête pour que « porte-greffe » l'emporte sur « greffe ». Le mot est borné par
+   des caractères qui ne sont ni lettre ni trait d'union, la limite de mot des
+   expressions régulières ignorant les lettres accentuées. */
+function compilerGlossaire() {
+  formeGloss.clear(); defGloss.clear();
+  const formes = [];
+  glossaire.forEach(g => {
+    defGloss.set(g.terme, g.definition);
+    [g.terme].concat(g.variantes || []).forEach(f => {
+      formeGloss.set(String(f).toLowerCase(), g.terme);
+      formes.push(String(f));
+    });
+  });
+  formes.sort((a, b) => b.length - a.length);
+  const motif = formes.map(f => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  regGloss = formes.length
+    ? new RegExp(`(^|[^${LETTRE_FR}-])(${motif})(?![${LETTRE_FR}-])`, "gi")
+    : null;
+}
+
+// Texte échappé, dont les termes du glossaire deviennent touchables.
+function marquerTermes(txt) {
+  const t = esc(txt);
+  if (!regGloss || !t) return t;
+  return t.replace(regGloss, (m, avant, mot) => {
+    const terme = formeGloss.get(mot.toLowerCase());
+    return terme
+      ? `${avant}<button type="button" class="terme" data-terme="${esc(terme)}">${mot}</button>`
+      : m;
+  });
+}
+
 function info(msg, erreur = false) {
   const e = $("etat");
   if (!msg) { e.hidden = true; return; }
@@ -1696,7 +1740,7 @@ function ficheMoment(p) {
     gestes.forEach(a => {
       const t = texteAction(p, a.k), c = TEINTE[a.k];
       h.push(`<div class="f-acte"><div class="f-ai" style="color:${c}"><svg viewBox="0 0 20 20">${GLF[PHF[a.k][2]]}</svg></div><div>`
-        + `<h4>${esc(phases[a.k].label)}</h4>${avancement(a.t, c)}${t ? `<p>${esc(t)}</p>` : ""}</div></div>`);
+        + `<h4>${esc(phases[a.k].label)}</h4>${avancement(a.t, c)}${t ? `<p>${marquerTermes(t)}</p>` : ""}</div></div>`);
     });
     h.push("</div>");
   }
@@ -1739,7 +1783,7 @@ function ficheAnnee(p) {
 function ficheBlocs(p) {
   const a = p.attr || {};
   const kv = rows => rows.filter(r => r[1]).map(r =>
-    `<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join("");
+    `<dt>${esc(r[0])}</dt><dd>${marquerTermes(r[1])}</dd>`).join("");
   const bloc = (titre, rows) => {
     const c = kv(rows);
     return c ? `<section class="f-bloc"><h3>${esc(titre)}</h3><dl class="f-kv">${c}</dl></section>` : "";
@@ -2120,6 +2164,7 @@ function positionSaison() {
 /* ---------- Deuxième profondeur, en feuille ---------- */
 
 function ouvrirVue(vue) {
+  fermerGlose();
   const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance };
   const f = (rendus[vue] || vueLieu)();
@@ -2594,6 +2639,14 @@ async function lireEauDuJour(cle) {
   });
 }
 
+// Vocabulaire horticole, lu une fois au démarrage et indépendant du jardin.
+async function lireGlossaire() {
+  const { data } = await avecReprise(() => db.from("glossaire")
+    .select("terme,variantes,definition").order("terme"));
+  glossaire = data || [];
+  compilerGlossaire();
+}
+
 async function lireVigilance() {
   vigilance = [];
   const g = jardinActif();
@@ -2967,6 +3020,7 @@ window.addEventListener("resize", () => { placerMarqueur(); majMois(); });
 majCompte();
 try { await chargerCatalogue(); }
 catch (e) { info("Catalogue indisponible : " + e.message, true); }
+lireGlossaire().catch(() => { /* glossaire indisponible, les textes restent bruts */ });
 const { data: { session: s0 } } = await db.auth.getSession();
 if (!s0) $("zone-connexion").hidden = false;
 
@@ -3069,6 +3123,7 @@ function brancherFiche(p) {
   const c = $("feuille-corps");
   const onglets = [...c.querySelectorAll(".f-onglets button")];
   onglets.forEach(b => b.addEventListener("click", () => {
+    fermerGlose();
     onglets.forEach(x => x.classList.toggle("actif", x === b));
     c.querySelector(".f-pan-moment").hidden = b.dataset.pan !== "moment";
     c.querySelector(".f-pan-annee").hidden = b.dataset.pan !== "annee";
@@ -3085,6 +3140,7 @@ function brancherFiche(p) {
 function majEau(p) {
   const c = $("feuille-corps");
   if (!c) return;
+  fermerGlose();
   const carte = c.querySelector(".f-eau");
   const svg = p.eauLignes && p.eauLignes.length ? eauSVG(p, p.eauLignes) : "";
   if (carte) {
@@ -3097,6 +3153,7 @@ function majEau(p) {
 }
 
 function ouvrirFeuille(p) {
+  fermerGlose();
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
   $("feuille-corps").innerHTML = ficheHTML(p);
@@ -3116,6 +3173,7 @@ function ouvrirFeuille(p) {
 
 function fermerFeuille() {
   if ($("feuille").hidden) return;
+  fermerGlose();
   $("voile").classList.remove("visible");
   $("feuille").classList.remove("ouverte");
   document.body.classList.remove("fige");
@@ -3130,9 +3188,52 @@ function sortirFeuille() {
   fermerFeuille();
 }
 
+/* La définition se pose sous le mot touché, dans le repère du corps de la
+   feuille : elle suit donc le défilement sans calcul supplémentaire. Sa largeur
+   est bornée à celle du corps pour qu'elle ne déborde jamais de l'écran. */
+function ouvrirGlose(bouton) {
+  fermerGlose();
+  const corps = $("feuille-corps");
+  const def = defGloss.get(bouton.dataset.terme);
+  if (!corps || !def) return;
+  const g = document.createElement("div");
+  g.className = "glose";
+  g.setAttribute("role", "note");
+  g.innerHTML = `<b>${esc(bouton.dataset.terme)}</b><p>${esc(def)}</p>`;
+  corps.appendChild(g);
+  const rb = bouton.getBoundingClientRect(), rc = corps.getBoundingClientRect();
+  const x = rb.left - rc.left + corps.scrollLeft;
+  g.style.left = Math.round(Math.max(8, Math.min(x, corps.clientWidth - g.offsetWidth - 8))) + "px";
+  // Sous le mot, au-dessus quand le bas de la feuille est trop proche.
+  const dessous = rb.bottom + 6 + g.offsetHeight <= rc.bottom
+    || rb.top - 6 - g.offsetHeight < rc.top;
+  const y = dessous ? rb.bottom - rc.top + 6 : rb.top - rc.top - 6 - g.offsetHeight;
+  g.style.top = Math.round(y + corps.scrollTop) + "px";
+  bouton.classList.add("ouvert");
+  gloseOuverte = g;
+}
+
+function fermerGlose() {
+  if (!gloseOuverte) return;
+  gloseOuverte.remove();
+  gloseOuverte = null;
+  document.querySelectorAll(".terme.ouvert").forEach(b => b.classList.remove("ouvert"));
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest ? e.target.closest(".terme") : null;
+  if (b) { ouvrirGlose(b); return; }
+  if (gloseOuverte && !(e.target.closest && e.target.closest(".glose"))) fermerGlose();
+});
+
 sur("voile", "click", sortirFeuille);
 sur("fermerFeuille", "click", sortirFeuille);
-document.addEventListener("keydown", e => { if (e.key === "Escape") sortirFeuille(); });
+// La touche d'échappement referme d'abord la définition, ensuite la feuille.
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (gloseOuverte) { fermerGlose(); return; }
+  sortirFeuille();
+});
 
 /* ================== Mise en sourdine ================== */
 

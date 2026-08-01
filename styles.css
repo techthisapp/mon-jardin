@@ -1544,3 +1544,23 @@ body.fige{overflow:hidden}
 .vg-ligne.v-3 .vg-pastille{background:#F7A401}
 .vg-ligne.v-4 .vg-pastille{background:#CE0000}
 .vg-txt{min-width:0}
+
+/* ---------- Glossaire du métier ---------- */
+/* Le corps de la feuille sert de repère à la définition, qui suit ainsi le
+   défilement du texte. */
+.feuille-corps{position:relative}
+.terme{
+  display:inline;font:inherit;color:inherit;background:none;border:0;padding:0;
+  text-align:left;cursor:pointer;
+  border-bottom:1px dotted rgba(76,140,63,.9);
+}
+.terme:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:2px}
+.terme.ouvert{background:#E7F0E3;box-shadow:0 0 0 2px #E7F0E3;border-radius:2px}
+.glose{
+  position:absolute;z-index:6;width:max-content;
+  max-width:min(280px,calc(100% - 24px));
+  background:var(--papier-haut);border:1px solid var(--filet);border-radius:10px;
+  box-shadow:0 10px 26px rgba(20,28,22,.18);padding:9px 11px;
+}
+.glose b{display:block;font-size:12.5px;font-weight:600;color:var(--encre)}
+.glose p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--encre-doux)}
