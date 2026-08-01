@@ -91,6 +91,7 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 | `releves_eau` | Mesures du jardinier, une ligne par jardin et par jour : pluie relevée au pluviomètre et arrosage apporté, en millimètres |
 | `stations_meteo` | Catalogue des postes de mesure de Météo-France. Lecture ouverte, écriture réservée à la collecte |
 | `pluie_station` | Lame d'eau quotidienne mesurée au poste, avec son code qualité. Fenêtre glissante de 120 jours |
+| `vigilance` | Vigilance météorologique par département et par échéance, aujourd'hui et demain. Couleur, aléas, bulletin |
 | `espaces` | Découpage d'un jardin. Nom, type, couleur, position |
 | `garden_plants` | Plantes retenues dans un jardin |
 | `garden_plant_espaces` | Affectation d'une plante à un ou plusieurs espaces, avec quantité et note |
@@ -336,6 +337,16 @@ Un déclencheur sur `gardens` rattache le jardin au poste le plus proche à moin
 La lame d'eau du jour se lit désormais dans trois sources, par ordre de confiance décroissante : le relevé du pluviomètre du jardinier, puis le poste rattaché, puis le modèle. Les valeurs de code qualité supérieur à 1 sont écartées. Le poste publiant avec deux jours de retard, le modèle couvre toujours les journées les plus récentes.
 
 Ce que la mesure change, contrôlé sur le jardin de Fain-lès-Moutiers et le poste de Montbard, à 10,1 km. Sur juillet 2026, le total est presque identique, 38,6 mm mesurés contre 37,3 mm modélisés. Le jour ne l'est pas : le poste a mesuré 9,2 mm le 13 juillet, dont le modèle ne voit rien, et le modèle place 4,7 mm le 16 juillet, où le poste n'a rien mesuré. Pour un réservoir, la date d'un remplissage compte autant que son volume.
+
+### Vigilance météorologique, 1er août 2026
+
+Même voie que la pluie mesurée, sans compte ni clé. Le jeu « Vigilance météorologique archivée » de data.gouv.fr expose un seau objet dont l'arborescence est `data/vigilance/metropole/AAAA/MM/JJ/HHMMSS/`. Plusieurs dépôts par jour, davantage en épisode actif, le dernier fait foi. Le listage S3 du préfixe du jour coûte moins d'un kilo-octet, la fonction `vigilance` prend donc le dernier répertoire puis lit deux fichiers : `CDP_CARTE_EXTERNE.json` pour la couleur et les aléas de chaque département, `CDP_TEXTES_VIGILANCE.json` pour le bulletin départemental. Une tâche `cron` nommée `collecte-vigilance` l'appelle toutes les deux heures.
+
+Identifiants d'aléa du descriptif technique : 1 vent, 2 pluie et inondation, 3 orages, 4 crues, 5 neige et verglas, 6 canicule, 7 grand froid, 8 avalanches, 9 vagues et submersion. Couleurs : 1 vert, 2 jaune, 3 orange, 4 rouge. Le vert n'est pas une alerte et ne s'affiche pas.
+
+Le bandeau porte le niveau le plus élevé des deux échéances, une vigilance orange annoncée pour demain comptant autant qu'une vigilance en cours, et il le dit. Chaque aléa porte sa conséquence au jardin, table `VIGI_GESTE`. Le détail s'ouvre en feuille : les deux échéances, le geste, le bulletin du département et l'heure d'émission.
+
+Les alertes calculées ne répètent pas la vigilance : une vigilance canicule couvre l'alerte de chaleur, une vigilance vent couvre l'alerte de vent, table `VIGI_COUVRE`.
 
 ### Trois correctifs météo, 1er août 2026
 

@@ -1523,3 +1523,24 @@ body.fige{overflow:hidden}
 .mt-bp.poste{background:#2E6FB0}
 .mt-leg i.s{background:#2E6FB0}
 .mt-leg i.m{background:#1F4F8F}
+
+/* ---------- Vigilance météorologique ---------- */
+.bd-vigi{
+  display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;cursor:pointer;
+  border:0;font-family:inherit;font-size:13.5px;padding:10px 12px;
+}
+.bd-vigi small{display:block;font-size:12px;opacity:.85;margin-top:2px}
+.bd-vigi .bd-ia{margin-top:1px}
+.bd-alerte.v-2{background:#FAF0CE;color:#6B5410}
+.bd-alerte.v-3{background:#FBE6CC;color:#8A4A10}
+.bd-alerte.v-4{background:#F7DAD6;color:#8A2216}
+.bd-vigi:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+
+.vg-ligne{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;
+  color:var(--f-ink, var(--encre))}
+.vg-ligne + .vg-ligne{border-top:1px solid var(--f-filet, var(--filet-clair))}
+.vg-pastille{width:12px;height:12px;border-radius:3px;flex:0 0 auto}
+.vg-ligne.v-2 .vg-pastille{background:#F2C500}
+.vg-ligne.v-3 .vg-pastille{background:#F7A401}
+.vg-ligne.v-4 .vg-pastille{background:#CE0000}
+.vg-txt{min-width:0}

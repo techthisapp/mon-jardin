@@ -48,6 +48,35 @@ let vueMoment = (() => {
 let vueDetail = null;
 let scrollEnsemble = 0;
 let obsSections = null;
+/* Vigilance météorologique. Les identifiants d'aléa et les couleurs suivent le
+   descriptif technique de Météo-France. Le vert n'est pas une alerte, il ne
+   s'affiche pas. */
+const ALEA = { 1: "vent violent", 2: "pluie et inondation", 3: "orages", 4: "crues",
+  5: "neige et verglas", 6: "canicule", 7: "grand froid", 8: "avalanches",
+  9: "vagues et submersion" };
+const VIGI_NOM = { 2: "jaune", 3: "orange", 4: "rouge" };
+// Ce que chaque aléa demande au jardin, dit en une consigne.
+const VIGI_GESTE = {
+  1: "tuteurer, rentrer les potées et les voiles",
+  2: "dégager les écoulements, surélever les semis en godets",
+  3: "rentrer ce qui peut voler, la grêle abîme le feuillage",
+  4: "ne pas travailler les parcelles basses",
+  5: "voiler les cultures fragiles, secouer la neige des branches",
+  6: "arroser tôt, ombrer les jeunes plants, pailler",
+  7: "protéger les souches et les potées, l'eau du sol gèle",
+  8: "",
+  9: "rentrer le mobilier, l'embrun brûle le feuillage",
+};
+let vigilance = [];
+
+// Département d'un code postal. Outre-mer sur trois chiffres, Corse sur deux lettres.
+const departementDe = cp => {
+  const v = String(cp || "");
+  if (v.length < 2) return null;
+  if (v.startsWith("97") || v.startsWith("98")) return v.slice(0, 3);
+  return v.slice(0, 2);
+};
+
 // Coefficient cultural moyen du jardin par quinzaine, et mesures du jardinier.
 let kcParQuinzaine = {};
 let releves = new Map();
@@ -467,7 +496,7 @@ async function chargerContenuJardin() {
   });
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
   await lireEauDuJour(cle);
-  await Promise.all([lireReleves(), lireStation()]);
+  await Promise.all([lireReleves(), lireStation(), lireVigilance()]);
   majCompte(); majJardinUI(); construireChips(); rendreTout();
   // La météo arrive après le premier rendu : la synthèse doit être refaite,
   // son pied porte la décision d'arrosage tirée du bilan du sol.
@@ -1925,9 +1954,15 @@ function bilanHydrique() {
 }
 
 // Alertes du jour et des deux jours suivants, croisées avec le jardin.
+/* Les alertes calculées ne répètent pas ce que la vigilance annonce déjà : une
+   vigilance canicule couvre l'alerte de chaleur, et ainsi de suite. */
+const VIGI_COUVRE = { 1: "vent", 2: "eau", 6: "chaud", 7: "froid" };
+
 function alertesMeteo() {
   const i = iJour();
   if (i < 0) return [];
+  const vg = vigilanceDuJour();
+  const couverts = vg ? vg.ids.map(x => VIGI_COUVRE[x]).filter(Boolean) : [];
   const d = meteo.daily, out = [];
   const quand = k => k === i ? "aujourd'hui" : k === i + 1 ? "demain"
     : new Date(d.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "long" });
@@ -1951,7 +1986,26 @@ function alertesMeteo() {
   if (v !== null && v >= 60) out.push({ ton: "vent", texte: `Vent à ${Math.round(v)} km/h, tuteurer et rentrer les potées` });
   const p = d.precipitation_sum[i];
   if (p !== null && p >= 15) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
-  return out.slice(0, 2);
+  return out.filter(x => couverts.indexOf(x.ton) === -1).slice(0, 2);
+}
+
+/* Le niveau retenu est le plus élevé des deux échéances : une vigilance orange
+   annoncée pour demain compte autant qu'une vigilance en cours. */
+function vigilanceDuJour() {
+  const lot = vigilance.filter(v => v.couleur > 1);
+  if (!lot.length) return null;
+  const couleur = Math.max(...lot.map(v => v.couleur));
+  const ids = [];
+  lot.forEach(v => (v.phenomenes || []).forEach(p => {
+    if (p.couleur === couleur && ids.indexOf(p.id) === -1) ids.push(p.id);
+  }));
+  if (!ids.length) return null;
+  const demainSeul = !lot.some(v => v.echeance === "J" && v.couleur === couleur);
+  return {
+    couleur, ids,
+    libelle: enumerer(ids.map(i => ALEA[i] || "phénomène " + i)) + (demainSeul ? ", demain" : ""),
+    geste: ids.map(i => VIGI_GESTE[i]).filter(Boolean)[0] || "",
+  };
 }
 
 // La pastille d'eau porte la décision du jour, non un écart à combler.
@@ -2016,6 +2070,13 @@ function rendreBandeau() {
     x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
 
   const h = [];
+  // La vigilance de Météo-France passe avant les alertes calculées : elle porte
+  // un avis officiel, les autres ne sont qu'une lecture de la prévision.
+  const vg = vigilanceDuJour();
+  if (vg) h.push(`<button type="button" class="bd-alerte bd-vigi v-${vg.couleur}" data-vue="vigilance">`
+    + icoM("alerte", "bd-ia")
+    + `<span><b>Vigilance ${esc(VIGI_NOM[vg.couleur])}</b>, ${esc(vg.libelle)}`
+    + (vg.geste ? `<small>${esc(vg.geste)}</small>` : "") + `</span></button>`);
   alertesMeteo().forEach(a => h.push(`<p class="bd-alerte a-${a.ton}">${icoM("alerte", "bd-ia")}`
     + `<span>${esc(a.texte)}</span></p>`));
   z.innerHTML = h.join("");
@@ -2047,7 +2108,7 @@ function positionSaison() {
 
 function ouvrirVue(vue) {
   const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
-                   saison: vueSaison, lieu: vueLieu };
+                   saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance };
   const f = (rendus[vue] || vueLieu)();
   $("feuille-titre").innerHTML = esc(f.titre)
     + (f.sous ? `<span class="feuille-latin">${esc(f.sous)}</span>` : "");
@@ -2257,6 +2318,29 @@ function vueSaison() {
         + `${esc(enumerer(froid.map(nomAvecArticle), 6))}.</p>` : "")
       + `<p class="f-note">Bornes de saison par climat, table du référentiel. `
       + `Le seuil de gel est celui de chaque fiche.</p>` };
+}
+
+function vueVigilance() {
+  const vg = vigilanceDuJour();
+  const g = jardinActif() || {};
+  if (!vg) return { titre: "Vigilance", corps: `<p class="f-txt">Aucune vigilance en cours.</p>` };
+  const quand = e => e === "J" ? "aujourd'hui" : "demain";
+  const lignes = vigilance.filter(v => v.couleur > 1).map(v =>
+    `<div class="vg-ligne v-${v.couleur}"><span class="vg-pastille"></span>`
+    + `<span class="vg-txt"><b>${esc(quand(v.echeance))}</b>, vigilance ${esc(VIGI_NOM[v.couleur])} `
+    + `${esc(enumerer((v.phenomenes || []).map(p => ALEA[p.id] || "phénomène " + p.id)))}</span></div>`).join("");
+  const bulletin = (vigilance.find(v => v.texte) || {}).texte;
+  const emis = (vigilance.find(v => v.emis_le) || {}).emis_le;
+  const gestes = vg.ids.map(i => VIGI_GESTE[i]).filter(Boolean);
+  return { titre: "Vigilance " + VIGI_NOM[vg.couleur], sous: g.commune || "",
+    corps: `<div class="f-carte">${lignes}</div>`
+      + (gestes.length ? `<p class="f-txt"><b>Au jardin</b> : ${esc(gestes.join(". "))}.</p>` : "")
+      + (bulletin ? `<div class="f-carte"><div class="f-carte-tete"><h3>Bulletin du département</h3></div>`
+          + `<p class="f-txt">${esc(bulletin)}</p></div>` : "")
+      + `<p class="f-note">Vigilance météorologique de Météo-France pour le département `
+      + `${esc(departementDe(g.code_postal) || "")}`
+      + (emis ? `, émise le ${esc(new Date(emis).toLocaleString("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }))}` : "")
+      + `. Fichiers ouverts publiés sur data.gouv.fr, relus toutes les deux heures.</p>` };
 }
 
 function vueLieu() {
@@ -2495,6 +2579,16 @@ async function lireEauDuJour(cle) {
     const v = lot.filter(r => r.quinzaine === q && r.kc !== null).map(r => Number(r.kc));
     if (v.length) kcParQuinzaine[q] = v.reduce((s, x) => s + x, 0) / v.length;
   });
+}
+
+async function lireVigilance() {
+  vigilance = [];
+  const g = jardinActif();
+  const dep = g && departementDe(g.code_postal);
+  if (!dep) return;
+  const { data } = await avecReprise(() => db.from("vigilance")
+    .select("echeance,couleur,phenomenes,debut,fin,texte,emis_le").eq("departement", dep));
+  vigilance = (data || []).sort((a, b) => a.echeance.localeCompare(b.echeance));
 }
 
 // Distance à vol d'oiseau entre deux points, en kilomètres.
