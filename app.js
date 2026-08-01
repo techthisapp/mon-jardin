@@ -1736,7 +1736,7 @@ function ficheHTML(p) {
    le lieu de la Base Adresse Nationale, l'évapotranspiration est celle du
    bulletin FAO 56 calculée au point du jardin. */
 
-const METEO_CACHE = "monjardin.meteo.v2";
+const METEO_CACHE = "monjardin.meteo.v3";
 const METEO_TTL = 3600 * 1000;   // une heure, la prévision ne bouge pas plus vite
 
 // Codes de temps sensible de l'Organisation météorologique mondiale.
@@ -1783,17 +1783,26 @@ async function lireMeteo(g) {
     const c = JSON.parse(localStorage.getItem(METEO_CACHE) || "null");
     if (c && c.cle === cle && Date.now() - c.t < METEO_TTL) { meteo = c.d; return; }
   } catch (e) { /* cache indisponible */ }
-  const u = "https://api.open-meteo.com/v1/forecast?latitude=" + g.lat + "&longitude=" + g.lon
+  const base = "https://api.open-meteo.com/v1/forecast?latitude=" + g.lat + "&longitude=" + g.lon
+    + "&timezone=Europe%2FParis&models=meteofrance_seamless";
+  // Trente jours d'antériorité : le bilan hydrique a besoin d'une mise en route
+  // assez longue pour que l'état initial du réservoir ne pèse plus sur le résultat.
+  const u = base
     + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,"
     + "precipitation_probability_max,wind_speed_10m_max,et0_fao_evapotranspiration,"
     + "sunrise,sunset,daylight_duration"
-    + "&past_days=30&forecast_days=7&timezone=Europe%2FParis&models=meteofrance_seamless";
-  // Trente jours d'antériorité : le bilan hydrique a besoin d'une mise en route
-  // assez longue pour que l'état initial du réservoir ne pèse plus sur le résultat.
+    + "&past_days=30&forecast_days=7";
+  // L'heure en cours dans un appel séparé : le quotidien porte le maximum du jour,
+  // qui n'est pas ce qu'il fait dehors quand on ouvre l'application le soir.
+  const uh = base + "&hourly=temperature_2m,weather_code,wind_speed_10m&forecast_days=1";
   try {
-    const r = await fetch(u);
+    const [r, rh] = await Promise.all([fetch(u), fetch(uh).catch(() => null)]);
     if (!r.ok) throw new Error(r.status);
     meteo = await r.json();
+    if (rh && rh.ok) {
+      const h = await rh.json();
+      if (h && h.hourly) meteo.hourly = h.hourly;
+    }
     localStorage.setItem(METEO_CACHE, JSON.stringify({ cle, t: Date.now(), d: meteo }));
   } catch (e) { meteo = null; }
 }
@@ -1803,6 +1812,15 @@ const iJour = () => {
   if (!meteo) return -1;
   const h = new Date().toISOString().slice(0, 10);
   return meteo.daily.time.indexOf(h);
+};
+
+// Index de l'heure en cours dans la série horaire, quand elle est disponible.
+const iHeure = () => {
+  if (!meteo || !meteo.hourly) return -1;
+  const d = new Date();
+  const cle = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-"
+    + String(d.getDate()).padStart(2, "0") + "T" + String(d.getHours()).padStart(2, "0") + ":00";
+  return meteo.hourly.time.indexOf(cle);
 };
 
 // Les nombres s'écrivent avec la virgule, et sans décimale au delà de dix.
@@ -1963,10 +1981,19 @@ function rendreBandeau() {
   const puce = (vue, icone, val, sous) =>
     `<button type="button" class="tm-puce" data-vue="${vue}">${icoM(icone, "tm-ic")}`
     + `<b>${esc(val)}</b><span>${esc(sous)}</span></button>`;
+  // Grand chiffre : la température de l'heure. Le code du jour est celui de la
+  // condition la plus sévère des vingt-quatre heures, il annoncerait de la pluie
+  // pour un dixième de millimètre tombé à midi.
+  const ih = iHeure();
+  const maintenant = ih >= 0
+    ? { deg: meteo.hourly.temperature_2m[ih], lib: tempsDe(meteo.hourly.weather_code[ih])[1],
+        vent: meteo.hourly.wind_speed_10m[ih] }
+    : { deg: d.temperature_2m_max[i], lib, vent: d.wind_speed_10m_max[i] };
   t.innerHTML = `<button type="button" class="tm-temps" data-vue="temps">`
-    + `<span class="tm-deg">${Math.round(d.temperature_2m_max[i])}°</span>`
-    + `<span class="tm-etat">${esc(lib)}<small>${Math.round(d.temperature_2m_min[i])}° la nuit, `
-    + `vent ${Math.round(d.wind_speed_10m_max[i])} km/h</small></span></button>`
+    + `<span class="tm-deg">${Math.round(maintenant.deg)}°</span>`
+    + `<span class="tm-etat">${esc(maintenant.lib)}<small>`
+    + `${Math.round(d.temperature_2m_max[i])}° le jour, ${Math.round(d.temperature_2m_min[i])}° la nuit, `
+    + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`
     + `<div class="tm-puces">`
     + puce("eau", "goutte", ...puceEau(b))
     + puce("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
