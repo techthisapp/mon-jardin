@@ -382,6 +382,12 @@ Règles retenues par tâche. Plantation : automne pour un ligneux, période de r
 
 Deux exceptions relevées à la relecture et corrigées : la seconde floraison d'un fruitier ne demande pas de suppression des fleurs fanées, et le conseil général de la Fraise décrit l'apport de juillet, ce qui ne convient pas à sa fenêtre de fin d'hiver.
 
+**Le conseil de période n'arrivait pas jusqu'à l'écran.** La vue `plants_full` construisait `guide` par `jsonb_object_agg(a.phase, a.advice)` sur toutes les lignes de `plant_advice`, conseil général et conseils de période confondus. Avec plusieurs lignes pour la même tâche, l'agrégat en gardait une au hasard : la Glycine affichait sa taille d'hiver au mois d'août. Le défaut existait depuis l'écriture des seize premiers conseils de période et s'est étendu à toutes les fiches concernées.
+
+Correction en deux points. La vue distingue maintenant `guide`, qui ne porte que le conseil général, et `guide_periode`, ajouté en fin de vue pour ne pas déplacer les colonnes existantes, qui porte les conseils de période indexés par identifiant de fenêtre. Chaque segment de `phases` gagne son identifiant en quatrième position, et `segsDe` le conserve à travers le décalage climatique. Dans l'application, `conseilPeriode(p, k)` cherche la fenêtre active et rend son texte, `texteAction` retombant sur le conseil général en son absence.
+
+Contrôle : sur les 125 tâches à périodes multiples, toutes ont désormais un texte différent par période, à l'exception des fiches inactives Mélisse et Souci.
+
 Contrôles de forme sur les 255 textes : aucun tiret cadratin, aucune flèche, aucune mention d'alternative restante, aucune élision manquée, longueur de 109 à 446 caractères. Quatre périodes restent sans texte propre, sur les fiches inactives Mélisse et Souci, remplacées par Mélisse citronnelle et Souci officinal.
 
 ### Couleurs de fleur et seuils de gel
@@ -514,6 +520,12 @@ L'installation se fait une fois par clone : `git config core.hooksPath .githooks
 Le fichier a été créé depuis l'interface GitHub, onglet Actions. GitHub refuse qu'un jeton sans la permission `Workflows` crée ou modifie un fichier sous `.github/workflows/`.
 
 Le contrôle échoue si les empreintes de version ne correspondent pas au contenu. C'est voulu : sur la machine de travail, le crochet les corrige avant le dépôt. Une poussée directe sans crochet fait donc rougir l'intégration continue, ce qui est le comportement recherché.
+
+### Vocabulaire du métier
+
+Les termes horticoles précis sont conservés, ils sont ceux de la littérature. Ils sont glosés à leur première apparition quand ils ne sont pas d'usage courant : « les cannes, les tiges du framboisier ». Le mot canne est bien le terme du métier, employé notamment par Gerbeaud qui le glose de la même façon.
+
+D'autres termes du référentiel mériteraient le même traitement, notamment œilleton, marcotte, praliner, nouaison, gourmand, collet et terre ressuyée. Un glossaire consultable depuis la fiche serait plus économique qu'une glose répétée dans chaque conseil.
 
 ### Registre visuel
 

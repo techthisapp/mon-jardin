@@ -390,6 +390,7 @@ async function lireCatalogue() {
     id: p.id, slug: p.slug, nom: p.name, cat: p.category, typo: p.typology,
     espacement: p.spacing, prof: p.depth, assoc: p.companions, conseil: p.advice,
     attr: p.attributes || {}, phases: p.phases || {}, guide: p.guide || {},
+    guide_periode: p.guide_periode || {},
     latin: p.latin || "", famille: p.family || "",
     // colonnes lues par la fiche détaillée
     port: p.habit || "", expo: p.exposure || "", eauNiv: p.water_need || "",
@@ -851,7 +852,9 @@ function segsDe(p, k) {
   if (!sh.s && !sh.a) return base;
   return base.map(v => {
     const d = v[0] <= 12 ? sh.s : sh.a;
-    return [borne(v[0] + d), borne(v[1] + d)];
+    // L'identifiant de la fenêtre suit le décalage : c'est lui qui rattache
+    // la période à son conseil propre.
+    return [borne(v[0] + d), borne(v[1] + d), v[2], v[3]];
   });
 }
 
@@ -875,10 +878,20 @@ function passeEspace(p) {
 }
 
 const actif = (p, k) => (segsDe(p, k) || []).some(v => dansFenetre(demi, v[0], v[1]));
-const texteAction = (p, k) =>
-  k === "taille" ? (p.guide.taille || p.attr.taille || "")
-  : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
-  : (p.guide[k] || "");
+/* Le conseil de la période en cours l'emporte sur celui de la tâche entière.
+   Une plante taillée deux fois dans l'année ne reçoit pas le texte d'hiver au
+   mois d'août. */
+const conseilPeriode = (p, k) => {
+  const g = p.guide_periode;
+  if (!g) return "";
+  const seg = (segsDe(p, k) || []).find(v => dansFenetre(demi, v[0], v[1]));
+  return seg && seg[3] !== undefined && seg[3] !== null ? (g[seg[3]] || "") : "";
+};
+
+const texteAction = (p, k) => conseilPeriode(p, k)
+  || (k === "taille" ? (p.guide.taille || p.attr.taille || "")
+    : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
+    : (p.guide[k] || ""));
 
 function majNiveau() {
   const ouvert = vueDetail !== null;
