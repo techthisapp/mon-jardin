@@ -1201,3 +1201,4 @@ body.fige{overflow:hidden}
   font-size:13.5px;color:var(--encre-doux);
 }
 .syn-pied b{color:var(--encre);font-weight:600}
+.syn-ligne.syn-plus .l{color:var(--encre-doux);font-style:italic}

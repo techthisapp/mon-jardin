@@ -1551,46 +1551,87 @@ function rendreSynthese(paires) {
   const audibles = paires.filter(x => !x.muet);
   if (!audibles.length) { z.hidden = true; z.innerHTML = ""; return; }
 
-  // Regroupement par tâche, dans l'ordre du coût de l'oubli.
-  const parTache = [];
+  // Une entrée par verbe et non par tâche : la multiplication porte le mode de
+  // chaque fiche, on ne divise pas un pêcher qui se greffe.
+  const ferme = (p, k) => (segsDe(p, k) || [])
+    .some(t => dansFenetre(demi, t[0], t[1]) && t[1] === demi);
+  const groupes = [];
   ORDRE_MAINTENANT.forEach(k => {
-    const lot = audibles.filter(x => x.k === k);
-    if (!lot.length || !phases[k]) return;
-    const plantes = [...new Map(lot.map(x => [x.p.id, x.p])).values()]
-      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-    // Une action presse quand la fenêtre qui court se ferme à cette quinzaine.
-    const ferme = x => (segsDe(x.p, x.k) || [])
-      .some(t => dansFenetre(demi, t[0], t[1]) && t[1] === demi);
-    parTache.push({ k, plantes, urgent: lot.some(ferme) });
+    if (!phases[k]) return;
+    const parVerbe = new Map();
+    audibles.filter(x => x.k === k).forEach(x => {
+      const v = verbeDe(x.p, k);
+      if (!parVerbe.has(v)) parVerbe.set(v, new Map());
+      parVerbe.get(v).set(x.p.id, x.p);
+    });
+    parVerbe.forEach((m, v) => {
+      const plantes = [...m.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+      groupes.push({ k, verbe: v, plantes, presse: plantes.filter(p => ferme(p, k)) });
+    });
   });
-  const gestes = parTache.filter(t => ETATS_FICHE.indexOf(t.k) === -1);
-  const etats = parTache.filter(t => ETATS_FICHE.indexOf(t.k) !== -1);
+  const gestes = groupes.filter(g => ETATS_FICHE.indexOf(g.k) === -1);
+  const etats = groupes.filter(g => ETATS_FICHE.indexOf(g.k) !== -1);
   if (!gestes.length && !etats.length) { z.hidden = true; z.innerHTML = ""; return; }
 
-  // La phrase de tête prend ce qui presse, sinon la première tâche de l'ordre.
-  const presse = gestes.filter(t => t.urgent);
-  const tete = (presse.length ? presse : gestes.slice(0, 1)).slice(0, 2);
-  const suite = gestes.filter(t => tete.indexOf(t) === -1);
+  // La phrase de tête ne porte que ce qui se termine, et ne nomme que ces
+  // plantes-là. Sans rien qui presse, elle prend la tâche la moins rattrapable.
+  const urgents = gestes.filter(g => g.presse.length);
+  const tete = (urgents.length ? urgents : gestes).slice(0, 2)
+    .map(g => ({ g, plantes: urgents.length ? g.presse : g.plantes, presse: Boolean(urgents.length) }));
 
-  const bout = t => enumerer(t.plantes.map(nomAvecArticle));
-
+  const bout = liste => enumerer(liste.map(nomAvecArticle));
   const h = [];
   if (tete.length) {
-    const phrases = tete.map(t => `<b>${esc(verbeDe(t.plantes[0], t.k).toLowerCase())}</b> ${esc(bout(t))}`
-      + (t.urgent ? ' <span class="fin">avant la fin de la quinzaine</span>' : ""));
-    h.push(`<p class="syn-tete">En ce moment, ${phrases.join(", et ")}.</p>`);
+    const phrases = tete.map(t => `<b>${esc(t.g.verbe.toLowerCase())}</b> ${esc(bout(t.plantes))}`);
+    h.push(`<p class="syn-tete">En ce moment, ${phrases.join(" et ")}`
+      + (tete[0].presse ? ' <span class="fin">avant la fin de la quinzaine</span>' : "") + ".</p>");
   }
-  if (suite.length) {
-    h.push('<div class="syn-lignes">' + suite.map(t =>
-      `<button type="button" class="syn-ligne" data-tache="${esc(t.k)}">`
-      + `<i style="background:${TEINTE[t.k] || phases[t.k].color}"></i>`
-      + `<span class="v">${esc(verbeDe(t.plantes[0], t.k))}</span>`
-      + `<span class="l">${esc(bout(t))}</span></button>`).join("") + "</div>");
+
+  // Les lignes reprennent le reste, la plante déjà nommée en tête n'y revient pas.
+  let lignes = [];
+  gestes.forEach(g => {
+    const dit = tete.find(t => t.g === g);
+    let reste = dit ? g.plantes.filter(p => dit.plantes.indexOf(p) === -1) : g.plantes;
+    if (!reste.length) return;
+    const presse = !dit && g.presse.length > 0;
+    // Ce qui se ferme se lit en premier dans la ligne.
+    if (presse) reste = g.presse.concat(reste.filter(p => g.presse.indexOf(p) === -1));
+    lignes.push({ g, plantes: reste, presse });
+  });
+  // Au delà de six lignes la synthèse redevient la liste. Ce qui saute est le
+  // geste qui porte le moins de plantes, jamais celui dont la fenêtre se ferme,
+  // sans quoi la récolte d'août tomberait la première pour être en fin d'ordre.
+  const MAX_LIGNES = 6;
+  let trop = [];
+  if (lignes.length > MAX_LIGNES) {
+    const gardees = lignes.slice()
+      .sort((a, b) => (Number(b.presse) - Number(a.presse)) || (b.plantes.length - a.plantes.length))
+      .slice(0, MAX_LIGNES);
+    trop = lignes.filter(l => gardees.indexOf(l) === -1);
+    lignes = lignes.filter(l => gardees.indexOf(l) !== -1);
+  }
+  if (lignes.length) {
+    h.push('<div class="syn-lignes">' + lignes.map(l =>
+      `<button type="button" class="syn-ligne" data-tache="${esc(l.g.k)}">`
+      + `<i style="background:${TEINTE[l.g.k] || phases[l.g.k].color}"></i>`
+      + `<span class="v">${esc(l.g.verbe)}</span>`
+      + `<span class="l">${esc(bout(l.plantes))}`
+      + (l.presse ? ' <span class="fin">· dernière quinzaine</span>' : "")
+      + `</span></button>`).join("")
+      + (trop.length ? `<button type="button" class="syn-ligne syn-plus" data-tache="">`
+        + `<span class="l">et ${trop.length} autre${trop.length > 1 ? "s" : ""} geste`
+        + `${trop.length > 1 ? "s" : ""} : ${esc(trop.map(l => l.g.verbe.toLowerCase()).join(", "))}`
+        + `</span></button>` : "")
+      + "</div>");
   }
 
   const pied = [];
-  etats.forEach(t => pied.push(enumerer(t.plantes.map(nomAvecArticle))
-    + (t.plantes.length > 1 ? " sont en fleur" : " est en fleur")));
+  etats.forEach(g => {
+    const n = g.plantes.length;
+    // Au delà de quatre, nommer les plantes en fleur devient une liste.
+    pied.push(n > 4 ? n + " plantes sont en fleur"
+      : bout(g.plantes) + (n > 1 ? " sont en fleur" : " est en fleur"));
+  });
   const eau = besoinEauDuJour();
   if (eau) pied.push(`compter <b>${esc(eau)}</b> et par jour sur les cultures arrosées`);
   if (pied.length) {
@@ -1603,6 +1644,7 @@ function rendreSynthese(paires) {
   // Un clic sur une ligne restreint la liste du dessous à cette tâche.
   z.querySelectorAll(".syn-ligne").forEach(b => b.addEventListener("click", () => {
     const k = b.dataset.tache;
+    if (!k) { ORDRE.forEach(x => etatPhaseM[x] = true); majFiltresMoment(); rendreMaintenant(); return; }
     const seul = ORDRE.every(x => etatPhaseM[x] === (x === k));
     ORDRE.forEach(x => etatPhaseM[x] = seul ? true : x === k);
     majFiltresMoment(); rendreMaintenant();
