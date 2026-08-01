@@ -323,6 +323,14 @@ La table `releves_eau` porte ce que le jardinier mesure. Le relevé de pluviomè
 
 La fenêtre météo passe de sept à trente jours pour que l'état initial du réservoir, posé à la moitié de la capacité, ne pèse plus sur le résultat. Contrôlé : après trente jours, le résultat est identique quel que soit l'état de départ.
 
+### Trois correctifs météo, 1er août 2026
+
+Le modèle n'est plus forcé dans l'appel à Open-Meteo. `models=meteofrance_seamless` s'arrête à quatre jours et rend des valeurs nulles ensuite, que l'affichage transformait en journées à zéro degré. La sélection automatique prend AROME sur les premiers jours puis prolonge, et couvre les sept jours sans trou. Les journées sans température sont de toute façon écartées de la liste, et la vue s'intitule d'après le nombre de jours réellement disponibles.
+
+L'en-tête portait la température maximale du jour et le code météo quotidien, défini par Open-Meteo comme la condition la plus sévère des vingt-quatre heures. À 21 h, l'application annonçait 29 degrés et de la pluie alors qu'il en faisait 20 sous un ciel dégagé, le libellé venant d'un dixième de millimètre tombé à midi. La série horaire est lue dans un second appel limité à la journée, le grand chiffre et le libellé viennent de l'heure en cours, le maximum et le minimum passent en seconde ligne.
+
+Le code postal ne suffit pas à situer un jardin : 21500 couvre huit communes, 21260 en couvre huit autres, et l'application retenait silencieusement la première. Le champ accepte maintenant un nom de commune ou un code postal, liste les communes correspondantes et laisse choisir. Une ligne Commune apparaît dans les réglages du jardin, seul chemin pour corriger un lieu déjà enregistré.
+
 La pastille d'eau de l'en-tête et le pied de la synthèse portent la décision du jour, arroser tant de litres, attendre la pluie annoncée, ou ne rien faire pendant tant de jours. Le litrage par plante de la fiche reste calé sur la normale de saison, qui est une référence stable et non une prévision.
 
 ### Pic de floraison

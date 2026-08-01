@@ -1783,8 +1783,11 @@ async function lireMeteo(g) {
     const c = JSON.parse(localStorage.getItem(METEO_CACHE) || "null");
     if (c && c.cle === cle && Date.now() - c.t < METEO_TTL) { meteo = c.d; return; }
   } catch (e) { /* cache indisponible */ }
+  // Le modèle n'est pas forcé. Météo-France seul s'arrête à quatre jours et rend
+  // des valeurs vides ensuite ; la sélection automatique d'Open-Meteo prend AROME
+  // sur les premiers jours puis prolonge, et couvre la semaine entière.
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + g.lat + "&longitude=" + g.lon
-    + "&timezone=Europe%2FParis&models=meteofrance_seamless";
+    + "&timezone=Europe%2FParis";
   // Trente jours d'antériorité : le bilan hydrique a besoin d'une mise en route
   // assez longue pour que l'état initial du réservoir ne pèse plus sur le résultat.
   const u = base
@@ -1866,7 +1869,7 @@ function bilanHydrique() {
   const serie = [];
   for (let k = 0; k <= i; k++) {
     const l = lameDuJour(d.time[k], d.precipitation_sum[k]);
-    const et0 = d.et0_fao_evapotranspiration[k] || 0;
+    const et0 = Number(d.et0_fao_evapotranspiration[k]) || 0;
     const etc = et0 * kcDe(d.time[k]);
     dr = Math.min(taw, Math.max(0, dr - l.pluie - l.arrosage + etc));
     serie.push({ jour: d.time[k], pluie: l.pluie, mesuree: l.mesuree,
@@ -1884,7 +1887,8 @@ function bilanHydrique() {
   for (let k = i + 1; k < d.time.length; k++) {
     const pl = d.precipitation_sum[k] || 0;
     cumulPluie += pl;
-    drProj = Math.min(taw, Math.max(0, drProj - pl + (d.et0_fao_evapotranspiration[k] || 0) * kcDe(d.time[k])));
+    if (d.et0_fao_evapotranspiration[k] === null) break;
+    drProj = Math.min(taw, Math.max(0, drProj - pl + (Number(d.et0_fao_evapotranspiration[k]) || 0) * kcDe(d.time[k])));
     if (drProj < raw) sec++; else break;
   }
   const prevue2 = (d.precipitation_sum[i + 1] || 0) + (d.precipitation_sum[i + 2] || 0);
@@ -2061,18 +2065,23 @@ function vueTemps() {
   const d = meteo.daily, i = iJour();
   const lignes = [];
   for (let k = i; k <= Math.min(i + 6, d.time.length - 1); k++) {
+    // Une journée sans température n'est pas une journée à zéro degré : au-delà
+    // de son horizon le modèle ne rend rien, et la ligne ne doit pas exister.
+    const tx = d.temperature_2m_max[k], tn = d.temperature_2m_min[k];
+    if (tx === null || tx === undefined) continue;
     const [, lib, ico] = tempsDe(d.weather_code[k]);
     const p = d.precipitation_sum[k];
     lignes.push(`<tr><th>${k === i ? "aujourd'hui" : esc(jourCourt(d.time[k]))}</th>`
       + `<td class="mt-ic">${icoM(ico)}</td><td class="mt-lib">${esc(lib)}</td>`
-      + `<td class="mt-t"><b>${Math.round(d.temperature_2m_max[k])}°</b> `
-      + `<span>${Math.round(d.temperature_2m_min[k])}°</span></td>`
+      + `<td class="mt-t"><b>${Math.round(tx)}°</b> `
+      + `<span>${tn === null || tn === undefined ? "" : Math.round(tn) + "°"}</span></td>`
       + `<td class="mt-p">${p >= 0.2 ? p.toFixed(1).replace(".", ",") + " mm" : ""}</td></tr>`);
   }
-  return { titre: "Sept jours", sous: (jardinActif() || {}).commune || "",
+  return { titre: lignes.length > 1 ? lignes.length + " jours" : "Aujourd'hui",
+    sous: (jardinActif() || {}).commune || "",
     corps: `<table class="mt-table">${lignes.join("")}</table>`
-      + `<p class="f-note">Modèles de Météo-France, servis par Open-Meteo. `
-      + `Relecture toutes les heures.</p>` };
+      + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
+      + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>` };
 }
 
 function vueEau() {
@@ -2232,43 +2241,62 @@ function vueSaison() {
 function vueLieu() {
   const g = jardinActif() || {};
   return { titre: "Situer le jardin", sous: g.commune || "",
-    corps: `<p class="f-txt">Le code postal sert à lire la météo du lieu plutôt que la `
+    corps: `<p class="f-txt">La commune sert à lire la météo du lieu plutôt que la `
       + `normale du climat, et à corriger l'arrosage de la pluie tombée.</p>`
-      + `<form class="mt-form" id="form-lieu"><input id="cp" type="text" inputmode="numeric" `
-      + `maxlength="5" placeholder="44000" value="${esc(g.code_postal || "")}" `
-      + `aria-label="Code postal"><button class="bouton" type="submit">Valider</button></form>`
-      + `<p class="f-note" id="cp-note">Commune résolue par la Base Adresse Nationale, `
+      + `<form class="mt-form" id="form-lieu"><input id="cp" type="text" `
+      + `placeholder="Nom de commune ou code postal" value="${esc(g.commune || g.code_postal || "")}" `
+      + `aria-label="Commune ou code postal"><button class="bouton" type="submit">Chercher</button></form>`
+      + `<div id="cp-liste"></div>`
+      + `<p class="f-note" id="cp-note">Un code postal couvre souvent plusieurs communes, `
+      + `il faut donc choisir la vôtre. Recherche par la Base Adresse Nationale, `
       + `api-adresse.data.gouv.fr. Aucune position précise n'est demandée.</p>` };
 }
 
 function brancherLieu() {
   const f = $("form-lieu");
   if (!f) return;
+  const note = $("cp-note"), liste = $("cp-liste");
+
+  const retenir = async t => {
+    const [lon, lat] = t.geometry.coordinates;
+    const g = jardinActif();
+    const val = { code_postal: t.properties.postcode || null,
+      commune: t.properties.city || t.properties.name || t.properties.label,
+      lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) };
+    const { error } = await db.from("gardens").update(val).eq("id", g.id);
+    if (error) { note.textContent = "Enregistrement refusé : " + error.message; return; }
+    Object.assign(g, val);
+    liste.innerHTML = "";
+    note.textContent = val.commune + ", position enregistrée.";
+    await lireMeteo(g);
+    rendreMaintenant();
+    majJardinUI();
+    setTimeout(sortirFeuille, 700);
+  };
+
   f.addEventListener("submit", async e => {
     e.preventDefault();
     const v = ($("cp").value || "").trim();
-    const note = $("cp-note");
-    if (!/^[0-9]{5}$/.test(v)) { note.textContent = "Cinq chiffres attendus."; return; }
-    note.textContent = "Recherche de la commune...";
+    if (v.length < 2) { note.textContent = "Saisissez un nom de commune ou un code postal."; return; }
+    note.textContent = "Recherche...";
+    liste.innerHTML = "";
     try {
-      const r = await fetch("https://api-adresse.data.gouv.fr/search/?type=municipality&limit=1&q=" + v);
+      const r = await fetch("https://api-adresse.data.gouv.fr/search/?type=municipality&limit=10&q="
+        + encodeURIComponent(v));
       const j = await r.json();
-      const t = (j.features || [])[0];
-      if (!t) { note.textContent = "Code postal inconnu."; return; }
-      const [lon, lat] = t.geometry.coordinates;
-      const g = jardinActif();
-      const { error } = await db.from("gardens").update({
-        code_postal: v, commune: t.properties.city || t.properties.label,
-        lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)),
-      }).eq("id", g.id);
-      if (error) { note.textContent = "Enregistrement refusé : " + error.message; return; }
-      Object.assign(g, { code_postal: v, commune: t.properties.city || t.properties.label,
-        lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) });
-      note.textContent = g.commune + ", position enregistrée.";
-      await lireMeteo(g);
-      rendreBandeau();
-      majJardinUI();
-      setTimeout(fermerFeuille, 700);
+      const lot = j.features || [];
+      if (!lot.length) { note.textContent = "Aucune commune trouvée."; return; }
+      if (lot.length === 1) { await retenir(lot[0]); return; }
+      // Plusieurs communes partagent le code : le choix revient au jardinier.
+      note.textContent = lot.length + " communes correspondent, choisissez la vôtre.";
+      lot.forEach(t => {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "cp-choix";
+        b.innerHTML = `<b>${esc(t.properties.city || t.properties.name)}</b>`
+          + `<span>${esc(t.properties.postcode || "")}</span>`;
+        b.addEventListener("click", () => retenir(t));
+        liste.appendChild(b);
+      });
     } catch (err) { note.textContent = "Service indisponible, réessayez plus tard."; }
   });
 }
@@ -2608,6 +2636,10 @@ function majJardinUI() {
   puce.classList.toggle("a-renseigner", !c);
   puce.hidden = !connecte;
 
+  const vc = $("valCommune");
+  if (vc) vc.textContent = g && g.commune
+    ? g.commune + (g.code_postal ? ", " + g.code_postal : "") : "non renseignée";
+
   const sj = $("selJardin");
   sj.innerHTML = jardins.map(j => `<option value="${j.id}">${esc(j.name)}</option>`).join("");
   if (g) sj.value = g.id;
@@ -2853,6 +2885,7 @@ sur("genererReprise", "click", async () => {
 });
 
 sur("puceClimat", "click", () => afficher("jardin"));
+sur("btnCommune", "click", () => ouvrirVue("lieu"));
 
 /* ================== Feuille de détail ================== */
 
