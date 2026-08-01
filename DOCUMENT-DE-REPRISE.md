@@ -427,7 +427,7 @@ En gravité basse subsistent les textes partagés par plus de vingt plantes, jus
 | `.githooks/pre-commit` | Enchaîne la correction des empreintes puis le contrôle |
 | `.github/workflows/verification.yml` | Rejoue le contrôle en intégration continue |
 
-L'application est pilotée par la base. Les couleurs des tâches viennent de `phases.color`. Ajouter une tâche demande de l'insérer dans `phases` et de l'ajouter aux constantes `ORDRE` et `ORDRE_MAINTENANT` de `app.js`.
+L'application est pilotée par la base. La couleur d'une tâche vient en revanche de la table `TEINTE` de `app.js`, palette validée en CIEDE2000, exposée par l'assistant `teinteK(k)` et employée partout : synthèse, listes, filtres, frise, fiche. `phases.color` ne sert plus que de repli. Ajouter une tâche demande de l'insérer dans `phases`, de l'ajouter aux constantes `ORDRE` et `ORDRE_MAINTENANT`, de lui donner un pictogramme dans `PICTOS`, une teinte dans `TEINTE` et un verbe dans `VERBE`.
 
 L'empreinte de version des balises `app.js?v=` et `styles.css?v=` de `index.html` porte les dix premiers caractères de l'empreinte SHA-256 du fichier. Elle n'est plus tenue à la main : `node outils/verification.mjs --corriger` la recalcule, et le crochet `pre-commit` l'applique à chaque dépôt.
 
@@ -461,7 +461,7 @@ L'identité repose sur trois familles IBM Plex, Sans, Sans Condensed et Mono, et
 
 **La chasse fixe est réservée aux dates.** Ligne de date, règle des mois, code de reprise. Partout ailleurs elle donnait un air de terminal.
 
-**Chaque tâche porte sa couleur.** Bandeau de titre teinté à 10 pour cent, filet vertical de 3 pixels en pleine couleur, pictogramme au trait dans la même couleur. Dans la vue par espace, la couleur vient de `espaces.color`, avec le vert de l'application en repli.
+**Chaque tâche porte sa couleur.** Carré de 27 pixels à angles arrondis, en pleine couleur, pictogramme blanc au trait à l'intérieur. Le carré identifie la tâche dans la synthèse, dans la barre de niveau, dans les en-têtes de section et dans le pas vers la tâche suivante. Les rangées d'action ne portent plus de filet coloré. Dans le regroupement par espace, la couleur du rail vient de `espaces.color`, avec le vert de l'application en repli.
 
 **Le fond suit la saison.** Cinq paliers calculés à partir de la quinzaine en cours, de saturation très faible, appliqués à la variable `--papier`.
 
@@ -473,7 +473,15 @@ Les cartes entrent en fondu montant décalé de 45 millisecondes, plafonné à h
 
 Deux écrans principaux, accessibles par une barre flottante translucide en bas d'écran.
 
-**En ce moment** affiche les actions de la quinzaine sur les plantes retenues. Bilan en tête, bascule entre organisation par tâche et par espace, filtres repliables sur l'espace puis la tâche, bouton d'affichage des actions masquées. Les sections se replient au clic sur leur en-tête. Les actions sont classées par coût de l'oubli, du plus irréversible au plus tolérant, et triées par échéance à l'intérieur de chaque bloc. Un glissement vers la gauche masque pour la quinzaine ou pour la période, vers la droite définitivement.
+**En ce moment** se lit sur deux niveaux depuis le 1er août 2026.
+
+Le premier niveau est la vue d'ensemble : en-tête météo, ligne de date et règle des mois, alertes du jour, carte de synthèse. La carte porte une phrase de tête qui ne nomme que ce dont la fenêtre se ferme, puis une ligne par verbe avec son carré de couleur, quatre plantes nommées au plus, le compte de la tâche et un chevron. Le pied de la carte donne les plantes en fleur et le besoin en eau moyen. Sous la carte, une ligne discrète porte le décompte total, l'accès à la liste complète et l'accès aux filtres. L'écran mesure environ 1 040 pixels de haut, contre 6 920 pour la liste déroulante qu'il remplace.
+
+Le second niveau est la liste. Un clic sur une ligne de verbe, ou sur le verbe de la phrase de tête, ouvre cette tâche seule : barre de retour collante portant le carré, le verbe et le compte, rangées à plat séparées par un filet, conseil lu en entier. Les plantes dont la fenêtre se ferme passent en tête sur fond rosé. En bas de liste, un retour à la vue d'ensemble et un pas vers la tâche suivante, qui permet de parcourir les six ou sept tâches sans jamais remonter. Le bouton Tout voir ouvre la liste complète : un rail de sections collant en haut, dont la puce suit la section lue par un `IntersectionObserver`, des en-têtes de section restés dans le flux, et le conseil tronqué à deux lignes.
+
+L'état de lecture voyage dans `history.state` : le geste de retour du téléphone ramène à la vue d'ensemble, et la feuille de plante pose son entrée par-dessus le niveau courant, qu'elle restitue en se fermant. Changer d'écran principal rend toujours la vue d'ensemble.
+
+Le regroupement par tâche ou par espace se choisit dans le panneau de filtres et ne s'applique qu'à la liste complète. L'œil des actions masquées se pose au pied de la liste ouverte, avec le compte de ce que l'on regarde. Les actions restent classées par coût de l'oubli, du plus irréversible au plus tolérant, et triées par échéance à l'intérieur de chaque tâche. Un glissement vers la gauche masque pour la quinzaine ou pour la période, vers la droite définitivement.
 
 **Calendrier** présente la frise annuelle. Les périodes sont empilées par remplissage, une voie accueillant plusieurs tâches tant qu'elles ne se chevauchent pas. Filtres sur l'espace, la tâche, le type et la catégorie. Mon jardin seulement est actif par défaut.
 
