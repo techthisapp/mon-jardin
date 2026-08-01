@@ -220,7 +220,8 @@ const VERBE = {
 };
 const VERBE_MULTI = {
   division: "Diviser", tubercule: "Diviser", bouture: "Bouturer",
-  marcotte: "Marcotter", greffe: "Greffer",
+  marcotte: "Marcotter", greffe: "Greffer", semis: "Semer",
+  spontanee: "Laisser se ressemer",
 };
 const verbeDe = (p, k) => k === "multiplication"
   ? (VERBE_MULTI[p.propagation] || VERBE.multiplication) : VERBE[k];
@@ -1580,6 +1581,18 @@ function rendreSynthese(paires) {
     .map(g => ({ g, plantes: urgents.length ? g.presse : g.plantes, presse: Boolean(urgents.length) }));
 
   const bout = liste => enumerer(liste.map(nomAvecArticle));
+  // Quatre plantes nommées par ligne au total, quel que soit le nombre de verbes.
+  const texteLigne = l => {
+    if (l.parts.length === 1) return bout(l.parts[0].plantes);
+    let budget = 4, dits = [], reste = 0;
+    l.parts.forEach(pa => {
+      const pris = pa.plantes.slice(0, Math.max(0, budget));
+      reste += pa.plantes.length - pris.length;
+      budget -= pris.length;
+      if (pris.length) dits.push(pa.verbe.toLowerCase() + " " + enumerer(pris.map(nomAvecArticle), 4));
+    });
+    return dits.join(", ") + (reste ? " et " + reste + " autre" + (reste > 1 ? "s" : "") : "");
+  };
   const h = [];
   if (tete.length) {
     const phrases = tete.map(t => `<b>${esc(t.g.verbe.toLowerCase())}</b> ${esc(bout(t.plantes))}`);
@@ -1588,15 +1601,25 @@ function rendreSynthese(paires) {
   }
 
   // Les lignes reprennent le reste, la plante déjà nommée en tête n'y revient pas.
+  // Une ligne par tâche. Quand la tâche porte plusieurs verbes, cas de la
+  // multiplication, la ligne prend le verbe générique et chaque verbe exact
+  // reste devant ses plantes : on ne divise pas un pêcher qui se greffe.
   let lignes = [];
   gestes.forEach(g => {
     const dit = tete.find(t => t.g === g);
     let reste = dit ? g.plantes.filter(p => dit.plantes.indexOf(p) === -1) : g.plantes;
     if (!reste.length) return;
     const presse = !dit && g.presse.length > 0;
-    // Ce qui se ferme se lit en premier dans la ligne.
     if (presse) reste = g.presse.concat(reste.filter(p => g.presse.indexOf(p) === -1));
-    lignes.push({ g, plantes: reste, presse });
+    const deja = lignes.find(l => l.k === g.k);
+    if (deja) {
+      deja.parts.push({ verbe: g.verbe, plantes: reste });
+      deja.total += reste.length;
+      deja.presse = deja.presse || presse;
+    } else {
+      lignes.push({ k: g.k, verbe: VERBE[g.k], parts: [{ verbe: g.verbe, plantes: reste }],
+                    total: reste.length, presse });
+    }
   });
   // Au delà de six lignes la synthèse redevient la liste. Ce qui saute est le
   // geste qui porte le moins de plantes, jamais celui dont la fenêtre se ferme,
@@ -1605,22 +1628,22 @@ function rendreSynthese(paires) {
   let trop = [];
   if (lignes.length > MAX_LIGNES) {
     const gardees = lignes.slice()
-      .sort((a, b) => (Number(b.presse) - Number(a.presse)) || (b.plantes.length - a.plantes.length))
+      .sort((a, b) => (Number(b.presse) - Number(a.presse)) || (b.total - a.total))
       .slice(0, MAX_LIGNES);
     trop = lignes.filter(l => gardees.indexOf(l) === -1);
     lignes = lignes.filter(l => gardees.indexOf(l) !== -1);
   }
   if (lignes.length) {
     h.push('<div class="syn-lignes">' + lignes.map(l =>
-      `<button type="button" class="syn-ligne" data-tache="${esc(l.g.k)}">`
-      + `<i style="background:${TEINTE[l.g.k] || phases[l.g.k].color}"></i>`
-      + `<span class="v">${esc(l.g.verbe)}</span>`
-      + `<span class="l">${esc(bout(l.plantes))}`
+      `<button type="button" class="syn-ligne" data-tache="${esc(l.k)}">`
+      + `<i style="background:${TEINTE[l.k] || phases[l.k].color}"></i>`
+      + `<span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span>`
+      + `<span class="l">${esc(texteLigne(l))}`
       + (l.presse ? ' <span class="fin">· dernière quinzaine</span>' : "")
       + `</span></button>`).join("")
       + (trop.length ? `<button type="button" class="syn-ligne syn-plus" data-tache="">`
         + `<span class="l">et ${trop.length} autre${trop.length > 1 ? "s" : ""} geste`
-        + `${trop.length > 1 ? "s" : ""} : ${esc(trop.map(l => l.g.verbe.toLowerCase()).join(", "))}`
+        + `${trop.length > 1 ? "s" : ""} : ${esc(trop.map(l => (l.parts.length > 1 ? l.verbe : l.parts[0].verbe).toLowerCase()).join(", "))}`
         + `</span></button>` : "")
       + "</div>");
   }
