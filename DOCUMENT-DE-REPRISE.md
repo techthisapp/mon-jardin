@@ -87,7 +87,8 @@ Le projet est joignable par le connecteur Supabase, qui permet lecture, migratio
 
 | Table | Contenu |
 |---|---|
-| `gardens` | Plusieurs jardins par compte. Nom, climat, altitude, date de dernière ouverture |
+| `gardens` | Plusieurs jardins par compte. Nom, climat, altitude, date de dernière ouverture, code postal et position, texture du sol |
+| `releves_eau` | Mesures du jardinier, une ligne par jardin et par jour : pluie relevée au pluviomètre et arrosage apporté, en millimètres |
 | `espaces` | Découpage d'un jardin. Nom, type, couleur, position |
 | `garden_plants` | Plantes retenues dans un jardin |
 | `garden_plant_espaces` | Affectation d'une plante à un ou plusieurs espaces, avec quantité et note |
@@ -307,6 +308,22 @@ Le besoin en eau n'est plus un libellé mais un calcul. Trois tables et une vue 
 `et0_reference` donne l'évapotranspiration de référence par climat et par quinzaine, 120 lignes, depuis les fiches climatologiques de Météo-France. `saison_vegetation` borne la saison par climat. `plant_kc_quinzaine` porte le coefficient cultural par plante, climat et quinzaine, 37 800 lignes, dérivé des longueurs de stade et des coefficients du bulletin FAO 56. La vue `arrosage_plante_quinzaine` restitue les litres par jour, les litres par jour et par mètre carré, l'unité d'affichage, le niveau, et pour les plantes qui ne s'arrosent qu'à l'installation, la dose et l'intervalle de reprise.
 
 Quatre modes d'arrosage sont portés par `irrigation_mode` : calculé pour 170 fiches, reprise seule pour 68, sans arrosage pour 77, contenant pour les cultures en pot. Le mode décide de ce que l'application affiche, un chiffre quotidien n'ayant aucun sens pour un arbre installé.
+
+### Bilan hydrique du sol, 1er août 2026
+
+Le conseil d'arrosage du jour ne vient plus d'un écart entre pluie et évaporation sur sept jours, qui ignorait ce que le sol garde en réserve. Le sol est traité comme un réservoir, selon le chapitre 8 du bulletin FAO 56.
+
+L'épuisement du jour vaut celui de la veille, moins la pluie et l'arrosage, plus la consommation des cultures, borné entre zéro et la capacité au champ. La consommation est l'évapotranspiration de référence du point du jardin multipliée par le coefficient cultural moyen des plantes retenues, lu quinzaine par quinzaine.
+
+Trois constantes portent le modèle, toutes sourcées. La réserve utile vient de la texture du sol, nouveau champ `gardens.sol_texture` : sableux 80, limoneux 155, argileux 165 millimètres par mètre de profondeur, milieux des fourchettes du tableau 19 du bulletin, recoupées par les capacités de rétention publiées par l'université de Californie. La zone racinaire de référence vaut 40 cm, le tableau 22 plaçant les légumes de plein champ entre 0,3 et 0,6 mètre. Le seuil de confort vaut 40 pour cent de la réserve, valeur du tableau 22 pour la tomate, ajusté chaque jour à la demande par la formule `p = 0,40 + 0,04 (5 − ETc)`, bornée entre 0,1 et 0,8.
+
+La dose recommandée est plafonnée à la fraction facilement utilisable. Au-delà, l'eau traverse la zone racinaire sans profiter à la culture.
+
+La table `releves_eau` porte ce que le jardinier mesure. Le relevé de pluviomètre prime sur la lame d'eau du modèle, jour par jour, et l'arrosage saisi entre dans le bilan. La saisie couvre les trois derniers jours, depuis la feuille de l'eau. Sans relevé, le calcul ignore les arrosages non enregistrés et surestime donc le déficit, ce que la feuille énonce.
+
+La fenêtre météo passe de sept à trente jours pour que l'état initial du réservoir, posé à la moitié de la capacité, ne pèse plus sur le résultat. Contrôlé : après trente jours, le résultat est identique quel que soit l'état de départ.
+
+La pastille d'eau de l'en-tête et le pied de la synthèse portent la décision du jour, arroser tant de litres, attendre la pluie annoncée, ou ne rien faire pendant tant de jours. Le litrage par plante de la fiche reste calé sur la normale de saison, qui est une référence stable et non une prévision.
 
 ### Pic de floraison
 
