@@ -750,20 +750,16 @@ if ($("dateJour")) $("dateJour").textContent =
   auj.toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) +
   " · " + (auj.getDate() <= 15 ? "première" : "seconde") + " quinzaine";
 
+// Douze traits pour l'année, un seul plein : la position se lit sans lire.
 function construireRegle() {
   const r = $("regleAnnee");
   if (r.childElementCount) return;
   MOIS.forEach((m, i) => {
-    const d = document.createElement("div");
-    d.className = "regle-mois" + (i === auj.getMonth() ? " en-cours" : "");
-    d.textContent = ABR[i].toUpperCase();
+    const d = document.createElement("i");
+    d.className = i < auj.getMonth() ? "passe" : i === auj.getMonth() ? "ici" : "";
+    d.title = m;
     r.appendChild(d);
   });
-  const c = document.createElement("div");
-  c.className = "regle-curseur";
-  const debut = new Date(auj.getFullYear(), 0, 1), fin = new Date(auj.getFullYear() + 1, 0, 1);
-  c.style.left = ((auj - debut) / (fin - debut) * 100) + "%";
-  r.appendChild(c);
 }
 
 function shiftPour(k) {
@@ -1679,6 +1675,8 @@ function rendreBandeau() {
   if (!z) return;
   const g = jardinActif();
   if (!g) { z.hidden = true; return; }
+  const tm = $("teteMeteo");
+  if (tm) { tm.hidden = true; tm.innerHTML = ""; }
   if (!meteo || iJour() < 0) {
     // Sans position, la tuile de lumière et celle de saison restent calculables.
     z.innerHTML = g.code_postal ? "" : `<button type="button" class="bd-invite" data-vue="lieu">`
@@ -1698,19 +1696,30 @@ function rendreBandeau() {
     `<button type="button" class="bd-tuile${ton ? " t-" + ton : ""}" data-vue="${vue}">`
     + icoM(icone) + `<span class="bd-val">${val}</span><span class="bd-sous">${esc(sous)}</span></button>`;
 
-  const h = [`<div class="bd-tuiles">`
-    + tuile("temps", ico, Math.round(d.temperature_2m_max[i]) + "°", lib)
-    + tuile("eau", "goutte", (b && b.deficit > 0 ? nombreFr(b.deficit) + " mm" : "à jour"),
-        b && b.deficit > 0 ? "manque sur 7 j" : "pluie suffisante")
-    + tuile("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
-    + tuile("saison", "feuille", sais.court, sais.sous)
-    + `</div>`];
+  // La météo tient dans l'en-tête, en pastilles ; le corps ne porte que l'alerte.
+  const t = $("teteMeteo");
+  const puce = (vue, icone, val, sous) =>
+    `<button type="button" class="tm-puce" data-vue="${vue}">${icoM(icone, "tm-ic")}`
+    + `<b>${esc(val)}</b><span>${esc(sous)}</span></button>`;
+  t.innerHTML = `<button type="button" class="tm-temps" data-vue="temps">`
+    + `<span class="tm-deg">${Math.round(d.temperature_2m_max[i])}°</span>`
+    + `<span class="tm-etat">${esc(lib)}<small>${Math.round(d.temperature_2m_min[i])}° la nuit, `
+    + `vent ${Math.round(d.wind_speed_10m_max[i])} km/h</small></span></button>`
+    + `<div class="tm-puces">`
+    + puce("eau", "goutte", (b && b.deficit > 0 ? nombreFr(b.deficit) + " mm" : "à jour"),
+        b && b.deficit > 0 ? "à compenser" : "pluie suffisante")
+    + puce("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
+    + puce("saison", "feuille", sais.court.toLowerCase(), sais.sous)
+    + `</div>`;
+  t.hidden = false;
+  t.querySelectorAll("[data-vue]").forEach(x =>
+    x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
 
+  const h = [];
   alertesMeteo().forEach(a => h.push(`<p class="bd-alerte a-${a.ton}">${icoM("alerte", "bd-ia")}`
     + `<span>${esc(a.texte)}</span></p>`));
-
   z.innerHTML = h.join("");
-  z.hidden = false;
+  z.hidden = !h.length;
   brancherBandeau();
 }
 
@@ -1979,7 +1988,8 @@ function rendreSynthese(paires) {
   if (lignes.length) {
     h.push('<div class="syn-lignes">' + lignes.map(l =>
       `<button type="button" class="syn-ligne" data-tache="${esc(l.k)}">`
-      + `<i style="background:${TEINTE[l.k] || phases[l.k].color}"></i>`
+      + `<span class="syn-pt" style="background:${TEINTE[l.k] || phases[l.k].color}">`
+      + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[l.k] || ""}</svg></span>`
       + `<span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span>`
       + `<span class="l">${esc(texteLigne(l))}`
       + (l.presse ? ' <span class="fin">· dernière quinzaine</span>' : "")

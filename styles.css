@@ -47,7 +47,7 @@ body{
 .tete-haut{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
 .tete h1{
   font-family:"IBM Plex Sans Condensed",sans-serif;
-  font-size:22px;font-weight:700;letter-spacing:.10em;text-transform:uppercase;
+  font-size:15.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;opacity:.88;
 }
 .tete-sous{
   font-family:"IBM Plex Mono",monospace;
@@ -214,29 +214,20 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 /* ---------- En ce moment ---------- */
 .bandeau-date{margin-bottom:16px}
 .date-jour{
-  font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--encre-doux);margin-bottom:8px;
+  font-size:12.5px;font-weight:500;letter-spacing:.04em;color:var(--encre-doux);margin-bottom:9px;
 }
-.regle-annee{
-  position:relative;height:22px;border:1px solid var(--filet);border-radius:6px;
-  background:var(--papier-haut);overflow:hidden;
-  display:grid;grid-template-columns:repeat(12,1fr);
-}
-.regle-mois{
-  border-left:1px solid var(--filet-clair);
-  font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--encre-doux);
-  display:flex;align-items:center;justify-content:center;
-}
-.regle-mois:first-child{border-left:0}
-.regle-mois.en-cours{background:var(--panneau);color:var(--encre);font-weight:500}
-.regle-curseur{position:absolute;top:0;bottom:0;width:2px;background:var(--encre)}
+.regle-annee{display:flex;gap:3px;height:4px}
+.regle-annee i{flex:1;border-radius:2px;background:#DEDCD2}
+.regle-annee i.passe{background:#C4C9BE}
+.regle-annee i.ici{background:var(--terre)}
 
 .carte-tache{
-  border:1px solid var(--filet);border-radius:var(--rayon);background:var(--papier-haut);
-  padding:0;margin-bottom:11px;overflow:hidden;
+  border:0;border-radius:16px;background:var(--papier-haut);
+  padding:0;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(20,30,25,.06);
 }
 .carte-tache h2{
   display:flex;align-items:center;gap:9px;
-  padding:10px 14px;background:var(--panneau);border-bottom:1px solid var(--filet);
+  padding:11px 14px;background:transparent;border-bottom:1px solid var(--filet-clair);
   font-family:"IBM Plex Sans Condensed",sans-serif;
   font-size:12.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
 }
@@ -491,13 +482,13 @@ main{
 .bouton-compte:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
 
 .puce-climat{
-  display:inline-block;margin:0;
-  border:1px solid rgba(239,239,232,.26);background:none;color:#EFEFE8;
-  font:400 11px/1 "IBM Plex Mono",monospace;letter-spacing:.02em;
-  padding:6px 11px;border-radius:999px;cursor:pointer;opacity:.78;
+  display:inline-block;margin:2px 0 0;
+  border:0;background:none;color:#A9BCB0;
+  font:500 12px/1.3 inherit;letter-spacing:.03em;
+  padding:2px 0;cursor:pointer;opacity:1;
 }
 .puce-climat:hover{opacity:1}
-.puce-climat.a-renseigner{border-style:dashed;opacity:1}
+.puce-climat.a-renseigner{color:#E4B9A8;text-decoration:underline;text-underline-offset:3px}
 .puce-climat:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
 
 /* La sous-navigation se distingue de la navigation principale par son fond */
@@ -1266,3 +1257,40 @@ body.fige{overflow:hidden}
   flex:0 0 110px;padding:9px 12px;border:1px solid var(--filet);border-radius:8px;
   font-family:"IBM Plex Mono",monospace;font-size:15px;background:#fff;color:var(--encre);
 }
+
+/* ---------- En-tête météo, direction tableau de bord ---------- */
+.tete-meteo{position:relative;z-index:1;padding:14px 0 18px}
+.tm-temps{
+  display:flex;align-items:flex-end;gap:12px;background:none;border:0;padding:0;
+  cursor:pointer;color:inherit;font-family:inherit;text-align:left;
+}
+.tm-deg{font-size:46px;font-weight:600;letter-spacing:-.045em;line-height:.92}
+.tm-etat{padding-bottom:5px;font-size:14px;color:#C6D5CA}
+.tm-etat small{display:block;font-size:11.5px;color:#93A79A;margin-top:2px}
+.tm-puces{display:flex;gap:7px;margin-top:15px;flex-wrap:wrap}
+.tm-puce{
+  display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.11);
+  border:0;border-radius:999px;padding:7px 13px;cursor:pointer;
+  font-family:inherit;font-size:12.5px;color:#CBDACF;
+}
+@media (hover:hover){ .tm-puce:hover{background:rgba(255,255,255,.18)} }
+.tm-puce b{font-weight:600;color:#F2F1EA}
+.tm-ic{width:14px;height:14px;flex:0 0 auto;color:#9FB6A6}
+
+/* La synthèse perd son cadre et gagne une ombre. */
+.synthese{
+  background:var(--papier-haut);border:0;border-radius:18px;padding:17px 17px 16px;
+  box-shadow:0 2px 10px rgba(20,30,25,.06);
+}
+.syn-lignes{gap:2px;margin-top:13px;padding-top:4px;border-top:0}
+.syn-ligne{align-items:center;gap:11px;padding:8px 0;border-top:1px solid #F0EEE7}
+.syn-ligne:first-child{border-top:0}
+.syn-pt{
+  width:27px;height:27px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;
+}
+.syn-pt svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round}
+.syn-ligne .v{font-size:14.5px}
+.syn-ligne .l{font-size:13.5px;line-height:1.4}
+.syn-pied{border-top:1px solid #F0EEE7;margin-top:13px;padding-top:12px}
+.bd-alerte{margin:0 0 10px}
