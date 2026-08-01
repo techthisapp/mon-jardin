@@ -372,7 +372,17 @@ Deux périodes de floraison ont été corrigées à cette occasion, le pic obser
 
 Une plante dont une tâche revient deux fois dans l'année recevait le même texte aux deux dates. `plant_advice` porte maintenant une clé propre, `id`, et une clé étrangère facultative `phase_id` vers `plant_phases`, avec unicité sur le triplet plante, tâche, période. Un conseil sans `phase_id` vaut pour toute la tâche, un conseil avec `phase_id` ne vaut que pour cette période et l'emporte sur le premier.
 
-La vue `conseil_par_periode` résout la règle et donne, pour chaque période, le texte à afficher et sa portée. Seize conseils propres à une période sont écrits, quatorze tailles sur sept fiches et deux fertilisations sur la Tomate. Cent vingt-deux tâches à périodes multiples restent à traiter, dont 60 plantations et 25 fertilisations.
+La vue `conseil_par_periode` résout la règle et donne, pour chaque période, le texte à afficher et sa portée.
+
+Le chantier est terminé au 1er août 2026 : 255 conseils propres à une période, aucune période sans texte parmi celles qu'un jardinier peut voir. Le périmètre réel était de 125 tâches et 250 périodes, et non 122 : une même tâche déclinée par climat compte pour une seule occurrence, ce que le décompte initial confondait.
+
+La rédaction est dérivée, conformément à la décision 2 sur la vérifiabilité, et tient dans deux migrations SQL rejouables. Une phrase est construite à partir de la position de la fenêtre dans l'année, du port, du seuil de gel et de la sensibilité à l'humidité hivernale, puis le conseil général la suit, sa mention d'alternative résolue en faveur de la période. La fonction `saison_de_fenetre` donne la saison d'une fenêtre par son milieu, et rend nul pour une fenêtre à cheval.
+
+Règles retenues par tâche. Plantation : automne pour un ligneux, période de référence, fin d'hiver pour les racines nues, printemps pour un sujet en conteneur ; pour une vivace, l'arrière-saison enracine avant l'hiver et le printemps demande un arrosage suivi ; pour un bulbe, l'automne avance et allonge la floraison. Fertilisation : apport de fond au printemps, apport d'entretien fractionné en pleine production. Multiplication : division de printemps à reprise immédiate, division d'automne qui repart tôt. Semis en place : printemps, fin d'été pour l'arrière-saison, automne pour les annuelles rustiques qui passent l'hiver. Floraison et récolte : première et seconde vague.
+
+Deux exceptions relevées à la relecture et corrigées : la seconde floraison d'un fruitier ne demande pas de suppression des fleurs fanées, et le conseil général de la Fraise décrit l'apport de juillet, ce qui ne convient pas à sa fenêtre de fin d'hiver.
+
+Contrôles de forme sur les 255 textes : aucun tiret cadratin, aucune flèche, aucune mention d'alternative restante, aucune élision manquée, longueur de 109 à 446 caractères. Quatre périodes restent sans texte propre, sur les fiches inactives Mélisse et Souci, remplacées par Mélisse citronnelle et Souci officinal.
 
 ### Couleurs de fleur et seuils de gel
 
