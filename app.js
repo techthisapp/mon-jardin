@@ -24,10 +24,11 @@ const ORDRE_CAT = [
 const MOIS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 const ABR  = ["Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc"];
 const CHECK = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
-const CACHE = "monjardin.catalogue.v5";
+const CACHE = "monjardin.catalogue.v6";
 
 let phases = {};
 let plantes = [];
+let saison = {};
 let climats = {};
 let shifts = {};
 let jardins = [];
@@ -299,6 +300,7 @@ async function chargerCatalogue() {
     if (brut) {
       const c = JSON.parse(brut);
       phases = c.phases; plantes = c.plantes; climats = c.climats || {}; shifts = c.shifts || {};
+      saison = c.saison || {};
       apresCatalogue();
       verifierFraicheur(c.empreinte);
       return;
@@ -308,14 +310,16 @@ async function chargerCatalogue() {
 }
 
 async function lireCatalogue() {
-  const [rp, rl, rm, rc, rs] = await Promise.all([
+  const [rp, rl, rm, rc, rs, rv] = await Promise.all([
     avecReprise(() => db.from("phases").select("*").order("position")),
     avecReprise(() => db.from("plants_full").select("*").eq("is_active", true)),
     avecReprise(() => db.from("catalog_meta").select("*").single()),
     avecReprise(() => db.from("climates").select("*").order("position")),
     avecReprise(() => db.from("climate_phase_shifts").select("*")),
+    avecReprise(() => db.from("saison_vegetation").select("*")),
   ]);
-  climats = {}; shifts = {};
+  climats = {}; shifts = {}; saison = {};
+  (rv.data || []).forEach(v => saison[v.climate_key] = v);
   (rc.data || []).forEach(c => climats[c.key] = c);
   (rs.data || []).forEach(r => {
     (shifts[r.climate_key] = shifts[r.climate_key] || {})[r.phase] = { s: r.shift_spring, a: r.shift_autumn };
@@ -337,7 +341,7 @@ async function lireCatalogue() {
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   try {
     localStorage.setItem(CACHE, JSON.stringify({
-      phases, plantes, climats, shifts, empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
+      phases, plantes, climats, shifts, saison, empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
     }));
   } catch (e) { /* stockage indisponible */ }
   apresCatalogue();
@@ -365,7 +369,7 @@ const compte = f => plantes.filter(f).length;
 
 /* ================== Jardin ================== */
 
-const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at";
+const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at,code_postal,commune,lat,lon";
 const jardinActif = () => jardins.find(g => g.id === jardinId) || null;
 // iOS isole le stockage local de l'application ajoutée à l'écran d'accueil de celui
 // de Safari. Le jardin actif est donc mémorisé en base, où il suit le compte.
@@ -434,6 +438,7 @@ async function chargerContenuJardin() {
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
   await lireEauDuJour(cle);
   majCompte(); majJardinUI(); construireChips(); rendreTout();
+  lireMeteo(jardinActif()).then(rendreBandeau);
 }
 
 async function chargerAdaptations() {
@@ -931,6 +936,7 @@ function rendreMaintenant() {
     return;
   }
 
+  rendreBandeau();
   rendreSynthese(paires);
 
   const audibles = paires.filter(x => !x.muet);
@@ -1539,6 +1545,343 @@ function ficheHTML(p) {
     <div class="f-pan f-pan-moment">${ficheMoment(p)}</div>
     <div class="f-pan f-pan-annee" hidden>${ficheAnnee(p)}${ficheBlocs(p)}</div>
   </div>`;
+}
+
+/* ================== Bandeau du jour ==================
+   Quatre tuiles lisibles d'un coup d'oeil, chacune ouvrant une feuille de
+   détail. La météo vient des modèles de Météo-France servis par Open-Meteo,
+   le lieu de la Base Adresse Nationale, l'évapotranspiration est celle du
+   bulletin FAO 56 calculée au point du jardin. */
+
+const METEO_CACHE = "monjardin.meteo.v1";
+const METEO_TTL = 3600 * 1000;   // une heure, la prévision ne bouge pas plus vite
+
+// Codes de temps sensible de l'Organisation météorologique mondiale.
+const TEMPS = [
+  [[0], "Ciel clair", "soleil"], [[1, 2], "Éclaircies", "soleil_nuage"],
+  [[3], "Couvert", "nuage"], [[45, 48], "Brouillard", "brume"],
+  [[51, 53, 55, 56, 57], "Bruine", "pluie"], [[61, 63, 65, 66, 67], "Pluie", "pluie"],
+  [[71, 73, 75, 77, 85, 86], "Neige", "neige"], [[80, 81, 82], "Averses", "averse"],
+  [[95, 96, 99], "Orage", "orage"],
+];
+const tempsDe = c => (TEMPS.find(t => t[0].indexOf(c) !== -1) || [[], "Temps variable", "nuage"]);
+
+const GM = {
+  soleil: '<circle cx="12" cy="12" r="4.6"/><path d="M12 2v2.6M12 19.4V22M2 12h2.6M19.4 12H22'
+    + 'M4.9 4.9l1.9 1.9M17.2 17.2l1.9 1.9M19.1 4.9l-1.9 1.9M6.8 17.2l-1.9 1.9"/>',
+  soleil_nuage: '<circle cx="9" cy="9" r="3.4"/><path d="M9 2.6v1.8M2.6 9h1.8M4.8 4.8l1.3 1.3M13.2 4.8l-1.3 1.3"/>'
+    + '<path d="M8.4 19.4h9.2a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6 1.2 3 3 0 0 0 .1 6z"/>',
+  nuage: '<path d="M7.4 19.4h9.2a3.8 3.8 0 0 0 .3-7.6 5.3 5.3 0 0 0-10.1 1.3 3.2 3.2 0 0 0 .6 6.3z"/>',
+  brume: '<path d="M7.4 15.4h9.2a3.8 3.8 0 0 0 .3-7.6A5.3 5.3 0 0 0 6.8 9.1a3.2 3.2 0 0 0 .6 6.3z"/>'
+    + '<path d="M4 18.6h16M6.5 21.4h11"/>',
+  pluie: '<path d="M7.4 15h9.2a3.8 3.8 0 0 0 .3-7.6A5.3 5.3 0 0 0 6.8 8.7a3.2 3.2 0 0 0 .6 6.3z"/>'
+    + '<path d="M9 18.4l-.9 2.6M13 18.4l-.9 2.6M17 18.4l-.9 2.6"/>',
+  averse: '<path d="M7.4 14.2h9.2a3.8 3.8 0 0 0 .3-7.6A5.3 5.3 0 0 0 6.8 7.9a3.2 3.2 0 0 0 .6 6.3z"/>'
+    + '<path d="M9.4 17.4l-1.2 3.4M13.4 17.4l-1.2 3.4"/><path d="M17.4 17.4l-2.6 2.4h2.6l-2.6 2"/>',
+  orage: '<path d="M7.4 13.6h9.2a3.8 3.8 0 0 0 .3-7.6A5.3 5.3 0 0 0 6.8 7.3a3.2 3.2 0 0 0 .6 6.3z"/>'
+    + '<path d="M13.4 16l-3.4 4.2h3l-2 3.4" stroke-linejoin="round"/>',
+  neige: '<path d="M7.4 14.6h9.2a3.8 3.8 0 0 0 .3-7.6A5.3 5.3 0 0 0 6.8 8.3a3.2 3.2 0 0 0 .6 6.3z"/>'
+    + '<path d="M9 18v3.4M7.4 18.9l3.2 1.6M10.6 18.9l-3.2 1.6M16 18v3.4M14.4 18.9l3.2 1.6M17.6 18.9l-3.2 1.6"/>',
+  goutte: '<path d="M12 3.4c4.2 4.8 6.6 8.2 6.6 11.2a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.4 6.6-11.2z"/>',
+  arc: '<path d="M3 18h18"/><path d="M6.2 18a5.8 5.8 0 0 1 11.6 0"/><path d="M12 6.4V4M5.2 9.2L3.6 7.6M18.8 9.2l1.6-1.6"/>',
+  feuille: '<path d="M20 4c0 9-5.4 14-12 14-1.4 0-2.6-.2-3.6-.6C5.6 9.6 11.4 4.6 20 4z"/>'
+    + '<path d="M4 21c1.6-4.6 4.4-8.2 8.4-10.8"/>',
+  alerte: '<path d="M12 3.6 21.4 20H2.6z" stroke-linejoin="round"/><path d="M12 9.6v4.6M12 17.2v.1"/>',
+};
+const icoM = (n, cls) => `<svg class="${cls || "bd-ic"}" viewBox="0 0 24 24" aria-hidden="true" `
+  + `fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${GM[n] || ""}</svg>`;
+
+let meteo = null;      // charge brute, telle que rendue par le service
+
+async function lireMeteo(g) {
+  if (!g || g.lat === null || g.lat === undefined) { meteo = null; return; }
+  const cle = `${g.lat},${g.lon}`;
+  try {
+    const c = JSON.parse(localStorage.getItem(METEO_CACHE) || "null");
+    if (c && c.cle === cle && Date.now() - c.t < METEO_TTL) { meteo = c.d; return; }
+  } catch (e) { /* cache indisponible */ }
+  const u = "https://api.open-meteo.com/v1/forecast?latitude=" + g.lat + "&longitude=" + g.lon
+    + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,"
+    + "precipitation_probability_max,wind_speed_10m_max,et0_fao_evapotranspiration,"
+    + "sunrise,sunset,daylight_duration"
+    + "&past_days=7&forecast_days=7&timezone=Europe%2FParis&models=meteofrance_seamless";
+  try {
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(r.status);
+    meteo = await r.json();
+    localStorage.setItem(METEO_CACHE, JSON.stringify({ cle, t: Date.now(), d: meteo }));
+  } catch (e) { meteo = null; }
+}
+
+// Index du jour dans la série, sept jours de passé précèdent aujourd'hui.
+const iJour = () => {
+  if (!meteo) return -1;
+  const h = new Date().toISOString().slice(0, 10);
+  return meteo.daily.time.indexOf(h);
+};
+
+// Les nombres s'écrivent avec la virgule, et sans décimale au delà de dix.
+const nombreFr = v => (Math.abs(v) >= 10 ? Math.round(v).toString() : v.toFixed(1).replace(".", ","));
+
+const hhmm = s => {
+  const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+  return h + " h " + String(m).padStart(2, "0");
+};
+
+// Bilan des sept derniers jours : ce qui est tombé face à ce que l'air a pris.
+function bilanEau() {
+  const i = iJour();
+  if (i < 1) return null;
+  const d = meteo.daily, a = Math.max(0, i - 6);
+  let pluie = 0, demande = 0;
+  for (let k = a; k <= i; k++) {
+    pluie += d.precipitation_sum[k] || 0;
+    demande += d.et0_fao_evapotranspiration[k] || 0;
+  }
+  const prevue = (d.precipitation_sum[i + 1] || 0) + (d.precipitation_sum[i + 2] || 0);
+  return { pluie: Math.round(pluie * 10) / 10, demande: Math.round(demande * 10) / 10,
+           deficit: Math.round((demande - pluie) * 10) / 10, prevue: Math.round(prevue * 10) / 10,
+           et0: d.et0_fao_evapotranspiration[i] };
+}
+
+// Alertes du jour et des deux jours suivants, croisées avec le jardin.
+function alertesMeteo() {
+  const i = iJour();
+  if (i < 0) return [];
+  const d = meteo.daily, out = [];
+  const quand = k => k === i ? "aujourd'hui" : k === i + 1 ? "demain"
+    : new Date(d.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "long" });
+  for (let k = i; k <= Math.min(i + 2, d.time.length - 1); k++) {
+    const tmin = d.temperature_2m_min[k], tmax = d.temperature_2m_max[k];
+    if (tmin !== null && tmin <= 2) {
+      const risque = [...sel].map(id => plantes.find(p => p.id === id)).filter(Boolean)
+        .filter(p => p.gel !== null && p.gel !== undefined && Number(p.gel) > tmin)
+        .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+      out.push({ ton: "froid", texte: `${Math.round(tmin)} °C ${quand(k)}`
+        + (risque.length ? `, ${enumerer(risque.map(nomAvecArticle))} ne passe`
+            + (risque.length > 1 ? "nt" : "") + " pas" : ", protéger les plus fragiles") });
+      break;
+    }
+    if (tmax !== null && tmax >= 32) {
+      out.push({ ton: "chaud", texte: `${Math.round(tmax)} °C ${quand(k)}, arroser tôt et ombrer les jeunes plants` });
+      break;
+    }
+  }
+  const v = d.wind_speed_10m_max[i];
+  if (v !== null && v >= 60) out.push({ ton: "vent", texte: `Vent à ${Math.round(v)} km/h, tuteurer et rentrer les potées` });
+  const p = d.precipitation_sum[i];
+  if (p !== null && p >= 15) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
+  return out.slice(0, 2);
+}
+
+function rendreBandeau() {
+  const z = $("bandeau");
+  if (!z) return;
+  const g = jardinActif();
+  if (!g) { z.hidden = true; return; }
+  if (!meteo || iJour() < 0) {
+    // Sans position, la tuile de lumière et celle de saison restent calculables.
+    z.innerHTML = g.code_postal ? "" : `<button type="button" class="bd-invite" data-vue="lieu">`
+      + icoM("arc") + `<span>Situer le jardin pour la météo et l'arrosage réel</span></button>`;
+    z.hidden = !z.innerHTML;
+    brancherBandeau();
+    return;
+  }
+  const d = meteo.daily, i = iJour();
+  const [, lib, ico] = tempsDe(d.weather_code[i]);
+  const b = bilanEau();
+  const dur = d.daylight_duration[i], veille = d.daylight_duration[i - 1];
+  const delta = Math.round((dur - veille) / 60);
+  const sais = positionSaison();
+
+  const tuile = (vue, icone, val, sous, ton) =>
+    `<button type="button" class="bd-tuile${ton ? " t-" + ton : ""}" data-vue="${vue}">`
+    + icoM(icone) + `<span class="bd-val">${val}</span><span class="bd-sous">${esc(sous)}</span></button>`;
+
+  const h = [`<div class="bd-tuiles">`
+    + tuile("temps", ico, Math.round(d.temperature_2m_max[i]) + "°", lib)
+    + tuile("eau", "goutte", (b && b.deficit > 0 ? nombreFr(b.deficit) + " mm" : "à jour"),
+        b && b.deficit > 0 ? "manque sur 7 j" : "pluie suffisante")
+    + tuile("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
+    + tuile("saison", "feuille", sais.court, sais.sous)
+    + `</div>`];
+
+  alertesMeteo().forEach(a => h.push(`<p class="bd-alerte a-${a.ton}">${icoM("alerte", "bd-ia")}`
+    + `<span>${esc(a.texte)}</span></p>`));
+
+  z.innerHTML = h.join("");
+  z.hidden = false;
+  brancherBandeau();
+}
+
+function brancherBandeau() {
+  const z = $("bandeau");
+  z.querySelectorAll("[data-vue]").forEach(b =>
+    b.addEventListener("click", () => ouvrirVue(b.dataset.vue)));
+}
+
+// Position dans la saison de végétation et compte à rebours de la première gelée.
+function positionSaison() {
+  const s = saison[(jardinActif() || {}).climate_key];
+  if (!s) return { court: "quinzaine " + demi, sous: "sur 24" };
+  const etape = demi < s.debut_q ? "Repos" : demi < s.pleine_q ? "Reprise"
+    : demi < s.senescence_q ? "Pleine" : demi <= s.fin_q ? "Déclin" : "Repos";
+  const long = { Repos: "repos végétatif", Reprise: "reprise de végétation",
+    Pleine: "pleine saison", "Déclin": "ralentissement" }[etape];
+  const reste = ((s.fin_q - demi) % 24 + 24) % 24;
+  const m = MOIS_ABR[Math.ceil(s.fin_q / 2) - 1];
+  return { court: etape, long,
+    sous: reste ? "gelée " + (s.fin_q % 2 ? "début " : "fin ") + m : "gelée imminente" };
+}
+
+/* ---------- Deuxième profondeur, en feuille ---------- */
+
+function ouvrirVue(vue) {
+  const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
+                   saison: vueSaison, lieu: vueLieu };
+  const f = (rendus[vue] || vueLieu)();
+  $("feuille-titre").innerHTML = esc(f.titre)
+    + (f.sous ? `<span class="feuille-latin">${esc(f.sous)}</span>` : "");
+  $("feuille-corps").innerHTML = `<div class="fiche-v2">${f.corps}</div>`;
+  $("feuille-corps").scrollTop = 0;
+  $("voile").hidden = false;
+  $("feuille").hidden = false;
+  document.body.classList.add("fige");
+  requestAnimationFrame(() => {
+    $("voile").classList.add("visible");
+    $("feuille").classList.add("ouverte");
+    $("feuille").focus();
+  });
+  if (vue === "lieu") brancherLieu();
+}
+
+const jourCourt = t => new Date(t + "T12:00")
+  .toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", "");
+
+function vueTemps() {
+  const d = meteo.daily, i = iJour();
+  const lignes = [];
+  for (let k = i; k <= Math.min(i + 6, d.time.length - 1); k++) {
+    const [, lib, ico] = tempsDe(d.weather_code[k]);
+    const p = d.precipitation_sum[k];
+    lignes.push(`<tr><th>${k === i ? "aujourd'hui" : esc(jourCourt(d.time[k]))}</th>`
+      + `<td class="mt-ic">${icoM(ico)}</td><td class="mt-lib">${esc(lib)}</td>`
+      + `<td class="mt-t"><b>${Math.round(d.temperature_2m_max[k])}°</b> `
+      + `<span>${Math.round(d.temperature_2m_min[k])}°</span></td>`
+      + `<td class="mt-p">${p >= 0.2 ? p.toFixed(1).replace(".", ",") + " mm" : ""}</td></tr>`);
+  }
+  return { titre: "Sept jours", sous: (jardinActif() || {}).commune || "",
+    corps: `<table class="mt-table">${lignes.join("")}</table>`
+      + `<p class="f-note">Modèles de Météo-France, servis par Open-Meteo. `
+      + `Relecture toutes les heures.</p>` };
+}
+
+function vueEau() {
+  const b = bilanEau(), d = meteo.daily, i = iJour();
+  if (!b) return { titre: "L'eau", corps: "" };
+  const barres = [];
+  for (let k = Math.max(0, i - 6); k <= Math.min(i + 3, d.time.length - 1); k++) {
+    const p = d.precipitation_sum[k] || 0, e = d.et0_fao_evapotranspiration[k] || 0;
+    const m = Math.max(8, p, e);
+    barres.push(`<div class="mt-col${k === i ? " ce-jour" : ""}">`
+      + `<span class="mt-duo">`
+      + `<i class="mt-bp" style="height:${(p / m * 46).toFixed(0)}px" title="${p} mm de pluie"></i>`
+      + `<i class="mt-be" style="height:${(e / m * 46).toFixed(0)}px" title="${e} mm d'évaporation"></i>`
+      + `</span><span class="mt-j">${esc(jourCourt(d.time[k]))}</span></div>`);
+  }
+  const conseil = b.deficit <= 0
+    ? "La pluie a couvert la demande, rien à apporter."
+    : b.prevue >= b.deficit * 0.8
+      ? `Il est annoncé ${nombreFr(b.prevue)} mm dans les deux jours, attendre.`
+      : `Il manque ${nombreFr(b.deficit)} mm sur la semaine, `
+        + `soit ${nombreFr(b.deficit)} litres par mètre carré.`;
+  return { titre: "L'eau", sous: "sept derniers jours",
+    corps: `<div class="f-carte"><div class="mt-barres">${barres.join("")}</div>`
+      + `<p class="mt-leg"><i class="p"></i>pluie tombée <i class="e"></i>évaporation</p></div>`
+      + `<p class="f-txt"><b>${nombreFr(b.pluie)} mm</b> sont tombés, `
+      + `l'air en a repris <b>${nombreFr(b.demande)} mm</b>. ${esc(conseil)}</p>`
+      + `<p class="f-note">Évapotranspiration de référence du bulletin FAO 56, calculée au point `
+      + `du jardin. Le litrage par plante de la fiche reste calé sur la normale de saison.</p>` };
+}
+
+function vueLumiere() {
+  const d = meteo.daily, i = iJour();
+  const dur = d.daylight_duration[i];
+  const delta = Math.round((dur - d.daylight_duration[i - 1]) / 60);
+  const solstice = Math.max(...d.daylight_duration);
+  const lever = d.sunrise[i].slice(11, 16).replace(":", " h ");
+  const coucher = d.sunset[i].slice(11, 16).replace(":", " h ");
+  const sens = delta >= 0 ? "s'allongent" : "raccourcissent";
+  return { titre: "La lumière", sous: hhmm(dur) + " de jour",
+    corps: `<dl class="f-kv"><dt>Lever</dt><dd>${esc(lever)}</dd>`
+      + `<dt>Coucher</dt><dd>${esc(coucher)}</dd>`
+      + `<dt>Durée</dt><dd>${esc(hhmm(dur))}</dd>`
+      + `<dt>Variation</dt><dd>${delta >= 0 ? "+" : "−"}${Math.abs(delta)} min par jour</dd></dl>`
+      + `<p class="f-txt">Les jours ${sens} de ${Math.abs(delta)} minutes. `
+      + `La lumière décide de la montée à graine des salades et des épinards, et de la `
+      + `date à partir de laquelle un semis sous abri ne rattrape plus son retard.</p>`
+      + `<p class="f-note">Lever et coucher calculés au point du jardin.</p>` };
+}
+
+function vueSaison() {
+  const s = saison[(jardinActif() || {}).climate_key];
+  const p = positionSaison();
+  const froid = [...sel].map(id => plantes.find(x => x.id === id)).filter(Boolean)
+    .filter(x => x.gel !== null && x.gel !== undefined && Number(x.gel) >= -2)
+    .sort((a, b) => Number(b.gel) - Number(a.gel)).slice(0, 6);
+  return { titre: "La saison", sous: p.long || p.court,
+    corps: (s ? `<dl class="f-kv"><dt>Reprise</dt><dd>${esc(demiTexte(s.debut_q))}</dd>`
+      + `<dt>Pleine saison</dt><dd>${esc(demiTexte(s.pleine_q))}</dd>`
+      + `<dt>Ralentissement</dt><dd>${esc(demiTexte(s.senescence_q))}</dd>`
+      + `<dt>Première gelée</dt><dd>${esc(demiTexte(s.fin_q))}</dd></dl>` : "")
+      + (froid.length ? `<p class="f-txt">Les plus exposées à la première gelée : `
+        + `${esc(enumerer(froid.map(nomAvecArticle), 6))}.</p>` : "")
+      + `<p class="f-note">Bornes de saison par climat, table du référentiel. `
+      + `Le seuil de gel est celui de chaque fiche.</p>` };
+}
+
+function vueLieu() {
+  const g = jardinActif() || {};
+  return { titre: "Situer le jardin", sous: g.commune || "",
+    corps: `<p class="f-txt">Le code postal sert à lire la météo du lieu plutôt que la `
+      + `normale du climat, et à corriger l'arrosage de la pluie tombée.</p>`
+      + `<form class="mt-form" id="form-lieu"><input id="cp" type="text" inputmode="numeric" `
+      + `maxlength="5" placeholder="44000" value="${esc(g.code_postal || "")}" `
+      + `aria-label="Code postal"><button class="bouton" type="submit">Valider</button></form>`
+      + `<p class="f-note" id="cp-note">Commune résolue par la Base Adresse Nationale, `
+      + `api-adresse.data.gouv.fr. Aucune position précise n'est demandée.</p>` };
+}
+
+function brancherLieu() {
+  const f = $("form-lieu");
+  if (!f) return;
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    const v = ($("cp").value || "").trim();
+    const note = $("cp-note");
+    if (!/^[0-9]{5}$/.test(v)) { note.textContent = "Cinq chiffres attendus."; return; }
+    note.textContent = "Recherche de la commune...";
+    try {
+      const r = await fetch("https://api-adresse.data.gouv.fr/search/?type=municipality&limit=1&q=" + v);
+      const j = await r.json();
+      const t = (j.features || [])[0];
+      if (!t) { note.textContent = "Code postal inconnu."; return; }
+      const [lon, lat] = t.geometry.coordinates;
+      const g = jardinActif();
+      const { error } = await db.from("gardens").update({
+        code_postal: v, commune: t.properties.city || t.properties.label,
+        lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)),
+      }).eq("id", g.id);
+      if (error) { note.textContent = "Enregistrement refusé : " + error.message; return; }
+      Object.assign(g, { code_postal: v, commune: t.properties.city || t.properties.label,
+        lat: Number(lat.toFixed(5)), lon: Number(lon.toFixed(5)) });
+      note.textContent = g.commune + ", position enregistrée.";
+      await lireMeteo(g);
+      rendreBandeau();
+      majJardinUI();
+      setTimeout(fermerFeuille, 700);
+    } catch (err) { note.textContent = "Service indisponible, réessayez plus tard."; }
+  });
 }
 
 /* ================== Synthèse d'accueil ==================
