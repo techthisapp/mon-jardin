@@ -1444,3 +1444,61 @@ body.fige{overflow:hidden}
   text-decoration:underline;text-decoration-color:rgba(22,36,30,.22);text-underline-offset:4px;
 }
 .syn-verbe:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:4px}
+
+/* ================= Bilan hydrique, réserve du sol ================= */
+
+.jauge-sol{
+  position:relative;height:26px;border-radius:8px;overflow:hidden;
+  background:#E6E4DA;
+}
+.js-eau{
+  position:absolute;left:0;top:0;bottom:0;width:var(--pleine);
+  background:linear-gradient(180deg,#6BA3DE,#3F7FD0);
+}
+.js-seuil{
+  position:absolute;top:0;bottom:0;left:var(--seuil);width:0;
+  border-left:2px dashed rgba(22,36,30,.45);
+}
+.js-leg{
+  display:flex;align-items:baseline;gap:9px;margin-top:8px;
+  font-size:13px;color:var(--f-ink2, var(--encre-doux));
+}
+.js-leg b{font-size:15px;font-weight:700;color:var(--f-ink, var(--encre))}
+.js-leg span{margin-left:auto;font-size:12px;color:var(--f-ink3, #8A9089)}
+
+.mt-bp.mesure{background:#1F4F8F}
+.mt-col.a-venir{opacity:.5}
+
+/* ---------- Saisie des relevés ---------- */
+.rel-table{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.rel-ligne{display:flex;align-items:center;gap:9px}
+.rel-j{
+  flex:1;min-width:0;font-size:13.5px;color:var(--f-ink, var(--encre));
+}
+.rel-j small{
+  display:block;font-size:11.5px;color:var(--f-ink3, #8A9089);
+}
+.rel-ch{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:3px}
+.rel-ch span{font-size:10.5px;color:var(--f-ink3, #8A9089)}
+.rel-ch input{
+  width:62px;padding:7px 8px;border:1px solid var(--filet);border-radius:8px;
+  font-family:"IBM Plex Mono",monospace;font-size:14px;text-align:center;
+  background:#fff;color:var(--encre);
+}
+.rel-ch input:focus-visible{outline:2px solid var(--terre);outline-offset:1px}
+.rel-ch input::-webkit-outer-spin-button,
+.rel-ch input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.rel-ch input[type="number"]{-moz-appearance:textfield}
+
+/* ---------- Choix de la texture ---------- */
+.sol-choix{display:flex;gap:7px;margin-top:10px}
+.sol-opt{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
+  border:1px solid var(--filet);border-radius:10px;background:#fff;padding:9px 6px;
+  font-family:inherit;font-size:13px;font-weight:600;color:var(--encre);
+}
+.sol-opt small{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:400;
+  color:var(--f-ink3, #8A9089)}
+.sol-opt.actif{background:var(--encre);border-color:var(--encre);color:#EFEFE8}
+.sol-opt.actif small{color:#A9BCB0}
+.sol-opt:focus-visible{outline:2px solid var(--terre);outline-offset:2px}

@@ -48,6 +48,22 @@ let vueMoment = (() => {
 let vueDetail = null;
 let scrollEnsemble = 0;
 let obsSections = null;
+// Coefficient cultural moyen du jardin par quinzaine, et mesures du jardinier.
+let kcParQuinzaine = {};
+let releves = new Map();
+
+/* Réserve utile du sol, en millimètres par mètre de profondeur. Milieux des
+   fourchettes du tableau 19 du bulletin FAO 56, recoupées par les capacités de
+   rétention publiées par l'université de Californie : sableux 55 à 105,
+   limoneux 130 à 180, argileux 130 à 200. */
+const RESERVE_SOL = { sableux: 80, limoneux: 155, argileux: 165 };
+const SOL_LIBELLE = { sableux: "Sableux", limoneux: "Limoneux", argileux: "Argileux" };
+// Profondeur de référence de la zone racinaire du potager, en mètres. Le tableau
+// 22 du même bulletin place les légumes de plein champ entre 0,3 et 0,6 mètre.
+const ZR_M = 0.40;
+// Fraction de la réserve épuisable sans contrainte, valeur du tableau 22 pour la
+// tomate, entre la laitue à 0,30 et le concombre à 0,50.
+const P_BASE = 0.40;
 let categories = [];
 let sel = new Set();
 let jardinId = null;
@@ -380,7 +396,7 @@ const compte = f => plantes.filter(f).length;
 
 /* ================== Jardin ================== */
 
-const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at,code_postal,commune,lat,lon";
+const COL_JARDIN = "id,name,climate_key,altitude,last_opened_at,code_postal,commune,lat,lon,sol_texture";
 const jardinActif = () => jardins.find(g => g.id === jardinId) || null;
 // iOS isole le stockage local de l'application ajoutée à l'écran d'accueil de celui
 // de Safari. Le jardin actif est donc mémorisé en base, où il suit le compte.
@@ -448,8 +464,11 @@ async function chargerContenuJardin() {
   });
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
   await lireEauDuJour(cle);
+  await lireReleves();
   majCompte(); majJardinUI(); construireChips(); rendreTout();
-  lireMeteo(jardinActif()).then(rendreBandeau);
+  // La météo arrive après le premier rendu : la synthèse doit être refaite,
+  // son pied porte la décision d'arrosage tirée du bilan du sol.
+  lireMeteo(jardinActif()).then(() => rendreMaintenant());
 }
 
 async function chargerAdaptations() {
@@ -1717,7 +1736,7 @@ function ficheHTML(p) {
    le lieu de la Base Adresse Nationale, l'évapotranspiration est celle du
    bulletin FAO 56 calculée au point du jardin. */
 
-const METEO_CACHE = "monjardin.meteo.v1";
+const METEO_CACHE = "monjardin.meteo.v2";
 const METEO_TTL = 3600 * 1000;   // une heure, la prévision ne bouge pas plus vite
 
 // Codes de temps sensible de l'Organisation météorologique mondiale.
@@ -1768,7 +1787,9 @@ async function lireMeteo(g) {
     + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,"
     + "precipitation_probability_max,wind_speed_10m_max,et0_fao_evapotranspiration,"
     + "sunrise,sunset,daylight_duration"
-    + "&past_days=7&forecast_days=7&timezone=Europe%2FParis&models=meteofrance_seamless";
+    + "&past_days=30&forecast_days=7&timezone=Europe%2FParis&models=meteofrance_seamless";
+  // Trente jours d'antériorité : le bilan hydrique a besoin d'une mise en route
+  // assez longue pour que l'état initial du réservoir ne pèse plus sur le résultat.
   try {
     const r = await fetch(u);
     if (!r.ok) throw new Error(r.status);
@@ -1793,19 +1814,84 @@ const hhmm = s => {
 };
 
 // Bilan des sept derniers jours : ce qui est tombé face à ce que l'air a pris.
-function bilanEau() {
+// Quinzaine d'une date de la série météo.
+function quinzaineDe(iso) {
+  const j = new Date(iso + "T12:00");
+  return j.getMonth() * 2 + (j.getDate() <= 15 ? 1 : 2);
+}
+
+// Lame d'eau du jour : le relevé du jardinier prime sur la sortie du modèle.
+function lameDuJour(iso, modele) {
+  const r = releves.get(iso);
+  const mesure = r && r.pluie_mm !== null && r.pluie_mm !== undefined ? Number(r.pluie_mm) : null;
+  return { pluie: mesure === null ? (modele || 0) : mesure,
+           arrosage: r && r.arrosage_mm !== null && r.arrosage_mm !== undefined ? Number(r.arrosage_mm) : 0,
+           mesuree: mesure !== null };
+}
+
+/* Bilan hydrique du bulletin FAO 56, chapitre 8. Le sol est un réservoir dont on
+   suit l'épuisement jour après jour : Dr = Dr veille moins la pluie et l'arrosage,
+   plus la consommation de la culture. L'excédent au-dessus de la capacité au champ
+   draine, l'épuisement ne descend pas sous zéro. Le calcul démarre trente jours en
+   arrière, à la moitié de la réserve, valeur que la pluie du mois efface. */
+function bilanHydrique() {
   const i = iJour();
   if (i < 1) return null;
-  const d = meteo.daily, a = Math.max(0, i - 6);
-  let pluie = 0, demande = 0;
-  for (let k = a; k <= i; k++) {
-    pluie += d.precipitation_sum[k] || 0;
-    demande += d.et0_fao_evapotranspiration[k] || 0;
+  const g = jardinActif() || {};
+  const texture = RESERVE_SOL[g.sol_texture] ? g.sol_texture : "limoneux";
+  const taw = RESERVE_SOL[texture] * ZR_M;
+  const d = meteo.daily;
+  const kcDe = iso => kcParQuinzaine[quinzaineDe(iso)]
+    || kcParQuinzaine[demi] || 0.85;
+
+  let dr = taw / 2;
+  const serie = [];
+  for (let k = 0; k <= i; k++) {
+    const l = lameDuJour(d.time[k], d.precipitation_sum[k]);
+    const et0 = d.et0_fao_evapotranspiration[k] || 0;
+    const etc = et0 * kcDe(d.time[k]);
+    dr = Math.min(taw, Math.max(0, dr - l.pluie - l.arrosage + etc));
+    serie.push({ jour: d.time[k], pluie: l.pluie, mesuree: l.mesuree,
+                 arrosage: l.arrosage, et0, etc, dr });
   }
-  const prevue = (d.precipitation_sum[i + 1] || 0) + (d.precipitation_sum[i + 2] || 0);
-  return { pluie: Math.round(pluie * 10) / 10, demande: Math.round(demande * 10) / 10,
-           deficit: Math.round((demande - pluie) * 10) / 10, prevue: Math.round(prevue * 10) / 10,
-           et0: d.et0_fao_evapotranspiration[i] };
+
+  // Seuil de confort, ajusté à la demande du jour comme le prévoit le bulletin.
+  const etcJour = serie[serie.length - 1].etc;
+  const p = Math.min(0.8, Math.max(0.1, P_BASE + 0.04 * (5 - etcJour)));
+  const raw = p * taw;
+
+  // Projection sur la prévision : combien de jours avant d'atteindre le seuil,
+  // et quelle pluie est annoncée d'ici là.
+  let sec = 0, cumulPluie = 0, drProj = dr;
+  for (let k = i + 1; k < d.time.length; k++) {
+    const pl = d.precipitation_sum[k] || 0;
+    cumulPluie += pl;
+    drProj = Math.min(taw, Math.max(0, drProj - pl + (d.et0_fao_evapotranspiration[k] || 0) * kcDe(d.time[k])));
+    if (drProj < raw) sec++; else break;
+  }
+  const prevue2 = (d.precipitation_sum[i + 1] || 0) + (d.precipitation_sum[i + 2] || 0);
+
+  // Cumuls de la semaine écoulée, pour la lecture d'ensemble.
+  let pluie7 = 0, demande7 = 0, apporte7 = 0;
+  serie.slice(-7).forEach(x => { pluie7 += x.pluie; demande7 += x.etc; apporte7 += x.arrosage; });
+
+  // La dose ne dépasse pas la fraction facilement utilisable : au-delà, l'eau
+  // traverse la zone racinaire sans profiter à la culture.
+  const dose = Math.min(dr, raw);
+  const arroser = dr >= raw;
+  const attendre = arroser && prevue2 >= dose * 0.8;
+  return {
+    texture, taw, raw, dr, p, etcJour, serie,
+    reserve: Math.max(0, 1 - dr / taw),
+    jours: arroser ? 0 : Math.max(1, sec),
+    apport: Math.round(dose * 10) / 10,
+    epuise: dr >= taw - 0.5,
+    prevue: Math.round(prevue2 * 10) / 10,
+    pluie7: Math.round(pluie7 * 10) / 10,
+    demande7: Math.round(demande7 * 10) / 10,
+    apporte7: Math.round(apporte7 * 10) / 10,
+    etat: attendre ? "attendre" : arroser ? "arroser" : "confort",
+  };
 }
 
 // Alertes du jour et des deux jours suivants, croisées avec le jardin.
@@ -1838,6 +1924,14 @@ function alertesMeteo() {
   return out.slice(0, 2);
 }
 
+// La pastille d'eau porte la décision du jour, non un écart à combler.
+function puceEau(b) {
+  if (!b) return ["eau", "réserve inconnue"];
+  if (b.etat === "arroser") return [nombreFr(b.apport) + " mm", "à apporter"];
+  if (b.etat === "attendre") return [nombreFr(b.prevue) + " mm", "annoncés, attendre"];
+  return [b.jours + (b.jours > 1 ? " jours" : " jour"), "de réserve"];
+}
+
 function rendreBandeau() {
   const z = $("bandeau");
   if (!z) return;
@@ -1855,7 +1949,7 @@ function rendreBandeau() {
   }
   const d = meteo.daily, i = iJour();
   const [, lib, ico] = tempsDe(d.weather_code[i]);
-  const b = bilanEau();
+  const b = bilanHydrique();
   const dur = d.daylight_duration[i], veille = d.daylight_duration[i - 1];
   const delta = Math.round((dur - veille) / 60);
   const sais = positionSaison();
@@ -1874,8 +1968,7 @@ function rendreBandeau() {
     + `<span class="tm-etat">${esc(lib)}<small>${Math.round(d.temperature_2m_min[i])}° la nuit, `
     + `vent ${Math.round(d.wind_speed_10m_max[i])} km/h</small></span></button>`
     + `<div class="tm-puces">`
-    + puce("eau", "goutte", (b && b.deficit > 0 ? nombreFr(b.deficit) + " mm" : "à jour"),
-        b && b.deficit > 0 ? "à compenser" : "pluie suffisante")
+    + puce("eau", "goutte", ...puceEau(b))
     + puce("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
     + puce("saison", "feuille", sais.court.toLowerCase(), sais.sous)
     + `</div>`;
@@ -1930,6 +2023,7 @@ function ouvrirVue(vue) {
     $("feuille").classList.add("ouverte");
     $("feuille").focus();
   });
+  if (typeof f.brancher === "function") f.brancher();
   if (vue === "lieu") brancherLieu();
 }
 
@@ -1955,31 +2049,121 @@ function vueTemps() {
 }
 
 function vueEau() {
-  const b = bilanEau(), d = meteo.daily, i = iJour();
+  const b = bilanHydrique(), d = meteo.daily, i = iJour();
   if (!b) return { titre: "L'eau", corps: "" };
+
+  // Huit jours passés et trois annoncés, la pluie mesurée se distingue de la
+  // pluie du modèle par un aplat plein.
   const barres = [];
-  for (let k = Math.max(0, i - 6); k <= Math.min(i + 3, d.time.length - 1); k++) {
-    const p = d.precipitation_sum[k] || 0, e = d.et0_fao_evapotranspiration[k] || 0;
-    const m = Math.max(8, p, e);
-    barres.push(`<div class="mt-col${k === i ? " ce-jour" : ""}">`
+  for (let k = Math.max(0, i - 7); k <= Math.min(i + 3, d.time.length - 1); k++) {
+    const l = lameDuJour(d.time[k], d.precipitation_sum[k]);
+    const pl = k > i ? (d.precipitation_sum[k] || 0) : l.pluie + l.arrosage;
+    const e = (d.et0_fao_evapotranspiration[k] || 0)
+      * (kcParQuinzaine[quinzaineDe(d.time[k])] || kcParQuinzaine[demi] || 0.85);
+    const m = Math.max(8, pl, e);
+    barres.push(`<div class="mt-col${k === i ? " ce-jour" : ""}${k > i ? " a-venir" : ""}">`
       + `<span class="mt-duo">`
-      + `<i class="mt-bp" style="height:${(p / m * 46).toFixed(0)}px" title="${p} mm de pluie"></i>`
-      + `<i class="mt-be" style="height:${(e / m * 46).toFixed(0)}px" title="${e} mm d'évaporation"></i>`
+      + `<i class="mt-bp${l.mesuree && k <= i ? " mesure" : ""}" style="height:${(pl / m * 46).toFixed(0)}px" `
+      + `title="${nombreFr(pl)} mm"></i>`
+      + `<i class="mt-be" style="height:${(e / m * 46).toFixed(0)}px" title="${nombreFr(e)} mm repris"></i>`
       + `</span><span class="mt-j">${esc(jourCourt(d.time[k]))}</span></div>`);
   }
-  const conseil = b.deficit <= 0
-    ? "La pluie a couvert la demande, rien à apporter."
-    : b.prevue >= b.deficit * 0.8
-      ? `Il est annoncé ${nombreFr(b.prevue)} mm dans les deux jours, attendre.`
-      : `Il manque ${nombreFr(b.deficit)} mm sur la semaine, `
-        + `soit ${nombreFr(b.deficit)} litres par mètre carré.`;
-  return { titre: "L'eau", sous: "sept derniers jours",
-    corps: `<div class="f-carte"><div class="mt-barres">${barres.join("")}</div>`
-      + `<p class="mt-leg"><i class="p"></i>pluie tombée <i class="e"></i>évaporation</p></div>`
-      + `<p class="f-txt"><b>${nombreFr(b.pluie)} mm</b> sont tombés, `
-      + `l'air en a repris <b>${nombreFr(b.demande)} mm</b>. ${esc(conseil)}</p>`
-      + `<p class="f-note">Évapotranspiration de référence du bulletin FAO 56, calculée au point `
-      + `du jardin. Le litrage par plante de la fiche reste calé sur la normale de saison.</p>` };
+
+  const pleine = Math.round(b.reserve * 100);
+  const seuil = Math.round((1 - b.raw / b.taw) * 100);
+  const conseil = b.etat === "arroser"
+    ? `Le sol est sous son seuil de confort. Apporter <b>${nombreFr(b.apport)} mm</b>, `
+      + `soit ${nombreFr(b.apport)} litres par mètre carré. Au-delà, l'eau passe sous les racines.`
+    : b.etat === "attendre"
+      ? `Le seuil est atteint, mais il est annoncé <b>${nombreFr(b.prevue)} mm</b> dans les deux jours. Attendre.`
+      : `La réserve tient encore <b>${b.jours}</b> jour${b.jours > 1 ? "s" : ""} `
+        + `avant d'atteindre le seuil. Rien à apporter.`;
+
+  const lignes = [];
+  for (let k = i; k >= Math.max(0, i - 2); k--) {
+    const iso = d.time[k], r = releves.get(iso) || {};
+    const nom = k === i ? "aujourd'hui" : k === i - 1 ? "hier" : "avant-hier";
+    lignes.push(`<div class="rel-ligne" data-jour="${esc(iso)}">`
+      + `<span class="rel-j">${esc(nom)}<small>modèle ${nombreFr(d.precipitation_sum[k] || 0)} mm</small></span>`
+      + `<label class="rel-ch"><input type="number" step="0.5" min="0" max="400" `
+      + `inputmode="decimal" class="rel-pluie" aria-label="Pluie relevée ${esc(nom)}" `
+      + `value="${r.pluie_mm === null || r.pluie_mm === undefined ? "" : r.pluie_mm}"><span>pluie</span></label>`
+      + `<label class="rel-ch"><input type="number" step="0.5" min="0" max="200" `
+      + `inputmode="decimal" class="rel-arros" aria-label="Arrosage apporté ${esc(nom)}" `
+      + `value="${r.arrosage_mm === null || r.arrosage_mm === undefined ? "" : r.arrosage_mm}"><span>arrosage</span></label>`
+      + `</div>`);
+  }
+
+  const sols = Object.keys(RESERVE_SOL).map(t =>
+    `<button type="button" class="sol-opt${t === b.texture ? " actif" : ""}" data-sol="${t}">`
+    + `${esc(SOL_LIBELLE[t])}<small>${RESERVE_SOL[t]} mm/m</small></button>`).join("");
+
+  return { titre: "L'eau", sous: "réserve du sol",
+    corps: `<div class="f-carte">`
+      + `<div class="jauge-sol" style="--pleine:${pleine}%;--seuil:${seuil}%">`
+      + `<i class="js-eau"></i><i class="js-seuil"></i></div>`
+      + `<p class="js-leg"><b>${pleine} %</b> de la réserve<span>seuil de confort à ${seuil} %</span></p>`
+      + `</div>`
+      + `<p class="f-txt">${conseil}</p>`
+      + `<div class="f-carte"><div class="mt-barres">${barres.join("")}</div>`
+      + `<p class="mt-leg"><i class="p"></i>pluie et arrosage <i class="e"></i>consommation</p></div>`
+      + `<p class="f-txt">Sur sept jours, <b>${nombreFr(b.pluie7)} mm</b> sont tombés`
+      + (b.apporte7 ? ` et <b>${nombreFr(b.apporte7)} mm</b> ont été apportés` : "")
+      + `, les cultures en ont repris <b>${nombreFr(b.demande7)} mm</b>.</p>`
+      + `<div class="f-carte"><div class="f-carte-tete"><h3>Vos relevés</h3></div>`
+      + `<p class="f-note">Un millimètre vaut un litre par mètre carré. Ce que vous mesurez `
+      + `remplace la lame d'eau du modèle. Le calcul ne connaît que ce qui est enregistré, `
+      + `notez vos arrosages pour qu'il reste juste.</p>`
+      + `<div class="rel-table">${lignes.join("")}</div>`
+      + `<p class="f-note" id="rel-note"></p></div>`
+      + `<div class="f-carte"><div class="f-carte-tete"><h3>Texture du sol</h3></div>`
+      + `<div class="sol-choix">${sols}</div>`
+      + `<p class="f-note" id="sol-note">Elle fixe la réserve utile. Sur ${esc(ZR_M * 100)} cm `
+      + `de profondeur, votre sol retient ${nombreFr(b.taw)} mm.</p></div>`
+      + `<p class="f-note">Bilan hydrique du bulletin FAO 56, chapitre 8. Évapotranspiration de `
+      + `référence calculée au point du jardin, coefficient cultural moyen des plantes retenues, `
+      + `seuil de confort ajusté à la demande du jour. Le litrage par plante de la fiche reste `
+      + `calé sur la normale de saison.</p>`,
+    brancher: brancherEau };
+}
+
+// Saisie des relevés et choix de la texture, dans la feuille de l'eau.
+function brancherEau() {
+  const note = $("rel-note");
+  const enregistrer = async ligne => {
+    const jour = ligne.dataset.jour;
+    const lire = s => {
+      const v = ligne.querySelector(s).value.trim();
+      if (v === "") return null;
+      const n = Number(v.replace(",", "."));
+      return Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : null;
+    };
+    const r = await ecrireReleve(jour, lire(".rel-pluie"), lire(".rel-arros"));
+    if (r && r.error) { note.textContent = "Enregistrement refusé : " + r.error.message; return; }
+    note.textContent = "Relevé enregistré.";
+    rendreBandeau();
+  };
+  // La saisie enregistre au fil de l'eau, la feuille ne se redessine qu'une fois
+  // le tableau quitté : redessiner à chaque champ ferait perdre la frappe suivante.
+  const table = document.querySelector(".rel-table");
+  if (table) {
+    table.querySelectorAll("input").forEach(c =>
+      c.addEventListener("change", () => enregistrer(c.closest(".rel-ligne"))));
+    table.addEventListener("focusout", e => {
+      if (table.contains(e.relatedTarget)) return;
+      setTimeout(() => { if (!$("feuille").hidden && document.querySelector(".rel-table")) ouvrirVue("eau"); }, 0);
+    });
+  }
+  document.querySelectorAll(".sol-opt").forEach(b => b.addEventListener("click", async () => {
+    const g = jardinActif();
+    if (!g || !session) { $("sol-note").textContent = "Connectez-vous pour enregistrer la texture."; return; }
+    const { error } = await db.from("gardens").update({ sol_texture: b.dataset.sol }).eq("id", g.id);
+    if (error) { $("sol-note").textContent = "Enregistrement refusé : " + error.message; return; }
+    g.sol_texture = b.dataset.sol;
+    document.querySelectorAll(".sol-opt").forEach(x => x.classList.toggle("actif", x === b));
+    rendreBandeau();
+    ouvrirVue("eau");
+  }));
 }
 
 function vueLumiere() {
@@ -2186,8 +2370,19 @@ function rendreSynthese(paires) {
     pied.push(n > 4 ? n + " plantes sont en fleur"
       : bout(g.plantes) + (n > 1 ? " sont en fleur" : " est en fleur"));
   });
-  const eau = besoinEauDuJour();
-  if (eau) pied.push(`compter <b>${esc(eau)}</b> et par jour sur les cultures arrosées`);
+  // L'eau du pied dit la décision du jour, tirée du bilan du sol. Sans position
+  // du jardin, elle retombe sur le besoin moyen de la normale de saison.
+  const bh = meteo ? bilanHydrique() : null;
+  if (bh && bh.etat === "arroser") {
+    pied.push(`arroser environ <b>${nombreFr(bh.apport)} litres par m²</b> sur les cultures arrosées`);
+  } else if (bh && bh.etat === "attendre") {
+    pied.push(`ne pas arroser, il est annoncé <b>${nombreFr(bh.prevue)} mm</b>`);
+  } else if (bh) {
+    pied.push(`ne pas arroser, la réserve du sol tient <b>${bh.jours} jour${bh.jours > 1 ? "s" : ""}</b>`);
+  } else {
+    const eau = besoinEauDuJour();
+    if (eau) pied.push(`compter <b>${esc(eau)}</b> et par jour sur les cultures arrosées`);
+  }
   if (pied.length) {
     const t = pied.join(", ");
     h.push(`<p class="syn-pied">${t.charAt(0).toUpperCase() + t.slice(1)}.</p>`);
@@ -2208,11 +2403,47 @@ let eauJour = [];
 
 async function lireEauDuJour(cle) {
   eauJour = [];
+  kcParQuinzaine = {};
   if (!cle || !sel.size) return;
+  // Le bilan hydrique remonte à trente jours et se projette sur une semaine, il
+  // traverse donc jusqu'à trois quinzaines.
+  const qs = [-2, -1, 0, 1].map(d => ((demi - 1 + d + 24) % 24) + 1);
   const { data } = await avecReprise(() => db.from("arrosage_plante_quinzaine")
-    .select("plant_id,litres_jour_m2").eq("climate_key", cle).eq("quinzaine", demi)
-    .in("plant_id", [...sel]));
-  eauJour = (data || []).filter(r => r.litres_jour_m2 !== null);
+    .select("plant_id,quinzaine,kc,litres_jour_m2").eq("climate_key", cle)
+    .in("quinzaine", qs).in("plant_id", [...sel]));
+  const lot = data || [];
+  eauJour = lot.filter(r => r.quinzaine === demi && r.litres_jour_m2 !== null);
+  // Coefficient cultural moyen du jardin, quinzaine par quinzaine. Les plantes
+  // sans calcul, contenants et cultures sans arrosage, ne comptent pas.
+  qs.forEach(q => {
+    const v = lot.filter(r => r.quinzaine === q && r.kc !== null).map(r => Number(r.kc));
+    if (v.length) kcParQuinzaine[q] = v.reduce((s, x) => s + x, 0) / v.length;
+  });
+}
+
+// Relevés du jardinier sur la fenêtre du bilan, indexés par jour.
+async function lireReleves() {
+  releves = new Map();
+  const g = jardinActif();
+  if (!g || !session) return;
+  const depuis = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10);
+  const { data } = await avecReprise(() => db.from("releves_eau")
+    .select("jour,pluie_mm,arrosage_mm").eq("garden_id", g.id).gte("jour", depuis));
+  (data || []).forEach(r => releves.set(r.jour, r));
+}
+
+// Une saisie efface sa ligne quand les deux mesures sont vides.
+async function ecrireReleve(jour, pluie, arrosage) {
+  const g = jardinActif();
+  if (!g || !session) return { error: { message: "Connectez-vous pour enregistrer un relevé." } };
+  if (pluie === null && arrosage === null) {
+    releves.delete(jour);
+    return await db.from("releves_eau").delete().eq("garden_id", g.id).eq("jour", jour);
+  }
+  const ligne = { garden_id: g.id, jour, pluie_mm: pluie, arrosage_mm: arrosage };
+  const r = await db.from("releves_eau").upsert(ligne, { onConflict: "garden_id,jour" });
+  if (!r.error) releves.set(jour, ligne);
+  return r;
 }
 
 // Moyenne des besoins calculés, les plantes sans calcul ne comptent pas.
