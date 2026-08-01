@@ -41,6 +41,13 @@ let voirSourdines = false;
 let vueMoment = (() => {
   try { return localStorage.getItem("monjardin.vue") || "tache"; } catch (e) { return "tache"; }
 })();
+// Position de lecture de l'écran du moment : null pour la vue d'ensemble,
+// { t:"tache", k } pour une tâche ouverte, { t:"tout" } pour la liste complète.
+// L'état voyage dans l'historique, le geste de retour du téléphone ramène donc
+// à la vue d'ensemble.
+let vueDetail = null;
+let scrollEnsemble = 0;
+let obsSections = null;
 let categories = [];
 let sel = new Set();
 let jardinId = null;
@@ -152,6 +159,10 @@ const TEINTE = {
   "floraison": "#d96aa8",
   "recolte": "#eb6834",
 };
+
+// La couleur d'une tâche vient de la palette validée, non de la base : elle est
+// la même dans la synthèse, la liste, les filtres et la frise.
+const teinteK = k => TEINTE[k] || ((phases[k] || {}).color) || "#4C8C3F";
 
 const GJ = {
   "soleil": "<circle cx=\"10\" cy=\"10\" r=\"4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\"/><path d=\"M10 1.5v2.5M10 16v2.5M1.5 10H4M16 10h2.5M4 4l1.8 1.8M14.2 14.2 16 16M16 4l-1.8 1.8M5.8 14.2 4 16\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\"/>",
@@ -515,7 +526,7 @@ function construireChips() {
   });
   // Écran Planning
   groupeChips($("chipsPhase"), ORDRE.filter(k => phases[k]), etatPhase, {
-    couleur: k => phases[k].color,
+    couleur: k => teinteK(k),
     libelle: k => phases[k].label,
     apres: () => { construireChips(); rendrePlanning(); },
   });
@@ -530,7 +541,7 @@ function construireChips() {
   });
   groupeChips($("chipsPhaseM"), ORDRE_MAINTENANT.filter(k => phases[k]), etatPhaseM, {
     libelle: k => phases[k].label,
-    couleur: k => phases[k].color,
+    couleur: k => teinteK(k),
     apres: () => { construireChips(); rendreMaintenant(); },
   });
   chipsEspaces($("chipsEspaceM"), $("ligneEspaceM"), rendreMaintenant);
@@ -574,6 +585,8 @@ let ecranConfig = "jardin";
 
 function afficher(ecran) {
   ecranCourant = ecran;
+  // Changer d'écran principal rend la vue d'ensemble, jamais une tâche ouverte.
+  if (vueDetail !== null) { vueDetail = null; rendreMaintenant(); }
   const enConfig = CONFIG.includes(ecran);
   if (enConfig) ecranConfig = ecran;
   ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== ecran); });
@@ -816,12 +829,63 @@ const texteAction = (p, k) =>
   : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
   : (p.guide[k] || "");
 
+function majNiveau() {
+  const ouvert = vueDetail !== null;
+  $("vueEnsemble").hidden = ouvert;
+  $("niveauDetail").hidden = !ouvert;
+  const tm = $("teteMeteo");
+  if (tm && tm.innerHTML) tm.hidden = ouvert;
+}
+
+function ouvrirDetail(d) {
+  if (vueDetail === null) scrollEnsemble = window.scrollY;
+  vueDetail = d;
+  try { history.pushState({ detail: d }, ""); } catch (e) { /* historique indisponible */ }
+  rendreMaintenant();
+  window.scrollTo(0, 0);
+}
+
+function revenirEnsemble() {
+  if (history.state && history.state.detail) { history.back(); return; }
+  vueDetail = null;
+  rendreMaintenant();
+  window.scrollTo(0, scrollEnsemble);
+}
+
+// La feuille pose son entrée d'historique par-dessus le niveau courant, qu'elle
+// conserve : refermer la feuille rend la tâche ouverte, non la vue d'ensemble.
+function poserEtatFeuille() {
+  if (history.state && history.state.feuille) return;
+  try { history.pushState({ detail: vueDetail, feuille: true }, ""); }
+  catch (e) { /* historique indisponible */ }
+}
+
+// L'historique fait foi : l'affichage se remet dans l'état de l'entrée courante.
+window.addEventListener("popstate", () => {
+  const e = history.state || {};
+  if (!e.feuille) fermerFeuille();
+  const avant = vueDetail;
+  vueDetail = e.detail || null;
+  if (avant === vueDetail) return;
+  rendreMaintenant();
+  window.scrollTo(0, vueDetail ? 0 : scrollEnsemble);
+});
+
 function rendreMaintenant() {
   appliquerSaison();
   const zone = $("maintenant");
   zone.innerHTML = "";
+  $("barreNiveau").innerHTML = "";
+  $("pagerTache").innerHTML = "";
+  $("zoneMasquees").innerHTML = "";
+  $("videMoment").innerHTML = "";
+  if (obsSections) { obsSections.disconnect(); obsSections = null; }
+
   if (!sel.size) {
-    zone.innerHTML = '<p class="vide">Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour indiquer ce que vous cultivez.</p>';
+    vueDetail = null; majNiveau();
+    $("synthese").hidden = true;
+    $("piedVue").hidden = true;
+    $("videMoment").innerHTML = '<p class="vide">Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour indiquer ce que vous cultivez.</p>';
     return;
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
@@ -890,7 +954,7 @@ function rendreMaintenant() {
       ? '<span class="echeance urgente">dernière quinzaine</span>'
       : (fin <= 24 && !muet ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
     const tete = mode === "espace"
-      ? `<span class="pt" style="background:${phases[k].color}"></span>${esc(phases[k].label)}`
+      ? `<span class="pt" style="background:${teinteK(k)}"></span>${esc(phases[k].label)}`
       : nomAvecMarque(p);
     const texte = texteAction(p, k);
     const d = document.createElement("button");
@@ -908,22 +972,23 @@ function rendreMaintenant() {
   // Toutes les actions du moment, filtrées des masquées.
   const paires = [];
   let muettes = 0;
+  const muettesPar = {};
   ORDRE_MAINTENANT.forEach(k => {
     if (!phases[k] || !etatPhaseM[k]) return;
     mien.filter(p => actif(p, k)).forEach(p => {
       const muet = Boolean(sourdineActive(p, k));
-      if (muet) muettes++;
+      if (muet) { muettes++; muettesPar[k] = (muettesPar[k] || 0) + 1; }
       if (!muet || voirSourdines) paires.push({ p, k, muet });
     });
   });
 
   if (!paires.length) {
+    vueDetail = null; majNiveau();
     $("bilanMoment").innerHTML = "";
     $("synthese").hidden = true;
-    $("basculeVue").innerHTML = "";
-    $("zoneMasquees").innerHTML = "";
+    $("piedVue").hidden = true;
     majFiltresMoment();
-    zone.innerHTML = '<div class="vide-soigne">'
+    $("videMoment").innerHTML = '<div class="vide-soigne">'
       + '<svg viewBox="0 0 1024 1024" aria-hidden="true">'
       + '<path d="M 512 824 C 512 720 512 660 512 470" fill="none" stroke="currentColor" stroke-width="52" stroke-linecap="round"/>'
       + '<path d="M 512 620 C 466 522 372 448 268 452 C 300 560 386 632 512 620 Z" fill="currentColor" opacity=".55"/>'
@@ -936,11 +1001,12 @@ function rendreMaintenant() {
   rendreSynthese(paires);
 
   const audibles = paires.filter(x => !x.muet);
-  const urgentes = audibles.filter(x => etatFenetre(x.p, x.k) === "derniere").length;
+  // L'urgence est déjà portée par la phrase de tête et par chaque ligne, le
+  // décompte du pied ne mesure donc que la longueur de la liste.
   $("bilanMoment").innerHTML =
-    `<span><b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
-    + `<b>${new Set(audibles.map(x => x.p.id)).size}</b> plantes</span>`
-    + (urgentes ? `<span class="alerte-fin">${urgentes} en dernière quinzaine</span>` : "");
+    `<b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
+    + `<b>${new Set(audibles.map(x => x.p.id)).size}</b> plantes`;
+  $("piedVue").hidden = false;
 
   const bascule = $("basculeVue");
   bascule.innerHTML = "";
@@ -951,65 +1017,128 @@ function rendreMaintenant() {
     b.addEventListener("click", () => {
       vueMoment = v;
       try { localStorage.setItem("monjardin.vue", v); } catch (err) { /* stockage indisponible */ }
+      if (vueDetail && vueDetail.t === "tache") vueDetail = { t: "tout" };
       rendreMaintenant();
     });
     bascule.appendChild(b);
   });
+  majFiltresMoment();
 
-  const zm = $("zoneMasquees");
-  zm.innerHTML = "";
-  if (muettes || voirSourdines) {
+  // Un filtre qui vide la tâche ouverte ramène à la vue d'ensemble.
+  if (vueDetail && vueDetail.t === "tache" && !paires.some(x => x.k === vueDetail.k)) vueDetail = null;
+  majNiveau();
+  if (!vueDetail) return;
+
+  const carreTache = k => `<span class="pt-tache" style="background:${teinteK(k)}">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[k] || ""}</svg></span>`;
+  const titreTache = k => VERBE[k] || phases[k].label;
+
+  const boutonRetour = () => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "retour"; b.setAttribute("aria-label", "Vue d'ensemble");
+    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>';
+    b.addEventListener("click", revenirEnsemble);
+    return b;
+  };
+
+  // L'œil des masquées se pose au pied de la liste, là où le manque se constate.
+  // Le compte porte sur ce que l'on regarde : la tâche ouverte, ou la liste entière.
+  const poserMasquees = n => {
+    if (!n && !voirSourdines) return;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "bascule-sourdine" + (voirSourdines ? " active" : "");
-    b.title = voirSourdines ? "Cacher les actions masquées" : "Afficher les actions masquées";
-    b.innerHTML = OEIL_BARRE + (muettes ? `<span class="nb">${muettes}</span>` : "");
+    b.innerHTML = OEIL_BARRE + `<span>${voirSourdines ? "Cacher les actions masquées"
+      : n + " action" + (n > 1 ? "s" : "") + " masquée" + (n > 1 ? "s" : "")}</span>`;
     b.addEventListener("click", () => { voirSourdines = !voirSourdines; rendreMaintenant(); });
-    zm.appendChild(b);
-  }
-  majFiltresMoment();
-
-  // Toute section se replie et se déploie au clic sur son en-tête, dans les deux vues.
-  let rang = 0;
-  const carte = (titre, compteur, replieDefaut, couleur) => {
-    const ferme = Boolean(replieDefaut);
-    const c = document.createElement("div");
-    c.className = "carte-tache anime";
-    c.style.animationDelay = Math.min(rang++, 8) * 45 + "ms";
-    if (couleur) {
-      c.style.boxShadow = `inset 3px 0 0 ${couleur}`;
-      c.style.borderColor = teinte(couleur, .22);
-      c.style.setProperty("--ton-tache", teinte(couleur, .10));
-      c.style.setProperty("--couleur-tache", couleur);
-    }
-    c.innerHTML = `<h2 class="tete-section" role="button" tabindex="0" aria-expanded="${!ferme}">`
-      + `${titre}<span class="nb">${compteur}</span>`
-      + `<span class="chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9.5 12 15.5 18 9.5"/></svg></span>`
-      + `</h2><div class="corps-tache${ferme ? " replie" : ""}"></div>`;
-    const h = c.querySelector("h2"), corps = c.querySelector(".corps-tache");
-    const basculer = () => h.setAttribute("aria-expanded", String(!corps.classList.toggle("replie")));
-    h.addEventListener("click", basculer);
-    h.addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); basculer(); }
-    });
-    return c;
+    $("zoneMasquees").appendChild(b);
   };
 
+  const clesPresentes = ORDRE_MAINTENANT.filter(k => paires.some(x => x.k === k));
+
+  if (vueDetail.t === "tache") {
+    const k = vueDetail.k;
+    const lot = paires.filter(x => x.k === k);
+    const barre = $("barreNiveau");
+    barre.className = "barre-niveau";
+    $("niveauDetail").classList.remove("mode-tout");
+    barre.appendChild(boutonRetour());
+    const t = document.createElement("span");
+    t.className = "titre-niveau";
+    t.innerHTML = carreTache(k) + `<span class="nom-niveau">${esc(titreTache(k))}</span>`;
+    barre.appendChild(t);
+    const n = document.createElement("span");
+    n.className = "nb-niveau";
+    n.textContent = lot.length + (lot.length > 1 ? " plantes" : " plante");
+    barre.appendChild(n);
+
+    if (k === "floraison") {
+      const bloc = document.createElement("div");
+      bloc.className = "bloc-puces";
+      lot.forEach(x => {
+        const d = document.createElement("div");
+        d.className = "enveloppe-puce";
+        d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(x.p)}</button>`;
+        d.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(x.p));
+        bloc.appendChild(d);
+      });
+      zone.appendChild(bloc);
+    } else {
+      // Ce qui se termine passe en tête, le reste suit la date de fin puis l'alphabet.
+      lot.slice()
+        .sort((a, b) => (etatFenetre(b.p, k) === "derniere") - (etatFenetre(a.p, k) === "derniere")
+          || finFenetre(a.p, k) - finFenetre(b.p, k)
+          || a.p.nom.localeCompare(b.p.nom, "fr"))
+        .forEach(x => zone.appendChild(ligneAction(x.p, k, "tache")));
+    }
+    poserMasquees(muettesPar[k] || 0);
+
+    const pager = $("pagerTache");
+    const retour = document.createElement("button");
+    retour.type = "button"; retour.className = "pas";
+    retour.innerHTML = '<svg class="fl" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>'
+      + "<span>Vue d'ensemble</span>";
+    retour.addEventListener("click", revenirEnsemble);
+    pager.appendChild(retour);
+    const i = clesPresentes.indexOf(k);
+    const suivant = clesPresentes[(i + 1) % clesPresentes.length];
+    if (suivant && suivant !== k) {
+      const s = document.createElement("button");
+      s.type = "button"; s.className = "pas";
+      s.innerHTML = carreTache(suivant) + `<span>${esc(titreTache(suivant))}</span>`
+        + '<svg class="fl" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+      s.addEventListener("click", () => {
+        vueDetail = { t: "tache", k: suivant };
+        try { history.replaceState({ detail: vueDetail }, ""); } catch (e) { /* historique indisponible */ }
+        rendreMaintenant();
+        window.scrollTo(0, 0);
+      });
+      pager.appendChild(s);
+    }
+    return;
+  }
+
+  // ---- Liste complète, rail de sections collant ----
+  const barre = $("barreNiveau");
+  barre.className = "barre-niveau barre-rail";
+  $("niveauDetail").classList.add("mode-tout");
+  barre.appendChild(boutonRetour());
+  const rail = document.createElement("div");
+  rail.className = "rail";
+  barre.appendChild(rail);
+
+  const sections = [];
   if (vueMoment === "espace") {
-    // Un espace filtré ne doit afficher que lui, même si les plantes retenues
-    // appartiennent par ailleurs à d'autres espaces.
     const tous = espaces.map(z => ({ cle: z.id, nom: z.name }))
       .concat([{ cle: "0", nom: "Non classées" }]);
     const groupes = espaceChoisi === null ? tous : tous.filter(g => g.cle === espaceChoisi);
     groupes.forEach(g => {
       const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : espacesDe(p.id).indexOf(g.cle) !== -1;
-      const ids = [...new Set(paires.filter(x => dedans(x.p)).map(x => x.p.id))];
-      if (!ids.length) return;
       const lot = paires.filter(x => dedans(x.p));
-      const c = carte(esc(g.nom), `${ids.length} plantes, ${lot.length} actions`, false,
-        (espaces.find(z => z.id === g.cle) || {}).color || "#4C8C3F");
-      c.classList.add("carte-espace");
-      const corps = c.querySelector(".corps-tache");
+      if (!lot.length) return;
+      const ids = [...new Set(lot.map(x => x.p.id))];
+      const corps = document.createElement("div");
+      corps.className = "corps-section";
       ids.map(id => plantes.find(p => p.id === id))
         .sort((a, b) => a.nom.localeCompare(b.nom, "fr"))
         .forEach(p => {
@@ -1024,35 +1153,74 @@ function rendreMaintenant() {
           lot.filter(x => x.p.id === p.id).forEach(x => bloc.appendChild(ligneAction(p, x.k, "espace")));
           corps.appendChild(bloc);
         });
-      zone.appendChild(c);
+      sections.push({ nom: g.nom, teinte: (espaces.find(z => z.id === g.cle) || {}).color || "#4C8C3F",
+        compte: `${ids.length} plantes, ${lot.length} actions`, corps });
     });
-    return;
+  } else {
+    clesPresentes.forEach(k => {
+      const lot = paires.filter(x => x.k === k);
+      const corps = document.createElement("div");
+      corps.className = "corps-section";
+      if (k === "floraison") {
+        corps.classList.add("bloc-puces");
+        lot.forEach(x => {
+          const d = document.createElement("div");
+          d.className = "enveloppe-puce";
+          d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(x.p)}</button>`;
+          d.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(x.p));
+          corps.appendChild(d);
+        });
+      } else {
+        lot.slice()
+          .sort((a, b) => (etatFenetre(b.p, k) === "derniere") - (etatFenetre(a.p, k) === "derniere")
+            || finFenetre(a.p, k) - finFenetre(b.p, k)
+            || a.p.nom.localeCompare(b.p.nom, "fr"))
+          .forEach(x => corps.appendChild(ligneAction(x.p, k, "tache")));
+      }
+      sections.push({ cle: k, nom: titreTache(k), teinte: teinteK(k),
+        compte: String(lot.length), corps });
+    });
   }
 
-  ORDRE_MAINTENANT.forEach(k => {
-    const lot = paires.filter(x => x.k === k);
-    if (!lot.length) return;
-    const repliable = REPLIES_PAR_DEFAUT.indexOf(k) !== -1 || lot.length > 8;
-    const urgence = lot.some(x => etatFenetre(x.p, k) === "derniere");
-    const replie = repliable && !urgence;
-    const c = carte(`${picto(k)}${esc(phases[k].label)}`, lot.length, replie, phases[k].color);
-    const corps = c.querySelector(".corps-tache");
-    if (k === "floraison") {
-      corps.classList.add("bloc-puces");
-      lot.forEach(x => {
-        const d = document.createElement("div");
-        d.className = "enveloppe-puce";
-        d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(x.p)}</button>`;
-        d.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(x.p));
-        corps.appendChild(d);
-      });
-    } else {
-      lot.slice()
-        .sort((a, b) => finFenetre(a.p, k) - finFenetre(b.p, k) || a.p.nom.localeCompare(b.p.nom, "fr"))
-        .forEach(x => corps.appendChild(ligneAction(x.p, k, "tache")));
-    }
-    zone.appendChild(c);
+  const puces = [];
+  sections.forEach((s, i) => {
+    const bloc = document.createElement("section");
+    bloc.className = "section-liste";
+    const tete = document.createElement("div");
+    tete.className = "tete-liste";
+    tete.innerHTML = (s.cle ? carreTache(s.cle)
+      : `<span class="pt-tache" style="background:${s.teinte}"></span>`)
+      + `<span class="nom-niveau">${esc(s.nom)}</span>`
+      + `<span class="nb-niveau">${esc(s.compte)}</span>`;
+    bloc.appendChild(tete);
+    bloc.appendChild(s.corps);
+    zone.appendChild(bloc);
+
+    const puce = document.createElement("button");
+    puce.type = "button";
+    puce.className = "puce-rail" + (i === 0 ? " ici" : "");
+    puce.innerHTML = `<i style="background:${s.teinte}"></i>${esc(s.nom)}`;
+    puce.addEventListener("click", () => {
+      const y = bloc.getBoundingClientRect().top + window.scrollY - barre.offsetHeight - 6;
+      window.scrollTo({ top: y, behavior: "smooth" });
+    });
+    rail.appendChild(puce);
+    puces.push({ puce, bloc });
   });
+  poserMasquees(muettes);
+
+  // La puce du rail suit la section lue, et le rail la ramène à sa vue.
+  if (window.IntersectionObserver) {
+    obsSections = new IntersectionObserver(entrees => {
+      entrees.forEach(e => {
+        const t = puces.find(x => x.bloc === e.target);
+        if (!t || !e.isIntersecting) return;
+        puces.forEach(x => x.puce.classList.toggle("ici", x === t));
+        rail.scrollTo({ left: Math.max(0, t.puce.offsetLeft - 44), behavior: "smooth" });
+      });
+    }, { rootMargin: "-92px 0px -72% 0px", threshold: 0 });
+    puces.forEach(x => obsSections.observe(x.bloc));
+  }
 }
 
 /* ================== Écran 3 : planning ================== */
@@ -1125,7 +1293,7 @@ function segs(p) {
     const morceaux = it.s <= it.e ? [[it.s, it.e]] : [[it.s, 24], [1, it.e]];
     return morceaux.map(([a, b]) => {
       const g = (a - 1) / 24 * 100, w = (b - a + 1) / 24 * 100;
-      return `<span class="seg" style="left:${g}%;width:${w}%;background:${phases[it.k].color}" title="${esc(phases[it.k].label)}"></span>`;
+      return `<span class="seg" style="left:${g}%;width:${w}%;background:${teinteK(it.k)}" title="${esc(phases[it.k].label)}"></span>`;
     }).join("");
   }).join("") + `</div>`).join("");
 }
@@ -1753,6 +1921,7 @@ function ouvrirVue(vue) {
     + (f.sous ? `<span class="feuille-latin">${esc(f.sous)}</span>` : "");
   $("feuille-corps").innerHTML = `<div class="fiche-v2">${f.corps}</div>`;
   $("feuille-corps").scrollTop = 0;
+  poserEtatFeuille();
   $("voile").hidden = false;
   $("feuille").hidden = false;
   document.body.classList.add("fige");
@@ -1947,7 +2116,10 @@ function rendreSynthese(paires) {
   };
   const h = [];
   if (tete.length) {
-    const phrases = tete.map(t => `<b>${esc(t.g.verbe.toLowerCase())}</b> ${esc(bout(t.plantes))}`);
+    // Le verbe de la phrase de tête ouvre lui aussi sa tâche : une tâche dont
+    // toutes les plantes sont citées ici n'a pas de ligne en dessous.
+    const phrases = tete.map(t => `<button type="button" class="syn-verbe" data-tache="${esc(t.g.k)}">`
+      + `${esc(t.g.verbe.toLowerCase())}</button> ${esc(bout(t.plantes))}`);
     h.push(`<p class="syn-tete">En ce moment, ${phrases.join(" et ")}`
       + (tete[0].presse ? ' <span class="fin">avant la fin de la quinzaine</span>' : "") + ".</p>");
   }
@@ -1985,19 +2157,25 @@ function rendreSynthese(paires) {
     trop = lignes.filter(l => gardees.indexOf(l) === -1);
     lignes = lignes.filter(l => gardees.indexOf(l) !== -1);
   }
+  // Le compte porté par la ligne est celui de la tâche entière, il annonce donc
+  // exactement ce que le niveau de détail affichera.
+  const compteK = {};
+  audibles.forEach(x => { compteK[x.k] = (compteK[x.k] || 0) + 1; });
+  const CHEVRON = '<svg class="syn-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
   if (lignes.length) {
     h.push('<div class="syn-lignes">' + lignes.map(l =>
       `<button type="button" class="syn-ligne" data-tache="${esc(l.k)}">`
-      + `<span class="syn-pt" style="background:${TEINTE[l.k] || phases[l.k].color}">`
+      + `<span class="syn-pt" style="background:${teinteK(l.k)}">`
       + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[l.k] || ""}</svg></span>`
-      + `<span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span>`
+      + `<span class="syn-txt"><span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span> `
       + `<span class="l">${esc(texteLigne(l))}`
       + (l.presse ? ' <span class="fin">· dernière quinzaine</span>' : "")
-      + `</span></button>`).join("")
+      + `</span></span><span class="syn-nb">${compteK[l.k] || l.total}</span>${CHEVRON}</button>`).join("")
       + (trop.length ? `<button type="button" class="syn-ligne syn-plus" data-tache="">`
-        + `<span class="l">et ${trop.length} autre${trop.length > 1 ? "s" : ""} geste`
+        + `<span class="syn-pt syn-pt-vide"></span>`
+        + `<span class="syn-txt"><span class="l">et ${trop.length} autre${trop.length > 1 ? "s" : ""} geste`
         + `${trop.length > 1 ? "s" : ""} : ${esc(trop.map(l => (l.parts.length > 1 ? l.verbe : l.parts[0].verbe).toLowerCase()).join(", "))}`
-        + `</span></button>` : "")
+        + `</span></span><span class="syn-nb">${trop.reduce((a, l) => a + (compteK[l.k] || 0), 0)}</span>${CHEVRON}</button>` : "")
       + "</div>");
   }
 
@@ -2017,13 +2195,11 @@ function rendreSynthese(paires) {
 
   z.innerHTML = h.join("");
   z.hidden = false;
-  // Un clic sur une ligne restreint la liste du dessous à cette tâche.
-  z.querySelectorAll(".syn-ligne").forEach(b => b.addEventListener("click", () => {
+  // Un clic sur une ligne ouvre la tâche, la ligne de reste ouvre la liste complète.
+  z.querySelectorAll(".syn-ligne,.syn-verbe").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
     const k = b.dataset.tache;
-    if (!k) { ORDRE.forEach(x => etatPhaseM[x] = true); majFiltresMoment(); rendreMaintenant(); return; }
-    const seul = ORDRE.every(x => etatPhaseM[x] === (x === k));
-    ORDRE.forEach(x => etatPhaseM[x] = seul ? true : x === k);
-    majFiltresMoment(); rendreMaintenant();
+    ouvrirDetail(k ? { t: "tache", k } : { t: "tout" });
   }));
 }
 
@@ -2473,6 +2649,7 @@ function ouvrirFeuille(p) {
   brancherFiche(p);
   chargerEau(p).then(() => majEau(p)).catch(() => {});
   $("feuille-corps").scrollTop = 0;
+  poserEtatFeuille();
   $("voile").hidden = false;
   $("feuille").hidden = false;
   document.body.classList.add("fige");
@@ -2491,9 +2668,17 @@ function fermerFeuille() {
   setTimeout(() => { $("feuille").hidden = true; $("voile").hidden = true; }, 220);
 }
 
-sur("voile", "click", fermerFeuille);
-sur("fermerFeuille", "click", fermerFeuille);
-document.addEventListener("keydown", e => { if (e.key === "Escape") fermerFeuille(); });
+// La fermeture passe par l'historique quand la feuille y a posé son entrée,
+// pour que le geste de retour du téléphone et la croix aient le même effet.
+function sortirFeuille() {
+  if ($("feuille").hidden) return;
+  if (history.state && history.state.feuille) { history.back(); return; }
+  fermerFeuille();
+}
+
+sur("voile", "click", sortirFeuille);
+sur("fermerFeuille", "click", sortirFeuille);
+document.addEventListener("keydown", e => { if (e.key === "Escape") sortirFeuille(); });
 
 /* ================== Mise en sourdine ================== */
 
@@ -2626,3 +2811,5 @@ sur("basculeFiltresM", "click", function () {
   $("corpsFiltresM").hidden = !ouvert;
   this.setAttribute("aria-expanded", String(ouvert));
 });
+
+sur("btnTout", "click", () => ouvrirDetail({ t: "tout" }));

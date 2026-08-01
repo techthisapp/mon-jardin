@@ -1294,3 +1294,153 @@ body.fige{overflow:hidden}
 .syn-ligne .l{font-size:13.5px;line-height:1.4}
 .syn-pied{border-top:1px solid #F0EEE7;margin-top:13px;padding-top:12px}
 .bd-alerte{margin:0 0 10px}
+
+/* ================= Deux niveaux de lecture sur l'écran du moment ================= */
+
+/* ---------- Pied de la vue d'ensemble ---------- */
+.pied-vue{
+  display:flex;align-items:center;gap:4px;margin:13px 0 0;padding:0 4px;
+}
+.pied-vue .bilan-moment{
+  flex:1;min-width:0;margin:0;padding:0;display:block;
+  font-size:12.5px;color:#7A857C;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.pied-vue .bilan-moment b{color:var(--encre-doux);font-weight:600}
+.pied-vue .alerte-fin{color:var(--alerte)}
+.mini{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  border:0;background:none;padding:6px 6px;
+  font-family:inherit;font-size:12.5px;color:var(--encre-doux);
+}
+.mini svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;
+  stroke-linecap:round;stroke-linejoin:round}
+.mini .nb{
+  font-size:10.5px;font-weight:600;padding:1px 5px;border-radius:999px;
+  background:var(--terre);color:#fff;
+}
+.mini[aria-pressed="true"]{color:var(--terre)}
+.mini:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:6px}
+
+/* Le panneau de filtres n'existe plus que déplié, sous le pied. */
+.filtres-moment{border:0;background:none;padding:0;margin:10px 0 0}
+.filtres-moment #corpsFiltresM{
+  background:var(--papier-haut);border-radius:14px;padding:11px 13px;
+  margin:0;border-top:0;box-shadow:0 1px 3px rgba(20,30,25,.06);
+}
+.filtres-moment .bascule-vue{margin-top:1px}
+
+/* ---------- Barre de niveau, collante ---------- */
+.barre-niveau{
+  position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:11px;
+  margin:0 -16px 4px;padding:10px 16px;
+  background:rgba(244,243,238,.97);box-shadow:0 1px 0 var(--filet-clair);
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .barre-niveau{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+}
+.retour{
+  flex:0 0 auto;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
+  background:rgba(22,36,30,.06);display:grid;place-items:center;color:var(--encre);
+}
+.retour svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.1;
+  stroke-linecap:round;stroke-linejoin:round}
+.retour:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+.titre-niveau{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.pt-tache{
+  flex:0 0 auto;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+}
+.pt-tache svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.nom-niveau{
+  font-size:16px;font-weight:700;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.nb-niveau{flex:0 0 auto;font-size:12px;color:#8A968D}
+
+/* ---------- Rail des sections, mode tout voir ---------- */
+.barre-rail{gap:8px}
+.rail{
+  display:flex;gap:7px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;padding:1px 0;
+}
+.rail::-webkit-scrollbar{display:none}
+.puce-rail{
+  display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;cursor:pointer;
+  border:1px solid var(--filet);background:none;border-radius:999px;padding:6px 11px;
+  font-family:inherit;font-size:12.5px;color:var(--encre-doux);white-space:nowrap;
+}
+.puce-rail i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.puce-rail.ici{background:var(--encre);border-color:var(--encre);color:#EFEFE8;font-weight:600}
+.puce-rail:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+
+/* ---------- Sections à plat ---------- */
+/* Le rail dit la section lue, l'en-tête reste dans le flux : une seule barre
+   collante, et aucune ligne recouverte au défilement. */
+.section-liste{margin-bottom:4px}
+.section-liste + .section-liste{border-top:1px solid var(--filet);padding-top:4px}
+.tete-liste{display:flex;align-items:center;gap:10px;padding:16px 0 8px}
+.corps-section{padding:0}
+#niveauDetail .plante-groupe{
+  border:0;border-radius:0;background:none;margin:0;
+  border-top:1px solid var(--filet-clair);
+}
+#niveauDetail .plante-groupe:first-child{border-top:0}
+#niveauDetail .tete-plante{background:none;padding:12px 0 2px}
+#niveauDetail .tete-plante b{
+  font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.005em;
+}
+#niveauDetail .plante-groupe .glissiere{padding:0}
+#niveauDetail .plante-groupe .rangee-tache + .rangee-tache{border-top:1px solid #EFEDE5}
+
+/* ---------- Rangées d'action, sans panneau ---------- */
+#niveauDetail .rangee-tache + .rangee-tache{border-top:1px solid #E6E4DB}
+#niveauDetail .glissiere{background:var(--papier)}
+#niveauDetail .glissiere > .action{padding-block:13px;min-height:0;gap:3px}
+#niveauDetail .glissiere > .action b{
+  font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.005em;
+}
+#niveauDetail .glissiere > .action .dit-action{font-size:13.5px;line-height:1.45;color:var(--encre-doux)}
+#niveauDetail .action.a-derniere,
+#niveauDetail .action.a-ouverture{border-left:0;padding-left:0}
+/* Ce qui se termine se lit d'un coup d'œil, sans compter les lignes. */
+#niveauDetail .glissiere > .action.a-derniere{
+  background:#FBF1EE;margin:0 -12px;padding-inline:12px;border-radius:12px;
+}
+/* Au niveau d'une tâche la liste est courte, le conseil se lit en entier ;
+   en liste complète il reste tronqué, le texte intégral est dans la fiche. */
+#niveauDetail .glissiere > .action .dit-action{-webkit-line-clamp:none;display:block}
+#niveauDetail.mode-tout .glissiere > .action .dit-action{
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+#niveauDetail .bloc-puces{padding:10px 0 2px}
+
+/* ---------- Pied de tâche : masquées et pas suivant ---------- */
+#zoneMasquees{margin:14px 0 0;display:flex;justify-content:center}
+#zoneMasquees:empty{margin:0}
+#niveauDetail .bascule-sourdine{margin:0;font-size:12.5px;padding:7px 13px}
+.pager{display:flex;gap:9px;margin:16px 0 0}
+.pas{
+  flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+  background:var(--papier-haut);border:0;border-radius:14px;padding:13px 10px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--encre);
+  box-shadow:0 1px 5px rgba(20,30,25,.07);
+}
+.pas span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pas .pt-tache{width:20px;height:20px;border-radius:7px}
+.pas .pt-tache svg{width:12px;height:12px}
+.pas svg.fl{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.pas:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+
+/* ---------- Lignes de synthèse : compte et chevron ---------- */
+.syn-txt{flex:1;min-width:0}
+.syn-txt .v{margin-right:4px}
+.syn-nb{flex:0 0 auto;min-width:20px;text-align:right;font-size:12px;color:#8A968D}
+.syn-chev{flex:0 0 auto;width:15px;height:15px;fill:none;stroke:#A6B0A8;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.syn-pt-vide{background:#D7D5CA}
+.syn-verbe{
+  border:0;background:none;padding:0;font:inherit;font-weight:700;color:inherit;cursor:pointer;
+  text-decoration:underline;text-decoration-color:rgba(22,36,30,.22);text-underline-offset:4px;
+}
+.syn-verbe:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:4px}

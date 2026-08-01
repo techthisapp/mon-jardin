@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles.css?v=9d087d0652">
+<link rel="stylesheet" href="./styles.css?v=f1e7e1ac7b">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -55,31 +55,44 @@
   <div id="etat" class="etat" hidden></div>
 
   <section id="ec-maintenant">
-    <div class="bandeau-date">
-      <p class="date-jour" id="dateJour"></p>
-      <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
-    </div>
-    <div class="bandeau" id="bandeau" hidden></div>
-    <div class="synthese" id="synthese" hidden></div>
-    <div class="filtres filtres-moment">
-      <div class="barre-filtres">
-        <button class="chip" id="basculeFiltresM" type="button" aria-expanded="false" aria-controls="corpsFiltresM">Filtres<span class="nb" id="nbFiltresM" hidden></span></button>
-        <div class="bascule-vue" id="basculeVue"></div>
-        <div id="zoneMasquees"></div>
+    <div id="vueEnsemble">
+      <div class="bandeau-date">
+        <p class="date-jour" id="dateJour"></p>
+        <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
       </div>
-      <div id="corpsFiltresM" hidden>
-        <div class="ligne-filtre" id="ligneEspaceM" hidden>
-          <span class="etiq-filtre">Espace</span>
-          <div class="jeu-chips" id="chipsEspaceM"></div>
-        </div>
-        <div class="ligne-filtre">
-          <span class="etiq-filtre">Tâche</span>
-          <div class="jeu-chips" id="chipsPhaseM"></div>
+      <div class="bandeau" id="bandeau" hidden></div>
+      <div class="synthese" id="synthese" hidden></div>
+      <div id="videMoment"></div>
+      <div class="pied-vue" id="piedVue" hidden>
+        <span class="bilan-moment" id="bilanMoment"></span>
+        <button class="mini" id="btnTout" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>Tout voir</button>
+        <button class="mini" id="basculeFiltresM" type="button" aria-expanded="false" aria-controls="corpsFiltresM">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltresM" hidden></span></button>
+      </div>
+      <div class="filtres filtres-moment">
+        <div id="corpsFiltresM" hidden>
+          <div class="ligne-filtre">
+            <span class="etiq-filtre">Grouper</span>
+            <div class="bascule-vue" id="basculeVue"></div>
+          </div>
+          <div class="ligne-filtre" id="ligneEspaceM" hidden>
+            <span class="etiq-filtre">Espace</span>
+            <div class="jeu-chips" id="chipsEspaceM"></div>
+          </div>
+          <div class="ligne-filtre">
+            <span class="etiq-filtre">Tâche</span>
+            <div class="jeu-chips" id="chipsPhaseM"></div>
+          </div>
         </div>
       </div>
     </div>
-    <p class="bilan-moment" id="bilanMoment"></p>
-    <div id="maintenant"></div>
+    <div id="niveauDetail" hidden>
+      <div class="barre-niveau" id="barreNiveau"></div>
+      <div id="maintenant"></div>
+      <div id="zoneMasquees"></div>
+      <div class="pager" id="pagerTache"></div>
+    </div>
   </section>
 
   <section id="ec-planning" hidden>
@@ -220,7 +233,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=d6d46a12c2"></script>
+<script type="module" src="./app.js?v=75d86ed91f"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
