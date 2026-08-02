@@ -40,13 +40,21 @@ export default async function essai(navigateur) {
   j.section("feuillage");
   j.controle("glycine, feuillage caduc", glycine["Feuillage"] === "Caduc", glycine["Feuillage"]);
 
-  j.section("associations sans écho de l'usage");
+  j.section("voisinage, seulement ce qu'une source établit");
   const lavande = await lireBlocs(pg, "Lavande");
-  j.controle("lavande, bordure et rocaille retirées",
-    lavande["Associations"] === "Pied de rosier", lavande["Associations"]);
-  const angelique = await lireBlocs(pg, "Angélique");
-  j.controle("angélique, associations intactes faute de recoupement",
-    angelique["Associations"] === "Fond de massif, bord d'eau", angelique["Associations"]);
+  j.controle("lavande, aucune ligne, ses associations étaient de tradition",
+    !("Voisinage" in lavande), lavande["Voisinage"]);
+  const tomate = await lireBlocs(pg, "Tomate");
+  j.controle("tomate, l'œillet d'Inde est conservé avec son effet",
+    tomate["Voisinage"] === "Œillet d'Inde, ralentit l'installation de l'aleurode des serres",
+    tomate["Voisinage"]);
+  const framboise = await lireBlocs(pg, "Framboise");
+  j.controle("framboise, l'antagonisme est énoncé",
+    framboise["Voisinage"] === "À isoler des solanacées et du fraisier, verticilliose partagée",
+    framboise["Voisinage"]);
+  const menthe = await lireBlocs(pg, "Menthe");
+  j.controle("menthe, la plante traçante est signalée",
+    /^À isoler/.test(menthe["Voisinage"] || ""), menthe["Voisinage"]);
 
   j.section("rusticité, la nuance seule quand le seuil est connu");
   j.controle("lavande, la nuance sans la classe",

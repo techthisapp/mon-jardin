@@ -1802,21 +1802,6 @@ function nuanceRusticite(p) {
   return (p.gel === null || p.gel === undefined) ? t : "";
 }
 
-/* Compagnonnage et usage se recoupent encore sur les ornementales, où la
-   colonne des associations a servi à noter l'emplacement. La ligne
-   Associations ne redit pas un segment que la ligne Usage porte déjà. La base
-   conserve les deux, seul l'affichage évite l'écho. */
-function associationsHorsUsage(assoc, usage) {
-  if (!assoc) return "";
-  const norme = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
-  const deja = new Set(String(usage || "").split(",").map(norme).filter(Boolean));
-  const restants = String(assoc).split(",").map(s => s.trim())
-    .filter(s => s && !deja.has(norme(s)));
-  if (!restants.length) return "";
-  const t = restants.join(", ");
-  return t.charAt(0).toUpperCase() + t.slice(1);
-}
-
 function ficheBlocs(p) {
   const a = p.attr || {};
   /* Un troisième élément porte le texte du conseil. Il tient sous la valeur,
@@ -1848,7 +1833,10 @@ function ficheBlocs(p) {
        libellés du vocabulaire servent de repli quand elle manque. Les deux
        ensemble ne feraient que se répéter. */
     ["Usage", a.usage_note || a.usage],
-    ["Associations", associationsHorsUsage(p.assoc, a.usage_note || a.usage)],
+    /* Le voisinage ne porte plus que ce qu'une source établit, association
+       comme antagonisme. Les mentions d'emplacement ont rejoint l'usage et
+       les associations de tradition ont été retirées. */
+    ["Voisinage", p.assoc],
   ]);
   // La couleur de fleur n'a pas de ligne ici : la légende du ruban la nomme
   // déjà, avec sa fenêtre de floraison et ses pastilles.
