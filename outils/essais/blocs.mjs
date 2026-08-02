@@ -99,6 +99,13 @@ export default async function essai(navigateur) {
   j.controle("tomate, aucune jauge de butineurs",
     !jTomate.some(t => /nectar|pollen|butineur/i.test(t)), jTomate.join(", "));
 
+  j.section("parfum, l'organe et non l'intensité");
+  j.controle("lavande, la fleur et le feuillage",
+    lavande["Parfum"] === "Fleurs et feuillage", lavande["Parfum"]);
+  j.controle("glycine, la fleur seule", glycine["Parfum"] === "Fleurs", glycine["Parfum"]);
+  j.controle("tomate, aucune ligne Parfum, la source ne l'établit pas",
+    !("Parfum" in tomate), tomate["Parfum"]);
+
   j.section("rusticité, la nuance seule quand le seuil est connu");
   j.controle("lavande, la nuance sans la classe",
     lavande["Rusticité"] === "Craint l'humidité", lavande["Rusticité"]);
