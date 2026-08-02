@@ -421,6 +421,28 @@ Ce qu'une source établit, c'est l'organe parfumé. Le Plant Finder du Missouri 
 
 La fiche affiche l'organe à la ligne Parfum du bloc Au jardin, Fleurs, Feuillage ou Fleurs et feuillage.
 
+### Confrontation des colonnes de culture au Plant Finder
+
+Les 237 pages de taxon rapportées pour le parfum portent aussi Sun, Height et Family. Elles ont servi à confronter trois colonnes que la provenance ne nommait pas.
+
+L'exposition est compatible sur les 236 fiches où elle est renseignée, sans une seule contradiction. Le référentiel est souvent plus prescriptif que la source, cent dix fiches où il dit plein soleil quand elle dit du plein soleil à la mi-ombre, mais jamais hors de sa fourchette. Les deux colonnes ne répondent d'ailleurs pas à la même question, la source dit où la plante pousse, le référentiel dit où la planter.
+
+La hauteur est compatible à trente-cinq pour cent près sur 228 fiches. Les neuf écarts s'expliquent tous par l'objet mesuré et non par une erreur : la source mesure la plante montée à fleur quand le référentiel mesure la culture telle qu'on la récolte, radis, mâche, endive, ou la plante conduite au sol quand le référentiel la conduit sur support, concombre, cornichon, pois mange-tout, melon.
+
+La famille est identique sur 234 fiches. Les trois divergences portent sur Viburnum et Sambucus, que la source place en Adoxaceae quand le référentiel retient Viburnaceae.
+
+Le besoin en eau n'a pas été repris. L'échelle de la source compte cinq degrés contre quatre au vocabulaire, la correspondance demande donc des seuils et une validation, et la colonne alimente le calcul d'arrosage.
+
+Le résultat du contrôle est écrit dans la provenance de chaque fiche concernée.
+
+### Exceptions de contrôle
+
+Une table `controle_exceptions`, clé sur le code du contrôle et la plante, enregistre les divergences arbitrées avec le motif de l'arbitrage, et la vue `controle_coherence` les retire de son résultat. Une divergence acceptée cesse ainsi d'être un signal permanent sans être oubliée.
+
+Première entrée, la Baie de mai sur `floraison_hors_baseflor` : Baseflor décrit la sous-espèce sauvage de montagne, qui fleurit de mai à juillet, quand le référentiel décrit le camérisier cultivé, dont la floraison de mars et avril fait tout l'intérêt.
+
+Trois contrôles ont été ajoutés à la vue, qui gardent les acquis du jour : un organe parfumé sans provenance, une intensité de parfum réapparue, une cotation apicole sans provenance. Le contrôle `parfum_incoherent`, devenu sans objet, a été retiré.
+
 La colonne `nectar_season`, qui disait à quelle saison la ressource est offerte, a été vidée dans le même mouvement. Aucune source ne l'établissait, elle n'était affichée nulle part, et elle contredisait la fiche sur cinquante-six lignes où la ressource elle-même n'est plus affirmée. Le jour où un calendrier apicole la demandera, elle se déduira de la fenêtre de floraison, qui est sourcée, selon une convention à écrire.
 
 ## Les contrôles
