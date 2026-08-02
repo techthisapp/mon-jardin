@@ -693,7 +693,7 @@ Actions ouvertes dont la source est identifiée : le feuillage sur 127 fiches ho
 
 Le reste par ordre d'intérêt décroissant.
 
-**Les associations n'ont jamais été relues.** 312 fiches, 267 formulations, aucun contrôle. C'est la dernière zone de contenu intacte, et le compagnonnage mêle des faits établis à des affirmations qui ne résistent pas à l'examen.
+**Les associations sont relues à moitié.** Passage du 2 août sur les 312 fiches. La colonne mélange deux notions : environ deux tiers des valeurs nomment un emplacement, « Mur au sud » pour l'abricotier, et un tiers de vraies plantes compagnes. Un défaut de contenu a été corrigé, le fenouil figurait comme plante compagne de la chicorée frisée alors qu'il inhibe la croissance de nombreux légumes et se cultive à l'écart, source à l'appui. Le partage entre emplacement et compagnonnage n'a pas été appliqué : la règle automatique écrite pour le faire se trompe assez souvent pour abîmer du contenu juste, elle a été mesurée puis écartée. Reste entière la vérification des 114 fiches de compagnonnage, dont le préalable est de décider si le référentiel distingue une association documentée d'une association traditionnelle. Détail dans la note de projet `relecture-des-associations`.
 
 **La traçabilité est nominale.** Les conseils portent une source, mais seulement trente sources distinctes, sous forme de listes du type « Gerbeaud, Terre Vivante, Au Jardin, SNHF ». C'est une liste de ce qui a été consulté, pas une attestation vérifiable. Pour les affirmations chiffrées, une URL par affirmation et sa date de consultation changeraient la nature de la garantie. Ne jamais stocker le texte de la source, seulement le fait et le lien.
 
