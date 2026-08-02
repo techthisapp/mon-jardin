@@ -1757,12 +1757,18 @@ function ficheAnnee(p) {
     + (clim ? `<span class="f-sub">climat ${esc(clim.toLowerCase())}</span>` : "") + `</h3>${seg}</div>`
     + `<div class="f-forme f-ruban">${rubanSVG(p)}</div>`
     + `<div class="f-forme f-roue" hidden>${roueSVG(p)}</div>`);
-  const c = (p.couleurs || [])[0];
+  /* Le tableau des couleurs est rangé par dominance. Les deux premières sont
+     nommées, une seule laissait croire à une glycine blanche. */
+  const cs = (p.couleurs || []).slice(0, 2);
   const flo = (segsDe(p, "floraison") || [])[0];
-  if (c && flo) {
-    const [rempli, cerne] = FLEUR[c] || FLEUR.rose;
-    h.push(`<p class="f-legende"><i style="background:${rempli};border-color:${cerne}"></i>`
-      + `Fleurs ${esc(ADJ[c] || c)}, de ${demiTexte(flo[0])} à ${demiTexte(flo[1])}</p>`);
+  if (cs.length && flo) {
+    const pastille = c => {
+      const [rempli, cerne] = FLEUR[c] || FLEUR.rose;
+      return `<i style="background:${rempli};border-color:${cerne}"></i>`;
+    };
+    h.push(`<p class="f-legende">${cs.map(pastille).join("")}<span>`
+      + `Fleurs ${cs.map(c => esc(ADJ[c] || c)).join(" et ")}, `
+      + `de ${demiTexte(flo[0])} à ${demiTexte(flo[1])}</span></p>`);
   }
   h.push("</div>");
 
@@ -1782,8 +1788,13 @@ function ficheAnnee(p) {
 
 function ficheBlocs(p) {
   const a = p.attr || {};
-  const kv = rows => rows.filter(r => r[1]).map(r =>
-    `<dt>${esc(r[0])}</dt><dd>${marquerTermes(r[1])}</dd>`).join("");
+  /* Un troisième élément porte le texte du conseil. Il tient sous la valeur,
+     à gauche comme elle : un paragraphe aligné à droite se lit mal. */
+  const kv = rows => rows.filter(r => r[1] || r[2]).map(r =>
+    `<dt>${esc(r[0])}</dt><dd${r[2] ? ' class="avec-note"' : ""}>`
+    + (r[1] ? marquerTermes(r[1]) : "")
+    + (r[2] ? `<small class="kv-note">${marquerTermes(r[2])}</small>` : "")
+    + `</dd>`).join("");
   const bloc = (titre, rows) => {
     const c = kv(rows);
     return c ? `<section class="f-bloc"><h3>${esc(titre)}</h3><dl class="f-kv">${c}</dl></section>` : "";
@@ -1793,7 +1804,10 @@ function ficheBlocs(p) {
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
   ]) + bloc("Culture", [
     ["Sol", a.sol], ["Eau", a.arrosage], ["Fertilité", a.fertilisation],
-    ["Profondeur", p.prof], ["Pollinisation", a.pollinisation], ["Multiplication", a.multiplication],
+    ["Profondeur", p.prof], ["Pollinisation", a.pollinisation],
+    // Cent douze plantes portent un conseil de multiplication sans période de
+    // multiplication : sans cette ligne il ne serait affiché nulle part.
+    ["Multiplication", a.multiplication, p.guide.multiplication || ""],
   ]) + bloc("Au jardin", [
     ["Nectar", a.mellifere], ["Parfum", a.parfum], ["Fleurs", a.couleur],
     ["Feuillage", a.feuillage], ["Usage", a.usage], ["Associations", p.assoc],
@@ -1809,6 +1823,7 @@ function ficheHTML(p) {
       ${ad ? `<span class="f-chip">${esc(NIVEAUX[ad.level].court)} sous ce climat</span>` : ""}</div>
       ${jaugesFiche(p)}
       ${tox ? `<p class="f-tox"><span aria-hidden="true">&#9670;</span>${esc(p.attr.toxicite)}</p>` : ""}
+      ${p.conseil ? `<p class="f-intro">${marquerTermes(p.conseil)}</p>` : ""}
     </div>
     <div class="f-onglets" role="tablist">
       <button type="button" role="tab" class="actif" data-pan="moment">En ce moment</button>

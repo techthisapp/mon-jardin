@@ -1120,6 +1120,9 @@ body.fige{overflow:hidden}
 .f-seg button.actif{background:#fff;color:var(--f-ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .f-legende{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13px;color:var(--f-ink2)}
 .f-legende i{width:11px;height:11px;border-radius:3px;border:1px solid transparent;flex:0 0 auto}
+/* Deux couleurs se lisent comme une paire, non comme deux repères distincts. */
+.f-legende i + i{margin-left:-4px}
+.f-legende span{min-width:0}
 .f-txt{font-size:13.5px;color:var(--f-ink2)}
 .f-note{font-size:12.5px;color:var(--f-ink3);margin-top:6px}
 .f-vide{font-size:13.5px;color:var(--f-ink3);padding:6px 0}
@@ -1159,6 +1162,7 @@ body.fige{overflow:hidden}
 .f-kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13.5px}
 .f-kv dt{color:var(--f-ink3)}
 .f-kv dd{text-align:right;color:var(--f-ink)}
+.kv-note{display:block;text-align:left;margin-top:3px;font-size:12.5px;line-height:1.45;color:var(--f-ink2)}
 
 /* Le nom ouvre la fiche, le rond coche : la flèche annonce le premier geste. */
 .item .voir-fiche{margin-left:auto;color:var(--f-ink3);display:flex;align-items:center}
@@ -1564,3 +1568,6 @@ body.fige{overflow:hidden}
 }
 .glose b{display:block;font-size:12.5px;font-weight:600;color:var(--encre)}
 .glose p{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--encre-doux)}
+
+/* Le caractère général de la plante, en tête de fiche. */
+.f-intro{margin-top:10px;font-size:13.5px;line-height:1.5;color:var(--encre-doux)}

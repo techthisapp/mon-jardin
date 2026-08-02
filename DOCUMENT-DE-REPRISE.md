@@ -533,6 +533,22 @@ Les rangées de l'écran du moment ne portent pas le repérage. Ce sont des bout
 
 La définition s'ouvre sous le mot, dans le repère du corps de la feuille pour qu'elle suive le défilement, bornée à la largeur de la feuille et basculée au-dessus du mot quand le bas est trop proche. Elle porte le terme canonique, non la forme rencontrée : toucher « Marcotter » affiche l'entrée marcottage.
 
+### Écarts entre la base et l'affichage
+
+Un audit du 2 août a cherché les données présentes en base mais fausses, tronquées ou invisibles à l'écran, dans la famille du défaut de la glycine. Cinq familles ont été passées par requête, puis les cas retenus confirmés en rendant de vraies lignes de production dans la fiche et en lisant le texte effectivement affiché. Quatre défauts en sont sortis, tous corrigés.
+
+**Le conseil général de la plante n'était affiché nulle part.** La colonne `plants.advice` est renseignée sur les 315 plantes, quatre-vingt-un caractères en moyenne. Elle était chargée dans `p.conseil` et utilisée par aucun rendu. Elle paraît désormais en tête de fiche, sous les jauges et sous l'avertissement de toxicité, visible depuis les deux onglets puisqu'elle vaut toute l'année.
+
+**Cent douze conseils de multiplication étaient inatteignables.** Ces plantes portent un conseil rattaché à la tâche multiplication sans avoir de période de multiplication, et l'écran ne parcourt que les tâches ayant une période. Le contenu porte sur la production de semences. Le conseil paraît désormais dans le bloc Culture de la fiche, sous la valeur de la ligne Multiplication, pour toutes les plantes et non seulement pour les cent douze : la règle est plus simple et le texte reste consultable hors de sa fenêtre.
+
+**La couleur de fleur affichée n'était pas la dominante.** Cent vingt-trois plantes portent plusieurs couleurs. Le tableau `flower_colors` était rangé dans l'ordre de la palette, la dominance n'étant portée que par `flower_color_note`, jamais lue. L'application n'affichant que la première couleur, une glycine « Mauve, blanc » sortait en fleurs blanches. Le tableau a été réordonné sur la note par la migration `couleurs_de_fleur_par_dominance`, soixante-quinze lignes touchées dont soixante-dix changent de couleur de tête, et la légende nomme maintenant les deux premières couleurs avec leurs deux pastilles.
+
+**Deux entrées archivées gardaient un texte unique pour deux fenêtres.** La mélisse et le souci, remplacés au catalogue par la mélisse citronnelle et le souci officinal, avaient encore deux périodes réelles servies par un texte mentionnant les deux saisons. Quatre conseils propres ont été écrits. Le catalogue visible était déjà correct sur ce point.
+
+Sont passées sans défaut : plus aucun conseil général en double, aucun conseil de période orphelin, aucune clé de vocabulaire introuvable, aucune valeur d'énumération inconnue de l'application pour les tâches, typologies, catégories, niveaux climatiques et couleurs, aucune perte entre `spacing` et `spacing_cm` ni entre `depth` et `depth_cm`.
+
+Une fausse alerte mérite d'être notée : trois cent cinquante-deux périodes de protection paraissaient dépourvues de conseil propre alors qu'il s'agit de déclinaisons par climat d'une même fenêtre, `plant_phases.climates` portant un climat par ligne. Tout comptage de périodes doit neutraliser cette déclinaison, faute de quoi il compte cinq fois la même fenêtre.
+
 ### Registre visuel
 
 L'identité repose sur trois familles IBM Plex, Sans, Sans Condensed et Mono, et sur une palette de pierre froide. Trois principes ont été posés lors de la reprise graphique.
@@ -598,6 +614,8 @@ Les enregistrements d'événements passent par une fonction qui ignore un élém
 **Les marges sur un conteneur à positionnement absolu.** Une marge horizontale posée sur la rangée d'un tiroir de glissement décale la glissière et découvre le tiroir en permanence. La marge doit aller sur l'élément qui glisse.
 
 **Les règles de zone sûre.** `padding-left: env(safe-area-inset-left)` écrase la marge définie plus haut et vaut zéro en portrait. Utiliser `calc(16px + env(...))`.
+
+**Vérifier la base sans vérifier l'écran.** Une donnée juste en base peut n'arriver nulle part, ou arriver fausse. Trois cas l'ont montré : le conseil général chargé et jamais rendu, le conseil de multiplication rattaché à une tâche sans période donc jamais parcourue, la couleur de fleur rangée dans l'ordre de la palette alors que l'écran n'en montre qu'une. Un contrôle de contenu doit lire le texte effectivement affiché, pas seulement la ligne qui l'alimente. Le fichier d'essai `ecarts.js` sert des lignes de production à la doublure et compare l'affiché à l'attendu.
 
 **GitHub Pages.** La reconstruction prend parfois plusieurs minutes, et la file peut se bloquer : une poussée est restée sans reconstruction pendant plus de quinze minutes, débloquée par un commit vide. Vérifier que le statut de la dernière publication vaut `built` sur le bon commit avant d'annoncer un déploiement.
 
