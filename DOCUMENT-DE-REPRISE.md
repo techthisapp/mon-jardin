@@ -130,7 +130,8 @@ Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par
 | `planting_mode` | plantation | 315 |
 | `toxicity`, `toxicity_note` | toxicite | 315 |
 | `wintering` | hivernage | 209 |
-| `nectar`, `nectar_season` | nectar, nectar_saison | 99, toutes sourcées |
+| `nectar` | nectar | 99, toutes sourcées |
+| `nectar_season` | nectar_saison | 0, aucune source ne l'établit |
 | `pollen` | pollen | 99, toutes sourcées |
 | `fragrance` | parfum | 0, aucune base ne cote l'intensité |
 | `fragrance_organ` | parfum_organe | 68, toutes sourcées |
@@ -417,6 +418,8 @@ L'intensité du parfum n'est cotée par aucune base. La colonne `fragrance` est 
 Ce qu'une source établit, c'est l'organe parfumé. Le Plant Finder du Missouri Botanical Garden publie `Flower: Fragrant` et `Leaf: Fragrant`, qui peuvent être cochés ensemble. Les 315 fiches y ont été confrontées une à une : 237 sont présentes, 68 portent un organe établi, 169 sont présentes sans que la source coche l'attribut, ce que la provenance énonce désormais pour éviter de refaire le travail, et 78 n'ont pas de correspondance.
 
 La fiche affiche l'organe à la ligne Parfum du bloc Au jardin, Fleurs, Feuillage ou Fleurs et feuillage.
+
+La colonne `nectar_season`, qui disait à quelle saison la ressource est offerte, a été vidée dans le même mouvement. Aucune source ne l'établissait, elle n'était affichée nulle part, et elle contredisait la fiche sur cinquante-six lignes où la ressource elle-même n'est plus affirmée. Le jour où un calendrier apicole la demandera, elle se déduira de la fenêtre de floraison, qui est sourcée, selon une convention à écrire.
 
 ## Les contrôles
 
