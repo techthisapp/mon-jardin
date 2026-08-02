@@ -1,6 +1,7 @@
 /* Blocs d'attributs de la fiche : usage lu dans sa colonne, feuillage lu dans
-   la sienne, rusticité réduite à ce que la jauge de gel n'énonce pas, et
-   associations débarrassées de l'écho de l'usage. */
+   la sienne, rusticité réduite à ce que la jauge de gel n'énonce pas,
+   associations débarrassées de l'écho de l'usage, et ressource pour les
+   butineurs limitée aux plantes que la liste Val'hor cote. */
 import { ouvrirContexte, journal, catalogueAvecProduction, PRODUCTION,
          ouvrirListeDesPlantes, ouvrirFiche, fermerFiche, ongletAnnee, net } from "./commun.mjs";
 
@@ -18,6 +19,14 @@ async function lireBlocs(pg, nom) {
   }
   await fermerFiche(pg);
   return paires;
+}
+
+/* Les libellés des jauges de l'onglet du moment, dans leur ordre d'affichage. */
+async function lireJauges(pg, nom) {
+  await ouvrirFiche(pg, nom);
+  const t = await pg.locator(".f-jauges .f-jt").allInnerTexts();
+  await fermerFiche(pg);
+  return t.map(net);
 }
 
 export default async function essai(navigateur) {
@@ -74,6 +83,21 @@ export default async function essai(navigateur) {
   j.controle("aucune note de voisinage sur une plante qui n'en porte pas",
     await pg.locator(".f-vois").count() === 0);
   await fermerFiche(pg);
+
+  j.section("nectar et pollen, seulement là où une source cote la plante");
+  j.controle("lavande, la ligne Nectar porte le libellé du vocabulaire",
+    lavande["Nectar"] === "Mellifère", lavande["Nectar"]);
+  j.controle("tomate, aucune ligne Nectar, la liste ne la cote pas",
+    !("Nectar" in tomate), tomate["Nectar"]);
+  const jauges = await lireJauges(pg, "Lavande");
+  j.controle("lavande, la jauge annonce le nectar seul",
+    jauges.indexOf("Surtout du nectar") !== -1, jauges.join(", "));
+  const lierre = await lireJauges(pg, "Lierre");
+  j.controle("lierre, la jauge annonce les deux ressources",
+    lierre.indexOf("Nectar et pollen") !== -1, lierre.join(", "));
+  const jTomate = await lireJauges(pg, "Tomate");
+  j.controle("tomate, aucune jauge de butineurs",
+    !jTomate.some(t => /nectar|pollen|butineur/i.test(t)), jTomate.join(", "));
 
   j.section("rusticité, la nuance seule quand le seuil est connu");
   j.controle("lavande, la nuance sans la classe",
