@@ -56,6 +56,25 @@ export default async function essai(navigateur) {
   j.controle("menthe, la plante traçante est signalée",
     /^À isoler/.test(menthe["Voisinage"] || ""), menthe["Voisinage"]);
 
+  j.section("le voisinage arrive au moment de choisir la place");
+  await ouvrirFiche(pg, "Fraise");
+  const fraise = net(await pg.locator(".f-pan-moment").innerText());
+  j.controle("fraise, le voisinage suit le geste de plantation",
+    /Voisinage\s*Ail, réduit les acariens/.test(fraise),
+    (fraise.match(/Voisinage[^.]{0,60}/) || [""])[0]);
+  const sousPlantation = await pg.evaluate(() => {
+    const v = document.querySelector(".f-vois");
+    if (!v) return null;
+    return v.closest(".f-acte").querySelector("h4").textContent;
+  });
+  j.controle("il est rattaché à la plantation et non à une autre tâche",
+    /Plantation|Semis/.test(sousPlantation || ""), sousPlantation);
+  await fermerFiche(pg);
+  await ouvrirFiche(pg, "Buddleia");
+  j.controle("aucune note de voisinage sur une plante qui n'en porte pas",
+    await pg.locator(".f-vois").count() === 0);
+  await fermerFiche(pg);
+
   j.section("rusticité, la nuance seule quand le seuil est connu");
   j.controle("lavande, la nuance sans la classe",
     lavande["Rusticité"] === "Craint l'humidité", lavande["Rusticité"]);

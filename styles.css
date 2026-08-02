@@ -1571,3 +1571,10 @@ body.fige{overflow:hidden}
 
 /* Le caractère général de la plante, en tête de fiche. */
 .f-intro{margin-top:10px;font-size:13.5px;line-height:1.5;color:var(--encre-doux)}
+
+/* Le voisinage, rappelé au moment de choisir la place. */
+.f-vois{margin-top:6px;font-size:12.5px;line-height:1.45;color:var(--f-ink2)}
+.f-vois span{
+  display:inline-block;margin-right:6px;padding:1px 6px;border-radius:4px;
+  background:var(--panneau);color:var(--f-ink3);font-size:11.5px;
+}

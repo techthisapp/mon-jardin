@@ -811,6 +811,164 @@
   }
  },
  {
+  "id": "97a865e7-4539-460b-ba24-5b628e3a3b25",
+  "slug": "fraise",
+  "name": "Fraise",
+  "category": "Petits fruits",
+  "typology": "Fruits",
+  "spacing": "30 x 40 cm",
+  "depth": "collet affleurant",
+  "companions": "Ail, réduit les acariens tétranyques du fraisier",
+  "advice": "Plantation d'automne conseillée pour une récolte dès le printemps suivant. Renouveler les pieds tous les trois ans.",
+  "attributes": {
+   "gel": "-20 degrés",
+   "sol": "Ordinaire",
+   "type": "Herbacée",
+   "usage": "Potée, jardinière, Suspension, Couvre-sol",
+   "parfum": "Sans parfum notable",
+   "taille": "Retirer stolons et vieilles feuilles, renouveler tous les trois ans",
+   "hauteur": "20 à 30 cm",
+   "recolte": "Dès la première année",
+   "arrosage": "Régulier",
+   "mellifere": "Mellifère",
+   "rusticite": "Rustique",
+   "exposition": "Soleil ou mi-ombre",
+   "usage_note": "Potée, suspension, couvre-sol du potager",
+   "fertilisation": "Apport modéré",
+   "pollinisation": "Autofertile",
+   "multiplication": "Semis"
+  },
+  "is_active": true,
+  "replaced_by": null,
+  "phases": {
+   "plant": [
+    [
+     7,
+     9,
+     null,
+     534
+    ],
+    [
+     15,
+     20,
+     null,
+     533
+    ]
+   ],
+   "taille": [
+    [
+     15,
+     18,
+     null,
+     537
+    ]
+   ],
+   "recolte": [
+    [
+     11,
+     19,
+     null,
+     536
+    ]
+   ],
+   "floraison": [
+    [
+     7,
+     12,
+     null,
+     535
+    ]
+   ],
+   "protection": [
+    [
+     17,
+     20,
+     [
+      "montagnard"
+     ],
+     2198
+    ]
+   ],
+   "fertilisation": [
+    [
+     3,
+     6,
+     null,
+     1525
+    ],
+    [
+     13,
+     16,
+     null,
+     2366
+    ]
+   ],
+   "multiplication": [
+    [
+     13,
+     18,
+     null,
+     1377
+    ]
+   ]
+  },
+  "guide": {
+   "plant": "Planter de préférence en automne, collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
+   "taille": "Retirer les stolons non conservés et les vieilles feuilles après la récolte, pour concentrer la plante sur ses couronnes.",
+   "recolte": "Cueillir bien mûres avec le pédoncule, tôt le matin. Renouveler la plantation tous les trois ans.",
+   "floraison": "Une gelée pendant la floraison noircit le cœur de la fleur, qui ne donnera aucun fruit. Couvrir d'un voile les nuits claires suffit à l'éviter. Floraison mellifère, elle offre à la fois du nectar et du pollen.",
+   "protection": "Rustique jusqu'à vingt degrés sous zéro, la fraise ne craint pas le froid. Le paillage posé avant l'hiver sert à tenir les fruits hors de la boue et à limiter le déchaussement du collet par le gel, non à la protéger.",
+   "fertilisation": "Apport de compost après la récolte, en juillet. C'est à ce moment que la plante forme ses boutons de l'année suivante. Besoin moyen, un apport annuel de compost mûr couvre la saison.",
+   "multiplication": "Marcotter les stolons dans des godets enterrés à partir de juillet, sevrer après enracinement. La production chute après trois ans, renouveler la plantation à ce rythme."
+  },
+  "latin": "Fragaria x ananassa",
+  "family": "Rosaceae",
+  "genus": "Fragaria",
+  "spacing_cm": 30,
+  "row_cm": 40,
+  "height_min_cm": 20,
+  "height_max_cm": 30,
+  "depth_cm": null,
+  "life_cycle": "vivace",
+  "habit": "herbacee",
+  "conduite": null,
+  "hardiness": "rustique",
+  "frost_min_c": -20,
+  "wintering": "en_terre",
+  "exposure": "soleil_mi_ombre",
+  "exposure_note": "la mi-ombre est tolérée",
+  "soil": "ordinaire",
+  "soil_note": "Compost à la plantation, apports au printemps",
+  "fertility_need": "moyenne",
+  "water_need": "regulier",
+  "water_note": "Régulier, sans mouiller les fruits",
+  "propagation": "semis",
+  "planting_mode": "plant",
+  "toxicity": "aucune",
+  "toxicity_note": null,
+  "nectar": "moyen",
+  "nectar_season": null,
+  "fragrance": "nul",
+  "fragrance_organ": null,
+  "pollination": "autofertile",
+  "first_harvest_year": 0,
+  "pollen": "moyen",
+  "flower_colors": [
+   "blanc",
+   "jaune"
+  ],
+  "flower_color_note": null,
+  "floraison_pic_q": null,
+  "floraison_pic_note": null,
+  "nom_article": "la",
+  "guide_periode": {
+   "533": "Plantation de fin d'été. Le sol est encore chaud, la touffe s'enracine avant l'hiver et démarre plus vite au printemps suivant. Planter collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
+   "534": "Plantation de printemps. La reprise est rapide. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
+   "1525": "Apport de fin d'hiver, avant le démarrage. Un compost bien décomposé en surface suffit, l'azote frais à ce stade pousse au feuillage et retarde la fructification. Besoin moyen, un apport annuel de compost mûr couvre les besoins.",
+   "2366": "Apport d'entretien, en pleine production. Fractionner en petites doses plutôt qu'en une seule fois, l'excès d'azote part en feuillage. Apport de compost après la récolte, en juillet. C'est à ce moment que la plante forme ses boutons de l'année suivante. Besoin moyen, un apport annuel de compost mûr couvre la saison."
+  }
+ },
+ {
   "id": "64b4cce9-c75f-49e9-9403-5c322f904a9b",
   "slug": "glycine",
   "name": "Glycine",
@@ -1348,6 +1506,125 @@
    "724": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine et l'arrosage se poursuit jusqu'aux pluies d'automne. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets.",
    "725": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud, les racines s'installent avant l'hiver et le premier été demande beaucoup moins d'arrosage. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets."
   }
+ },
+ {
+  "id": "2577ff13-5eaa-4b59-9340-59c8f81be44e",
+  "slug": "radis",
+  "name": "Radis",
+  "category": "Racines",
+  "typology": "Légumes",
+  "spacing": "3 x 12 cm",
+  "depth": "1 cm",
+  "companions": "À isoler des autres brassicacées, hernie du chou partagée",
+  "advice": "Semer une courte ligne chaque semaine. Arroser souvent pour éviter le piquant.",
+  "attributes": {
+   "gel": "-7 degrés",
+   "sol": "Frais",
+   "type": "Herbacée",
+   "parfum": "Sans parfum notable",
+   "taille": "Aucune",
+   "hauteur": "15 à 25 cm",
+   "arrosage": "Modéré",
+   "mellifere": "Mellifère",
+   "rusticite": "Cycle court, peu concerné",
+   "exposition": "Soleil ou mi-ombre",
+   "fertilisation": "Peu exigeante",
+   "multiplication": "Semis"
+  },
+  "is_active": true,
+  "replaced_by": null,
+  "phases": {
+   "plant": [
+    [
+     5,
+     18,
+     null,
+     2429
+    ]
+   ],
+   "terre": [
+    [
+     5,
+     18,
+     null,
+     1011
+    ]
+   ],
+   "recolte": [
+    [
+     7,
+     20,
+     null,
+     1012
+    ]
+   ],
+   "protection": [
+    [
+     17,
+     20,
+     [
+      "montagnard"
+     ],
+     2295
+    ]
+   ],
+   "fertilisation": [
+    [
+     5,
+     10,
+     null,
+     1569
+    ]
+   ]
+  },
+  "guide": {
+   "plant": "Éclaircir peu après la levée et arroser régulièrement, sans excès pour éviter des radis creux. Renouveler le semis toutes les deux à trois semaines pour une production continue. Espacer les plants de 3 cm sur le rang et de 12 cm entre rangs, à 1 cm de profondeur.",
+   "terre": "Semer une courte ligne chaque semaine pour étaler. Éclaircir tôt et arroser souvent, la sécheresse les rend piquants et creux. Sol frais, qui ne se dessèche pas au cœur de l'été.",
+   "recolte": "Arracher jeunes et réguliers, dès qu'ils ont grossi. Un radis laissé trop longtemps devient fibreux et monte.",
+   "protection": "Récolter ou protéger avant les fortes gelées. Un voile d'hivernage ou un tunnel prolonge la récolte de plusieurs semaines.",
+   "fertilisation": "Ne jamais apporter de fumier frais, il fait fourcher les racines. Compost bien décomposé l'automne précédent. Besoin faible, un seul apport modéré par an, l'excès nuisant plus qu'il ne profite.",
+   "multiplication": "Allogame, se croise avec les autres radis. Bisannuel pour les variétés d'hiver, annuel pour les radis de tous les mois."
+  },
+  "latin": "Raphanus sativus",
+  "family": "Brassicaceae",
+  "genus": "Raphanus",
+  "spacing_cm": 3,
+  "row_cm": 12,
+  "height_min_cm": 15,
+  "height_max_cm": 25,
+  "depth_cm": 1,
+  "life_cycle": "annuelle",
+  "habit": "herbacee",
+  "conduite": null,
+  "hardiness": "rustique",
+  "frost_min_c": -7,
+  "wintering": null,
+  "exposure": "soleil_mi_ombre",
+  "exposure_note": "mi-ombre aux heures chaudes de l'été",
+  "soil": "frais",
+  "soil_note": "Sol frais sans fumure fraîche",
+  "fertility_need": "faible",
+  "water_need": "modere",
+  "water_note": "Fréquent, un sol sec les rend piquants",
+  "propagation": "semis",
+  "planting_mode": "semis",
+  "toxicity": "aucune",
+  "toxicity_note": null,
+  "nectar": "moyen",
+  "nectar_season": null,
+  "fragrance": "nul",
+  "fragrance_organ": null,
+  "pollination": null,
+  "first_harvest_year": null,
+  "pollen": "moyen",
+  "flower_colors": [
+   "blanc"
+  ],
+  "flower_color_note": null,
+  "floraison_pic_q": null,
+  "floraison_pic_note": null,
+  "nom_article": "le",
+  "guide_periode": {}
  },
  {
   "id": "d7ab4f6d-b604-4b38-811d-f230dbe41e28",

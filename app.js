@@ -257,6 +257,8 @@ const MOIS_ABR = ["janv","févr","mars","avr","mai","juin","juil","août","sept"
 const MOIS_PLEIN = ["janvier","février","mars","avril","mai","juin","juillet","août",
   "septembre","octobre","novembre","décembre"];
 
+// Les deux tâches où l'on choisit la place de la plante.
+const VOISINAGE_AU_GESTE = ["plant", "terre"];
 const PIPS_EXPO = { soleil: 3, soleil_mi_ombre: 3, mi_ombre: 2, mi_ombre_ombre: 2, ombre: 1 };
 const PIPS_EAU  = { faible: 1, modere: 2, regulier: 3, soutenu: 3 };
 const PIPS_BUT  = { nul: 0, faible: 1, moyen: 2, fort: 3 };
@@ -1739,8 +1741,15 @@ function ficheMoment(p) {
     h.push('<div class="f-gestes">');
     gestes.forEach(a => {
       const t = texteAction(p, a.k), c = TEINTE[a.k];
+      /* Le voisinage se décide au moment où l'on choisit la place, donc à la
+         plantation et au semis en pleine terre. Il arrive là plutôt que de
+         rester dans la liste d'attributs, que l'on ne consulte pas la bêche
+         à la main. */
+      const vois = VOISINAGE_AU_GESTE.indexOf(a.k) !== -1 && p.assoc ? p.assoc : "";
       h.push(`<div class="f-acte"><div class="f-ai" style="color:${c}"><svg viewBox="0 0 20 20">${GLF[PHF[a.k][2]]}</svg></div><div>`
-        + `<h4>${esc(phases[a.k].label)}</h4>${avancement(a.t, c)}${t ? `<p>${marquerTermes(t)}</p>` : ""}</div></div>`);
+        + `<h4>${esc(phases[a.k].label)}</h4>${avancement(a.t, c)}${t ? `<p>${marquerTermes(t)}</p>` : ""}`
+        + (vois ? `<p class="f-vois"><span>Voisinage</span>${marquerTermes(vois)}</p>` : "")
+        + `</div></div>`);
     });
     h.push("</div>");
   }
