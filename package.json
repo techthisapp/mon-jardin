@@ -1,0 +1,15 @@
+{
+  "name": "mon-jardin",
+  "version": "1.0.0",
+  "description": "Calendrier de jardin, application web installable",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "verification": "node outils/verification.mjs",
+    "corriger": "node outils/verification.mjs --corriger",
+    "essais": "node outils/essais/tous.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

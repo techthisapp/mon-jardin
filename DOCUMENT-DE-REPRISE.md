@@ -408,6 +408,16 @@ Les valeurs sourcées viennent des listes apicoles, Bienenroute, la table de Gem
 
 ## Les contrôles
 
+### Essais de bout en bout
+
+`npm run essais` sert le dépôt sur un port local, ouvre un navigateur et joue neuf suites, cent neuf contrôles, en rendant un code de sortie non nul au premier échec. Une seule suite se joue par `npm run essais -- glossaire`. Le détail est dans `outils/essais/README.md`.
+
+Le client Supabase est remplacé par une doublure qui sert des instantanés figés, les appels météo sont détournés vers un jeu de trente jours passés et sept jours de prévision, et l'horloge du navigateur est décalée sur le 2 août 2026 par un écart constant, de sorte que les contrôles portant sur la tâche du moment ne changent pas de résultat au fil des saisons. Les minuteries de l'interface continuent de tourner, seule la date de départ change.
+
+Ces essais ont vécu dans un répertoire de travail hors dépôt pendant deux jours, ce qui les exposait à disparaître avec la session. Un essai qui n'est pas versionné n'existe pas. Ils sont désormais dans `outils/essais/` avec leurs données figées.
+
+Un essai qui n'affirme rien ne sert à rien non plus : cinq des huit harnais d'origine se contentaient d'imprimer un résultat à relire, ils ont été convertis en affirmations vérifiables. Les erreurs de page relevées par le navigateur comptent comme des échecs.
+
 ### Contrôles de contenu
 
 `select * from controle_bilan` donne le nombre de cas par contrôle et par gravité, `controle_detail` liste chaque cas.
@@ -691,7 +701,7 @@ Le reste par ordre d'intérêt décroissant.
 
 **Aucun retour du terrain.** L'application sait quand une tâche est cochée. Un écart systématique entre la date réelle et la fenêtre annoncée est le seul signal qui ne vienne pas d'une source écrite.
 
-**Aucun test de bout en bout.** Le contrôle avant dépôt est purement statique. Rien ne vérifie qu'une fiche s'affiche, que le calendrier rend des segments cohérents, qu'un décalage climatique produit des dates plausibles.
+**Les essais de bout en bout ne couvrent pas tout.** Ils existent depuis le 2 août, `npm run essais`, cent neuf contrôles sur neuf suites, décrits dans `outils/essais/README.md`. Restent hors couverture : le calendrier annuel et ses segments, le décalage climatique et les dates qu'il produit, l'écran des espaces, la connexion et la reprise par code.
 
 **Aucun audit tournant.** Rien ne se dégrade seul, mais rien ne se re-vérifie non plus. Dix fiches par mois reconfrontées aux sources maintiennent la qualité sans campagne.
 
