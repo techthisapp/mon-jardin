@@ -443,6 +443,26 @@ Première entrée, la Baie de mai sur `floraison_hors_baseflor` : Baseflor décr
 
 Trois contrôles ont été ajoutés à la vue, qui gardent les acquis du jour : un organe parfumé sans provenance, une intensité de parfum réapparue, une cotation apicole sans provenance. Le contrôle `parfum_incoherent`, devenu sans objet, a été retiré.
 
+### Conseils remis d'accord avec leur fenêtre
+
+Six conseils citaient en tête un mois hors de la période de leur tâche, seul défaut de gravité haute que les vues signalaient encore. Le contrôle lit la première phrase du conseil, y cherche les noms de mois et de saison, et demande qu'au moins un recoupe la fenêtre.
+
+Trois portaient une erreur de fond, corrigée : l'arroche se ressème jusqu'en juillet et non jusqu'en septembre, le chou chinois se sème à partir de juillet, le fenouil bulbe à partir de juin et non d'avril, la source citée pour sa fenêtre disant précisément qu'un semis plus précoce monte à graine. Le pois voit son semis de grains ronds calé sur la mi-mars, début de sa fenêtre.
+
+Deux tenaient à la place d'une proposition subordonnée : l'hibiscus des marais et le rosier renvoyaient à l'hiver et au printemps dans la phrase de tête, ce qui est juste au fond mais fait sortir le conseil de sa fenêtre. La mention est passée en seconde phrase.
+
+Le recouvrement entre tâches de l'aster d'automne a été levé : la division de la touffe quitte le conseil de taille, où elle doublait celui de multiplication.
+
+Les vues ne signalent plus aucun défaut de gravité haute ni moyenne.
+
+### Essais du ruban de l'année
+
+Une neuvième suite, `calendrier`, onze contrôles, couvre la géométrie du ruban annuel de la fiche et le décalage climatique. C'était le plus gros angle mort : une bande posée sur la mauvaise quinzaine ne lève aucune erreur et ne se voit qu'à l'oeil.
+
+Elle contrôle que le ruban porte une voie par tâche, qu'une fenêtre à cheval sur le premier janvier est dessinée en deux morceaux qui se rejoignent aux bords, que le repère du moment tombe sur la quinzaine du jour, que la règle des mois marque le mois courant, et que le décalage climatique déplace bien la floraison de deux quinzaines vers l'avant en climat montagnard et de deux vers l'arrière en méditerranéen.
+
+Le harnais accepte désormais un climat de jardin en paramètre, ce qui rend le décalage éprouvable sans toucher aux données figées.
+
 La colonne `nectar_season`, qui disait à quelle saison la ressource est offerte, a été vidée dans le même mouvement. Aucune source ne l'établissait, elle n'était affichée nulle part, et elle contredisait la fiche sur cinquante-six lignes où la ressource elle-même n'est plus affirmée. Le jour où un calendrier apicole la demandera, elle se déduira de la fenêtre de floraison, qui est sourcée, selon une convention à écrire.
 
 ## Les contrôles

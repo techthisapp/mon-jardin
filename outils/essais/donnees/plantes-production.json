@@ -753,7 +753,7 @@
    "taille": "Pincer en juin, rabattre en fin d'hiver",
    "floraison": "Supprimer les fleurs fanées au fur et à mesure pour prolonger la floraison. Ressource tardive, utile pour la constitution des réserves avant l'hiver.",
    "fertilisation": "Deux centimètres de compost mûr en surface en sortie d'hiver. L'excès d'azote donne des tiges molles qui versent. Besoin moyen, un apport annuel de compost mûr couvre la saison.",
-   "multiplication": "Diviser au printemps tous les trois ans, conserver les éclats périphériques et jeter le centre dégarni."
+   "multiplication": "Diviser au printemps tous les trois ans, au moment où l'on rabat les tiges sèches. Conserver les éclats périphériques et jeter le centre dégarni, qui s'épuise avec l'âge."
   },
   "latin": "Symphyotrichum novi-belgii",
   "family": "Asteraceae",
@@ -799,7 +799,7 @@
   "guide_periode": {
    "213": "Plantation de printemps. La reprise est rapide. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter au printemps, collet au ras du sol. Arroser à la reprise puis laisser la plante s'installer. Espacer les plants de 45 cm.",
    "214": "Plantation de fin d'été. Le sol est encore chaud, la touffe s'enracine avant l'hiver et démarre plus vite au printemps suivant. Planter en automne, collet au ras du sol. Arroser à la reprise puis laisser la plante s'installer. Espacer les plants de 45 cm.",
-   "216": "Rabattre les tiges sèches au ras du sol avant le départ de végétation. Diviser la touffe tous les trois ans à cette occasion, le centre s'épuisant avec l'âge.",
+   "216": "Rabattre les tiges sèches au ras du sol avant le départ de végétation.",
    "217": "Pincer les tiges de moitié en juin. La touffe reste compacte, fleurit un peu plus tard et se passe de tuteur."
   }
  },
