@@ -1786,6 +1786,37 @@ function ficheAnnee(p) {
   return h.join("");
 }
 
+/* La jauge de gel donne déjà le seuil en degrés. La ligne de rusticité ne
+   répète pas la classe : elle ne garde que la nuance qui suit, et ne reprend la
+   classe entière que pour les plantes dont le seuil n'est pas renseigné. */
+const CLASSES_RUSTICITE = ["Très rustique", "Moyennement rustique", "Assez rustique",
+  "Peu rustique", "Rustique", "Très gélive", "Gélive", "Gélif"];
+
+function nuanceRusticite(p) {
+  const t = String((p.attr || {}).rusticite || "").trim();
+  if (!t) return "";
+  const c = CLASSES_RUSTICITE.find(x => t === x || t.startsWith(x + ","));
+  if (!c) return t;
+  const reste = t.slice(c.length).replace(/^,\s*/, "");
+  if (reste) return reste.charAt(0).toUpperCase() + reste.slice(1);
+  return (p.gel === null || p.gel === undefined) ? t : "";
+}
+
+/* Compagnonnage et usage se recoupent encore sur les ornementales, où la
+   colonne des associations a servi à noter l'emplacement. La ligne
+   Associations ne redit pas un segment que la ligne Usage porte déjà. La base
+   conserve les deux, seul l'affichage évite l'écho. */
+function associationsHorsUsage(assoc, usage) {
+  if (!assoc) return "";
+  const norme = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+  const deja = new Set(String(usage || "").split(",").map(norme).filter(Boolean));
+  const restants = String(assoc).split(",").map(s => s.trim())
+    .filter(s => s && !deja.has(norme(s)));
+  if (!restants.length) return "";
+  const t = restants.join(", ");
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
 function ficheBlocs(p) {
   const a = p.attr || {};
   /* Un troisième élément porte le texte du conseil. Il tient sous la valeur,
@@ -1802,6 +1833,7 @@ function ficheBlocs(p) {
   return bloc("Identité", [
     ["Famille", p.famille], ["Cycle", a.type], ["Hauteur", a.hauteur],
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
+    ["Rusticité", nuanceRusticite(p)],
   ]) + bloc("Culture", [
     ["Sol", a.sol], ["Eau", a.arrosage], ["Fertilité", a.fertilisation],
     ["Profondeur", p.prof], ["Pollinisation", a.pollinisation],
@@ -1809,9 +1841,17 @@ function ficheBlocs(p) {
     // multiplication : sans cette ligne il ne serait affiché nulle part.
     ["Multiplication", a.multiplication, p.guide.multiplication || ""],
   ]) + bloc("Au jardin", [
-    ["Nectar", a.mellifere], ["Parfum", a.parfum], ["Fleurs", a.couleur],
-    ["Feuillage", a.feuillage], ["Usage", a.usage], ["Associations", p.assoc],
+    ["Nectar", a.mellifere], ["Parfum", a.parfum],
+    ["Feuillage", a.feuillage],
+    /* Une seule ligne d'usage. La note sourcée est la formulation lisible,
+       « Tiges confites, liqueur » là où la clé ne dit que culinaire ; les
+       libellés du vocabulaire servent de repli quand elle manque. Les deux
+       ensemble ne feraient que se répéter. */
+    ["Usage", a.usage_note || a.usage],
+    ["Associations", associationsHorsUsage(p.assoc, a.usage_note || a.usage)],
   ]);
+  // La couleur de fleur n'a pas de ligne ici : la légende du ruban la nomme
+  // déjà, avec sa fenêtre de floraison et ses pastilles.
 }
 
 function ficheHTML(p) {

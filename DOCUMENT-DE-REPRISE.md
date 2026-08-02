@@ -545,6 +545,14 @@ Un audit du 2 août a cherché les données présentes en base mais fausses, tro
 
 **Deux entrées archivées gardaient un texte unique pour deux fenêtres.** La mélisse et le souci, remplacés au catalogue par la mélisse citronnelle et le souci officinal, avaient encore deux périodes réelles servies par un texte mentionnant les deux saisons. Quatre conseils propres ont été écrits. Le catalogue visible était déjà correct sur ce point.
 
+**Trois lignes du bloc « Au jardin » ne paraissaient jamais.** Cet audit avait comparé les colonnes de la base, pas les clés du bloc d'attributs que la vue fabrique. Or la vue construisait `feuillage`, `usage` et `couleur` depuis l'ancienne colonne JSON `plants.attributes`, qui ne porte plus que `rusticite` et `taille` depuis la campagne de structuration. Les trois lignes étaient donc vides sur les 315 plantes.
+
+Le feuillage est lu dans `plants.foliage` et traduit par la table des vocabulaires, comme les autres attributs : 117 plantes retrouvent leur ligne, soit tout le périmètre où la notion s'applique, ligneux, lianes et graminées. L'usage est lu dans `plants.uses`, tableau de clés validé contre le vocabulaire des vingt-quatre usages, avec `uses_note` pour la formulation lisible : 91 plantes sur 315, les 224 autres restent à sourcer. La couleur n'a pas de ligne : la légende du ruban la nomme déjà avec sa fenêtre de floraison et ses pastilles, une seconde mention serait une répétition.
+
+**La rusticité paraît sans redoubler la jauge de gel.** Le libellé de `attributes.rusticite` se compose d'une classe, cinq valeurs, suivie parfois d'une nuance. La jauge donnant déjà le seuil en degrés sur 295 plantes, la ligne du bloc Identité ne garde que la nuance, « Craint l'humidité », « À rentrer », « Jeune plant à protéger », et ne reprend la classe entière que pour les vingt plantes dont le seuil n'est pas renseigné.
+
+**Les associations ne redisent plus l'usage.** La colonne `companions` a servi, sur les ornementales, à noter l'emplacement plutôt que le compagnonnage : la lavande y porte « Bordure, rocaille, pied de rosier » quand son usage dit déjà bordure et rocaille. À l'affichage, un segment déjà porté par la ligne Usage est retiré de la ligne Associations. Les deux colonnes restent intactes en base ; la campagne de sourçage des usages remettra chaque information dans sa colonne.
+
 Sont passées sans défaut : plus aucun conseil général en double, aucun conseil de période orphelin, aucune clé de vocabulaire introuvable, aucune valeur d'énumération inconnue de l'application pour les tâches, typologies, catégories, niveaux climatiques et couleurs, aucune perte entre `spacing` et `spacing_cm` ni entre `depth` et `depth_cm`.
 
 Une fausse alerte mérite d'être notée : trois cent cinquante-deux périodes de protection paraissaient dépourvues de conseil propre alors qu'il s'agit de déclinaisons par climat d'une même fenêtre, `plant_phases.climates` portant un climat par ligne. Tout comptage de périodes doit neutraliser cette déclinaison, faute de quoi il compte cinq fois la même fenêtre.
@@ -614,6 +622,8 @@ Les enregistrements d'événements passent par une fonction qui ignore un élém
 **Les marges sur un conteneur à positionnement absolu.** Une marge horizontale posée sur la rangée d'un tiroir de glissement décale la glissière et découvre le tiroir en permanence. La marge doit aller sur l'élément qui glisse.
 
 **Les règles de zone sûre.** `padding-left: env(safe-area-inset-left)` écrase la marge définie plus haut et vaut zéro en portrait. Utiliser `calc(16px + env(...))`.
+
+**Comparer les colonnes sans comparer les clés construites.** Une vue qui fabrique un objet JSON à partir de colonnes disparues laisse des clés vides que rien ne signale : ni erreur, ni valeur nulle visible, la clé est simplement absente et la ligne ne s'affiche pas. Le premier audit avait vérifié les colonnes de `plants` une par une et manqué les trois lignes du bloc « Au jardin ». Le contrôle juste consiste à comparer les clés que l'application lit dans `attributes` à celles que la vue produit réellement, requête `jsonb_object_keys` à l'appui.
 
 **Vérifier la base sans vérifier l'écran.** Une donnée juste en base peut n'arriver nulle part, ou arriver fausse. Trois cas l'ont montré : le conseil général chargé et jamais rendu, le conseil de multiplication rattaché à une tâche sans période donc jamais parcourue, la couleur de fleur rangée dans l'ordre de la palette alors que l'écran n'en montre qu'une. Un contrôle de contenu doit lire le texte effectivement affiché, pas seulement la ligne qui l'alimente. Le fichier d'essai `ecarts.js` sert des lignes de production à la doublure et compare l'affiché à l'attendu.
 
