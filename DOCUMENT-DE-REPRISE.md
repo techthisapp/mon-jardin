@@ -399,9 +399,11 @@ Dix seuils de gel écrits. Le contrôle qui croisait le seuil avec la classe de 
 
 ### Sourçage apicole du nectar et du pollen
 
-Révisé le 2 août 2026. Les colonnes `nectar` et `pollen` ne sont plus renseignées que sur les 99 fiches qu'une source de premier rang cote, toutes sourcées. Elles l'étaient sur les 315, dont 18 seulement citaient une source, 169 se déclaraient estimations et 128 ne déclaraient rien.
+Révisé le 2 août 2026. Les colonnes `nectar` et `pollen` ne sont plus renseignées que sur les 91 et 90 fiches qu'une source de premier rang cote, toutes sourcées. Elles l'étaient sur les 315, dont 18 seulement citaient une source, 169 se déclaraient estimations et 128 ne déclaraient rien.
 
 La source est la *Liste de plantes attractives pour les abeilles*, Val'hor, FranceAgriMer, Société nationale d'horticulture de France, Institut de l'Abeille, ASTREDHOR, CNPMAI et INRA, juin 2017, 200 espèces. Elle cote l'intérêt nectar et l'intérêt pollen de zéro à trois pictogrammes et publie un indice de confiance sur trois degrés. La correspondance avec les quatre classes du vocabulaire est un réétiquetage, non une conversion : les deux échelles ont le même nombre de degrés et la même sémantique aux extrémités, aucun seuil n'est à choisir, il n'y a donc rien à valider.
+
+L'indice de confiance est employé de façon dissymétrique, et cette dissymétrie est mesurée. Une cotation positive suppose une observation affirmative, qu'une documentation mince ne peut pas produire. Une cotation nulle est une négation, dont la valeur ne dépasse pas la complétude de la documentation. La source porte la signature de ce biais : la part de nectars nuls tombe de 23 pour cent à l'indice 1 à 8 pour cent à l'indice 3, et la part de pollens nuls de 40 à 26 pour cent. Lues une à une, les cotations nulles de l'indice 1 contiennent des erreurs franches, l'achillée et l'aneth sans pollen, l'abélia et le muflier sans nectar, la pastèque sans pollen, quand celles de l'indice 2 sont défendables et comprennent deux cas d'école, le noisetier et l'argousier sans nectar, tous deux à pollinisation anémophile. Les cotations nulles de l'indice 1 ne sont donc pas retenues, dix-sept en tout, et la provenance le dit. Aucune espèce de la liste n'étant nulle dans les deux colonnes, chaque fiche garde au moins une cotation.
 
 C'est ce qui la distingue des trois tentatives précédentes. Deux jeux quantitatifs ont été essayés et écartés, la mesure de sucre nectarifère de Tew et coauteurs et la mesure de volume pollinique du jeu AgriLand. La règle de conversion, écrite avant d'être appliquée, échouait deux fois avec la même signature : corrélation de rang de 0,107 sur le nectar et de 0,168 sur le pollen, et inversion des médianes par classe. La cause est identifiée, ces jeux mesurent par fleur quand l'appréciation apicole intègre le nombre de fleurs portées et la durée de floraison. Le Noisetier le montre sans ambiguïté, dernier du classement mesuré et ressource pollinique majeure de février.
 
@@ -698,9 +700,9 @@ Couverture au 2 août 2026, dans le périmètre où le champ s'applique. Un vide
 | Profondeur de mise en place | 315 | 177 | 56 % |
 | Vecteur de pollinisation | 315 | 168 | 53 % |
 | Feuillage, hors annuelles | 244 | 117 | 48 % |
-| Nectar sourcé, espèces cotées par la liste Val'hor | 99 | 99 | 100 % |
+| Nectar sourcé, espèces cotées par la liste Val'hor | 91 | 91 | 100 % |
+| Pollen sourcé, espèces cotées par la liste Val'hor | 90 | 90 | 100 % |
 | Usages | 315 | 91 | 29 % |
-| Pollen sourcé, espèces cotées par la liste Val'hor | 99 | 99 | 100 % |
 | Pollinisation, fiches à récolte | 156 | 42 | 27 % |
 | Pic de floraison | 215 | 12 | 6 % |
 
