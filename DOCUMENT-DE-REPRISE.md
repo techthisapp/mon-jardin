@@ -130,10 +130,10 @@ Un `null` signifie que la question ne se pose pas. Il n'est jamais remplacé par
 | `planting_mode` | plantation | 315 |
 | `toxicity`, `toxicity_note` | toxicite | 315 |
 | `wintering` | hivernage | 209 |
-| `nectar`, `nectar_season` | nectar, nectar_saison | 315, dont 146 sourcées |
-| `pollen` | pollen | 315, dont 86 sourcées |
-| `fragrance` | parfum | 315 |
-| `fragrance_organ` | parfum_organe | 127 |
+| `nectar`, `nectar_season` | nectar, nectar_saison | 99, toutes sourcées |
+| `pollen` | pollen | 99, toutes sourcées |
+| `fragrance` | parfum | 0, aucune base ne cote l'intensité |
+| `fragrance_organ` | parfum_organe | 68, toutes sourcées |
 | `foliage`, `foliage_note` | feuillage | 117 hors annuelles |
 | `pollination` | pollinisation | 42 fruitiers |
 | `pollination_vector` | pollinisation_vecteur | 168 |
@@ -398,13 +398,25 @@ Dix seuils de gel écrits. Le contrôle qui croisait le seuil avec la classe de 
 
 ### Sourçage apicole du nectar et du pollen
 
-Les colonnes `nectar` et `pollen` sont renseignées sur les 315 fiches, dont 146 et 86 par une source apicole nommée, contre 87 et rien au 28 juillet.
+Révisé le 2 août 2026. Les colonnes `nectar` et `pollen` ne sont plus renseignées que sur les 99 fiches qu'une source de premier rang cote, toutes sourcées. Elles l'étaient sur les 315, dont 18 seulement citaient une source, 169 se déclaraient estimations et 128 ne déclaraient rien.
 
-Deux jeux de données quantitatifs ont été essayés et écartés, la mesure de sucre nectarifère de Tew et coauteurs et la mesure de volume pollinique du jeu AgriLand. La règle de conversion, écrite avant d'être appliquée, a été validée sur les valeurs déjà sourcées qui n'avaient pas servi à l'établir. Elle échoue deux fois, avec la même signature : corrélation de rang de 0,107 sur le nectar et de 0,168 sur le pollen, et inversion des médianes par classe. La cause est identifiée, ces jeux mesurent par fleur quand l'appréciation apicole intègre le nombre de fleurs portées et la durée de floraison. Le Noisetier le montre sans ambiguïté, dernier du classement mesuré et ressource pollinique majeure de février.
+La source est la *Liste de plantes attractives pour les abeilles*, Val'hor, FranceAgriMer, Société nationale d'horticulture de France, Institut de l'Abeille, ASTREDHOR, CNPMAI et INRA, juin 2017, 200 espèces. Elle cote l'intérêt nectar et l'intérêt pollen de zéro à trois pictogrammes et publie un indice de confiance sur trois degrés. La correspondance avec les quatre classes du vocabulaire est un réétiquetage, non une conversion : les deux échelles ont le même nombre de degrés et la même sémantique aux extrémités, aucun seuil n'est à choisir, il n'y a donc rien à valider.
 
-Les mesures sont conservées dans deux colonnes distinctes de l'appréciation, `nectar_ug_fleur` et `pollen_um3_fleur`, avec leur citation et leur DOI en commentaire de colonne. Trois corrections de nectar ont été appliquées sur la foi d'un zéro mesuré, l'Anémone du Japon, l'Anémone blanda et le Bégonia des jardins, dépourvus de nectaires.
+C'est ce qui la distingue des trois tentatives précédentes. Deux jeux quantitatifs ont été essayés et écartés, la mesure de sucre nectarifère de Tew et coauteurs et la mesure de volume pollinique du jeu AgriLand. La règle de conversion, écrite avant d'être appliquée, échouait deux fois avec la même signature : corrélation de rang de 0,107 sur le nectar et de 0,168 sur le pollen, et inversion des médianes par classe. La cause est identifiée, ces jeux mesurent par fleur quand l'appréciation apicole intègre le nombre de fleurs portées et la durée de floraison. Le Noisetier le montre sans ambiguïté, dernier du classement mesuré et ressource pollinique majeure de février.
 
-Les valeurs sourcées viennent des listes apicoles, Bienenroute, la table de Gembloux et la liste des plantes mellifères d'Europe. Un contrôle est désormais appliqué avant tout usage d'une table apicole, sur cinq espèces au comportement non discutable, Saule marsault, Noisetier, Coquelicot, Thym et Lavande. Une table qui échoue sur ces cinq lignes n'est pas exploitée : c'est ce contrôle qui a rattrapé une inversion de colonnes lors d'une réextraction.
+Les mesures sont conservées dans deux colonnes distinctes de l'appréciation, `nectar_ug_fleur` et `pollen_um3_fleur`, avec leur citation et leur DOI en commentaire de colonne.
+
+Les catalogues employés jusque-là, Bienenroute et la table de Gembloux, ne sont plus la convention du référentiel et leurs valeurs ont été retirées. Le contrôle sur cinq espèces au comportement non discutable reste en vigueur avant tout usage d'une table apicole, Saule marsault, Noisetier, Coquelicot, Thym et Lavande : c'est lui qui a rattrapé une inversion de colonnes lors d'une réextraction.
+
+Les deux colonnes utiles de la liste Val'hor sont des pictogrammes vectoriels que `pdftotext` ne rend pas. L'extraction convertit chaque page en SVG par `pdftocairo -svg` et reconnaît les glyphes au début de leur tracé, puis regroupe les positions en rangées. La méthode est décrite en détail dans la procédure d'ajout d'une plante.
+
+### Parfum, l'organe et non l'intensité
+
+L'intensité du parfum n'est cotée par aucune base. La colonne `fragrance` est vidée sur les 315 fiches et le vocabulaire à quatre classes reste en place pour le jour où une source graduée se présenterait.
+
+Ce qu'une source établit, c'est l'organe parfumé. Le Plant Finder du Missouri Botanical Garden publie `Flower: Fragrant` et `Leaf: Fragrant`, qui peuvent être cochés ensemble. Les 315 fiches y ont été confrontées une à une : 237 sont présentes, 68 portent un organe établi, 169 sont présentes sans que la source coche l'attribut, ce que la provenance énonce désormais pour éviter de refaire le travail, et 78 n'ont pas de correspondance.
+
+La fiche affiche l'organe à la ligne Parfum du bloc Au jardin, Fleurs, Feuillage ou Fleurs et feuillage.
 
 ## Les contrôles
 
@@ -607,7 +619,7 @@ Deux écrans de réglage, derrière le bouton de l'en-tête.
 
 **Mes plantes** liste le catalogue groupé par type puis par catégorie, avec recherche sur le nom commun, le nom latin et la famille, et une jauge d'adaptation au climat à quatre crans. Le bouton Adaptées à mon climat restreint la liste aux plantes de niveau adaptée sous le climat du jardin actif. Il n'apparaît que si un jardin déclare son climat.
 
-La feuille de détail affiche hauteur, espacement, profondeur, arrosage, sol, fertilisation, couleur, feuillage, résistance au gel, parfum, caractère mellifère, première récolte, pollinisation, multiplication, usage et associations.
+La feuille de détail affiche hauteur, espacement, profondeur, arrosage, sol, fertilisation, couleur, feuillage, résistance au gel, organe parfumé, caractère mellifère, première récolte, pollinisation, multiplication, usage et voisinage.
 
 ### Authentification
 
@@ -670,7 +682,7 @@ Le SMTP personnalisé configuré sur Brevo n'est pas fonctionnel : l'adresse d'e
 
 ### Fiabilisation du référentiel
 
-Couverture au 31 juillet 2026, dans le périmètre où le champ s'applique. Un vide n'est pas une valeur douteuse : les quatre champs qui portent encore une mention d'estimation explicite sont le parfum, le pollen, le nectar et l'intensité du parfum.
+Couverture au 2 août 2026, dans le périmètre où le champ s'applique. Un vide n'est pas une valeur douteuse. Depuis le 2 août, aucune fiche ne porte plus de mention d'estimation, pour aucun champ : une valeur qu'aucune source n'établit est laissée vide.
 
 | Champ | Périmètre | Renseigné | Taux |
 |---|---|---|---|
@@ -679,13 +691,13 @@ Couverture au 31 juillet 2026, dans le périmètre où le champ s'applique. Un v
 | Hivernage, hors annuelles | 244 | 209 | 86 % |
 | Couleur de fleur | 258 | 257 | 99,6 % |
 | Première récolte, pérennes comestibles | 86 | 72 | 84 % |
-| Organe du parfum | 127 | 127 | 100 % |
+| Organe du parfum, espèces dont le Plant Finder coche l'attribut | 68 | 68 | 100 % |
 | Profondeur de mise en place | 315 | 177 | 56 % |
 | Vecteur de pollinisation | 315 | 168 | 53 % |
 | Feuillage, hors annuelles | 244 | 117 | 48 % |
-| Nectar sourcé | 315 | 146 | 46 % |
+| Nectar sourcé, espèces cotées par la liste Val'hor | 99 | 99 | 100 % |
 | Usages | 315 | 91 | 29 % |
-| Pollen sourcé | 315 | 86 | 27 % |
+| Pollen sourcé, espèces cotées par la liste Val'hor | 99 | 99 | 100 % |
 | Pollinisation, fiches à récolte | 156 | 42 | 27 % |
 | Pic de floraison | 215 | 12 | 6 % |
 
@@ -739,6 +751,6 @@ L'interface a été reprise plusieurs fois : filtrage par catégorie fine, tri a
 
 Le 28 juillet 2026, une session a posé le contrôle avant dépôt, le versionnage par empreinte et l'intégration continue, plafonné les tentatives de reprise, ouvert la traçabilité au niveau du conseil, relu la totalité des conseils du référentiel, séparé les trois fiches à deux espèces et fusionné les deux fiches de groseille, normalisé seize notions en vocabulaire contrôlé, ajouté le filtre par adaptation au climat, et mis en place l'historisation et la détection d'anomalies.
 
-Du 28 au 31 juillet 2026, la base a reçu la confrontation de la nomenclature à GBIF, POWO et Tela Botanica, le calcul d'arrosage par la méthode FAO 56 avec ses trois tables et sa vue de restitution, le pic de floraison sourcé sur douze fiches et démontré non dérivable, le rattachement d'un conseil à une période précise, le sourçage apicole du nectar et du pollen après l'échec documenté de deux jeux quantitatifs, la fusion des quatre-vingt-deux paires de fenêtres à cheval sur le 1er janvier, la confrontation à baseflor par la vue `controle_coherence`, et la correction des deux contrôles que la fusion des fenêtres avait rendus faux.
+Du 28 au 31 juillet 2026, la base a reçu la confrontation de la nomenclature à GBIF, POWO et Tela Botanica, le calcul d'arrosage par la méthode FAO 56 avec ses trois tables et sa vue de restitution, le pic de floraison sourcé sur douze fiches et démontré non dérivable, le rattachement d'un conseil à une période précise, le sourçage apicole du nectar et du pollen après l'échec documenté de deux jeux quantitatifs, la fusion des quatre-vingt-deux paires de fenêtres à cheval sur le 1er janvier, la confrontation à baseflor par la vue `controle_coherence`, et la correction des deux contrôles que la fusion des fenêtres avait rendus faux. Le 2 août, elle a reçu le glossaire horticole, la relecture des associations sur pièces, et la sortie de l'estimation pour le nectar, le pollen et le parfum, après quoi aucune fiche ne porte plus de valeur qu'une source n'établisse.
 
 Le design de la fiche de plante a été repris en parallèle, hors dépôt, sous forme de maquette : rangée de jauges normalisées, calendrier annuel en ruban ou en roue avec une teinte par action, courbe de besoin en eau, taille à maturité rapportée à une silhouette humaine, motif par typologie. L'intégration dans l'application est le chantier en cours au 31 juillet.
