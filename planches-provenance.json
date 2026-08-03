@@ -1,0 +1,1290 @@
+{
+ "absinthe": {
+  "fichier": "File:Absinthe Vilmorin-Andrieux 1904.jpg",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Absinthe_Vilmorin-Andrieux_1904.jpg",
+  "plante": "Absinthe"
+ },
+ "achillee": {
+  "fichier": "File:184 Achillea millefolium L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:184_Achillea_millefolium_L.jpg",
+  "plante": "Achillée"
+ },
+ "ail": {
+  "fichier": "File:Ail ordinaire - Vilmorin-Andrieux, 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Ail_ordinaire_-_Vilmorin-Andrieux,_1883.png",
+  "plante": "Ail"
+ },
+ "ail-d-ornement": {
+  "fichier": "File:317 Allium flavum L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:317_Allium_flavum_L.jpg",
+  "plante": "Ail d'ornement"
+ },
+ "alchemille": {
+  "fichier": "File:Illustration Alchemilla vulgaris0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Alchemilla_vulgaris0.jpg",
+  "plante": "Alchémille"
+ },
+ "amandier": {
+  "fichier": "File:Prunus dulcis - Köhler–s Medizinal-Pflanzen-250.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Prunus_dulcis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-250.jpg",
+  "plante": "Amandier"
+ },
+ "amarante-queue-de-renard": {
+  "fichier": "File:Amaranthus retroflexus, Thomé 1885-0.png",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Amaranthus_retroflexus,_Thom%C3%A9_1885-0.png",
+  "plante": "Amarante queue-de-renard"
+ },
+ "ancolie": {
+  "fichier": "File:14 Aquilegia alpina L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:14_Aquilegia_alpina_L.jpg",
+  "plante": "Ancolie"
+ },
+ "aneth": {
+  "fichier": "File:Illustration Anethum graveolens0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Anethum_graveolens0.jpg",
+  "plante": "Aneth"
+ },
+ "angelique": {
+  "fichier": "File:Angélique officinale Vilmorin-Andrieux 1904.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Ang%C3%A9lique_officinale_Vilmorin-Andrieux_1904.png",
+  "plante": "Angélique"
+ },
+ "anis-vert": {
+  "fichier": "File:Anis vert Vilmorin-Andrieux 1904.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Anis_vert_Vilmorin-Andrieux_1904.png",
+  "plante": "Anis vert"
+ },
+ "argousier": {
+  "fichier": "File:Illustration Hippophae rhamnoides0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Hippophae_rhamnoides0.jpg",
+  "plante": "Argousier"
+ },
+ "arroche": {
+  "fichier": "File:Arroche Vilmorin-Andrieux 1883.jpg",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Arroche_Vilmorin-Andrieux_1883.jpg",
+  "plante": "Arroche"
+ },
+ "artichaut": {
+  "fichier": "File:Artichaut gros vert de Laon Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Artichaut_gros_vert_de_Laon_Vilmorin-Andrieux_1883.png",
+  "plante": "Artichaut"
+ },
+ "asperge": {
+  "fichier": "File:325 Asparagus officinalis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:325_Asparagus_officinalis_L.jpg",
+  "plante": "Asperge"
+ },
+ "asperule-odorante": {
+  "fichier": "File:Aspérule odorante Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Asp%C3%A9rule_odorante_Vilmorin-Andrieux_1883.png",
+  "plante": "Aspérule odorante"
+ },
+ "aubergine": {
+  "fichier": "File:Aubergine blanche Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Aubergine_blanche_Vilmorin-Andrieux_1883.png",
+  "plante": "Aubergine"
+ },
+ "basilic": {
+  "fichier": "File:Basilic grand Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Basilic_grand_Vilmorin-Andrieux_1883.png",
+  "plante": "Basilic"
+ },
+ "berberis": {
+  "fichier": "File:18 Berberis vulgaris L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:18_Berberis_vulgaris_L.jpg",
+  "plante": "Berbéris"
+ },
+ "betterave": {
+  "fichier": "File:Betterave piriforme Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Betterave_piriforme_Vilmorin-Andrieux_1883.png",
+  "plante": "Betterave"
+ },
+ "blette": {
+  "fichier": "File:276 Beta vulgaris L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:276_Beta_vulgaris_L.jpg",
+  "plante": "Blette"
+ },
+ "bleuet": {
+  "fichier": "File:163 Centaurea cyanus L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:163_Centaurea_cyanus_L.jpg",
+  "plante": "Bleuet"
+ },
+ "bourrache": {
+  "fichier": "File:Bourrache officinale Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Bourrache_officinale_Vilmorin-Andrieux_1883.png",
+  "plante": "Bourrache"
+ },
+ "brocoli": {
+  "fichier": "File:Brocoli branchu Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Brocoli_branchu_Vilmorin-Andrieux_1883.png",
+  "plante": "Brocoli"
+ },
+ "buis": {
+  "fichier": "File:287 Buxus sempervirens L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:287_Buxus_sempervirens_L.jpg",
+  "plante": "Buis"
+ },
+ "camomille-romaine": {
+  "fichier": "File:Chamaemelum nobile - Köhler–s Medizinal-Pflanzen-012.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chamaemelum_nobile_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-012.jpg",
+  "plante": "Camomille romaine"
+ },
+ "capucine": {
+  "fichier": "File:Capucine grande Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Capucine_grande_Vilmorin-Andrieux_1883.png",
+  "plante": "Capucine"
+ },
+ "capucine-tubereuse": {
+  "fichier": "File:Capucine tubéreuse Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Capucine_tub%C3%A9reuse_Vilmorin-Andrieux_1883.png",
+  "plante": "Capucine tubéreuse"
+ },
+ "cardon": {
+  "fichier": "File:Cardon Puvis Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cardon_Puvis_Vilmorin-Andrieux_1883.png",
+  "plante": "Cardon"
+ },
+ "carex": {
+  "fichier": "File:362 Carex maxima Scop.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:362_Carex_maxima_Scop.jpg",
+  "plante": "Carex"
+ },
+ "carotte": {
+  "fichier": "File:Carotte jaune longue Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Carotte_jaune_longue_Vilmorin-Andrieux_1883.png",
+  "plante": "Carotte"
+ },
+ "carvi": {
+  "fichier": "File:Carvi Vilmorin-Andrieux 1904.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Carvi_Vilmorin-Andrieux_1904.png",
+  "plante": "Carvi"
+ },
+ "celeri-rave": {
+  "fichier": "File:Céleri-rave Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:C%C3%A9leri-rave_Vilmorin-Andrieux_1883.png",
+  "plante": "Céleri-rave"
+ },
+ "cerfeuil": {
+  "fichier": "File:Cerfeuil frisé Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cerfeuil_fris%C3%A9_Vilmorin-Andrieux_1883.png",
+  "plante": "Cerfeuil"
+ },
+ "cerfeuil-tubereux": {
+  "fichier": "File:Cerfeuil tubéreux Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cerfeuil_tub%C3%A9reux_Vilmorin-Andrieux_1883.png",
+  "plante": "Cerfeuil tubéreux"
+ },
+ "cerisier": {
+  "fichier": "File:Illustration Prunus avium0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Prunus_avium0.jpg",
+  "plante": "Cerisier"
+ },
+ "chataignier": {
+  "fichier": "File:Castanea sativa - Köhler–s Medizinal-Pflanzen-173.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Castanea_sativa_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-173.jpg",
+  "plante": "Châtaignier"
+ },
+ "chervis": {
+  "fichier": "File:Chervis Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chervis_Vilmorin-Andrieux_1883.png",
+  "plante": "Chervis"
+ },
+ "chicoree-frisee": {
+  "fichier": "File:Chicorée frisée de Meaux Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chicor%C3%A9e_fris%C3%A9e_de_Meaux_Vilmorin-Andrieux_1883.png",
+  "plante": "Chicorée frisée"
+ },
+ "chou-cabus": {
+  "fichier": "File:Chou cabus panaché Vilmorin-Andrieux 1904.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chou_cabus_panach%C3%A9_Vilmorin-Andrieux_1904.png",
+  "plante": "Chou cabus"
+ },
+ "chou-de-bruxelles": {
+  "fichier": "File:Chou de Bruxelles nain Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chou_de_Bruxelles_nain_Vilmorin-Andrieux_1883.png",
+  "plante": "Chou de Bruxelles"
+ },
+ "chou-fleur": {
+  "fichier": "File:Chou-fleur Lenormand Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chou-fleur_Lenormand_Vilmorin-Andrieux_1883.png",
+  "plante": "Chou-fleur"
+ },
+ "chou-rave": {
+  "fichier": "File:Chou-rave blanc Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chou-rave_blanc_Vilmorin-Andrieux_1883.png",
+  "plante": "Chou-rave"
+ },
+ "chou-rouge": {
+  "fichier": "File:Chou rouge gros Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Chou_rouge_gros_Vilmorin-Andrieux_1883.png",
+  "plante": "Chou rouge"
+ },
+ "ciboulette": {
+  "fichier": "File:Ciboulette Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Ciboulette_Vilmorin-Andrieux_1883.png",
+  "plante": "Ciboulette"
+ },
+ "clematite": {
+  "fichier": "File:1 Clematis vitalba L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:1_Clematis_vitalba_L.jpg",
+  "plante": "Clématite"
+ },
+ "cognassier": {
+  "fichier": "File:Cydonia oblonga - Köhler–s Medizinal-Pflanzen-049.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cydonia_oblonga_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-049.jpg",
+  "plante": "Cognassier"
+ },
+ "colchique": {
+  "fichier": "File:Colchicum autumnale - Köhler–s Medizinal-Pflanzen-044.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Colchicum_autumnale_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-044.jpg",
+  "plante": "Colchique"
+ },
+ "consoude": {
+  "fichier": "File:225 Symphytum officinale L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:225_Symphytum_officinale_L.jpg",
+  "plante": "Consoude"
+ },
+ "coquelicot": {
+  "fichier": "File:Papaver rhoeas - Köhler–s Medizinal-Pflanzen-101.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Papaver_rhoeas_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-101.jpg",
+  "plante": "Coquelicot"
+ },
+ "coriandre": {
+  "fichier": "File:Coriandrum sativum - Köhler–s Medizinal-Pflanzen-193.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Coriandrum_sativum_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-193.jpg",
+  "plante": "Coriandre"
+ },
+ "cornouiller-a-bois-rouge": {
+  "fichier": "File:148 Cornus mas L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:148_Cornus_mas_L.jpg",
+  "plante": "Cornouiller à bois rouge"
+ },
+ "cotoneaster": {
+  "fichier": "File:Illustration Cotoneaster integerrimus0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Cotoneaster_integerrimus0.jpg",
+  "plante": "Cotoneaster"
+ },
+ "cresson-alenois": {
+  "fichier": "File:Cresson alénois frisé Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cresson_al%C3%A9nois_fris%C3%A9_Vilmorin-Andrieux_1883.png",
+  "plante": "Cresson alénois"
+ },
+ "cresson-de-fontaine": {
+  "fichier": "File:Cresson de fontaine Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cresson_de_fontaine_Vilmorin-Andrieux_1883.png",
+  "plante": "Cresson de fontaine"
+ },
+ "crocus": {
+  "fichier": "File:Illustration Crocus vernus0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Crocus_vernus0.jpg",
+  "plante": "Crocus"
+ },
+ "cumin": {
+  "fichier": "File:Cuminum cyminum - Köhler–s Medizinal-Pflanzen-198.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Cuminum_cyminum_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-198.jpg",
+  "plante": "Cumin"
+ },
+ "curcuma": {
+  "fichier": "File:Curcuma longa - Köhler–s Medizinal-Pflanzen-199.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Curcuma_longa_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-199.jpg",
+  "plante": "Curcuma"
+ },
+ "cyclamen-de-naples": {
+  "fichier": "File:Illustration Cyclamen purpurascens0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Cyclamen_purpurascens0.jpg",
+  "plante": "Cyclamen de Naples"
+ },
+ "delphinium": {
+  "fichier": "File:16 Delphinium consolida L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:16_Delphinium_consolida_L.jpg",
+  "plante": "Delphinium"
+ },
+ "digitale": {
+  "fichier": "File:245 Digitalis purpurea L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:245_Digitalis_purpurea_L.jpg",
+  "plante": "Digitale"
+ },
+ "echalote": {
+  "fichier": "File:Échalote de Jersey Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:%C3%89chalote_de_Jersey_Vilmorin-Andrieux_1883.png",
+  "plante": "Échalote"
+ },
+ "endive-chicoree-witloof": {
+  "fichier": "File:189 Cichorium intybus L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:189_Cichorium_intybus_L.jpg",
+  "plante": "Endive, chicorée witloof"
+ },
+ "epinard": {
+  "fichier": "File:Épinard d'Angleterre Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:%C3%89pinard_d%27Angleterre_Vilmorin-Andrieux_1883.png",
+  "plante": "Épinard"
+ },
+ "estragon": {
+  "fichier": "File:Estragon Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Estragon_Vilmorin-Andrieux_1883.png",
+  "plante": "Estragon"
+ },
+ "estragon-de-russie": {
+  "fichier": "File:178 Artemisia absinthium L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:178_Artemisia_absinthium_L.jpg",
+  "plante": "Estragon de Russie"
+ },
+ "euphorbe-des-jardins": {
+  "fichier": "File:Euphorbia helioscopia L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Euphorbia_helioscopia_L.jpg",
+  "plante": "Euphorbe des jardins"
+ },
+ "fetuque-bleue": {
+  "fichier": "File:384 Festuca duriuscula L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:384_Festuca_duriuscula_L.jpg",
+  "plante": "Fétuque bleue"
+ },
+ "feve": {
+  "fichier": "File:Fève julienne Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:F%C3%A8ve_julienne_Vilmorin-Andrieux_1883.png",
+  "plante": "Fève"
+ },
+ "ficoide-glaciale": {
+  "fichier": "File:Ficoïde glaciale Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Fico%C3%AFde_glaciale_Vilmorin-Andrieux_1883.png",
+  "plante": "Ficoïde glaciale"
+ },
+ "figuier": {
+  "fichier": "File:289 Ficus carica L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:289_Ficus_carica_L.jpg",
+  "plante": "Figuier"
+ },
+ "fraise": {
+  "fichier": "File:Fraise Lucas Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Fraise_Lucas_Vilmorin-Andrieux_1883.png",
+  "plante": "Fraise"
+ },
+ "fritillaire-pintade": {
+  "fichier": "File:314 Fritillaria meleagris L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:314_Fritillaria_meleagris_L.jpg",
+  "plante": "Fritillaire pintade"
+ },
+ "fusain-d-europe": {
+  "fichier": "File:Illustration Euonymus europaea0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Euonymus_europaea0.jpg",
+  "plante": "Fusain d'Europe"
+ },
+ "geranium-vivace": {
+  "fichier": "File:59 Geranium phaeum L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:59_Geranium_phaeum_L.jpg",
+  "plante": "Géranium vivace"
+ },
+ "gingembre": {
+  "fichier": "File:Zingiber officinale - Köhler–s Medizinal-Pflanzen-146.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Zingiber_officinale_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-146.jpg",
+  "plante": "Gingembre"
+ },
+ "glaieul": {
+  "fichier": "File:331 Gladiolus palustris Gand.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:331_Gladiolus_palustris_Gand.jpg",
+  "plante": "Glaïeul"
+ },
+ "goji": {
+  "fichier": "File:232 Lycium barbarum L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:232_Lycium_barbarum_L.jpg",
+  "plante": "Goji"
+ },
+ "gombo": {
+  "fichier": "File:Gombo à fruit long Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Gombo_%C3%A0_fruit_long_Vilmorin-Andrieux_1883.png",
+  "plante": "Gombo"
+ },
+ "gypsophile": {
+  "fichier": "File:Illustration Gypsophila paniculata0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Gypsophila_paniculata0.jpg",
+  "plante": "Gypsophile"
+ },
+ "haricot-a-rames": {
+  "fichier": "File:Haricot à rames extra-hâtif Vilmorin-Andrieux 1904.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Haricot_%C3%A0_rames_extra-h%C3%A2tif_Vilmorin-Andrieux_1904.png",
+  "plante": "Haricot à rames"
+ },
+ "haricot-d-espagne": {
+  "fichier": "File:Haricot d'Espagne Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Haricot_d%27Espagne_Vilmorin-Andrieux_1883.png",
+  "plante": "Haricot d'Espagne"
+ },
+ "hellebore": {
+  "fichier": "File:13 Helleborus niger L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:13_Helleborus_niger_L.jpg",
+  "plante": "Hellébore"
+ },
+ "hemerocalle": {
+  "fichier": "File:320 Hemerocallis fulva L., H. flava L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:320_Hemerocallis_fulva_L.,_H._flava_L.jpg",
+  "plante": "Hémérocalle"
+ },
+ "houblon-dore": {
+  "fichier": "File:Humulus lupulus - Köhler–s Medizinal-Pflanzen-072.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Humulus_lupulus_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-072.jpg",
+  "plante": "Houblon doré"
+ },
+ "houx": {
+  "fichier": "File:68 Ilex aquifolium L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:68_Ilex_aquifolium_L.jpg",
+  "plante": "Houx"
+ },
+ "hysope": {
+  "fichier": "File:256 Hyssopus officinalis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:256_Hyssopus_officinalis_L.jpg",
+  "plante": "Hysope"
+ },
+ "if": {
+  "fichier": "File:Illustration Taxus baccata0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Taxus_baccata0.jpg",
+  "plante": "If"
+ },
+ "impatiens": {
+  "fichier": "File:65 Impatiens noli-tangere L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:65_Impatiens_noli-tangere_L.jpg",
+  "plante": "Impatiens"
+ },
+ "iris-des-jardins": {
+  "fichier": "File:329 Iris germanica L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:329_Iris_germanica_L.jpg",
+  "plante": "Iris des jardins"
+ },
+ "laitue": {
+  "fichier": "File:Laitue gotte Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Laitue_gotte_Vilmorin-Andrieux_1883.png",
+  "plante": "Laitue"
+ },
+ "laitue-d-hiver": {
+  "fichier": "File:Laitue d'hiver de Trémont Vilmorin-Andrieux 1904.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Laitue_d%27hiver_de_Tr%C3%A9mont_Vilmorin-Andrieux_1904.png",
+  "plante": "Laitue d'hiver"
+ },
+ "laurier-sauce": {
+  "fichier": "File:282 Laurus nobilis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:282_Laurus_nobilis_L.jpg",
+  "plante": "Laurier-sauce"
+ },
+ "lavande": {
+  "fichier": "File:Lavande officinale Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Lavande_officinale_Vilmorin-Andrieux_1883.png",
+  "plante": "Lavande"
+ },
+ "lentille": {
+  "fichier": "File:Lentille large blonde Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Lentille_large_blonde_Vilmorin-Andrieux_1883.png",
+  "plante": "Lentille"
+ },
+ "lierre": {
+  "fichier": "File:Illustration Hedera helix0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Hedera_helix0.jpg",
+  "plante": "Lierre"
+ },
+ "lis": {
+  "fichier": "File:315 Lilium martagon L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:315_Lilium_martagon_L.jpg",
+  "plante": "Lis"
+ },
+ "liveche-officinale": {
+  "fichier": "File:Levisticum officinale - Köhler–s Medizinal-Pflanzen-217.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Levisticum_officinale_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-217.jpg",
+  "plante": "Livèche officinale"
+ },
+ "lupin": {
+  "fichier": "File:Illustration Lupinus luteus0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Lupinus_luteus0.jpg",
+  "plante": "Lupin"
+ },
+ "luzule": {
+  "fichier": "File:356 Luzula vernalis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:356_Luzula_vernalis_L.jpg",
+  "plante": "Luzule"
+ },
+ "mache": {
+  "fichier": "File:Mâche ronde Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:M%C3%A2che_ronde_Vilmorin-Andrieux_1883.png",
+  "plante": "Mâche"
+ },
+ "mais-doux": {
+  "fichier": "File:Zea mays - Köhler–s Medizinal-Pflanzen-283.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Zea_mays_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-283.jpg",
+  "plante": "Maïs doux"
+ },
+ "marguerite": {
+  "fichier": "File:Leucanthemum vulgare (Masclef et al. 1891, Tome 2, planche 181) clean.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Leucanthemum_vulgare_(Masclef_et_al._1891,_Tome_2,_planche_181)_clean.jpg",
+  "plante": "Marguerite"
+ },
+ "marjolaine": {
+  "fichier": "File:Marjolaine vivace Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Marjolaine_vivace_Vilmorin-Andrieux_1883.png",
+  "plante": "Marjolaine"
+ },
+ "melisse-citronnelle": {
+  "fichier": "File:Mélisse citronnelle Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:M%C3%A9lisse_citronnelle_Vilmorin-Andrieux_1883.png",
+  "plante": "Mélisse citronnelle"
+ },
+ "melon": {
+  "fichier": "File:Melon Dudaïm Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Melon_Duda%C3%AFm_Vilmorin-Andrieux_1883.png",
+  "plante": "Melon"
+ },
+ "menthe": {
+  "fichier": "File:Illustration Mentha spicata0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Mentha_spicata0.jpg",
+  "plante": "Menthe"
+ },
+ "molinie": {
+  "fichier": "File:Illustration Molinia caerulea0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Molinia_caerulea0.jpg",
+  "plante": "Molinie"
+ },
+ "muflier": {
+  "fichier": "File:Illustration Antirrhinum majus0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Antirrhinum_majus0.jpg",
+  "plante": "Muflier"
+ },
+ "muguet": {
+  "fichier": "File:Convallaria majalis - Köhler–s Medizinal-Pflanzen-045.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Convallaria_majalis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-045.jpg",
+  "plante": "Muguet"
+ },
+ "murier-platane": {
+  "fichier": "File:288 Morus nigra L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:288_Morus_nigra_L.jpg",
+  "plante": "Mûrier platane"
+ },
+ "muscari": {
+  "fichier": "File:319 Muscari comosum Mill.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:319_Muscari_comosum_Mill.jpg",
+  "plante": "Muscari"
+ },
+ "myosotis": {
+  "fichier": "File:230 Myosotis palustris Roth.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:230_Myosotis_palustris_Roth.jpg",
+  "plante": "Myosotis"
+ },
+ "narcisse": {
+  "fichier": "File:334 Narcissus poeticus L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:334_Narcissus_poeticus_L.jpg",
+  "plante": "Narcisse"
+ },
+ "narcisse-botanique": {
+  "fichier": "File:334 Narcissus poeticus L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:334_Narcissus_poeticus_L.jpg",
+  "plante": "Narcisse botanique"
+ },
+ "navet": {
+  "fichier": "File:Navet turnep Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Navet_turnep_Vilmorin-Andrieux_1883.png",
+  "plante": "Navet"
+ },
+ "nigelle-de-damas": {
+  "fichier": "File:12 Nigella arvensis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:12_Nigella_arvensis_L.jpg",
+  "plante": "Nigelle de Damas"
+ },
+ "noisetier": {
+  "fichier": "File:299 Corylus avellana L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:299_Corylus_avellana_L.jpg",
+  "plante": "Noisetier"
+ },
+ "noyer": {
+  "fichier": "File:295 Juglans regia L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:295_Juglans_regia_L.jpg",
+  "plante": "Noyer"
+ },
+ "oeillet-de-poete": {
+  "fichier": "File:51 Dianthus deltoides L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:51_Dianthus_deltoides_L.jpg",
+  "plante": "Œillet de poète"
+ },
+ "oignon": {
+  "fichier": "File:Ognon d'Égypte Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Ognon_d%27%C3%89gypte_Vilmorin-Andrieux_1883.png",
+  "plante": "Oignon"
+ },
+ "oignon-blanc-hatif": {
+  "fichier": "File:Ognon blanc hâtif de Paris Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Ognon_blanc_h%C3%A2tif_de_Paris_Vilmorin-Andrieux_1883.png",
+  "plante": "Oignon blanc hâtif"
+ },
+ "olivier": {
+  "fichier": "File:215 Olea europaea L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:215_Olea_europaea_L.jpg",
+  "plante": "Olivier"
+ },
+ "origan": {
+  "fichier": "File:254 Origanum vulgare L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:254_Origanum_vulgare_L.jpg",
+  "plante": "Origan"
+ },
+ "ortie": {
+  "fichier": "File:Illustration Urtica dioica0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Urtica_dioica0.jpg",
+  "plante": "Ortie"
+ },
+ "oseille": {
+  "fichier": "File:Oseille épinard Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Oseille_%C3%A9pinard_Vilmorin-Andrieux_1883.png",
+  "plante": "Oseille"
+ },
+ "panais": {
+  "fichier": "File:Panais long Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Panais_long_Vilmorin-Andrieux_1883.png",
+  "plante": "Panais"
+ },
+ "panicum": {
+  "fichier": "File:370 Panicum miliaceum L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:370_Panicum_miliaceum_L.jpg",
+  "plante": "Panicum"
+ },
+ "paquerette": {
+  "fichier": "File:180 Bellis perennis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:180_Bellis_perennis_L.jpg",
+  "plante": "Pâquerette"
+ },
+ "pasteque": {
+  "fichier": "File:Pastèque à graine noire Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Past%C3%A8que_%C3%A0_graine_noire_Vilmorin-Andrieux_1883.png",
+  "plante": "Pastèque"
+ },
+ "pavot-d-orient": {
+  "fichier": "File:21 Papaver somniferum L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:21_Papaver_somniferum_L.jpg",
+  "plante": "Pavot d'Orient"
+ },
+ "pecher": {
+  "fichier": "File:Illustration Prunus persica0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Prunus_persica0.jpg",
+  "plante": "Pêcher"
+ },
+ "pensee": {
+  "fichier": "File:41 Viola odorata L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:41_Viola_odorata_L.jpg",
+  "plante": "Pensée"
+ },
+ "perce-neige": {
+  "fichier": "File:Illustration Galanthus nivalis0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Galanthus_nivalis0.jpg",
+  "plante": "Perce-neige"
+ },
+ "persil": {
+  "fichier": "File:Persil commun Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Persil_commun_Vilmorin-Andrieux_1883.png",
+  "plante": "Persil"
+ },
+ "pervenche": {
+  "fichier": "File:217 Vinca minor L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:217_Vinca_minor_L.jpg",
+  "plante": "Pervenche"
+ },
+ "physalis": {
+  "fichier": "File:235 Physalis alkekengi L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:235_Physalis_alkekengi_L.jpg",
+  "plante": "Physalis"
+ },
+ "physalis-pruineux": {
+  "fichier": "File:235 Physalis alkekengi L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:235_Physalis_alkekengi_L.jpg",
+  "plante": "Physalis pruineux"
+ },
+ "piment": {
+  "fichier": "File:Piment cerise Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Piment_cerise_Vilmorin-Andrieux_1883.png",
+  "plante": "Piment"
+ },
+ "pivoine-herbacee": {
+  "fichier": "File:Illustration Paeonia mascula0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Paeonia_mascula0.jpg",
+  "plante": "Pivoine herbacée"
+ },
+ "poireau": {
+  "fichier": "File:Poireau jaune du Poitou Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Poireau_jaune_du_Poitou_Vilmorin-Andrieux_1883.png",
+  "plante": "Poireau"
+ },
+ "poirier": {
+  "fichier": "File:Illustration Pyrus communis0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Pyrus_communis0.jpg",
+  "plante": "Poirier"
+ },
+ "pois": {
+  "fichier": "File:Pois oméga Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Pois_om%C3%A9ga_Vilmorin-Andrieux_1883.png",
+  "plante": "Pois"
+ },
+ "pois-mange-tout": {
+  "fichier": "File:88 Pisum sativum L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:88_Pisum_sativum_L.jpg",
+  "plante": "Pois mange-tout"
+ },
+ "poivron": {
+  "fichier": "File:Illustration Capsicum annuum0.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Capsicum_annuum0.jpg",
+  "plante": "Poivron"
+ },
+ "pomme-de-terre": {
+  "fichier": "File:Pomme de terre Shaw Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Pomme_de_terre_Shaw_Vilmorin-Andrieux_1883.png",
+  "plante": "Pomme de terre"
+ },
+ "pommier": {
+  "fichier": "File:Malus domestica - Köhler–s Medizinal-Pflanzen-108.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Malus_domestica_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-108.jpg",
+  "plante": "Pommier"
+ },
+ "potentille-arbustive": {
+  "fichier": "File:100 Potentilla fragariastrum Ehrh.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:100_Potentilla_fragariastrum_Ehrh.jpg",
+  "plante": "Potentille arbustive"
+ },
+ "pourpier": {
+  "fichier": "File:Pourpier vert Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Pourpier_vert_Vilmorin-Andrieux_1883.png",
+  "plante": "Pourpier"
+ },
+ "primevere": {
+  "fichier": "File:211 Primula officinalis Jaqc.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:211_Primula_officinalis_Jaqc.jpg",
+  "plante": "Primevère"
+ },
+ "radis": {
+  "fichier": "File:Radis long rose Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Radis_long_rose_Vilmorin-Andrieux_1883.png",
+  "plante": "Radis"
+ },
+ "radis-noir-d-hiver": {
+  "fichier": "File:26 Raphanus sativus L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:26_Raphanus_sativus_L.jpg",
+  "plante": "Radis noir d'hiver"
+ },
+ "raifort": {
+  "fichier": "File:Raifort sauvage Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Raifort_sauvage_Vilmorin-Andrieux_1883.png",
+  "plante": "Raifort"
+ },
+ "rhubarbe": {
+  "fichier": "File:Rhubarbe Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Rhubarbe_Vilmorin-Andrieux_1883.png",
+  "plante": "Rhubarbe"
+ },
+ "romarin": {
+  "fichier": "File:Romarin Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Romarin_Vilmorin-Andrieux_1883.png",
+  "plante": "Romarin"
+ },
+ "roquette": {
+  "fichier": "File:Roquette Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Roquette_Vilmorin-Andrieux_1883.png",
+  "plante": "Roquette"
+ },
+ "rose-tremiere": {
+  "fichier": "File:Alcea rosea - Köhler–s Medizinal-Pflanzen-009.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Alcea_rosea_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-009.jpg",
+  "plante": "Rose trémière"
+ },
+ "rosier": {
+  "fichier": "File:106 Rosa canina L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:106_Rosa_canina_L.jpg",
+  "plante": "Rosier"
+ },
+ "rosier-grimpant": {
+  "fichier": "File:106 Rosa canina L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:106_Rosa_canina_L.jpg",
+  "plante": "Rosier grimpant"
+ },
+ "rue-officinale": {
+  "fichier": "File:Ruta graveolens - Köhler–s Medizinal-Pflanzen-259.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Ruta_graveolens_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-259.jpg",
+  "plante": "Rue officinale"
+ },
+ "rutabaga": {
+  "fichier": "File:Rutabaga à collet vert Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Rutabaga_%C3%A0_collet_vert_Vilmorin-Andrieux_1883.png",
+  "plante": "Rutabaga"
+ },
+ "salsifis": {
+  "fichier": "File:Salsifis Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Salsifis_Vilmorin-Andrieux_1883.png",
+  "plante": "Salsifis"
+ },
+ "sarriette": {
+  "fichier": "File:Sarriette vivace Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Sarriette_vivace_Vilmorin-Andrieux_1883.png",
+  "plante": "Sarriette"
+ },
+ "sarriette-vivace": {
+  "fichier": "File:Sarriette vivace Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Sarriette_vivace_Vilmorin-Andrieux_1883.png",
+  "plante": "Sarriette vivace"
+ },
+ "sauge-des-bois": {
+  "fichier": "File:260 Salvia pratensis L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:260_Salvia_pratensis_L.jpg",
+  "plante": "Sauge des bois"
+ },
+ "sauge-officinale": {
+  "fichier": "File:Sauge officinale Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Sauge_officinale_Vilmorin-Andrieux_1883.png",
+  "plante": "Sauge officinale"
+ },
+ "sauge-sclaree": {
+  "fichier": "File:Sauge sclarée Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Sauge_sclar%C3%A9e_Vilmorin-Andrieux_1883.png",
+  "plante": "Sauge sclarée"
+ },
+ "scarole": {
+  "fichier": "File:Scarole ronde Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Scarole_ronde_Vilmorin-Andrieux_1883.png",
+  "plante": "Scarole"
+ },
+ "scille-de-siberie": {
+  "fichier": "File:316 Scilla bifolia L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:316_Scilla_bifolia_L.jpg",
+  "plante": "Scille de Sibérie"
+ },
+ "scorsonere": {
+  "fichier": "File:Scorsonère Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Scorson%C3%A8re_Vilmorin-Andrieux_1883.png",
+  "plante": "Scorsonère"
+ },
+ "solidage": {
+  "fichier": "File:172 Solidago virga-aurea L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:172_Solidago_virga-aurea_L.jpg",
+  "plante": "Solidage"
+ },
+ "souci-officinal": {
+  "fichier": "File:Calendula officinalis - Köhler–s Medizinal-Pflanzen-024.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Calendula_officinalis_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-024.jpg",
+  "plante": "Souci officinal"
+ },
+ "spiree": {
+  "fichier": "File:99 Spiraea ulmaria L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:99_Spiraea_ulmaria_L.jpg",
+  "plante": "Spirée"
+ },
+ "statice": {
+  "fichier": "File:Illustration Limonium vulgare0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Limonium_vulgare0.jpg",
+  "plante": "Statice"
+ },
+ "sureau-noir": {
+  "fichier": "File:150 Sambucus nigra L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:150_Sambucus_nigra_L.jpg",
+  "plante": "Sureau noir"
+ },
+ "tanaisie": {
+  "fichier": "File:Tanaisie Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Tanaisie_Vilmorin-Andrieux_1883.png",
+  "plante": "Tanaisie"
+ },
+ "tetragone": {
+  "fichier": "File:Tétragone cornue Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:T%C3%A9tragone_cornue_Vilmorin-Andrieux_1883.png",
+  "plante": "Tétragone"
+ },
+ "thym": {
+  "fichier": "File:Thym ordinaire Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Thym_ordinaire_Vilmorin-Andrieux_1883.png",
+  "plante": "Thym"
+ },
+ "tomate": {
+  "fichier": "File:Tomate poire Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Tomate_poire_Vilmorin-Andrieux_1883.png",
+  "plante": "Tomate"
+ },
+ "topinambour": {
+  "fichier": "File:Topinambour Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Topinambour_Vilmorin-Andrieux_1883.png",
+  "plante": "Topinambour"
+ },
+ "tulipe": {
+  "fichier": "File:313 Tulipa silvestris L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:313_Tulipa_silvestris_L.jpg",
+  "plante": "Tulipe"
+ },
+ "tulipe-botanique": {
+  "fichier": "File:313 Tulipa silvestris L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:313_Tulipa_silvestris_L.jpg",
+  "plante": "Tulipe botanique"
+ },
+ "veronique-en-epis": {
+  "fichier": "File:244 Veronica teucrium L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "genre",
+  "page": "https://commons.wikimedia.org/wiki/File:244_Veronica_teucrium_L.jpg",
+  "plante": "Véronique en épis"
+ },
+ "vigne-de-table": {
+  "fichier": "File:Vitis vinifera - Köhler–s Medizinal-Pflanzen-145.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Vitis_vinifera_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-145.jpg",
+  "plante": "Vigne de table"
+ }
+}
