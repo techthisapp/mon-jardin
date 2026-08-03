@@ -887,9 +887,12 @@ function majLegendeClim() {
   }
   if (!c) { e.hidden = true; return; }
   e.hidden = false;
-  e.innerHTML = `<span class="leg-titre">Adaptation au climat ${esc(c.label.toLowerCase())}</span>`
-    + ["adapte", "protection", "abri", "deconseille"]
-        .map(n => `<span class="leg-item">${jaugeClim(n)}${esc(NIVEAUX[n].court)}</span>`).join("");
+  /* Le climat est déjà nommé dans l'entête : la légende n'a pas à le répéter et
+     tient sur une ligne, en tête du tableau, sans cadre. Le titre reste, pour
+     les lecteurs d'écran. */
+  e.setAttribute("aria-label", `Adaptation au climat ${c.label.toLowerCase()}`);
+  e.innerHTML = ["adapte", "protection", "abri", "deconseille"]
+    .map(n => `<span class="leg-item">${jaugeClim(n)}${esc(NIVEAUX[n].court)}</span>`).join("");
 }
 
 /* Cocher une plante ne modifie qu'une rangée de la liste : le filtre de l'écran

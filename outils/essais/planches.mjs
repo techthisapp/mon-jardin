@@ -128,6 +128,29 @@ export default async function essai(navigateur) {
   j.controle("deux teintes au plus, le vert et son repli",
     crans && crans.teintes.length <= 2, crans && crans.teintes.join(" "));
 
+  j.section("la légende tient sur une ligne, en tête du tableau");
+  const leg = await pg.evaluate(() => {
+    const e = document.getElementById("legendeClim");
+    if (!e || e.hidden) return null;
+    const st = getComputedStyle(e);
+    return {
+      tient: e.scrollWidth <= e.clientWidth + 1,
+      haut: Math.round(e.getBoundingClientRect().height),
+      cadre: st.borderTopWidth !== "0px" || st.boxShadow !== "none",
+      avantListe: Boolean(e.compareDocumentPosition(document.getElementById("listes")) & 4),
+      apresFiltres: Boolean(document.querySelector(".filtres")
+        .compareDocumentPosition(e) & 4),
+      titre: e.querySelectorAll(".leg-titre").length,
+      etiquette: e.getAttribute("aria-label") || "",
+    };
+  });
+  j.controle("elle ne déborde pas", leg && leg.tient, leg && leg.haut + " px de haut");
+  j.controle("elle n'a plus de cadre", leg && !leg.cadre);
+  j.controle("elle est posée après le filtre et avant la liste",
+    leg && leg.apresFiltres && leg.avantListe);
+  j.controle("le climat n'est plus répété à l'écran, il reste pour la lecture assistée",
+    leg && leg.titre === 0 && /^Adaptation au climat /.test(leg.etiquette), leg && leg.etiquette);
+
   await ctx.close();
   return j.fin(erreurs);
 }
