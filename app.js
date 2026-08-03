@@ -592,14 +592,14 @@ async function basculer(plantId) {
   if (!session) { info("Connectez-vous pour enregistrer votre jardin."); $("email")?.focus(); return; }
   const present = sel.has(plantId);
   present ? sel.delete(plantId) : sel.add(plantId);
-  majCompte(); rendreTout();
+  majCompte(); rendreApresBascule(plantId);
   const req = present
     ? db.from("garden_plants").delete().eq("garden_id", jardinId).eq("plant_id", plantId)
     : db.from("garden_plants").insert({ garden_id: jardinId, plant_id: plantId });
   const { error } = await req;
   if (error) {
     present ? sel.add(plantId) : sel.delete(plantId);
-    majCompte(); rendreTout();
+    majCompte(); rendreApresBascule(plantId);
     info("Modification non enregistrée : " + error.message, true);
     return;
   }
@@ -751,6 +751,7 @@ function filtrerSel() {
 function carteItem(p) {
   const bloc = document.createElement("div");
   bloc.className = "item-bloc";
+  bloc.dataset.plante = p.id;
   const b = document.createElement("button");
   b.type = "button"; b.className = "item";
   b.setAttribute("aria-pressed", String(sel.has(p.id)));
@@ -826,6 +827,27 @@ function majLegendeClim() {
   e.innerHTML = `<span class="leg-titre">Adaptation au climat ${esc(c.label.toLowerCase())}</span>`
     + ["adapte", "protection", "abri", "deconseille"]
         .map(n => `<span class="leg-item">${jaugeClim(n)}${esc(NIVEAUX[n].court)}</span>`).join("");
+}
+
+/* Cocher une plante ne modifie qu'une rangée de la liste : le filtre de l'écran
+   porte sur le type, la catégorie, le climat et la recherche, jamais sur la
+   sélection. Reconstruire les 315 rangées à chaque coche coûtait vingt-trois à
+   trente-trois millisecondes, jusqu'à quatre-vingt-treize sur un téléphone.
+   Le repli sur le rendu complet couvre le cas où la liste n'est pas encore
+   construite, à la première coche depuis un autre écran. */
+function majRangee(plantId) {
+  const ancien = document.querySelector(`.item-bloc[data-plante="${plantId}"]`);
+  const p = plantes.find(x => x.id === plantId);
+  if (!ancien || !p) return false;
+  ancien.replaceWith(carteItem(p));
+  return true;
+}
+
+function rendreApresBascule(plantId) {
+  if (!majRangee(plantId)) { rendreTout(); return; }
+  rendreMaintenant();
+  rendrePlanning();
+  rendreEspaces();
 }
 
 function rendreSelection() {
