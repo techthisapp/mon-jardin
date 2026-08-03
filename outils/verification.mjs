@@ -3,7 +3,7 @@
 // Sans dépendance. Usage : node outils/verification.mjs [--corriger]
 // L'option --corriger réécrit les empreintes de version dans index.html.
 
-import { readFileSync, writeFileSync, mkdtempSync, copyFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, copyFileSync, existsSync, readdirSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
@@ -145,6 +145,31 @@ if (picto && ordre) {
 /* ------------------------------------------------------------------ */
 /* Contrôle 4 : empreintes de version des actifs                       */
 /* ------------------------------------------------------------------ */
+
+/* Le manifeste des planches et les fichiers doivent se répondre exactement. Une
+   entrée sans fichier laisse une vignette vide dans la liste, un fichier sans
+   entrée est du poids mort dans le dépôt. */
+{
+  const chemin = join(RACINE, "planches.json");
+  if (!existsSync(chemin)) {
+    faute("planches", "planches.json est absent");
+  } else {
+    const m = JSON.parse(readFileSync(chemin, "utf8"));
+    const slugs = Object.keys(m);
+    const codes = [...new Set(Object.values(m).map(v => v[0]))].filter(c => !"mvkt".includes(c));
+    if (codes.length) faute("planches", `codes de fonds inconnus : ${codes.join(", ")}`);
+    for (const d of ["liste", "fiche"]) {
+      const manquants = slugs.filter(s => !existsSync(join(RACINE, "planches", d, s + ".webp")));
+      if (manquants.length) {
+        faute("planches", `${manquants.length} fichiers absents dans planches/${d} : ${manquants.slice(0, 5).join(", ")}`);
+      }
+      const sur = readdirSync(join(RACINE, "planches", d))
+        .filter(f => f.endsWith(".webp")).map(f => f.slice(0, -5))
+        .filter(f => !slugs.includes(f));
+      if (sur.length) faute("planches", `${sur.length} fichiers de planches/${d} hors manifeste : ${sur.slice(0, 5).join(", ")}`);
+    }
+  }
+}
 
 /* Aucun domaine tiers sur le chemin critique. Les caractères et le client de la
    base étaient servis par Google Fonts et esm.sh, ce qui ajoutait trois domaines

@@ -580,6 +580,10 @@ En gravité basse subsistent les textes partagés par plus de vingt plantes, jus
 | `app.js` | Lecture du catalogue, authentification, filtres, rendu |
 | `config.js` | URL du projet et clé anon |
 | `vendor/supabase.js` | Client de la base groupé, construit et versionné dans le dépôt |
+| `planches/liste/*.webp` | Masques alpha de 128 pixels, vignette de la liste |
+| `planches/fiche/*.webp` | Planches en couleur de 320 pixels, entête de fiche |
+| `planches.json` | Manifeste, une lettre de fonds par plante |
+| `planches-provenance.json` | Fichier d'origine et page de Commons, hors application |
 | `polices/*.woff2` | Neuf graisses IBM Plex réduites au jeu français |
 | `sw.js` | Agent de service, cache des actifs et fonctionnement hors ligne |
 | `manifest.webmanifest`, icônes | Installation sur écran d'accueil |
@@ -608,9 +612,25 @@ Relevé du 3 août 2026, avant traitement : 643 kilo-octets, trente-cinq requêt
 
 Les essais de bout en bout s'exécutent avec `serviceWorkers: "block"`, faute de quoi l'agent servirait les réponses de la doublure d'une page à l'autre.
 
+### Planches d'herbier
+
+190 fiches sur 315 portent une planche, 145 au niveau de l'espèce et 45 au niveau du genre. Quatre fonds du domaine public, dans cet ordre : Vilmorin pour le potager et les aromatiques, parce que les flores sauvages montrent l'espèce botanique et non la forme cultivée ; Masclef pour tout le reste ; Köhler puis Thomé en recours à l'espèce ; le genre en dernier, chez Masclef puis Thomé.
+
+Deux règles ont écarté des planches et c'est le résultat recherché. Une planche partagée par plusieurs fiches est retirée des fiches servies au genre, sauf lorsqu'une fiche porte le nom de l'autre : cinq fiches montraient la même groseille à maquereau, six le même colza. Une fiche appariée à l'espèce garde la sienne, le framboisier étant bien *Rubus idaeus*. Et l'appariement Vilmorin exige que la planche porte le nom entier de la fiche en tête de son titre, faute de quoi le pois de senteur recevait la planche du pois potager.
+
+`planches.json` porte une lettre de fonds par plante, `v` Vilmorin, `m` Masclef, `k` Köhler, `t` Thomé, suivie d'un `g` quand la planche est celle du genre. Trois kilo-octets, lus au démarrage en parallèle du catalogue et précachés par l'agent de service.
+
+La vignette de liste est un masque alpha : le fichier ne porte que la forme, la couleur vient de la feuille de style. Son adresse n'est posée qu'à l'approche de la rangée, par un observateur d'intersection, une image de fond n'ayant pas de chargement paresseux. Sans cela, ouvrir l'écran des plantes demanderait les 190 fichiers d'un coup.
+
+La planche de fiche remplace le motif décoratif par typologie quand elle existe. Le blanc de son papier disparaît par `mix-blend-mode: multiply`, un fondu circulaire l'éteint de tous les côtés, l'opacité est ramenée à quarante-deux pour cent. Le motif reste pour les 125 fiches sans planche.
+
+La provenance est énoncée dans le bloc Identité, avec la mention « planche du genre » quand le dessin montre une plante voisine et non celle de la fiche.
+
+La fabrique est hors dépôt, dans l'atelier : `vignette.py`, `texte.py` et `affecter.py`. Le téléchargement depuis Commons demande trois secondes entre deux fichiers, en deçà le service renvoie des erreurs 429 sur la plus grande partie du lot.
+
 ### Contrôle avant dépôt
 
-`node outils/verification.mjs` vérifie huit points, sans aucune dépendance externe.
+`node outils/verification.mjs` vérifie neuf points, sans aucune dépendance externe.
 
 **Syntaxe du module.** Une erreur de syntaxe n'apparaît qu'au chargement de la page, et le module s'interrompt sans un mot dans l'interface.
 
@@ -623,6 +643,8 @@ Les essais de bout en bout s'exécutent avec `serviceWorkers: "block"`, faute de
 **Empreintes de version.** Les balises de `index.html` et l'import de `vendor/supabase.js` dans `app.js` doivent correspondre au contenu des fichiers.
 
 **Domaines tiers.** Aucun fichier servi par le site ne doit appeler un domaine autre que la base, le service météorologique et le service d'adresses. C'est ce qui empêche de replacer les caractères ou le client de la base sur un domaine extérieur.
+
+**Planches.** Chaque entrée de `planches.json` doit avoir ses deux fichiers, chaque fichier doit avoir son entrée, et le code de fonds doit être connu. Une entrée sans fichier laisse une vignette vide dans la liste, un fichier sans entrée est du poids mort dans le dépôt.
 
 **Agent de service.** Chaque actif déclaré dans `sw.js` doit exister, et la constante `VERSION` doit correspondre à leurs empreintes. Sans ce contrôle, un navigateur garderait l'ancienne copie après une mise en ligne. `index.html` est écarté du calcul, il ne change que pour porter les empreintes des autres actifs et le document est demandé au réseau d'abord.
 

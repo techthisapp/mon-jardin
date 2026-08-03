@@ -335,6 +335,13 @@
   "page": "https://commons.wikimedia.org/wiki/File:Colchicum_autumnale_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-044.jpg",
   "plante": "Colchique"
  },
+ "concombre": {
+  "fichier": "File:Concombre serpent Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Concombre_serpent_Vilmorin-Andrieux_1883.png",
+  "plante": "Concombre"
+ },
  "consoude": {
   "fichier": "File:225 Symphytum officinale L.jpg",
   "fonds": "Masclef 1891",
@@ -355,6 +362,13 @@
   "niveau": "espece",
   "page": "https://commons.wikimedia.org/wiki/File:Coriandrum_sativum_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-193.jpg",
   "plante": "Coriandre"
+ },
+ "cornichon": {
+  "fichier": "File:Concombre serpent Vilmorin-Andrieux 1883.png",
+  "fonds": "Vilmorin 1883",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Concombre_serpent_Vilmorin-Andrieux_1883.png",
+  "plante": "Cornichon"
  },
  "cornouiller-a-bois-rouge": {
   "fichier": "File:148 Cornus mas L.jpg",
@@ -468,6 +482,20 @@
   "page": "https://commons.wikimedia.org/wiki/File:Euphorbia_helioscopia_L.jpg",
   "plante": "Euphorbe des jardins"
  },
+ "fenouil-aromatique": {
+  "fichier": "File:Foeniculum vulgare - Köhler–s Medizinal-Pflanzen-148.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Foeniculum_vulgare_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-148.jpg",
+  "plante": "Fenouil aromatique"
+ },
+ "fenouil-bulbe": {
+  "fichier": "File:Foeniculum vulgare - Köhler–s Medizinal-Pflanzen-148.jpg",
+  "fonds": "Köhler 1887",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Foeniculum_vulgare_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-148.jpg",
+  "plante": "Fenouil bulbe"
+ },
  "fetuque-bleue": {
   "fichier": "File:384 Festuca duriuscula L.jpg",
   "fonds": "Masclef 1891",
@@ -502,6 +530,13 @@
   "niveau": "espece",
   "page": "https://commons.wikimedia.org/wiki/File:Fraise_Lucas_Vilmorin-Andrieux_1883.png",
   "plante": "Fraise"
+ },
+ "framboise": {
+  "fichier": "File:104 Rubus idaeus L.jpg",
+  "fonds": "Masclef 1891",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:104_Rubus_idaeus_L.jpg",
+  "plante": "Framboise"
  },
  "fritillaire-pintade": {
   "fichier": "File:314 Fritillaria meleagris L.jpg",
@@ -1286,5 +1321,12 @@
   "niveau": "espece",
   "page": "https://commons.wikimedia.org/wiki/File:Vitis_vinifera_-_K%C3%B6hler%E2%80%93s_Medizinal-Pflanzen-145.jpg",
   "plante": "Vigne de table"
+ },
+ "viorne-obier": {
+  "fichier": "File:Illustration Viburnum opulus0.jpg",
+  "fonds": "Thomé 1885",
+  "niveau": "espece",
+  "page": "https://commons.wikimedia.org/wiki/File:Illustration_Viburnum_opulus0.jpg",
+  "plante": "Viorne obier"
  }
 }

@@ -400,6 +400,54 @@ function info(msg, erreur = false) {
   e.hidden = false;
 }
 
+/* ================== Planches ================== */
+
+/* Le manifeste porte une lettre de fonds par plante, et un g quand la planche
+   est celle du genre plutôt que de l'espèce. Trois kilo-octets, servis par le
+   site et mis en cache par l'agent de service. Son absence n'est pas une panne :
+   aucune vignette n'apparaît, les rangées se referment. */
+let planches = {};
+const FONDS = {
+  m: "Masclef, Atlas des plantes de France, 1891",
+  v: "Vilmorin-Andrieux, Les plantes potagères, 1883",
+  k: "Köhler, Medizinal-Pflanzen, 1887",
+  t: "Thomé, Flora von Deutschland, 1885",
+};
+const aPlanche = p => Boolean(planches[p.slug]);
+const plancheDuGenre = p => (planches[p.slug] || "").endsWith("g");
+const creditPlanche = p => {
+  const c = planches[p.slug];
+  if (!c) return "";
+  return FONDS[c[0]] + (c.endsWith("g") ? ", planche du genre" : "");
+};
+
+async function lirePlanches() {
+  try {
+    const r = await fetch("./planches.json");
+    if (!r.ok) return;
+    planches = await r.json();
+    // Le manifeste arrive bien avant qu'une fiche soit ouverte : seule la liste
+    // peut avoir été rendue sans lui.
+    if (plantes.length) rendreSelection();
+  } catch (e) { /* manifeste indisponible, aucune vignette */ }
+}
+
+/* Les masques ne sont posés qu'à l'approche de la rangée. Sans cela, ouvrir
+   l'écran des plantes demanderait les 184 fichiers d'un coup, une image de
+   fond n'ayant pas de chargement paresseux. */
+let obsPlanches = null;
+function poserPlanches(racine) {
+  if (obsPlanches) obsPlanches.disconnect();
+  obsPlanches = new IntersectionObserver(entrees => {
+    entrees.forEach(e => {
+      if (!e.isIntersecting) return;
+      e.target.style.setProperty("--pl", `url("./planches/liste/${e.target.dataset.pl}.webp")`);
+      obsPlanches.unobserve(e.target);
+    });
+  }, { rootMargin: "400px" });
+  racine.querySelectorAll(".v-planche[data-pl]").forEach(e => obsPlanches.observe(e));
+}
+
 /* ================== Catalogue ================== */
 
 async function chargerCatalogue() {
@@ -758,6 +806,7 @@ function carteItem(p) {
   const ad = adapt[p.id];
   const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
   b.innerHTML = `<span class="rond">${CHECK}</span>`
+    + (aPlanche(p) ? `<span class="v-planche" data-pl="${esc(p.slug)}" aria-hidden="true"></span>` : "")
     + `<span class="nom-item">${esc(p.nom)}${sousTitre}</span>`
     + (ad ? jaugeClim(ad.level, ad.note) : "")
     + `<span class="voir-fiche" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`;
@@ -839,7 +888,10 @@ function majRangee(plantId) {
   const ancien = document.querySelector(`.item-bloc[data-plante="${plantId}"]`);
   const p = plantes.find(x => x.id === plantId);
   if (!ancien || !p) return false;
-  ancien.replaceWith(carteItem(p));
+  const neuf = carteItem(p);
+  ancien.replaceWith(neuf);
+  const v = neuf.querySelector(".v-planche[data-pl]");
+  if (v) v.style.setProperty("--pl", `url("./planches/liste/${v.dataset.pl}.webp")`);
   return true;
 }
 
@@ -865,6 +917,7 @@ function rendreSelection() {
     g.className = "liste";
     lot.forEach(p => g.appendChild(carteItem(p)));
     zone.appendChild(g);
+    poserPlanches(zone);
     return;
   }
   // Deux niveaux : le type d'abord, ses catégories ensuite.
@@ -891,6 +944,7 @@ function rendreSelection() {
       zone.appendChild(g);
     });
   });
+  poserPlanches(zone);
 }
 
 sur("rech", "input", rendreSelection);
@@ -1469,7 +1523,14 @@ function cleMotif(p) {
   return MOTIF_TYPO[p.typo] || "ornement";
 }
 
+/* La planche remplace le motif décoratif par typologie quand elle existe. Le
+   blanc de son papier disparaît par fusion multiplicative, un dégradé dégage le
+   côté du titre. Le motif reste pour les 131 fiches sans planche. */
 function motifFiche(p) {
+  if (aPlanche(p)) {
+    return `<span class="f-planche" aria-hidden="true">`
+      + `<img src="./planches/fiche/${esc(p.slug)}.webp" alt="" decoding="async"></span>`;
+  }
   const m = MOTIF[cleMotif(p)];
   if (!m) return "";
   return `<span class="f-motif" aria-hidden="true"><svg viewBox="0 0 200 200">${m}</svg></span>`;
@@ -1879,6 +1940,9 @@ function ficheBlocs(p) {
     ["Famille", p.famille], ["Cycle", a.type], ["Hauteur", a.hauteur],
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
     ["Rusticité", nuanceRusticite(p)],
+    // La planche du genre montre une plante voisine, pas celle de la fiche : la
+    // provenance le dit plutôt que de laisser croire au portrait de l'espèce.
+    ["Planche", creditPlanche(p)],
   ]) + bloc("Culture", [
     ["Sol", a.sol], ["Eau", a.arrosage], ["Fertilité", a.fertilisation],
     ["Profondeur", p.prof], ["Pollinisation", a.pollinisation],
@@ -3133,6 +3197,7 @@ majCompte();
 try { await chargerCatalogue(); }
 catch (e) { info("Catalogue indisponible : " + e.message, true); }
 lireGlossaire().catch(() => { /* glossaire indisponible, les textes restent bruts */ });
+lirePlanches();
 const { data: { session: s0 } } = await db.auth.getSession();
 if (!s0) $("zone-connexion").hidden = false;
 

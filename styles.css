@@ -1077,6 +1077,33 @@ body.fige{overflow:hidden}
 .f-centre{font-size:12px;font-weight:600;fill:var(--f-ink)}
 
 .f-entete{position:relative;overflow:hidden;border-radius:var(--rayon);padding:2px 0 4px}
+/* Vignette de planche de la liste. Le fichier ne porte que la forme, la couleur
+   vient d'ici : encre du texte, teinte de sélection quand la plante est retenue.
+   L'adresse du masque est posée par l'observateur à l'approche de la rangée. */
+.v-planche{
+  flex:0 0 auto;width:34px;height:34px;background:var(--encre);opacity:.78;
+  -webkit-mask-image:var(--pl);mask-image:var(--pl);
+  -webkit-mask-size:contain;mask-size:contain;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-position:center;mask-position:center;
+}
+.item[aria-pressed="true"] .v-planche{background:var(--terre);opacity:1}
+
+/* Planche en couleur de l'entête de fiche. Le blanc de son papier disparaît par
+   fusion multiplicative, un dégradé linéaire dégage le côté du titre. */
+.f-planche{
+  position:absolute;top:-14px;right:-16px;width:188px;height:188px;
+  pointer-events:none;display:block;
+}
+.f-planche img{
+  width:100%;height:100%;object-fit:contain;display:block;
+  mix-blend-mode:multiply;opacity:.42;
+  /* Même fondu circulaire que le motif décoratif qu'elle remplace : la planche
+     s'éteint de tous les côtés et ne vient pas troubler les jauges. */
+  -webkit-mask-image:radial-gradient(circle at 74% 28%, #000 38%, transparent 72%);
+  mask-image:radial-gradient(circle at 74% 28%, #000 38%, transparent 72%);
+}
+
 .f-motif{
   position:absolute;top:-26px;right:-30px;width:190px;height:190px;color:var(--terre);
   pointer-events:none;
