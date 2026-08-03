@@ -27,7 +27,10 @@
   --terre:#4C8C3F;
   --alerte:#8A2E1E;
   --col-nom:196px;
-  --rayon:10px;
+--rayon:12px;
+  --rayon-s:9px;
+  --ombre:0 1px 2px rgba(22,36,30,.045), 0 1px 1px rgba(22,36,30,.03);
+  --ombre-h:0 2px 6px rgba(22,36,30,.07);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
@@ -920,21 +923,20 @@ body.fige{overflow:hidden}
 
 
 /* ---------- Jauge d'adaptation au climat ---------- */
+/* Adaptation au climat : quatre traits d'égale hauteur, tous de la même encre
+   verte. C'est le nombre de traits remplis qui porte le niveau, la couleur ne
+   le redouble pas. Quatre teintes différentes faisaient de chaque rangée de la
+   liste un feu de signalisation. */
 .jauge{
-  display:inline-flex;align-items:flex-end;gap:2px;height:14px;flex:none;
+  display:inline-flex;align-items:center;gap:2.5px;height:13px;flex:none;
   margin-left:8px;
 }
-.jauge .cran{
-  display:block;width:3.5px;border-radius:1.5px;background:#E1DFD6;
-}
-.jauge .cran:nth-child(1){height:5px}
-.jauge .cran:nth-child(2){height:8px}
-.jauge .cran:nth-child(3){height:11px}
-.jauge .cran:nth-child(4){height:14px}
-.jauge.niv-adapte .cran.plein{background:#4C8C3F}
-.jauge.niv-protection .cran.plein{background:#D19A32}
-.jauge.niv-abri .cran.plein{background:#D2764F}
-.jauge.niv-deconseille .cran.plein{background:#B7455A}
+/* Les classes de niveau servent aussi à des pastilles et à des blocs teintés :
+   la jauge annule leur fond et leur contour. */
+.jauge{background:none;border:0;color:inherit}
+.jauge .cran{display:block;width:3px;height:13px;border-radius:2px;background:#E4E2D9}
+.jauge .cran.plein{background:var(--terre)}
+.jauge.niv-deconseille .cran.plein{background:#9DB08F}
 
 .item{align-items:center}
 .nom-item{flex:1;min-width:0}
@@ -1618,3 +1620,200 @@ body.fige{overflow:hidden}
   display:inline-block;margin-right:6px;padding:1px 6px;border-radius:4px;
   background:var(--panneau);color:var(--f-ink3);font-size:11.5px;
 }
+
+
+/* ============================================================
+   Rafraîchissement de surface, 3 août 2026.
+   Le contour d'un pixel sur fond blanc, répété sur chaque jeton, chaque rangée
+   et chaque panneau, était la marque la plus datée de l'interface. Il cède la
+   place à un aplat très clair et à une ombre d'un pixel. Les libellés en
+   capitales condensées espacées sont réduits au strict repérage.
+   ============================================================ */
+
+/* ---------- Panneaux ---------- */
+.filtres,
+.carte,
+.panneau{
+  border:0;
+  box-shadow:var(--ombre);
+  border-radius:var(--rayon);
+}
+.filtres{padding:12px 14px}
+
+/* ---------- Jetons de filtre ---------- */
+/* Les jetons de type et de catégorie sont tous actifs à l'ouverture : c'est
+   l'état calme qui doit être le plus discret. Un jeton retenu porte donc l'aplat
+   neutre, un jeton écarté s'efface. L'inverse peignait l'écran en noir tant que
+   rien n'était filtré. */
+.chip{
+  border:0;background:rgba(22,36,30,.055);border-radius:var(--rayon-s);
+  padding:6px 11px;color:var(--encre);
+  font-family:"IBM Plex Sans",sans-serif;
+  font-size:12.5px;font-weight:500;letter-spacing:0;
+  transition:background .12s, opacity .12s;
+}
+.chip:hover{background:rgba(22,36,30,.1)}
+.chip[aria-pressed="false"]{
+  background:none;color:var(--encre-doux);opacity:.5;
+  box-shadow:inset 0 0 0 1px var(--filet);
+}
+.chip .nb{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  color:var(--encre-doux);opacity:.85;
+}
+.chip .pastille{width:6px;height:6px}
+/* Le filtre climatique est un vrai interrupteur, éteint par défaut. */
+.chip-clim[aria-pressed="false"]{background:rgba(22,36,30,.055);color:var(--encre);opacity:1;box-shadow:none}
+.chip-clim[aria-pressed="true"]{background:var(--terre);color:#fff;opacity:1;box-shadow:none}
+.chip-jardin[aria-pressed="true"]{background:var(--terre);color:#fff;opacity:1;box-shadow:none}
+.mini-chip{
+  border:0;background:rgba(22,36,30,.055);color:var(--encre-doux);
+  border-radius:var(--rayon-s);padding:5px 9px;
+  font:500 11.5px/1 "IBM Plex Sans",sans-serif;
+}
+.mini-chip[aria-pressed="true"]{background:var(--terre);color:#fff}
+
+/* ---------- Bascule segmentée ---------- */
+.segments{
+  border:0;background:rgba(22,36,30,.05);border-radius:11px;padding:3px;gap:2px;
+}
+.segment{
+  border-radius:8px;padding:7px 13px;
+  font-family:"IBM Plex Sans",sans-serif;font-size:12.5px;font-weight:500;
+  letter-spacing:0;color:var(--encre-doux);transition:background .12s;
+}
+.segment[aria-pressed="true"]{
+  background:#fff;color:var(--encre);font-weight:600;box-shadow:var(--ombre);
+}
+
+/* ---------- Entêtes de groupe ---------- */
+.groupe-type{
+  background:none;color:var(--encre);border-radius:0;
+  padding:0 2px 7px;margin:26px 0 4px;
+  border-bottom:1px solid var(--filet);
+}
+.groupe-type:first-child{margin-top:2px}
+.groupe-type b{
+  font-family:"IBM Plex Sans",sans-serif;
+  font-size:15px;font-weight:650;letter-spacing:-.005em;text-transform:none;
+}
+.groupe-type .nb{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;
+  font-size:11.5px;color:var(--encre-doux);
+}
+.groupe-type .pastille{width:7px;height:7px}
+.groupe-titre{
+  border-bottom:0;margin:14px 0 6px;padding-bottom:0;
+}
+.groupe-titre b{
+  font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--encre-doux);
+}
+
+/* ---------- Rangées de plante ---------- */
+.item{
+  border:0;background:#fff;border-radius:var(--rayon-s);
+  box-shadow:var(--ombre);padding:9px 12px;
+  transition:background .12s, box-shadow .12s;
+}
+.item:hover{border:0;box-shadow:var(--ombre-h)}
+.item[aria-pressed="true"]{background:#EDF3E8;border:0;font-weight:600}
+.liste{gap:6px}
+
+/* ---------- Légende du climat ---------- */
+.legende-clim{
+  border:0;box-shadow:var(--ombre);border-radius:var(--rayon);
+}
+
+/* ---------- Étiquettes de filtre ---------- */
+.etiq-filtre{
+  font-family:"IBM Plex Sans",sans-serif;
+  font-size:11px;font-weight:600;letter-spacing:.06em;padding-top:7px;
+}
+
+/* ---------- Champs de saisie ---------- */
+input[type="search"],
+input[type="text"],
+input[type="email"],
+select{
+  border:0;background:rgba(22,36,30,.05);border-radius:var(--rayon-s);
+  box-shadow:none;
+}
+input[type="search"]:focus,
+input[type="text"]:focus,
+input[type="email"]:focus,
+select:focus{
+  outline:2px solid var(--terre);outline-offset:1px;background:#fff;
+}
+
+/* ---------- Barre de bilan de l'écran des plantes ---------- */
+.ligne-bilan{align-items:center;gap:10px;flex-wrap:wrap}
+.ligne-bilan .lien{margin-left:auto}
+.ligne-bilan .bilan{font-size:12.5px}
+#basculeFiltres{flex:none;white-space:nowrap}
+#basculeFiltres[aria-pressed="true"]{border-color:var(--terre);color:var(--terre)}
+#corpsFiltres{
+  display:flex;flex-direction:column;gap:8px;
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--filet-clair);
+}
+
+/* ---------- Libellés de repérage ---------- */
+/* Les capitales condensées très espacées étaient partout. Elles restent, mais
+   plus petites et moins écartées, et le titre de la légende passe en casse
+   normale : c'est une phrase, pas une étiquette. */
+.legende-clim .leg-titre{
+  font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;
+  color:var(--encre);margin-bottom:2px;
+}
+.etiq-filtre{font-size:10.5px;letter-spacing:.05em}
+.groupe-titre b{letter-spacing:.06em}
+
+/* ---------- Boutons discrets ---------- */
+.mini{
+  background:rgba(22,36,30,.055);border-radius:var(--rayon-s);padding:6px 11px;
+  color:var(--encre);font-size:12.5px;
+}
+.mini:hover{background:rgba(22,36,30,.1)}
+.mini[aria-pressed="true"]{background:var(--terre);color:#fff}
+.mini .nb{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  background:rgba(255,255,255,.28);border-radius:6px;padding:0 5px;
+}
+.ligne-bilan .lien{margin-left:0}
+
+/* ---------- Pastilles de tâche ---------- */
+/* L'aplat saturé avec un pictogramme blanc faisait cinq carrés de couleur vive
+   par écran. La teinte reste le code de la tâche, mais elle passe au fond très
+   clair et au trait plein, ce qui l'apaise sans la perdre. */
+.syn-pt, .pt-tache{
+  background:color-mix(in srgb, var(--t, var(--encre-doux)) 13%, #fff);
+  color:var(--t, var(--encre-doux));
+  border-radius:10px;
+}
+.syn-pt svg, .pt-tache svg{stroke:currentColor;stroke-width:1.9}
+
+/* ---------- Entête de la frise annuelle ---------- */
+/* Le bandeau d'un noir plein tenait lieu d'ancrage à un tableau dense. Un fond
+   de papier et un filet suffisent, et la frise cesse de commencer par une barre
+   sombre. */
+.entete-mois{
+  background:var(--papier-haut);color:var(--encre-doux);
+  border-bottom:1px solid var(--filet);
+}
+.coin-entete{
+  font-family:"IBM Plex Sans",sans-serif;font-size:11px;font-weight:600;
+  letter-spacing:.05em;opacity:1;color:var(--encre-doux);
+}
+.mois-case{border-left:1px solid var(--filet-clair);color:var(--encre-doux)}
+.mois-case.ici{background:rgba(76,140,63,.1);color:var(--encre);font-weight:600}
+.cadre-frise{border-radius:var(--rayon);overflow:hidden;box-shadow:var(--ombre);border:0}
+
+/* ---------- Fiche de plante ---------- */
+.f-chip{
+  border:0;background:rgba(22,36,30,.055);color:var(--f-ink2);
+  border-radius:var(--rayon-s);padding:4px 11px;font-size:12px;
+}
+.f-jauges{
+  border:0;box-shadow:var(--ombre);background:rgba(255,255,255,.72);
+  border-radius:var(--rayon);
+}
+.f-bloc{border-radius:var(--rayon)}

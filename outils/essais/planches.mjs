@@ -1,4 +1,4 @@
-/* Planches d'herbier. Les contrôles portent sur ce qui ne se voit pas dans le
+/* Planches d'herbier et réglages de l'écran des plantes. Les contrôles portent sur ce qui ne se voit pas dans le
    rendu : la vignette n'apparaît que là où une planche existe, son masque n'est
    posé qu'à l'approche de la rangée, la planche remplace le motif décoratif
    dans l'entête, et la provenance est énoncée, planche du genre comprise. */
@@ -74,6 +74,32 @@ export default async function essai(navigateur) {
   const sans = net(await pg.locator(".f-pan-annee").innerText());
   j.controle("aucune ligne de provenance", !/Planche/.test(sans));
   await fermerFiche(pg);
+
+  j.section("le bloc de filtres s'ouvre replié");
+  const filtres = await pg.evaluate(() => {
+    const b = document.getElementById("basculeFiltresS"), c = document.getElementById("corpsFiltresS");
+    if (!b || !c) return null;
+    const ferme = c.hidden;
+    b.click();
+    const ouvert = !c.hidden;
+    b.click();
+    return { ferme, ouvert, rendu: c.hidden };
+  });
+  j.controle("il est replié au premier affichage", filtres && filtres.ferme);
+  j.controle("le bouton l'ouvre et le referme",
+    filtres && filtres.ouvert && filtres.rendu);
+
+  j.section("la jauge de climat porte quatre crans d'une seule encre");
+  const crans = await pg.evaluate(() => {
+    const g = document.querySelector(".legende-clim .jauge");
+    if (!g) return null;
+    const teintes = [...document.querySelectorAll(".legende-clim .jauge .cran.plein")]
+      .map(e => getComputedStyle(e).backgroundColor);
+    return { total: g.children.length, teintes: [...new Set(teintes)] };
+  });
+  j.controle("quatre crans", crans && crans.total === 4, crans && crans.total);
+  j.controle("deux teintes au plus, le vert et son repli",
+    crans && crans.teintes.length <= 2, crans && crans.teintes.join(" "));
 
   await ctx.close();
   return j.fin(erreurs);

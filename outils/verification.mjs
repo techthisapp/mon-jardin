@@ -48,7 +48,14 @@ try {
 /* ------------------------------------------------------------------ */
 
 const declares = new Set();
-for (const m of indexHtml.matchAll(/\bid="([A-Za-z0-9_-]+)"/g)) declares.add(m[1]);
+const doubles = [];
+for (const m of indexHtml.matchAll(/\bid="([A-Za-z0-9_-]+)"/g)) {
+  if (declares.has(m[1])) doubles.push(m[1]);
+  declares.add(m[1]);
+}
+// Un identifiant en double fait retourner par getElementById le premier venu,
+// souvent celui d'un autre écran, et le comportement est silencieusement faux.
+if (doubles.length) faute("identifiants", `identifiants en double dans index.html : ${[...new Set(doubles)].join(", ")}`);
 
 // Éléments que le script construit lui-même dans ses gabarits.
 const construits = new Set();

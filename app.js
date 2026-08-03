@@ -721,6 +721,7 @@ function construireChips() {
   });
   chipsEspaces($("chipsEspaceM"), $("ligneEspaceM"), rendreMaintenant);
   chipsEspaces($("chipsEspaceP"), $("ligneEspaceP"), rendrePlanning);
+  majNbFiltres();
 }
 
 // Filtre d'espace : sélection unique, avec une valeur pour les plantes non classées.
@@ -948,7 +949,7 @@ function rendreSelection() {
 }
 
 sur("rech", "input", rendreSelection);
-sur("filtreClimat", "click", () => { climatSeul = !climatSeul; rendreSelection(); });
+sur("filtreClimat", "click", () => { climatSeul = !climatSeul; majNbFiltres(); rendreSelection(); });
 sur("vider", "click", async () => {
   if (!sel.size || !session) return;
   const copie = new Set(sel), copieAff = new Map(aff);
@@ -1244,7 +1245,7 @@ function rendreMaintenant() {
   majNiveau();
   if (!vueDetail) return;
 
-  const carreTache = k => `<span class="pt-tache" style="background:${teinteK(k)}">`
+  const carreTache = k => `<span class="pt-tache" style="--t:${teinteK(k)}">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[k] || ""}</svg></span>`;
   const titreTache = k => VERBE[k] || phases[k].label;
 
@@ -2734,7 +2735,7 @@ function rendreSynthese(paires) {
   if (lignes.length) {
     h.push('<div class="syn-lignes">' + lignes.map(l =>
       `<button type="button" class="syn-ligne" data-tache="${esc(l.k)}">`
-      + `<span class="syn-pt" style="background:${teinteK(l.k)}">`
+      + `<span class="syn-pt" style="--t:${teinteK(l.k)}">`
       + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[l.k] || ""}</svg></span>`
       + `<span class="syn-txt"><span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span> `
       + `<span class="l">${esc(texteLigne(l))}`
@@ -3537,6 +3538,27 @@ function majFiltresMoment() {
   e.hidden = n === 0;
   $("basculeFiltresM").setAttribute("aria-pressed", String(n > 0));
 }
+
+/* Le bloc de filtres de l'écran des plantes s'ouvrait sur quinze catégories et
+   occupait la hauteur de l'écran avant la première plante. Il est replié, et la
+   pastille dit combien de filtres écartent quelque chose. */
+function majNbFiltres() {
+  const e = $("nbFiltresS");
+  if (!e) return;
+  let n = 0;
+  if (ORDRE_TYPO.some(t => !etatTypo[t])) n++;
+  if (catsVisibles(etatTypo).some(c => !etatCat[c])) n++;
+  if (climatSeul) n++;
+  e.textContent = n;
+  e.hidden = n === 0;
+  $("basculeFiltresS").setAttribute("aria-pressed", String(n > 0));
+}
+
+sur("basculeFiltresS", "click", function () {
+  const ouvert = $("corpsFiltresS").hidden;
+  $("corpsFiltresS").hidden = !ouvert;
+  this.setAttribute("aria-expanded", String(ouvert));
+});
 
 sur("basculeFiltresM", "click", function () {
   const ouvert = $("corpsFiltresM").hidden;

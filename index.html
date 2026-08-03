@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=43a5af3f0b">
+<link rel="stylesheet" href="./styles.css?v=9d846ba232">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -98,7 +98,8 @@
   <section id="ec-planning" hidden>
     <div class="filtres">
       <div class="barre-filtres">
-        <button class="chip" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">Filtres<span class="nb" id="nbFiltres" hidden></span></button>
+        <button class="mini" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltres" hidden></span></button>
         <button class="chip chip-jardin" id="filtreJardin" aria-pressed="true" type="button">Mon jardin seulement</button>
         <span class="bilan" id="bilanPlan"></span>
         <button class="lien" id="razMois" type="button" hidden>Tous les mois</button>
@@ -149,19 +150,23 @@
           <button class="segment" data-tri="alpha" aria-pressed="false">A à Z</button>
         </div>
       </div>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Type</span>
-        <div class="jeu-chips" id="chipsTypo"></div>
-      </div>
-      <div class="ligne-filtre">
-        <span class="etiq-filtre">Catégorie</span>
-        <div class="jeu-chips" id="chipsCat"></div>
-      </div>
       <div class="ligne-bilan">
+        <button class="mini" id="basculeFiltresS" type="button" aria-expanded="false" aria-controls="corpsFiltresS">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltresS" hidden></span></button>
         <button class="chip chip-clim" id="filtreClimat" aria-pressed="false" type="button" hidden>Adaptées à mon climat</button>
         <span class="bilan" id="bilanSel"></span>
         <span class="bilan fort" id="compte"></span>
         <button class="lien" id="vider" type="button">Tout décocher</button>
+      </div>
+      <div id="corpsFiltresS" hidden>
+        <div class="ligne-filtre">
+          <span class="etiq-filtre">Type</span>
+          <div class="jeu-chips" id="chipsTypo"></div>
+        </div>
+        <div class="ligne-filtre">
+          <span class="etiq-filtre">Catégorie</span>
+          <div class="jeu-chips" id="chipsCat"></div>
+        </div>
       </div>
     </div>
 
@@ -239,7 +244,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=de1f9a782e"></script>
+<script type="module" src="./app.js?v=7013ede132"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
