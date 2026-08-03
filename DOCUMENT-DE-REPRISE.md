@@ -576,21 +576,41 @@ En gravité basse subsistent les textes partagés par plus de vingt plantes, jus
 | Fichier | Rôle |
 |---|---|
 | `index.html` | Structure des quatre écrans, barre de navigation, feuille de détail |
-| `styles.css` | Typographies IBM Plex, palette de pierre froide |
+| `styles.css` | Typographies IBM Plex, palette de pierre froide, déclarations `@font-face` |
 | `app.js` | Lecture du catalogue, authentification, filtres, rendu |
 | `config.js` | URL du projet et clé anon |
+| `vendor/supabase.js` | Client de la base groupé, construit et versionné dans le dépôt |
+| `polices/*.woff2` | Neuf graisses IBM Plex réduites au jeu français |
+| `sw.js` | Agent de service, cache des actifs et fonctionnement hors ligne |
 | `manifest.webmanifest`, icônes | Installation sur écran d'accueil |
+| `outils/paquet/construire.mjs` | Reconstruit `vendor/supabase.js` avec esbuild |
 | `outils/verification.mjs` | Contrôle avant dépôt, sans dépendance |
 | `.githooks/pre-commit` | Enchaîne la correction des empreintes puis le contrôle |
 | `.github/workflows/verification.yml` | Rejoue le contrôle en intégration continue |
 
 L'application est pilotée par la base. La couleur d'une tâche vient en revanche de la table `TEINTE` de `app.js`, palette validée en CIEDE2000, exposée par l'assistant `teinteK(k)` et employée partout : synthèse, listes, filtres, frise, fiche. `phases.color` ne sert plus que de repli. Ajouter une tâche demande de l'insérer dans `phases`, de l'ajouter aux constantes `ORDRE` et `ORDRE_MAINTENANT`, de lui donner un pictogramme dans `PICTOS`, une teinte dans `TEINTE` et un verbe dans `VERBE`.
 
-L'empreinte de version des balises `app.js?v=` et `styles.css?v=` de `index.html` porte les dix premiers caractères de l'empreinte SHA-256 du fichier. Elle n'est plus tenue à la main : `node outils/verification.mjs --corriger` la recalcule, et le crochet `pre-commit` l'applique à chaque dépôt.
+L'empreinte de version des balises `app.js?v=` et `styles.css?v=` de `index.html` porte les dix premiers caractères de l'empreinte SHA-256 du fichier. Elle n'est plus tenue à la main : `node outils/verification.mjs --corriger` la recalcule, et le crochet `pre-commit` l'applique à chaque dépôt. La même règle vaut pour `vendor/supabase.js?v=`, présent à la fois dans `index.html` et dans l'import de `app.js`, et pour la constante `VERSION` de `sw.js`, calculée sur les empreintes de tous les actifs qu'il met en cache.
+
+### Démarrage
+
+Relevé du 3 août 2026, avant traitement : 643 kilo-octets, trente-cinq requêtes, cinq domaines et dix allers-retours dépendants avant le premier affichage. Le calcul n'était pas en cause, le premier rendu prenant 292 millisecondes sans réseau et la relecture du cache local 5. Quatre changements ramènent le chemin critique à 229 kilo-octets, deux domaines et quatre allers-retours.
+
+**Catalogue en deux requêtes parallèles.** `COL_LEGERES` porte ce que le premier écran affiche, 26 kilo-octets et 370 millisecondes. `COL_LONGUES` porte `attributes`, `guide`, `guide_periode` et `advice`, 162 kilo-octets, qui ne servent qu'au libellé de l'action en cours et à la fiche. Les deux partent en même temps, le premier rendu n'attend que la première, et le catalogue complet arrive plus tôt qu'avec l'ancienne requête unique de 266 kilo-octets et 1 460 millisecondes. Le cache local n'est écrit qu'une fois les deux arrivées. Les objets de `plantes` portent `attr`, `guide`, `guide_periode` et `conseil` vides jusqu'à l'arrivée de la seconde, jamais absents.
+
+**Caractères servis par le site.** Les neuf fichiers étaient chargés depuis Google Fonts, deux domaines et 219 kilo-octets. Ils sont maintenant dans `polices/`, réduits au jeu français, 167 kilo-octets, déclarés en tête de `styles.css` avec `font-display: swap`, et deux graisses sont préchargées depuis `index.html`.
+
+**Client de la base groupé.** Il était chargé depuis esm.sh en dix-sept modules répartis sur quatre niveaux d'imports, avant lesquels aucune requête vers la base ne pouvait partir. `vendor/supabase.js` est construit par `node outils/paquet/construire.mjs`, 55 kilo-octets compressés en une requête, et préchargé par `modulepreload`. Le fichier construit est versionné dans le dépôt parce que GitHub Pages ne construit rien.
+
+**Agent de service.** `sw.js` met en cache le document, le script, la feuille de style, le paquet, les caractères et les icônes. Le document est demandé au réseau d'abord, les actifs versionnés sont servis du cache d'abord, les appels à la base et au service météorologique ne sont pas interceptés. L'application fonctionne hors ligne. C'est aussi le préalable des planches, qui seraient sinon redemandées à chaque session.
+
+**Rendu ciblé à la coche.** Le filtre de l'écran des plantes porte sur le type, la catégorie, le climat et la recherche, jamais sur la sélection : cocher une plante n'ajoute ni ne retire de rangée. `majRangee` remplace la seule rangée concernée. Quatorze millisecondes contre quarante-deux, soixante contre cent vingt avec le processeur bridé au quart.
+
+Les essais de bout en bout s'exécutent avec `serviceWorkers: "block"`, faute de quoi l'agent servirait les réponses de la doublure d'une page à l'autre.
 
 ### Contrôle avant dépôt
 
-`node outils/verification.mjs` vérifie cinq points, sans aucune dépendance externe.
+`node outils/verification.mjs` vérifie huit points, sans aucune dépendance externe.
 
 **Syntaxe du module.** Une erreur de syntaxe n'apparaît qu'au chargement de la page, et le module s'interrompt sans un mot dans l'interface.
 
@@ -600,7 +620,11 @@ L'empreinte de version des balises `app.js?v=` et `styles.css?v=` de `index.html
 
 **Cohérence des tâches.** `ORDRE`, `ORDRE_MAINTENANT` et `PICTOS` doivent porter les mêmes clés.
 
-**Empreintes de version.** Les balises doivent correspondre au contenu des fichiers.
+**Empreintes de version.** Les balises de `index.html` et l'import de `vendor/supabase.js` dans `app.js` doivent correspondre au contenu des fichiers.
+
+**Domaines tiers.** Aucun fichier servi par le site ne doit appeler un domaine autre que la base, le service météorologique et le service d'adresses. C'est ce qui empêche de replacer les caractères ou le client de la base sur un domaine extérieur.
+
+**Agent de service.** Chaque actif déclaré dans `sw.js` doit exister, et la constante `VERSION` doit correspondre à leurs empreintes. Sans ce contrôle, un navigateur garderait l'ancienne copie après une mise en ligne. `index.html` est écarté du calcul, il ne change que pour porter les empreintes des autres actifs et le document est demandé au réseau d'abord.
 
 L'installation se fait une fois par clone : `git config core.hooksPath .githooks`.
 
