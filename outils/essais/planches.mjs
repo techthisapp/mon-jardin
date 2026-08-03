@@ -75,6 +75,33 @@ export default async function essai(navigateur) {
   j.controle("aucune ligne de provenance", !/Planche/.test(sans));
   await fermerFiche(pg);
 
+  j.section("la vignette suit la plante sur les autres écrans");
+  const frise = await pg.evaluate(() => {
+    const b = document.querySelector('.onglet[data-ecran="planning"]');
+    if (b) b.click();
+    const v = document.querySelectorAll("#rangees .v-planche");
+    return { rangees: document.querySelectorAll("#rangees .rangee").length, vignettes: v.length };
+  });
+  j.controle("la frise annuelle en porte, sans en mettre partout",
+    frise && frise.vignettes > 0 && frise.vignettes < frise.rangees,
+    frise && `${frise.vignettes} vignettes sur ${frise.rangees} rangées`);
+  await pg.evaluate(() => document.querySelector('.onglet[data-ecran="maintenant"]').click());
+  await pg.waitForTimeout(500);
+  const tache = await pg.evaluate(() => {
+    const b = document.querySelector(".syn-ligne");
+    if (!b) return null;
+    b.click();
+    return document.querySelectorAll("#maintenant .v-planche").length;
+  });
+  await pg.waitForTimeout(500);
+  j.controle("la liste d'une tâche en porte", tache !== null && tache > 0, tache);
+  await pg.evaluate(() => {
+    const r = document.querySelector(".barre-niveau .pas, .barre-niveau button");
+    if (r) r.click();
+  });
+  await pg.waitForTimeout(400);
+  await ouvrirListeDesPlantes(pg);
+
   j.section("le bloc de filtres s'ouvre replié");
   const filtres = await pg.evaluate(() => {
     const b = document.getElementById("basculeFiltresS"), c = document.getElementById("corpsFiltresS");

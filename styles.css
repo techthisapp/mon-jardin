@@ -928,13 +928,13 @@ body.fige{overflow:hidden}
    le redouble pas. Quatre teintes différentes faisaient de chaque rangée de la
    liste un feu de signalisation. */
 .jauge{
-  display:inline-flex;align-items:center;gap:2.5px;height:13px;flex:none;
+  display:inline-flex;align-items:center;gap:2px;height:12px;flex:none;
   margin-left:8px;
 }
 /* Les classes de niveau servent aussi à des pastilles et à des blocs teintés :
    la jauge annule leur fond et leur contour. */
 .jauge{background:none;border:0;color:inherit}
-.jauge .cran{display:block;width:3px;height:13px;border-radius:2px;background:#E4E2D9}
+.jauge .cran{display:block;width:5px;height:12px;border-radius:1.5px;background:#DEDCD2}
 .jauge .cran.plein{background:var(--terre)}
 .jauge.niv-deconseille .cran.plein{background:#9DB08F}
 
@@ -1817,3 +1817,19 @@ select:focus{
   border-radius:var(--rayon);
 }
 .f-bloc{border-radius:var(--rayon)}
+
+/* ---------- Vignette de planche dans les autres listes ---------- */
+/* Vingt-deux pixels devant le nom, dans la liste d'une tâche, dans la frise
+   annuelle et dans un espace. Même masque, même encre, taille réduite : la
+   plante se reconnaît partout de la même façon. */
+.v-pl-s{width:22px;height:22px;opacity:.72}
+.ligne-nom{align-items:center;gap:8px}
+.ligne-nom b{flex:1;min-width:0}
+.ligne-nom .echeance{flex:none}
+.tete-plante .v-pl-s{margin-right:2px}
+.nom-plante{flex-direction:row;align-items:center;gap:8px}
+.nom-plante-txt{display:flex;flex-direction:column;gap:1px;min-width:0}
+.nom-espace{display:inline-flex;align-items:center;gap:7px}
+.action .v-pl-s{background:var(--encre-doux)}
+
+.puce.nom-action{display:inline-flex;align-items:center;gap:6px}

@@ -414,6 +414,13 @@ const FONDS = {
   t: "Thomé, Flora von Deutschland, 1885",
 };
 const aPlanche = p => Boolean(planches[p.slug]);
+/* Vignette de planche, partout où une plante est nommée dans une liste. Elle
+   n'est pas réservée à l'écran des plantes : la même plante se reconnaît de la
+   même façon dans la liste d'une tâche, dans la frise annuelle et dans un
+   espace. L'adresse du masque est posée par l'observateur d'intersection. */
+const vignettePlanche = (p, classe) => aPlanche(p)
+  ? `<span class="v-planche${classe ? " " + classe : ""}" data-pl="${esc(p.slug)}" aria-hidden="true"></span>`
+  : "";
 const plancheDuGenre = p => (planches[p.slug] || "").endsWith("g");
 const creditPlanche = p => {
   const c = planches[p.slug];
@@ -426,9 +433,9 @@ async function lirePlanches() {
     const r = await fetch("./planches.json");
     if (!r.ok) return;
     planches = await r.json();
-    // Le manifeste arrive bien avant qu'une fiche soit ouverte : seule la liste
-    // peut avoir été rendue sans lui.
-    if (plantes.length) rendreSelection();
+    // Quatre écrans nomment des plantes et tous portent la vignette : celui qui a
+    // été rendu avant l'arrivée du manifeste doit l'être à nouveau.
+    if (plantes.length) rendreTout();
   } catch (e) { /* manifeste indisponible, aucune vignette */ }
 }
 
@@ -437,14 +444,20 @@ async function lirePlanches() {
    fond n'ayant pas de chargement paresseux. */
 let obsPlanches = null;
 function poserPlanches(racine) {
-  if (obsPlanches) obsPlanches.disconnect();
-  obsPlanches = new IntersectionObserver(entrees => {
-    entrees.forEach(e => {
-      if (!e.isIntersecting) return;
-      e.target.style.setProperty("--pl", `url("./planches/liste/${e.target.dataset.pl}.webp")`);
-      obsPlanches.unobserve(e.target);
-    });
-  }, { rootMargin: "400px" });
+  if (!racine || !window.IntersectionObserver) return;
+  // Un seul observateur pour toute l'application : quatre écrans posent des
+  // vignettes, et le remettre à zéro à chaque rendu laisserait les précédents
+  // sans surveillance. Les éléments détachés du document ne croisent jamais
+  // rien, ils s'éteignent d'eux-mêmes.
+  if (!obsPlanches) {
+    obsPlanches = new IntersectionObserver(entrees => {
+      entrees.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.style.setProperty("--pl", `url("./planches/liste/${e.target.dataset.pl}.webp")`);
+        obsPlanches.unobserve(e.target);
+      });
+    }, { rootMargin: "400px" });
+  }
   racine.querySelectorAll(".v-planche[data-pl]").forEach(e => obsPlanches.observe(e));
 }
 
@@ -1176,7 +1189,9 @@ function rendreMaintenant() {
     const d = document.createElement("button");
     d.type = "button";
     d.className = "action nom-action" + (e && !muet ? " a-" + e : "") + (texte ? "" : " sans-texte");
-    d.innerHTML = `<span class="ligne-nom"><b>${tete}</b>${echeance}</span>`
+    d.innerHTML = `<span class="ligne-nom">`
+      + (mode === "espace" ? "" : vignettePlanche(p, "v-pl-s"))
+      + `<b>${tete}</b>${echeance}</span>`
       + (texte ? `<span class="dit-action">${esc(texte)}</span>` : "");
     d.addEventListener("click", ev => {
       if (ev.currentTarget.parentElement.dataset.glisse) return;
@@ -1294,7 +1309,8 @@ function rendreMaintenant() {
       lot.forEach(x => {
         const d = document.createElement("div");
         d.className = "enveloppe-puce";
-        d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(x.p)}</button>`;
+        d.innerHTML = `<button class="puce nom-action">`
+          + vignettePlanche(x.p, "v-pl-s") + `${nomAvecMarque(x.p)}</button>`;
         d.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(x.p));
         bloc.appendChild(d);
       });
@@ -1308,6 +1324,7 @@ function rendreMaintenant() {
         .forEach(x => zone.appendChild(ligneAction(x.p, k, "tache")));
     }
     poserMasquees(muettesPar[k] || 0);
+    poserPlanches(zone);
 
     const pager = $("pagerTache");
     const retour = document.createElement("button");
@@ -1362,7 +1379,7 @@ function rendreMaintenant() {
           bloc.className = "plante-groupe";
           const t = document.createElement("button");
           t.type = "button"; t.className = "tete-plante";
-          t.innerHTML = `<b>${nomAvecMarque(p)}</b>`
+          t.innerHTML = vignettePlanche(p, "v-pl-s") + `<b>${nomAvecMarque(p)}</b>`
             + `<span class="voir-fiche" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`;
           t.addEventListener("click", () => ouvrirFeuille(p));
           bloc.appendChild(t);
@@ -1382,7 +1399,8 @@ function rendreMaintenant() {
         lot.forEach(x => {
           const d = document.createElement("div");
           d.className = "enveloppe-puce";
-          d.innerHTML = `<button class="puce nom-action">${nomAvecMarque(x.p)}</button>`;
+          d.innerHTML = `<button class="puce nom-action">`
+          + vignettePlanche(x.p, "v-pl-s") + `${nomAvecMarque(x.p)}</button>`;
           d.querySelector(".nom-action").addEventListener("click", () => ouvrirFeuille(x.p));
           corps.appendChild(d);
         });
@@ -1424,6 +1442,7 @@ function rendreMaintenant() {
     puces.push({ puce, bloc });
   });
   poserMasquees(muettes);
+  poserPlanches(zone);
 
   // La puce du rail suit la section lue, et le rail la ramène à sa vue.
   if (window.IntersectionObserver) {
@@ -2912,13 +2931,15 @@ function rendrePlanning() {
     // Le liseré ne marque l'appartenance au jardin que si le catalogue entier est affiché.
     r.className = "rangee" + (sel.has(p.id) && !jardinSeul ? " retenue" : "");
     r.innerHTML =
-      `<button class="nom-plante">${esc(p.nom)}`
-      + `<small>${p.latin ? `<i>${esc(p.latin)}</i>` : esc(p.cat)}</small></button>`
+      `<button class="nom-plante">${vignettePlanche(p, "v-pl-s")}`
+      + `<span class="nom-plante-txt">${esc(p.nom)}`
+      + `<small>${p.latin ? `<i>${esc(p.latin)}</i>` : esc(p.cat)}</small></span></button>`
       + `<div class="piste">${segs(p)}</div>`;
     r.querySelector(".nom-plante").addEventListener("click", () => ouvrirFeuille(p));
     zone.appendChild(r);
   });
 
+  poserPlanches(zone);
   const v = $("videPlanning");
   v.hidden = lot.length > 0;
   v.textContent = (jardinSeul && !sel.size)
@@ -3069,7 +3090,8 @@ function rendreEspaces() {
       const r = (aff.get(p.id) || []).find(x => x.espace_id === zo.id) || {};
       const l = document.createElement("div");
       l.className = "ligne-espace";
-      l.innerHTML = `<button type="button" class="nom-espace">${esc(p.nom)}</button>`
+      l.innerHTML = `<button type="button" class="nom-espace">`
+        + vignettePlanche(p, "v-pl-s") + `${esc(p.nom)}</button>`
         + `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
         + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`;
       l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
@@ -3087,6 +3109,7 @@ function rendreEspaces() {
     d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
     z.appendChild(d);
   });
+  poserPlanches(z);
 }
 
 async function majAffectation(plantId, espaceId, qte, notes) {
