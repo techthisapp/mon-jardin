@@ -541,8 +541,8 @@
   "floraison_pic_note": null,
   "nom_article": "l'",
   "guide_periode": {
-   "636": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud, les racines s'installent avant l'hiver et le premier été demande beaucoup moins d'arrosage. Planter en sol frais et humifère, à l'abri du soleil brûlant. Prévoir 100 cm entre deux sujets.",
-   "637": "Plantation de fin d'hiver, en repos végétatif et hors période de gel. Arroser copieusement à la plantation, la reprise du premier été en dépend. Planter en sol frais et humifère, à l'abri du soleil brûlant. Prévoir 100 cm entre deux sujets."
+   "636": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Planter en sol frais et humifère, à l'abri du soleil brûlant. Prévoir 100 cm entre deux sujets.",
+   "637": "Plantation de fin d'hiver, en repos végétatif et hors période de gel. Arroser copieusement à la plantation, puis régulièrement tout le premier été, la reprise en dépend. Planter en sol frais et humifère, à l'abri du soleil brûlant. Prévoir 100 cm entre deux sujets."
   }
  },
  {
@@ -797,7 +797,7 @@
   "floraison_pic_note": null,
   "nom_article": "l'",
   "guide_periode": {
-   "213": "Plantation de printemps. La reprise est rapide. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter au printemps, collet au ras du sol. Arroser à la reprise puis laisser la plante s'installer. Espacer les plants de 45 cm.",
+   "213": "Plantation de printemps. L'enracinement prend toute la saison. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter au printemps, collet au ras du sol. Arroser à la reprise puis laisser la plante s'installer. Espacer les plants de 45 cm.",
    "214": "Plantation de fin d'été. Le sol est encore chaud, la touffe s'enracine avant l'hiver et démarre plus vite au printemps suivant. Planter en automne, collet au ras du sol. Arroser à la reprise puis laisser la plante s'installer. Espacer les plants de 45 cm.",
    "216": "Rabattre les tiges sèches au ras du sol avant le départ de végétation.",
    "217": "Pincer les tiges de moitié en juin. La touffe reste compacte, fleurit un peu plus tard et se passe de tuteur."
@@ -954,8 +954,8 @@
   "nom_article": "la",
   "guide_periode": {
    "533": "Plantation de fin d'été. Le sol est encore chaud, la touffe s'enracine avant l'hiver et démarre plus vite au printemps suivant. Planter collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
-   "534": "Plantation de printemps. La reprise est rapide. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
-   "1525": "Apport de fin d'hiver, avant le démarrage. Un compost bien décomposé en surface suffit, l'azote frais à ce stade pousse au feuillage et retarde la fructification. Besoin moyen, un apport annuel de compost mûr couvre les besoins.",
+   "534": "Plantation de printemps. L'enracinement prend toute la saison. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
+   "1525": "Apport de fin d'hiver, avant le démarrage. Un compost bien décomposé en surface convient, il apporte peu d'éléments et complète un engrais sans le remplacer. L'azote frais à ce stade pousse au feuillage et retarde la fructification. Besoin moyen, un apport annuel de compost mûr couvre les besoins.",
    "2366": "Apport d'entretien, en pleine production. Fractionner en petites doses plutôt qu'en une seule fois, l'excès d'azote part en feuillage. Apport de compost après la récolte, en juillet. C'est à ce moment que la plante forme ses boutons de l'année suivante. Besoin moyen, un apport annuel de compost mûr couvre la saison."
   }
  },
@@ -1091,8 +1091,8 @@
   "floraison_pic_note": null,
   "nom_article": "la",
   "guide_periode": {
-   "572": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud, les racines s'installent avant l'hiver et le premier été demande beaucoup moins d'arrosage. Installer un support très solide avant la plantation, un sujet adulte pèse lourd et déforme une structure légère. Planter à 40 cm du mur, à l'écart des gouttières et des descentes. Prévoir 300 cm entre deux sujets.",
-   "573": "Plantation de fin d'hiver, en repos végétatif et hors période de gel. Arroser copieusement à la plantation, la reprise du premier été en dépend. Installer un support très solide avant la plantation, un sujet adulte pèse lourd et déforme une structure légère. Planter à 40 cm du mur, à l'écart des gouttières et des descentes. Prévoir 300 cm entre deux sujets.",
+   "572": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Installer un support très solide avant la plantation, un sujet adulte pèse lourd et déforme une structure légère. Planter à 40 cm du mur, à l'écart des gouttières et des descentes. Prévoir 300 cm entre deux sujets.",
+   "573": "Plantation de fin d'hiver, en repos végétatif et hors période de gel. Arroser copieusement à la plantation, puis régulièrement tout le premier été, la reprise en dépend. Installer un support très solide avant la plantation, un sujet adulte pèse lourd et déforme une structure légère. Planter à 40 cm du mur, à l'écart des gouttières et des descentes. Prévoir 300 cm entre deux sujets.",
    "575": "Taille d'été. Raccourcir les longues pousses de l'année à cinq ou six feuilles. C'est elle qui prépare les boutons floraux du printemps suivant.",
    "576": "Taille d'hiver. Ramener à deux ou trois yeux les rameaux déjà raccourcis en août, ce sont eux qui porteront les grappes."
   }
@@ -1242,8 +1242,8 @@
   "floraison_pic_note": null,
   "nom_article": "l'",
   "guide_periode": {
-   "143": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine et l'arrosage se poursuit jusqu'aux pluies d'automne. Sol acide, léger et frais, en terre de bruyère si le sol du jardin ne convient pas. Planter la motte affleurante et pailler, les racines sont superficielles. Prévoir 30 cm entre deux sujets.",
-   "144": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud, les racines s'installent avant l'hiver et le premier été demande beaucoup moins d'arrosage. Sol acide, léger et frais, en terre de bruyère si le sol du jardin ne convient pas. Planter la motte affleurante et pailler, les racines sont superficielles. Prévoir 30 cm entre deux sujets."
+   "143": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine, sauf si les racines tournent en rond dans le pot, auquel cas les dégager avant de planter. L'arrosage se poursuit jusqu'aux pluies d'automne. Sol acide, léger et frais, en terre de bruyère si le sol du jardin ne convient pas. Planter la motte affleurante et pailler, les racines sont superficielles. Prévoir 30 cm entre deux sujets.",
+   "144": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Sol acide, léger et frais, en terre de bruyère si le sol du jardin ne convient pas. Planter la motte affleurante et pailler, les racines sont superficielles. Prévoir 30 cm entre deux sujets."
   }
  },
  {
@@ -1490,8 +1490,8 @@
   "floraison_pic_note": null,
   "nom_article": "le",
   "guide_periode": {
-   "724": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine et l'arrosage se poursuit jusqu'aux pluies d'automne. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets.",
-   "725": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud, les racines s'installent avant l'hiver et le premier été demande beaucoup moins d'arrosage. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets."
+   "724": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine, sauf si les racines tournent en rond dans le pot, auquel cas les dégager avant de planter. L'arrosage se poursuit jusqu'aux pluies d'automne. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets.",
+   "725": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets."
   }
  },
  {
@@ -2032,7 +2032,7 @@
   "floraison_pic_note": null,
   "nom_article": "la",
   "guide_periode": {
-   "1265": "Division de printemps. La reprise est immédiate et la touffe refait son volume dans la saison. Arroser jusqu'à la reprise. Prélever des fragments de rhizome portant des racines. Culture en pot ou en barrière anti-rhizome recommandée.",
+   "1265": "Division de printemps. La reprise prend toute la saison et la floraison peut être plus tardive la première année. Arroser jusqu'à la reprise. Prélever des fragments de rhizome portant des racines. Culture en pot ou en barrière anti-rhizome recommandée.",
    "1266": "Division d'automne. Le sol est encore chaud, les éclats s'enracinent avant l'hiver et repartent tôt au printemps. Rabattre le feuillage avant de diviser. Prélever des fragments de rhizome portant des racines. Culture en pot ou en barrière anti-rhizome recommandée."
   }
  },

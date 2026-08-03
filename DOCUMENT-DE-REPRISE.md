@@ -463,6 +463,28 @@ Elle contrôle que le ruban porte une voie par tâche, qu'une fenêtre à cheval
 
 Le harnais accepte désormais un climat de jardin en paramètre, ce qui rend le décalage éprouvable sans toucher aux données figées.
 
+### Conseils par période sourcés
+
+Deux cent cinquante-deux conseils portaient la mention `derive_periode` et n'avaient jamais été relus. Leur examen a montré qu'ils ne sont pas deux cent cinquante-deux textes indépendants : chacun est composé d'un préambule pris dans une petite bibliothèque, qui explique pourquoi la période convient, suivi du conseil de fiche de la même tâche, parfois spécialisé à la saison. La bibliothèque compte trente-cinq préambules.
+
+Chacun a été confronté un à un aux sources de premier et de second rang. Quinze sont confirmés, deux sont tirés du calendrier et des colonnes de la fiche, dix-huit portaient une erreur et ont été corrigés.
+
+Les erreurs suivent trois motifs. Le premier est la reprise annoncée comme rapide après une plantation ou une division de printemps, quarante-quatre fiches : toutes les sources disent l'inverse, l'enracinement prend la saison et une plantation de printemps demande plus d'eau qu'une plantation d'automne. Le deuxième est la levée annoncée comme rapide en semis d'été et de fin d'été, neuf fiches : la chaleur du sol freine ou bloque la germination des espèces de saison fraîche, qui sont justement celles semées à ces périodes. Le troisième est l'arrosage réduit au seul jour de la plantation, seize fiches, alors que le Royal Horticultural Society impute les échecs d'installation au manque d'eau des deux premières années.
+
+Deux corrections de fond concernent les bulbes : ils s'enracinent avant que le sol ne gèle et non pendant l'hiver, et la plantation d'automne ne les fait pas fleurir plus tôt, elle leur donne le froid dont ils ont besoin pour former leur fleur. Le conseil de repli qui envoyait planter au printemps en terre lourde était donc faux.
+
+Trois conseils de plantation de printemps en conteneur demandaient de planter à racines nues en repos végétatif, contradiction levée.
+
+Un contrôle a rattrapé une correction proposée à tort : les vingt-cinq centimètres d'éclaircissage du souci ne sont pas un chiffre général inventé, ils viennent de l'écartement de sa propre fiche.
+
+Aucun conseil de plante active n'est plus dans sa rédaction d'origine.
+
+### Semis d'automne du pois
+
+Terre Vivante documente le semis d'octobre et novembre des variétés à grains ronds et le réserve au climat doux. La colonne `climates` de `plant_phases` sait exprimer cette réserve : la fenêtre a été ouverte pour l'océanique et le méditerranéen seulement, les deux climats dont le minimum habituel reste au-dessus de moins sept degrés.
+
+La fenêtre de protection, qui portait sur le climat montagnard en septembre et octobre, ne protégeait rien : le pois y est semé en avril et récolté en juillet. Elle suit désormais le semis d'automne, sur les mêmes deux climats, de décembre à février.
+
 La colonne `nectar_season`, qui disait à quelle saison la ressource est offerte, a été vidée dans le même mouvement. Aucune source ne l'établissait, elle n'était affichée nulle part, et elle contredisait la fiche sur cinquante-six lignes où la ressource elle-même n'est plus affirmée. Le jour où un calendrier apicole la demandera, elle se déduira de la fenêtre de floraison, qui est sourcée, selon une convention à écrire.
 
 ## Les contrôles
