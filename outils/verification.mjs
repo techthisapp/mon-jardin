@@ -3,7 +3,7 @@
 // Sans dépendance. Usage : node outils/verification.mjs [--corriger]
 // L'option --corriger réécrit les empreintes de version dans index.html.
 
-import { readFileSync, writeFileSync, mkdtempSync, copyFileSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, copyFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { createHash } from "node:crypto";
@@ -146,10 +146,70 @@ if (picto && ordre) {
 /* Contrôle 4 : empreintes de version des actifs                       */
 /* ------------------------------------------------------------------ */
 
+/* Aucun domaine tiers sur le chemin critique. Les caractères et le client de la
+   base étaient servis par Google Fonts et esm.sh, ce qui ajoutait trois domaines
+   à résoudre et quatre allers-retours avant la première requête. Seuls restent
+   les services appelés après le premier rendu. */
+{
+  const AUTORISES = ["ocsjpojdddmltluzmmwv.supabase.co", "api.open-meteo.com",
+                     "api-adresse.data.gouv.fr"];
+  for (const f of ["index.html", "styles.css", "app.js", "config.js", "sw.js"]) {
+    for (const m of lire(f).matchAll(/https?:\/\/([a-zA-Z0-9.-]+)/g)) {
+      if (!AUTORISES.includes(m[1])) faute("domaines tiers", `${f} appelle ${m[1]}`);
+    }
+  }
+}
+
+/* L'agent de service porte une version qui doit changer dès qu'un actif change,
+   sinon un navigateur garde l'ancienne copie. Elle est calculée sur les
+   empreintes de tout ce qu'il met en cache. */
+{
+  const sw = lire("sw.js");
+  const listes = sw.match(/const ACTIFS = \[([\s\S]*?)\];/);
+  const actifs = listes ? [...listes[1].matchAll(/"\.\/([^"]*)"/g)].map(m => m[1]).filter(Boolean) : [];
+  const manquants = actifs.filter(a => !existsSync(join(RACINE, a)));
+  if (!actifs.length) faute("agent de service", "sw.js ne déclare aucun actif à mettre en cache");
+  if (manquants.length) faute("agent de service", `actifs déclarés mais absents : ${manquants.join(", ")}`);
+  // index.html est écarté du calcul : il ne change que pour porter les empreintes
+  // des autres actifs, et l'inclure demanderait deux passages pour converger. Le
+  // document est de toute façon demandé au réseau d'abord.
+  const attendu = createHash("sha256")
+    .update(actifs.filter(a => a !== "index.html" && existsSync(join(RACINE, a)))
+      .map(a => a + ":" + empreinte(a)).join("|")).digest("hex").slice(0, 10);
+  const m = sw.match(/const VERSION = "([A-Za-z0-9.]+)"/);
+  if (!m) faute("agent de service", "sw.js ne déclare pas de VERSION");
+  else if (m[1] !== attendu) {
+    if (CORRIGER) {
+      writeFileSync(join(RACINE, "sw.js"), sw.replace(/const VERSION = "[A-Za-z0-9.]+"/, `const VERSION = "${attendu}"`));
+      corrections.push(`sw.js : version ${m[1]} devient ${attendu}`);
+    } else {
+      faute("agent de service", `sw.js porte la version ${m[1]}, attendu ${attendu}`);
+    }
+  }
+}
+
+// Le paquet du client de la base est importé par app.js, non par index.html.
+{
+  const attendu = empreinte("vendor/supabase.js");
+  const motif = /(\.\/vendor\/supabase\.js\?v=)([A-Za-z0-9.]+)/g;
+  const trouves = [...appJs.matchAll(motif)];
+  if (!trouves.length) {
+    faute("empreintes", "app.js n'importe pas ./vendor/supabase.js?v=");
+  } else if (trouves.some(t => t[2] !== attendu)) {
+    if (CORRIGER) {
+      writeFileSync(join(RACINE, "app.js"), appJs.replace(motif, `$1${attendu}`));
+      corrections.push(`vendor/supabase.js : ${trouves[0][2]} devient ${attendu}`);
+    } else {
+      faute("empreintes", `vendor/supabase.js : app.js porte ${trouves[0][2]}, attendu ${attendu}`);
+    }
+  }
+}
+
 let html = indexHtml;
-for (const actif of ["app.js", "styles.css"]) {
+const echapper = t => t.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+for (const actif of ["app.js", "styles.css", "vendor/supabase.js"]) {
   const attendu = empreinte(actif);
-  const motif = new RegExp(`(\\./${actif.replace(".", "\\.")}\\?v=)([A-Za-z0-9.]+)`, "g");
+  const motif = new RegExp(`(\\./${echapper(actif)}\\?v=)([A-Za-z0-9.]+)`, "g");
   const trouves = [...html.matchAll(motif)];
   if (!trouves.length) {
     faute("versions", `index.html : aucune balise ./${actif}?v=`);

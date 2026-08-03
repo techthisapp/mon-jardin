@@ -45,7 +45,10 @@ export async function ouvrirContexte(navigateur, options = {}) {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null,
   } = options;
-  const ctx = await navigateur.newContext({ viewport: { width: 430, height: 940 }, deviceScaleFactor: 2 });
+  // L'agent de service intercepterait les réponses de la doublure d'une page à
+  // l'autre : les essais s'exécutent sans lui.
+  const ctx = await navigateur.newContext({ viewport: { width: 430, height: 940 },
+                                            deviceScaleFactor: 2, serviceWorkers: "block" });
   await ctx.addInitScript(scriptHorloge);
   await ctx.addInitScript(`window.__FIXTURES__ = ${catalogue};`
     + `window.__RELEVES__ = ${JSON.stringify(releves)};`
@@ -53,7 +56,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + `window.__VIGILANCE__ = ${JSON.stringify(vigilance)};`
     + `window.__GLOSSAIRE__ = ${glossaire};`
     + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
-  await ctx.route(/esm\.sh/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
+  await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: "text/css", body: "" }));
   await ctx.route(/api\.open-meteo\.com/, route => {
     const d = JSON.parse(meteo);

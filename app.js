@@ -1,4 +1,7 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Client servi par le site. Il était chargé depuis esm.sh en dix-sept modules
+// répartis sur quatre niveaux d'imports, avant lesquels aucune requête vers la
+// base ne pouvait partir. Reconstruction : node outils/paquet/construire.mjs
+import { createClient } from "./vendor/supabase.js?v=e1ae1f6cea";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -414,10 +417,23 @@ async function chargerCatalogue() {
   await lireCatalogue();
 }
 
+/* Le catalogue est lu en deux requêtes parallèles. La première porte ce que le
+   premier écran affiche, 26 kilo-octets ; la seconde les quatre colonnes de
+   texte long, 162 kilo-octets, qui ne servent qu'au libellé de l'action en cours
+   et à la fiche. Le premier rendu n'attend plus que la première, et les deux
+   partent en même temps : le catalogue complet arrive plus tôt qu'en une seule
+   requête. */
+const COL_LEGERES = "id,slug,name,category,typology,phases,spacing,depth,companions,"
+  + "latin,family,habit,exposure,water_need,nectar,pollen,frost_min_c,height_min_cm,"
+  + "height_max_cm,flower_colors,floraison_pic_q,floraison_pic_note,nom_article,propagation";
+const COL_LONGUES = "id,attributes,guide,guide_periode,advice";
+
 async function lireCatalogue() {
+  const promesseLongues = avecReprise(() =>
+    db.from("plants_full").select(COL_LONGUES).eq("is_active", true));
   const [rp, rl, rm, rc, rs, rv] = await Promise.all([
     avecReprise(() => db.from("phases").select("*").order("position")),
-    avecReprise(() => db.from("plants_full").select("*").eq("is_active", true)),
+    avecReprise(() => db.from("plants_full").select(COL_LEGERES).eq("is_active", true)),
     avecReprise(() => db.from("catalog_meta").select("*").single()),
     avecReprise(() => db.from("climates").select("*").order("position")),
     avecReprise(() => db.from("climate_phase_shifts").select("*")),
@@ -434,9 +450,10 @@ async function lireCatalogue() {
   rp.data.forEach(p => phases[p.key] = { label: p.label, color: p.color });
   plantes = rl.data.map(p => ({
     id: p.id, slug: p.slug, nom: p.name, cat: p.category, typo: p.typology,
-    espacement: p.spacing, prof: p.depth, assoc: p.companions, conseil: p.advice,
-    attr: p.attributes || {}, phases: p.phases || {}, guide: p.guide || {},
-    guide_periode: p.guide_periode || {},
+    espacement: p.spacing, prof: p.depth, assoc: p.companions,
+    phases: p.phases || {},
+    // remplis par la seconde requête, jamais absents pour le code qui les lit
+    conseil: "", attr: {}, guide: {}, guide_periode: {},
     latin: p.latin || "", famille: p.family || "",
     // colonnes lues par la fiche détaillée
     port: p.habit || "", expo: p.exposure || "", eauNiv: p.water_need || "",
@@ -445,12 +462,24 @@ async function lireCatalogue() {
     couleurs: p.flower_colors || [], pic: p.floraison_pic_q, picNote: p.floraison_pic_note || "",
     article: p.nom_article || "", propagation: p.propagation || "",
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  apresCatalogue();
+
+  const rt = await promesseLongues;
+  if (rt.error) { info("Conseils indisponibles : " + rt.error.message, true); return; }
+  const parId = new Map(plantes.map(p => [p.id, p]));
+  (rt.data || []).forEach(t => {
+    const p = parId.get(t.id);
+    if (!p) return;
+    p.attr = t.attributes || {}; p.guide = t.guide || {};
+    p.guide_periode = t.guide_periode || {}; p.conseil = t.advice || "";
+  });
+  // Seul l'écran du moment lit ces colonnes avant l'ouverture d'une fiche.
+  rendreMaintenant();
   try {
     localStorage.setItem(CACHE, JSON.stringify({
       phases, plantes, climats, shifts, saison, empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
     }));
   } catch (e) { /* stockage indisponible */ }
-  apresCatalogue();
 }
 
 async function verifierFraicheur(empreinte) {
@@ -3066,6 +3095,15 @@ function rendreTout() {
   rendreMaintenant();
   rendrePlanning();
   rendreEspaces();
+}
+
+/* L'agent de service met en cache le script, la feuille de style et les
+   caractères, et rend l'application utilisable sans réseau. Son absence n'est
+   pas une panne : le site fonctionne, il repart simplement du réseau. */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => { /* contexte non sécurisé */ });
+  });
 }
 
 window.addEventListener("resize", () => { placerMarqueur(); majMois(); });
