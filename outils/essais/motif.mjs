@@ -64,6 +64,44 @@ export default async function essai(navigateur) {
     `motif ${plans.m}, corps ${plans.c}`);
   j.controle("le titre reste cliquable au-dessus du dessin", plans.titre);
 
+  /* Un mouvement joué sous la ligne de coupe du bandeau ne se voit pas : le
+     bandeau masque tout ce qui dépasse. Chaque élément animé doit donc être
+     visible pour l'essentiel de sa hauteur, sans quoi l'animation est perdue. */
+  j.section("les animations se jouent dans la partie visible");
+  const champ = await pg.evaluate(async () => {
+    const h = document.getElementById("motifMois");
+    const classes = ["vent", "souffle", "respire", "eclot", "ouvre", "spirale",
+                     "pollen", "chute", "envol"];
+    const bilan = { coupe: 0, total: 0, perdus: [] };
+    for (let m = 1; m <= 12; m++) {
+      h.innerHTML = await (await fetch(`./motifs/${m}.svg`)).text();
+      const svg = h.querySelector("svg");
+      const g = svg.querySelector("g");
+      const dy = Number((g.getAttribute("transform").match(/-?\d+/g) || [0, 0])[1]);
+      const cadre = h.getBoundingClientRect();
+      const tete = document.querySelector(".tete").getBoundingClientRect();
+      const parUnite = cadre.height / 220;
+      // Le contrôle se fait sur la coupe la plus basse, celle d'un écran de
+      // trois cent soixante points, pour ne pas valider un cas favorable.
+      bilan.coupe = Math.min(200, Math.round((tete.bottom - cadre.top) / parUnite));
+      svg.querySelectorAll(classes.map(c => "." + c).join(",")).forEach(e => {
+        bilan.total++;
+        const b = e.getBBox();
+        const haut = b.y + dy, bas = b.y + b.height + dy;
+        const vu = Math.max(0, Math.min(bilan.coupe, bas) - haut);
+        if (b.height > 0 && vu / b.height < .70) {
+          bilan.perdus.push(m + " " + (e.getAttribute("class") || "").split(" ")[0]
+            + " " + Math.round(haut) + ".." + Math.round(bas));
+        }
+      });
+    }
+    return bilan;
+  });
+  j.controle("la ligne de coupe laisse voir presque toute la vue",
+    champ.coupe >= 200, champ.coupe + " unités sur 220");
+  j.controle("aucune animation des douze mois ne se joue hors champ", champ.perdus.length === 0,
+    champ.perdus.length ? champ.perdus.join(" | ") : champ.total + " éléments animés, tous visibles");
+
   j.section("le mouvement respecte le réglage du système");
   const anime = await pg.evaluate(() =>
     document.getAnimations().filter(a => a.effect.target.closest && a.effect.target.closest(".motif-mois")).length);
