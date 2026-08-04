@@ -58,6 +58,13 @@ const ALEA = { 1: "vent violent", 2: "pluie et inondation", 3: "orages", 4: "cru
   5: "neige et verglas", 6: "canicule", 7: "grand froid", 8: "avalanches",
   9: "vagues et submersion" };
 const VIGI_NOM = { 2: "jaune", 3: "orange", 4: "rouge" };
+/* Gravité de ce qui peut paraître sur la carte du temps. Elle range les lignes
+   et décide de la teinte de la carte, qui est celle de la plus grave. Le gel
+   passe devant la vigilance jaune : un avis d'orage dérange, une nuit à moins
+   deux tue. La vigilance orange et la rouge passent devant tout. */
+const GRAVITE = { "v-4": 6, "v-3": 5, froid: 4, chaud: 3, "v-2": 2, vent: 1, eau: 0 };
+// L'icône dit la nature de la ligne : un avertissement, ou de l'eau annoncée.
+const ICONE_TON = { eau: "goutte" };
 // Ce que chaque aléa demande au jardin, dit en une consigne.
 const VIGI_GESTE = {
   1: "tuteurer, rentrer les potées et les voiles",
@@ -2501,18 +2508,32 @@ function rendreBandeau() {
   t.querySelectorAll("[data-vue]").forEach(x =>
     x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
 
-  const h = [];
-  // La vigilance de Météo-France passe avant les alertes calculées : elle porte
-  // un avis officiel, les autres ne sont qu'une lecture de la prévision.
+  /* Tout ce que le temps demande au jardin tient dans une seule carte : un avis
+     de vigilance et une lame d'eau annoncée parlent du même ciel, deux cartes
+     les faisaient lire comme deux sujets. Les lignes vont de la plus grave à la
+     moins grave, et la carte prend la teinte de la première. */
+  const lignes = [];
   const vg = vigilanceDuJour();
-  if (vg) h.push(`<button type="button" class="bd-alerte bd-vigi v-${vg.couleur}" data-vue="vigilance">`
-    + icoM("alerte", "bd-ia")
-    + `<span><b>Vigilance ${esc(VIGI_NOM[vg.couleur])}</b>, ${esc(vg.libelle)}`
-    + (vg.geste ? `<small>${esc(vg.geste)}</small>` : "") + `</span></button>`);
-  alertesMeteo().forEach(a => h.push(`<p class="bd-alerte a-${a.ton}">${icoM("alerte", "bd-ia")}`
-    + `<span>${esc(a.texte)}</span></p>`));
-  z.innerHTML = h.join("");
-  z.hidden = !h.length;
+  if (vg) lignes.push({ ton: "v-" + vg.couleur, vue: "vigilance",
+    corps: `<b>Vigilance ${esc(VIGI_NOM[vg.couleur])}</b>, ${esc(vg.libelle)}`
+      + (vg.geste ? `<small>${esc(vg.geste)}</small>` : "") });
+  alertesMeteo().forEach(a => lignes.push({ ton: a.ton, corps: esc(a.texte) }));
+  lignes.sort((a, b) => (GRAVITE[b.ton] || 0) - (GRAVITE[a.ton] || 0));
+
+  if (lignes.length) {
+    const CHEV = '<svg class="bd-chev" viewBox="0 0 24 24" aria-hidden="true">'
+      + '<path d="M9 5l7 7-7 7"/></svg>';
+    z.innerHTML = `<div class="bd-carte t-${lignes[0].ton.replace("-", "")}">`
+      + lignes.map(l => l.vue
+        ? `<button type="button" class="bd-alerte bd-vigi a-${l.ton}" data-vue="${l.vue}">`
+          + icoM("alerte", "bd-ia") + `<span>${l.corps}</span>${CHEV}</button>`
+        : `<p class="bd-alerte a-${l.ton}">${icoM(ICONE_TON[l.ton] || "alerte", "bd-ia")}`
+          + `<span>${l.corps}</span></p>`).join("")
+      + `</div>`;
+  } else {
+    z.innerHTML = "";
+  }
+  z.hidden = !lignes.length;
   brancherBandeau();
 }
 

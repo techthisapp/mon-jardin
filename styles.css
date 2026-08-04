@@ -1456,13 +1456,21 @@ body.fige{overflow:hidden}
 /* Les quatre tuiles du bandeau sont parties dans la feuille du jour : seule
    l'icône commune et le bandeau d'alerte restent de ce bloc. */
 .bd-ic{width:22px;height:22px;color:var(--encre-doux);display:block}
+/* Une seule carte pour tout ce que le temps demande au jardin. Sa teinte est
+   celle de la ligne la plus grave, portée par une classe unique, et les lignes
+   qui suivent n'en ont plus : elles héritent de l'encre de la carte. */
+.bd-carte{border-radius:var(--rayon);overflow:hidden}
+.bd-carte.t-v4{background:rgba(247,218,214,.90);color:#8A2216}
+.bd-carte.t-v3{background:rgba(251,230,204,.90);color:#8A4A10}
+.bd-carte.t-v2{background:rgba(250,240,206,.90);color:#6B5410}
+.bd-carte.t-froid,.bd-carte.t-chaud{background:rgba(246,234,230,.90);color:var(--alerte)}
+.bd-carte.t-vent{background:rgba(237,239,234,.92);color:var(--encre-doux)}
+.bd-carte.t-eau{background:rgba(232,239,246,.90);color:#1F4F8F}
 .bd-alerte{
-  display:flex;align-items:center;gap:8px;margin-top:8px;padding:9px 12px;
-  border-radius:var(--rayon);font-size:13.5px;
-  background:#F6EAE6;color:var(--alerte);
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  font-size:13.5px;color:inherit;background:none;
 }
-.bd-alerte.a-eau{background:#E8EFF6;color:#1F4F8F}
-.bd-alerte.a-vent{background:#EDEFEA;color:var(--encre-doux)}
+.bd-alerte + .bd-alerte{border-top:1px solid rgba(22,36,30,.09)}
 .bd-ia{width:17px;height:17px;flex:0 0 auto}
 .bd-invite{
   display:flex;align-items:center;gap:9px;width:100%;text-align:left;cursor:pointer;
@@ -1580,7 +1588,7 @@ body.fige{overflow:hidden}
 .syn-ligne .v{font-size:14.5px}
 .syn-ligne .l{font-size:13.5px;line-height:1.4}
 .syn-pied{border-top:1px solid #F0EEE7;margin-top:13px;padding-top:12px}
-.bd-alerte{margin:0 0 10px}
+.bd-carte{margin:0 0 12px}
 
 /* ================= Deux niveaux de lecture sur l'écran du moment ================= */
 
@@ -1855,10 +1863,12 @@ body.fige{overflow:hidden}
 }
 .bd-vigi small{display:block;font-size:12px;opacity:.85;margin-top:2px}
 .bd-vigi .bd-ia{margin-top:1px}
-.bd-alerte.v-2{background:#FAF0CE;color:#6B5410}
-.bd-alerte.v-3{background:#FBE6CC;color:#8A4A10}
-.bd-alerte.v-4{background:#F7DAD6;color:#8A2216}
-.bd-vigi:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+.bd-chev{
+  width:15px;height:15px;flex:0 0 auto;margin-left:auto;align-self:center;
+  fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+  opacity:.55;
+}
+.bd-vigi:focus-visible{outline:2px solid var(--terre);outline-offset:-2px}
 
 .vg-ligne{display:flex;align-items:center;gap:10px;padding:9px 0;font-size:13.5px;
   color:var(--f-ink, var(--encre))}
