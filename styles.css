@@ -124,6 +124,80 @@ body{
   border:0;background:none;color:#EFEFE8;font-family:inherit;font-size:11.5px;
   cursor:pointer;text-decoration:underline;text-underline-offset:3px;
 }
+
+/* ---------- Feuille d'herbier de l'écran du moment ----------
+   Le papier prend un grain fin et des fibres longues, obtenus par deux bruits
+   SVG en ligne : aucune image à charger. Les onze autres mois de l'année sont
+   imprimés dessous en filigrane, et les blocs sont assez translucides pour
+   qu'on les devine sans qu'ils gênent la lecture. */
+#ec-maintenant{position:relative;overflow:hidden;isolation:isolate}
+#ec-maintenant::before{
+  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(206,193,152,.13),rgba(206,193,152,.13)),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.86%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.085%22/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22240%22%20height%3D%22240%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.012%200.72%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22240%22%20height%3D%22240%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.07%22/%3E%3C/svg%3E");
+  background-size:auto, 180px 180px, 240px 240px;
+  mix-blend-mode:multiply;
+}
+#vueEnsemble,#niveauDetail{position:relative;z-index:2}
+/* Les blocs de cet écran laissent voir le papier imprimé dessous. */
+#ec-maintenant{--papier-haut:rgba(251,250,247,.70)}
+
+.prairie{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.pr-i{
+  position:absolute;width:calc(260px * var(--s));height:calc(220px * var(--s));
+  transform:rotate(var(--r));opacity:var(--o);
+}
+.pr-i svg{width:100%;height:100%;display:block;overflow:visible}
+.prairie .vert{fill:#4C8C3F;opacity:.20}
+.prairie .masse{fill:#16241E;opacity:.10}
+.prairie .trait{fill:none;stroke:#16241E;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.prairie .trait .fin{stroke-width:.62;opacity:.74}
+.prairie .trait .pt{fill:#16241E;stroke:none;opacity:.80}
+.prairie .trait .apl{fill:#16241E;fill-opacity:.30}
+.prairie .trait .plein{fill:#16241E;fill-opacity:.42;stroke:none}
+.prairie .trait .plein2{fill:#16241E;fill-opacity:.26;stroke:none}
+.prairie .trait .apl2{fill:#16241E;fill-opacity:.20}
+/* Le fond ne bouge pas : cent quarante-trois animations derrière le texte
+   coûteraient cher et distrairaient de ce qui est à lire. */
+.prairie .pollen,.prairie .chute,.prairie .envol{fill:#16241E;opacity:.45;animation:none}
+.prairie .souffle,.prairie .vent,.prairie .ouvre,
+.prairie .eclot,.prairie .spirale,.prairie .respire{animation:none}
+
+/* La planche de la première plante nommée tient lieu de vignette de ligne. */
+.v-planche.syn-pl{width:30px;height:30px;align-self:center;opacity:.66}
+
+/* Ce qui fleurit se montre, en planches, au lieu de se compter. */
+.carte-fleur{
+  background:var(--papier-haut);border-radius:var(--rayon);
+  padding:13px 14px 14px;margin:0 0 13px;
+}
+.carte-fleur[hidden]{display:none}
+.syn-sect{
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--encre-doux);margin-bottom:9px;
+}
+.fl-rail{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.fl-rail::-webkit-scrollbar{display:none}
+.fl-i{
+  flex:0 0 auto;width:74px;display:flex;flex-direction:column;align-items:center;gap:3px;
+  border:0;background:none;padding:0;cursor:pointer;font-family:inherit;color:inherit;
+}
+.v-planche.fl-pl{width:64px;height:64px;opacity:.82}
+.fl-i span{
+  max-width:100%;font-size:11.5px;line-height:1.22;color:var(--encre-doux);text-align:center;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+@media (hover:hover){ .fl-i:hover .v-planche.fl-pl{opacity:1} .fl-i:hover span{color:var(--encre)} }
+.fl-i:focus-visible{outline:2px solid var(--terre);outline-offset:3px;border-radius:8px}
+
+/* Le dicton ferme la page, il ne demande rien. */
+.dicton{
+  margin:2px 0 16px;text-align:center;font-size:12.5px;font-style:italic;
+  line-height:1.5;color:#6B7770;
+}
+.dicton:empty{display:none}
+
 /* ---------- Barre de navigation flottante ---------- */
 /* Le verre dépoli laissait passer la ligne qu'il recouvre, à moitié lisible.
    Un fondu vers le papier s'intercale sous la barre : le texte s'y éteint. */

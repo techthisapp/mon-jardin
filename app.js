@@ -279,6 +279,34 @@ const PHF = {
 const ORDRE_FICHE = ["abri", "terre", "plant", "multiplication", "taille",
   "fertilisation", "protection", "protection_ete", "floraison", "recolte"];
 const ETATS_FICHE = ["floraison"];
+/* Un dicton par quinzaine, de l'almanach du jardinier. Il ferme la page sans
+   rien demander, et change deux fois par mois. */
+const DICTONS = [
+  "Janvier sec et beau remplit caves et tonneaux.",
+  "Neige de janvier vaut fumier.",
+  "Février le court, le pire de tous.",
+  "Quand février commence en lion, il finit comme un mouton.",
+  "Mars venteux, verger pommeux.",
+  "Taille tôt, taille tard, rien ne vaut la taille de mars.",
+  "Avril fait la fleur, mai en a l'honneur.",
+  "En avril ne te découvre pas d'un fil.",
+  "Bourgeon qui pousse en avril met peu de vin au baril.",
+  "Mai frais et venteux fait l'an plantureux.",
+  "Juin bien fleuri, vrai bonheur au logis.",
+  "Beau temps à la Saint-Médard, la récolte se prépare.",
+  "Juillet sans orage, famine au village.",
+  "En juillet, la faucille au poignet.",
+  "Quand août est bon, abondance à la maison.",
+  "Ce que l'été mûrit, l'automne le cueille.",
+  "Septembre est le mai de l'automne.",
+  "En septembre, si tu es prudent, achète grains et vêtements.",
+  "En octobre, qui n'a pas de vêtements doit en trouver.",
+  "Quand l'automne est beau, l'hiver est méchant.",
+  "À la Toussaint, le froid revient et met l'hiver en train.",
+  "Novembre, mois des brumes, tient le jardinier en chambre.",
+  "Décembre aux pieds blancs s'en vient, an de neige et de bon grain.",
+  "Noël au balcon, Pâques aux tisons.",
+];
 const MOIS_ABR = ["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
 const MOIS_PLEIN = ["janvier","février","mars","avril","mai","juin","juillet","août",
   "septembre","octobre","novembre","décembre"];
@@ -469,6 +497,48 @@ async function lirePlanches() {
    trente-cinq kilo-octets compressés : trop pour le chemin critique, alors que
    le motif est décoratif. Seul celui du mois est demandé, après le premier
    rendu, et l'agent de service garde les douze pour l'usage hors ligne. */
+/* La prairie : les onze autres mois imprimés en filigrane sur toute la hauteur
+   de l'écran du moment, dans l'ordre de l'année à partir du mois prochain. Le
+   mois en cours n'y est pas, il est au bandeau en pleine encre. Les dessins
+   sont déjà déclarés dans l'agent de service, ils ne coûtent qu'un premier
+   chargement, après le rendu. */
+const PAS_PRAIRIE = 230;      // hauteur d'un intervalle, en pixels
+let prairieSvg = null;
+
+async function chargerPrairie() {
+  if (prairieSvg) return prairieSvg;
+  const ici = new Date().getMonth() + 1;
+  const mois = [];
+  for (let k = 1; k <= 11; k++) mois.push(((ici - 1 + k) % 12) + 1);
+  const rendus = await Promise.all(mois.map(async m => {
+    try { const r = await fetch(`./motifs/${m}.svg`); return r.ok ? await r.text() : ""; }
+    catch (e) { return ""; }
+  }));
+  prairieSvg = rendus.filter(Boolean);
+  return prairieSvg;
+}
+
+function poserPrairie() {
+  const z = $("prairie"), sec = $("ec-maintenant");
+  if (!z || !sec || !prairieSvg || !prairieSvg.length) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { /* le fond reste, il ne bouge pas */ }
+  const haut = sec.offsetHeight;
+  const n = Math.max(0, Math.min(14, Math.ceil((haut - 200) / PAS_PRAIRIE)));
+  if (z.childElementCount === n) return;
+  const o = [];
+  for (let k = 0; k < n; k++) {
+    // Les valeurs dérivent du rang : le fond est le même d'un rendu à l'autre.
+    const gauche = k % 2 === 0;
+    const x = gauche ? -6 + (k % 3) * 2 : 30 + (k % 3) * 3;
+    const s = (1.15 + ((k * 7) % 4) * .10).toFixed(2);
+    const r = (k % 2 ? 1 : -1) * (2 + (k % 4));
+    const op = (.23 + ((k * 5) % 4) * .02).toFixed(3);
+    o.push(`<div class="pr-i" style="left:${x}%;top:${200 + k * PAS_PRAIRIE}px;`
+      + `--s:${s};--r:${r}deg;--o:${op}">${prairieSvg[k % prairieSvg.length]}</div>`);
+  }
+  z.innerHTML = o.join("");
+}
+
 async function poserMotifMois() {
   const hote = $("motifMois");
   if (!hote) return;
@@ -476,6 +546,8 @@ async function poserMotifMois() {
     const r = await fetch(`./motifs/${new Date().getMonth() + 1}.svg`);
     if (r.ok) hote.innerHTML = await r.text();
   } catch (e) { /* motif indisponible, le bandeau reste nu */ }
+  // Les onze autres mois suivent, pour le fond de l'écran du moment.
+  chargerPrairie().then(poserPrairie);
 }
 
 /* Les masques ne sont posés qu'à l'approche de la rangée. Sans cela, ouvrir
@@ -595,8 +667,16 @@ function apresCatalogue() {
   $("tete-total").textContent = `${plantes.length} plantes au catalogue`;
   construireChips();
   construireMois();
+  const dic = $("dicton");
+  if (dic) dic.textContent = "« " + DICTONS[demi - 1] + " »";
   construireRegle();
   rendreTout();
+  // Le fond se recompose quand la page grandit. Son chargement, lui, part une
+  // fois le dessin du bandeau posé : c'est celui-là qui se voit.
+  poserPrairie();
+  if (typeof ResizeObserver === "function" && $("ec-maintenant")) {
+    new ResizeObserver(() => poserPrairie()).observe($("ec-maintenant"));
+  }
 }
 
 const typoDe = cat => (plantes.find(p => p.cat === cat) || {}).typo;
@@ -2956,9 +3036,15 @@ function rendreSynthese(paires) {
   const CHEVRON = '<svg class="syn-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
   if (lignes.length) {
     h.push('<div class="syn-lignes">' + lignes.map(l =>
+      // La planche de la première plante nommée tient lieu de vignette : la ligne
+      // dit alors de quoi il s'agit avant même d'être lue. Le picto de la tâche
+      // reste quand la plante n'a pas de planche.
       `<button type="button" class="syn-ligne" data-tache="${esc(l.k)}">`
-      + `<span class="syn-pt" style="--t:${teinteK(l.k)}">`
-      + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[l.k] || ""}</svg></span>`
+      + ((pl => pl
+          ? vignettePlanche(pl, "syn-pl")
+          : `<span class="syn-pt" style="--t:${teinteK(l.k)}">`
+            + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[l.k] || ""}</svg></span>`
+        )(l.parts.reduce((a, pa) => a || pa.plantes.find(aPlanche), null)))
       + `<span class="syn-txt"><span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span> `
       + `<span class="l">${esc(texteLigne(l))}`
       + (l.presse ? ' <span class="fin">· dernière quinzaine</span>' : "")
@@ -2971,8 +3057,34 @@ function rendreSynthese(paires) {
       + "</div>");
   }
 
+  /* Ce qui fleurit se montre au lieu de se compter. Huit planches au plus, celles
+     du jardin, choisies parmi les plantes en fleur cette quinzaine. C'est le seul
+     endroit de l'écran qui regarde le jardin plutôt que le travail. Les plantes
+     qui nourrissent les butineurs passent devant : l'ordre alphabétique ne dit
+     rien de ce qui vaut d'être regardé. */
+  const enFleur = etats.reduce((a, g) => a.concat(g.plantes), []).filter(aPlanche);
+  const note = p => (PIPS_BUT[p.nectar] || 0) + (PIPS_BUT[p.pollen] || 0);
+  const vusFleur = enFleur.slice().sort((a, b) =>
+    (note(b) - note(a)) || a.nom.localeCompare(b.nom, "fr")).slice(0, 8);
+  const zf = $("carteFleur");
+  if (zf) {
+    zf.hidden = vusFleur.length === 0;
+    zf.innerHTML = vusFleur.length
+      ? `<h3 class="syn-sect">En fleur en ce moment</h3><div class="fl-rail">`
+        + vusFleur.map(p => `<button type="button" class="fl-i" data-plante="${esc(p.id)}">`
+            + vignettePlanche(p, "fl-pl") + `<span>${esc(p.nom)}</span></button>`).join("")
+        + `</div>`
+      : "";
+    poserPlanches(zf);
+    zf.querySelectorAll(".fl-i[data-plante]").forEach(b => b.addEventListener("click", () => {
+      const p = plantes.find(x => String(x.id) === b.dataset.plante);
+      if (p) ouvrirFeuille(p);
+    }));
+  }
+
   const pied = [];
-  etats.forEach(g => {
+  // La bande les montre : le compte ne se répète que lorsqu'elle est absente.
+  if (!vusFleur.length) etats.forEach(g => {
     const n = g.plantes.length;
     // Au delà de quatre, nommer les plantes en fleur devient une liste.
     pied.push(n > 4 ? n + " plantes sont en fleur"
@@ -2998,6 +3110,12 @@ function rendreSynthese(paires) {
 
   z.innerHTML = h.join("");
   z.hidden = false;
+  poserPlanches(z);
+  z.querySelectorAll(".fl-i[data-plante]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    const p = plantes.find(x => String(x.id) === b.dataset.plante);
+    if (p) ouvrirFeuille(p);
+  }));
   // Un clic sur une ligne ouvre la tâche, la ligne de reste ouvre la liste complète.
   z.querySelectorAll(".syn-ligne,.syn-verbe").forEach(b => b.addEventListener("click", e => {
     e.stopPropagation();

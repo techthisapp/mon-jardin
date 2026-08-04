@@ -49,6 +49,7 @@ const SUITES = [
   ["calendrier", () => import("./calendrier.mjs")],
   ["planches", () => import("./planches.mjs")],
   ["motif", () => import("./motif.mjs")],
+  ["herbier", () => import("./herbier.mjs")],
 ];
 
 const demande = process.argv[2];

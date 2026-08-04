@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=bf2e3fb71f">
+<link rel="stylesheet" href="./styles.css?v=f7fc52fc6c">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -49,12 +49,14 @@
   <div id="etat" class="etat" hidden></div>
 
   <section id="ec-maintenant">
+    <div class="prairie" id="prairie" aria-hidden="true"></div>
     <div id="vueEnsemble">
       <div class="bandeau-date bandeau-date-seule">
         <button class="date-jour" id="dateJour" type="button"
                 aria-label="Le jour : météo, eau, lumière et saison"></button>
       </div>
       <div class="bandeau" id="bandeau" hidden></div>
+      <div class="carte-fleur" id="carteFleur" hidden></div>
       <div class="synthese" id="synthese" hidden></div>
       <div id="videMoment"></div>
       <div class="pied-vue" id="piedVue" hidden>
@@ -64,6 +66,7 @@
         <button class="mini" id="basculeFiltresM" type="button" aria-expanded="false" aria-controls="corpsFiltresM">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltresM" hidden></span></button>
       </div>
+      <p class="dicton" id="dicton"></p>
       <div class="filtres filtres-moment">
         <div id="corpsFiltresM" hidden>
           <div class="ligne-filtre">
@@ -243,7 +246,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=18de3ad1d9"></script>
+<script type="module" src="./app.js?v=1e45dc5018"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

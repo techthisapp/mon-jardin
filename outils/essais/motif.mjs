@@ -23,12 +23,17 @@ export default async function essai(navigateur) {
   j.controle("le bandeau porte un dessin", pose.present);
   j.controle("le dessin est détaillé", pose.boites > 100, pose.boites + " tracés");
 
+  /* Le fond de l'écran du moment demande les onze autres mois, après le rendu.
+     Le contrôle porte donc sur l'ordre : le mois affiché passe le premier, seul
+     à compter pour le premier affichage. */
   const demandes = await pg.evaluate(() =>
-    performance.getEntriesByType("resource").filter(e => /\/motifs\/\d+\.svg$/.test(e.name)).map(e => e.name));
-  j.controle("un seul mois est demandé, pas les douze", demandes.length === 1, demandes.length);
+    performance.getEntriesByType("resource").filter(e => /\/motifs\/\d+\.svg$/.test(e.name))
+      .sort((a, b) => a.startTime - b.startTime).map(e => e.name));
   const mois = await pg.evaluate(() => new Date().getMonth() + 1);
-  j.controle("c'est celui du mois affiché", demandes[0] && demandes[0].endsWith(`/motifs/${mois}.svg`),
+  j.controle("le mois affiché est demandé le premier",
+    demandes[0] && demandes[0].endsWith(`/motifs/${mois}.svg`),
     demandes[0] ? demandes[0].split("/").pop() : "aucun");
+  j.controle("les autres viennent après, pour le fond", demandes.length === 12, demandes.length);
 
   j.section("le dessin n'est pas sur le chemin critique");
   const ordre = await pg.evaluate(() => {
