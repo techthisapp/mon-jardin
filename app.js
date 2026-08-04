@@ -299,11 +299,14 @@ function nomAvecArticle(p) {
 }
 
 // Trois plantes nommées, puis le compte : au delà, la synthèse redevient une liste.
-function enumerer(noms, max) {
+function enumerer(noms, max, muet) {
   const n = max || 3;
   const vus = noms.slice(0, n), reste = noms.length - vus.length;
   let t = vus.length > 1 ? vus.slice(0, -1).join(", ") + " et " + vus[vus.length - 1] : vus[0];
-  if (reste) t = vus.join(", ") + " et " + reste + " autre" + (reste > 1 ? "s" : "");
+  // Là où le compte de la tâche est déjà porté à côté, le dire une seconde fois
+  // en fin de phrase encombre la ligne sans rien apprendre.
+  if (reste && !muet) t = vus.join(", ") + " et " + reste + " autre" + (reste > 1 ? "s" : "");
+  else if (reste) t = vus.join(", ");
   return t;
 }
 
@@ -2244,8 +2247,17 @@ function alertesMeteo() {
   }
   const v = d.wind_speed_10m_max[i];
   if (v !== null && v >= 60) out.push({ ton: "vent", texte: `Vent à ${Math.round(v)} km/h, tuteurer et rentrer les potées` });
+  /* La pluie du jour ne décide pas de l'arrosage : le bilan du sol le fait, et
+     il a déjà déduit cette lame. L'alerte énonce donc le fait quand le sol reste
+     en dette malgré elle, se tait quand la pastille d'eau annonce déjà la pluie
+     à venir, et ne conseille de ne pas arroser que lorsque le bilan le dit. */
   const p = d.precipitation_sum[i];
-  if (p !== null && p >= 15) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
+  if (p !== null && p >= 15) {
+    const b = meteo ? bilanHydrique() : null;
+    if (!b) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
+    else if (b.etat === "arroser") out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus aujourd'hui` });
+    else if (b.etat === "confort") out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
+  }
   return out.filter(x => couverts.indexOf(x.ton) === -1).slice(0, 2);
 }
 
@@ -2708,16 +2720,17 @@ function rendreSynthese(paires) {
 
   const bout = liste => enumerer(liste.map(nomAvecArticle));
   // Quatre plantes nommées par ligne au total, quel que soit le nombre de verbes.
+  // Le reste n'est pas énoncé : le compte de la tâche est affiché au bout de la
+  // ligne et ouvre le détail complet.
   const texteLigne = l => {
-    if (l.parts.length === 1) return bout(l.parts[0].plantes);
-    let budget = 4, dits = [], reste = 0;
+    if (l.parts.length === 1) return enumerer(l.parts[0].plantes.map(nomAvecArticle), 3, true);
+    let budget = 4, dits = [];
     l.parts.forEach(pa => {
       const pris = pa.plantes.slice(0, Math.max(0, budget));
-      reste += pa.plantes.length - pris.length;
       budget -= pris.length;
-      if (pris.length) dits.push(pa.verbe.toLowerCase() + " " + enumerer(pris.map(nomAvecArticle), 4));
+      if (pris.length) dits.push(pa.verbe.toLowerCase() + " " + enumerer(pris.map(nomAvecArticle), 4, true));
     });
-    return dits.join(", ") + (reste ? " et " + reste + " autre" + (reste > 1 ? "s" : "") : "");
+    return dits.join(", ");
   };
   const h = [];
   if (tete.length) {
@@ -2795,7 +2808,7 @@ function rendreSynthese(paires) {
   // du jardin, elle retombe sur le besoin moyen de la normale de saison.
   const bh = meteo ? bilanHydrique() : null;
   if (bh && bh.etat === "arroser") {
-    pied.push(`arroser environ <b>${nombreFr(bh.apport)} litres par m²</b> sur les cultures arrosées`);
+    pied.push(`arroser environ <b>${nombreFr(bh.apport)} mm</b> sur les cultures arrosées`);
   } else if (bh && bh.etat === "attendre") {
     pied.push(`ne pas arroser, il est annoncé <b>${nombreFr(bh.prevue)} mm</b>`);
   } else if (bh) {
