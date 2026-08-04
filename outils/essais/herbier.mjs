@@ -12,19 +12,24 @@ export default async function essai(navigateur) {
   j.section("le papier porte son grain et sa prairie");
   const fond = await pg.evaluate(() => {
     const sec = document.getElementById("ec-maintenant");
-    const av = getComputedStyle(sec, "::before");
+    const av = getComputedStyle(document.body);
     const z = document.getElementById("prairie");
+    const cadre = z.getBoundingClientRect();
     return {
       grain: (av.backgroundImage.match(/url\(/g) || []).length,
-      fusion: av.mixBlendMode,
+      pleine: Math.round(cadre.left) <= 0 && Math.round(cadre.right) >= window.innerWidth,
       items: z ? z.childElementCount : 0,
       traces: z ? z.querySelectorAll("path,circle,ellipse").length : 0,
       hauteur: sec.offsetHeight,
       dessous: Number(getComputedStyle(z).zIndex) < Number(getComputedStyle(document.getElementById("vueEnsemble")).zIndex),
     };
   });
-  j.controle("le papier porte deux bruits, sans image à charger", fond.grain === 2, fond.grain);
-  j.controle("ils se fondent en multiplication", fond.fusion === "multiply", fond.fusion);
+  /* Le grain est sur le fond de la page, non sur une section : posé sur la
+     section, il s'arrêtait à ses marges et laissait un cadre blanc de seize
+     points sur trois côtés. */
+  j.controle("le papier de la page porte deux bruits, sans image à charger",
+    fond.grain === 2, fond.grain);
+  j.controle("la prairie va d'un bord à l'autre de l'écran", fond.pleine);
   j.controle("la prairie est posée", fond.items > 0, fond.items + " dessins");
   j.controle("elle tient la hauteur de la page",
     fond.items >= Math.floor((fond.hauteur - 200) / 230), fond.hauteur + " px");
@@ -63,11 +68,13 @@ export default async function essai(navigateur) {
     debord.sortis.join(" | "));
   const rogne = await pg.evaluate(() => {
     const p = getComputedStyle(document.getElementById("prairie"));
-    return { chemin: p.clipPath, deborde: p.overflow };
+    const sec = getComputedStyle(document.getElementById("ec-maintenant"));
+    return { chemin: p.clipPath, deborde: p.overflow, section: sec.overflow };
   });
   j.controle("la prairie est rognée deux fois",
     rogne.chemin !== "none" && /hidden|clip/.test(rogne.deborde),
     rogne.deborde + ", " + rogne.chemin);
+  j.controle("la section, elle, ne rogne rien", rogne.section === "visible", rogne.section);
   const tourne = await pg.evaluate(() => {
     const e = document.querySelector(".pr-i");
     return e ? getComputedStyle(e).transform : "aucun";

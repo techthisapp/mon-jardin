@@ -34,8 +34,16 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
+/* Le papier de l'application porte le grain d'un papier à main : un bruit fin
+   et des fibres longues, deux images SVG posées en ligne, environ un
+   kilo-octet, aucune requête. Il est sur le fond de la page et non sur une
+   section, sans quoi il s'arrêterait aux marges et laisserait un cadre blanc. */
 body{
-  background:var(--papier);color:var(--encre);
+  background-color:var(--papier);
+  background-image:linear-gradient(rgba(206,193,152,.13),rgba(206,193,152,.13)),
+    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.86%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.085%22/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22240%22%20height%3D%22240%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.012%200.72%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22240%22%20height%3D%22240%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.07%22/%3E%3C/svg%3E");
+  background-size:auto, 180px 180px, 240px 240px;
+  color:var(--encre);
   font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   font-size:15px;line-height:1.5;
 }
@@ -130,19 +138,10 @@ body{
    SVG en ligne : aucune image à charger. Les onze autres mois de l'année sont
    imprimés dessous en filigrane, et les blocs sont assez translucides pour
    qu'on les devine sans qu'ils gênent la lecture. */
-#ec-maintenant{
-  position:relative;isolation:isolate;
-  /* « clip » rogne sans faire de la section une zone défilante : « hidden »
-     en crée une, et le navigateur peut alors lui réserver une gouttière. */
-  overflow:hidden;overflow:clip;
-}
-#ec-maintenant::before{
-  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background-image:linear-gradient(rgba(206,193,152,.13),rgba(206,193,152,.13)),
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.86%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.085%22/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22240%22%20height%3D%22240%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.012%200.72%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22240%22%20height%3D%22240%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.07%22/%3E%3C/svg%3E");
-  background-size:auto, 180px 180px, 240px 240px;
-  mix-blend-mode:multiply;
-}
+#ec-maintenant{position:relative}
+/* La prairie s'étend jusqu'aux bords de l'écran, par-dessous les marges de la
+   page, et se rogne elle-même : la section, elle, ne rogne rien, pour ne pas
+   couper ce qui la traverse. */
 #vueEnsemble,#niveauDetail{position:relative;z-index:2}
 /* Les blocs de cet écran laissent voir le papier imprimé dessous. */
 #ec-maintenant{--papier-haut:rgba(251,250,247,.70)}
@@ -151,7 +150,13 @@ body{
    pour les calques que le compositeur sort du flux. Sans lui, un dessin qui
    mord sur le bord droit rend la page glissante de côté sur WebKit. */
 .prairie{
-  position:absolute;inset:0;z-index:0;pointer-events:none;
+  position:absolute;z-index:0;pointer-events:none;
+  top:calc(-1 * var(--marge-h, 16px));
+  bottom:calc(-1 * var(--marge-b, 96px));
+  left:calc(-1 * var(--marge-g, 16px));
+  right:calc(-1 * var(--marge-d, 16px));
+  /* Le rognage est doublé : « clip » pour la mise en page, « clip-path » pour
+     les calques que le compositeur sort du flux. */
   overflow:hidden;overflow:clip;clip-path:inset(0);
 }
 /* Pas de rotation : elle ne se voyait qu'à peine et c'est elle qui faisait
@@ -254,7 +259,13 @@ body::after{
   .barre-basse{background:rgba(248,247,243,.97)}
 }
 
-main{max-width:1060px;margin:0 auto;padding:16px 16px 96px}
+/* Les marges de la page sont nommées : la prairie s'en sert pour déborder
+   jusqu'aux bords de l'écran. */
+main{
+  --marge-h:16px; --marge-g:16px; --marge-d:16px; --marge-b:96px;
+  max-width:1060px;margin:0 auto;
+  padding:var(--marge-h) var(--marge-d) var(--marge-b) var(--marge-g);
+}
 
 .etat{
   padding:10px 13px;border-radius:var(--rayon);font-size:13px;margin-bottom:14px;
@@ -596,9 +607,9 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 /* ---------- Mode plein écran depuis l'écran d'accueil ---------- */
 .tete{padding-top:env(safe-area-inset-top)}
 main{
-  padding-left:calc(16px + env(safe-area-inset-left));
-  padding-right:calc(16px + env(safe-area-inset-right));
-  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+  --marge-g:calc(16px + env(safe-area-inset-left));
+  --marge-d:calc(16px + env(safe-area-inset-right));
+  --marge-b:calc(96px + env(safe-area-inset-bottom));
 }
 .tete-corps,.onglets,.sous-onglets{
   padding-left:calc(16px + env(safe-area-inset-left));
