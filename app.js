@@ -279,8 +279,12 @@ const PHF = {
 const ORDRE_FICHE = ["abri", "terre", "plant", "multiplication", "taille",
   "fertilisation", "protection", "protection_ete", "floraison", "recolte"];
 const ETATS_FICHE = ["floraison"];
-/* Un dicton par quinzaine, de l'almanach du jardinier. Il ferme la page sans
-   rien demander, et change deux fois par mois. */
+/* Un dicton ferme la page sans rien demander. La tradition en attache un à
+   deux cent onze jours de l'année, rattaché à un saint ou à un repère du
+   calendrier ; les cent cinquante-cinq autres jours prennent celui de leur
+   quinzaine. Les vingt-quatre replis restent dans le script, pour que le pied
+   de page n'attende rien pour s'écrire, et les dictons datés arrivent ensuite
+   dans un fichier à part. */
 const DICTONS = [
   "Janvier sec et beau remplit caves et tonneaux.",
   "Neige de janvier vaut fumier.",
@@ -538,6 +542,25 @@ function poserPrairie() {
   z.innerHTML = o.join("");
 }
 
+function poserDicton(texte) {
+  const d = $("dicton");
+  if (d) d.textContent = "« " + texte + " »";
+}
+
+/* Le dicton du jour remplace celui de la quinzaine quand la date en porte un.
+   Le fichier est déclaré dans l'agent de service : cinq kilo-octets compressés,
+   une seule fois, et l'application reste juste hors réseau. */
+async function chargerDictons() {
+  try {
+    const r = await fetch("./dictons.json");
+    if (!r.ok) return;
+    const t = await r.json();
+    const cle = String(auj.getMonth() + 1).padStart(2, "0")
+      + "-" + String(auj.getDate()).padStart(2, "0");
+    if (t[cle]) poserDicton(t[cle]);
+  } catch (e) { /* le repli de quinzaine reste en place */ }
+}
+
 async function poserMotifMois() {
   const hote = $("motifMois");
   if (!hote) return;
@@ -666,8 +689,8 @@ function apresCatalogue() {
   $("tete-total").textContent = `${plantes.length} plantes au catalogue`;
   construireChips();
   construireMois();
-  const dic = $("dicton");
-  if (dic) dic.textContent = "« " + DICTONS[demi - 1] + " »";
+  poserDicton(DICTONS[demi - 1]);
+  chargerDictons();
   construireRegle();
   rendreTout();
   // Le fond se recompose quand la page grandit. Son chargement, lui, part une

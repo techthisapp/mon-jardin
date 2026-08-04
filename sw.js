@@ -15,12 +15,13 @@
    La version est réécrite par outils/verification.mjs à partir des empreintes
    des actifs. Un changement de version vide l'ancien cache à l'activation. */
 
-const VERSION = "d9ce479b5f";
+const VERSION = "5a1eb9f788";
 const CACHE = "monjardin-" + VERSION;
 
 const ACTIFS = [
   "./", "./index.html", "./styles.css", "./app.js", "./config.js",
   "./vendor/supabase.js", "./manifest.webmanifest", "./planches.json",
+  "./dictons.json",
   "./icone.svg", "./favicon.ico", "./icone-192.png", "./icone-512.png",
   "./icone-maskable-512.png", "./apple-touch-icon.png",
   "./polices/plex-sans-400.woff2", "./polices/plex-sans-500.woff2",

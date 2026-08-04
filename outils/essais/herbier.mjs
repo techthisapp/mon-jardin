@@ -151,14 +151,32 @@ export default async function essai(navigateur) {
   await pg.goBack();
   await pg.waitForTimeout(500);
 
+  /* Deux cent onze jours de l'année portent un dicton propre à leur date, les
+     autres prennent celui de leur quinzaine. Le repli est écrit tout de suite,
+     le dicton daté le remplace quand le fichier arrive. */
   j.section("le dicton ferme la page");
-  const dic = await pg.locator("#dicton").innerText();
-  j.controle("il est posé et cité", /^«.+»$/.test(dic.trim()), dic.slice(0, 60));
-  const quinz = await pg.evaluate(() => {
+  const dic = (await pg.locator("#dicton").innerText()).trim();
+  j.controle("il est posé et cité", /^«.+»$/.test(dic), dic.slice(0, 60));
+  const table = await pg.evaluate(async () => {
+    const r = await fetch("./dictons.json");
+    if (!r.ok) return null;
+    const t = await r.json();
     const d = new Date();
-    return d.getMonth() * 2 + (d.getDate() <= 15 ? 1 : 2);
+    const cle = String(d.getMonth() + 1).padStart(2, "0")
+      + "-" + String(d.getDate()).padStart(2, "0");
+    return { nb: Object.keys(t).length, ici: t[cle] || null,
+      quinz: d.getMonth() * 2 + (d.getDate() <= 15 ? 1 : 2),
+      cles: Object.keys(t).every(k => /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(k)) };
   });
-  j.controle("il change à chaque quinzaine", quinz >= 1 && quinz <= 24, "quinzaine " + quinz);
+  j.controle("le fichier des dictons est servi et complet",
+    table && table.nb === 211, table && table.nb);
+  j.controle("toutes ses clés sont des dates valides", table && table.cles);
+  j.controle("le texte affiché est celui de la date, ou celui de la quinzaine",
+    table && (table.ici ? dic === "« " + table.ici + " »" : /^«.+»$/.test(dic)),
+    table && (table.ici ? "daté" : "repli de la quinzaine " + table.quinz));
+  const declare = await pg.evaluate(async () =>
+    (await (await fetch("./sw.js")).text()).includes('"./dictons.json"'));
+  j.controle("l'agent de service le déclare, pour le hors réseau", declare);
 
   await ctx.close();
   return j.fin(erreurs);
