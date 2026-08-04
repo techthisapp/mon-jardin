@@ -98,13 +98,36 @@ export default async function essai(navigateur) {
     noms.join(" | ") === "L'EAU | LA LUMIÈRE | LA SAISON", noms.join(" | "));
   const section = await pg.locator("#feuille-corps .f-sect").innerText().catch(() => "absente");
   j.controle("la prévision est annoncée par son titre", section === "LA SEMAINE", section);
+  j.controle("la feuille du jour n'a pas de retour, elle vient de l'écran",
+    await pg.locator("#retourFeuille").isVisible() === false);
   await pg.locator('#feuille-corps .mesure[data-vue="lumiere"]').click();
   await pg.waitForTimeout(500);
   j.controle("chaque mesure ouvre encore sa propre feuille",
     /jour|lumière|soleil/i.test(await pg.locator("#feuille-titre").innerText()),
     (await pg.locator("#feuille-titre").innerText()).split("\n")[0]);
-  await pg.goBack();
-  await pg.waitForTimeout(600);
+
+  /* Une feuille ouverte depuis une autre garde le chemin de celle qu'elle
+     recouvre : sans lui, la croix était la seule sortie et faisait tout fermer. */
+  j.section("le retour remonte d'un cran, la croix ferme tout");
+  j.controle("le chemin du retour nomme la feuille recouverte",
+    await pg.locator("#retourFeuille").isVisible() === true,
+    await pg.locator("#retourNom").textContent().catch(() => "absent"));
+  j.controle("il nomme la feuille du jour",
+    (await pg.locator("#retourNom").textContent()) === "Le jour");
+  await pg.locator("#retourFeuille").click();
+  await pg.waitForTimeout(500);
+  j.controle("le retour ramène à la feuille du jour",
+    (await pg.locator("#feuille-titre").innerText()).split("\n")[0] === "Le jour");
+  j.controle("et le chemin disparaît, il n'y a plus de cran au-dessus",
+    await pg.locator("#retourFeuille").isVisible() === false);
+  await pg.locator('#feuille-corps .mesure[data-vue="saison"]').click();
+  await pg.waitForTimeout(500);
+  const ruban = await pg.locator("#feuille-corps .ra-s").count();
+  j.controle("la saison porte le ruban de l'année", ruban === 5, ruban + " bandes");
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(500);
+  j.controle("la croix ferme tout d'un coup", await cache("#feuille") === 1);
+
   await pg.locator('.onglet[data-ecran="planning"]').click();
   await pg.waitForTimeout(900);
   j.controle("le calendrier porte la même date", await visible("#dateJourP") === 1,

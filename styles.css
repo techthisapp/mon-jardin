@@ -830,6 +830,21 @@ body.fige{overflow:hidden}
 /* ================= Feuille de détail, mise en forme ================= */
 .feuille:focus{outline:none}
 .feuille-tete{align-items:flex-start;padding:6px 16px 12px}
+.ft-textes{flex:1;min-width:0}
+/* Le chemin du retour se lit au-dessus du titre, la croix reste à sa place. */
+.retour-feuille{
+  display:inline-flex;align-items:center;gap:3px;
+  border:0;background:none;padding:0 6px 2px 0;cursor:pointer;
+  font-family:inherit;font-size:12.5px;font-weight:500;letter-spacing:.02em;
+  color:var(--encre-doux);
+}
+.retour-feuille svg{
+  width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.retour-feuille[hidden]{display:none}
+@media (hover:hover){ .retour-feuille:hover{color:var(--encre)} }
+.retour-feuille:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
 .feuille-tete h2{
   display:flex;flex-direction:column;gap:3px;
   font-size:21px;line-height:1.15;letter-spacing:.01em;
@@ -1147,7 +1162,7 @@ body.fige{overflow:hidden}
 /* ---------- Fiche de plante, rendu détaillé ---------- */
 .fiche-v2{
   --f-ink:var(--encre); --f-ink2:var(--encre-doux); --f-ink3:#8A9089;
-  --f-grille:#E4E3DA; --f-carte:#fff; --f-plan:var(--papier); --f-filet:var(--filet-clair);
+  --f-grille:#E4E3DA; --f-carte:var(--papier); --f-plan:var(--papier); --f-filet:var(--filet-clair);
   display:flex;flex-direction:column;gap:14px;
 }
 .f-svg{width:100%;height:auto;display:block;overflow:visible}
@@ -1229,11 +1244,15 @@ body.fige{overflow:hidden}
 
 .f-pan{display:flex;flex-direction:column;gap:12px}
 .f-carte{
-  background:var(--f-carte);border:1px solid var(--filet-clair);
-  border-radius:var(--rayon);padding:12px 14px 14px;
+  background:var(--f-carte);border:0;
+  border-radius:var(--rayon);padding:13px 14px 15px;
 }
-.f-carte-tete{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
-.f-carte-tete h3{font-size:15px;font-weight:700;line-height:1.25}
+.f-carte-tete{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.f-carte-tete h3{
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  line-height:1.25;color:var(--encre-doux);
+}
 .f-sub{font-weight:400;color:var(--f-ink3);margin-left:6px;font-size:13px}
 .f-seg{display:flex;background:var(--panneau);border-radius:999px;padding:2px;flex:0 0 auto}
 .f-seg button{
@@ -1366,10 +1385,12 @@ body.fige{overflow:hidden}
 .mt-bp{background:#4F8FD8}
 .mt-be{background:#E0B84A;opacity:.9}
 .mt-j{font-size:10.5px;color:var(--encre-doux);margin-top:3px}
-.mt-leg{display:flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:var(--encre-doux)}
-.mt-leg i{width:9px;height:9px;border-radius:2px;display:inline-block;margin-left:8px}
-.mt-leg i.p{background:#4F8FD8;margin-left:0}
+.mt-leg{display:flex;flex-wrap:wrap;gap:5px 14px;margin-top:10px;font-size:12px;color:var(--encre-doux)}
+.mt-leg span{display:inline-flex;align-items:center;gap:5px}
+.mt-leg i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.mt-leg i.p{background:#4F8FD8}
 .mt-leg i.e{background:#E0B84A}
+.mt-bilan{margin-top:11px;padding-top:11px;border-top:1px solid var(--filet-clair)}
 .mt-form{display:flex;gap:8px;margin:12px 0 8px}
 .mt-form input{
   flex:0 0 110px;padding:9px 12px;border:1px solid var(--filet);border-radius:8px;
@@ -1613,18 +1634,53 @@ body.fige{overflow:hidden}
 
 .jauge-sol{
   position:relative;height:26px;border-radius:8px;overflow:hidden;
-  background:#E6E4DA;
+  background:#E2E0D6;
 }
 .js-eau{
-  position:absolute;left:0;top:0;bottom:0;width:var(--pleine);
-  background:linear-gradient(180deg,#6BA3DE,#3F7FD0);
+  position:absolute;left:0;top:0;bottom:0;width:var(--pleine);min-width:8px;
+  border-radius:8px 3px 3px 8px;
+  background:linear-gradient(180deg,#7FA9CD,#4A7CA8);
 }
+/* La jauge, le chiffre et la conclusion sont une seule lecture. */
+.js-bloc .f-txt{margin-top:11px;padding-top:11px;border-top:1px solid var(--filet-clair)}
+
+/* Course du soleil */
+.aj-bloc{padding-bottom:11px}
+.arc-jour{display:block}
+.arc-jour .aj-arc{fill:none;stroke:#C2B47F;stroke-width:1.4;stroke-linecap:round}
+.arc-jour .aj-plein{fill:rgba(199,190,121,.30);stroke:none}
+.arc-jour .aj-sol{stroke:var(--filet);stroke-width:1}
+.arc-jour .aj-fil{stroke:#C2B47F;stroke-width:1;opacity:.55}
+.arc-jour .aj-astre{fill:#C79A3C;stroke:var(--f-carte);stroke-width:2.5}
+.aj-bornes{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  margin-top:2px;font-size:12.5px;color:var(--f-ink3, #8A9089);
+}
+.aj-bornes b{font-size:13.5px;font-weight:600;color:var(--f-ink, var(--encre))}
+.aj-tendance{
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--filet-clair);
+  font-size:13.5px;color:var(--f-ink2, var(--encre-doux));
+}
+
+/* Ruban de la saison de végétation */
+.ruban-veget .regle-annee{margin-bottom:9px}
+.ruban-veget .ra-pt{background:var(--encre);box-shadow:0 0 0 3px var(--papier-haut)}
+.rv-leg{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12px;color:var(--encre-doux)}
+.rv-leg span{display:inline-flex;align-items:center;gap:5px}
+.rv-leg i{width:9px;height:9px;border-radius:2px;background:var(--t);opacity:.9}
 .js-seuil{
   position:absolute;top:0;bottom:0;left:var(--seuil);width:0;
   border-left:2px dashed rgba(22,36,30,.45);
 }
+/* Le seuil de confort se nomme sous son trait : à l'autre bout de la ligne, le
+   chiffre ne se rattachait à rien. */
+.jauge-cadre{position:relative;padding-bottom:16px}
+.js-etiq{
+  position:absolute;bottom:0;transform:translateX(-50%);white-space:nowrap;
+  font-size:11px;letter-spacing:.01em;color:var(--f-ink3, #8A9089);
+}
 .js-leg{
-  display:flex;align-items:baseline;gap:9px;margin-top:8px;
+  display:flex;align-items:baseline;gap:9px;margin-top:2px;
   font-size:13px;color:var(--f-ink2, var(--encre-doux));
 }
 .js-leg b{font-size:15px;font-weight:700;color:var(--f-ink, var(--encre))}

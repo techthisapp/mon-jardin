@@ -34,7 +34,7 @@ export default async function essai(navigateur) {
   j.controle("sa distance est plausible", km > 0 && km < 40, km + " km");
 
   j.section("part des jours mesurés");
-  const mesures = Number((corps.match(/(\d+) des trente derniers jours/) || [, "0"])[1]);
+  const mesures = Number((corps.match(/(\d+) jours? sur les trente derniers/) || [, "0"])[1]);
   j.controle("le compte des jours mesurés vaut celui des relevés retenus",
     mesures === PLUIES.filter(p => p.qualite <= 1).length, mesures + " jours");
   j.controle("la valeur douteuse est écartée", mesures === PLUIES.length - 1,

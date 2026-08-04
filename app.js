@@ -1038,13 +1038,17 @@ const TEXTE_JOUR =
    quinzaine, l'initiale de chaque mois dessous. Le point d'aujourd'hui remonte
    par un aplomb vers la date écrite juste au-dessus, qui porte la même teinte de
    saison. La part écoulée de l'année est légèrement assombrie. */
-function construireRegle() {
+/* Le ruban de l'année : des bandes posées en jours, un cran par quinzaine, les
+   initiales des mois, un point pour aujourd'hui. La ligne du bandeau et le
+   ruban de la saison en partagent le dessin, seules les bandes changent. */
+function dessinRuban(bandes, opt) {
+  const o = opt || {};
   const pc = j => (100 * j / JOURS_AN).toFixed(2);
   const debutMois = m => jourDeLAn(AN_EN_COURS, m, 1);
   const ici = POS_AN.toFixed(2);
 
-  const bandes = SAISONS_AN.map(s =>
-    `<i class="ra-s" style="left:${pc(s.a)}%;width:${pc(s.b - s.a)}%;--t:${TEINTE_SAISON[s.nom]}"></i>`).join("");
+  const bd = bandes.map(s =>
+    `<i class="ra-s" style="left:${pc(s.a)}%;width:${pc(s.b - s.a)}%;--t:${s.t}"></i>`).join("");
   let crans = "";
   for (let m = 0; m < 12; m++) {
     // Le cran du premier du mois est un peu plus marqué que celui du seize :
@@ -1059,13 +1063,18 @@ function construireRegle() {
   }).join("");
 
   /* Les bandes sont enfermées dans le fond, qui les rogne à ses coins arrondis.
-     La part à venir n'est pas grisée mais lavée de papier : les saisons se
+     La part à venir n'est pas grisée mais lavée de papier : les bandes se
      lisent d'un bout à l'autre, et l'année déjà passée est la plus franche. */
-  const dedans = `<span class="ra-ligne">`
-    + `<i class="ra-fond">${bandes}<i class="ra-avenir" style="left:${ici}%"></i></i>`
-    + `${crans}<i class="ra-fil" style="left:${ici}%"></i>`
+  return `<span class="ra-ligne">`
+    + `<i class="ra-fond">${bd}<i class="ra-avenir" style="left:${ici}%"></i></i>`
+    + `${crans}${o.fil ? `<i class="ra-fil" style="left:${ici}%"></i>` : ""}`
     + `<i class="ra-pt" style="left:${ici}%"></i></span>`
     + `<span class="ra-mois">${initiales}</span>`;
+}
+
+function construireRegle() {
+  const dedans = dessinRuban(
+    SAISONS_AN.map(s => ({ a: s.a, b: s.b, t: TEINTE_SAISON[s.nom] })), { fil: true });
   ["regleAnnee", "regleAnneeP"].forEach(id => {
     const r = $(id);
     if (r && !r.childElementCount) r.innerHTML = dedans;
@@ -2426,11 +2435,36 @@ function positionSaison() {
 
 /* ---------- Deuxième profondeur, en feuille ---------- */
 
-function ouvrirVue(vue) {
+/* Une feuille ouverte depuis une autre garde le chemin de celle qu'elle
+   recouvre : la croix ferme tout, le retour remonte d'un cran. L'historique du
+   téléphone n'est pas touché, il continue de fermer la feuille d'un geste. */
+let pileFeuille = [];
+let vueCourante = null;
+
+function poserRetour() {
+  const b = $("retourFeuille");
+  if (!b) return;
+  const n = pileFeuille[pileFeuille.length - 1];
+  b.hidden = !n;
+  if (!n) return;
+  $("retourNom").textContent = n.titre;
+  b.setAttribute("aria-label", "Retour à " + n.titre);
+}
+
+function retourFeuille() {
+  const p = pileFeuille.pop();
+  if (!p) { sortirFeuille(); return; }
+  ouvrirVue(p.vue, true);
+}
+
+function ouvrirVue(vue, enRetour) {
   fermerGlose();
   const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance };
   const f = (rendus[vue] || vueLieu)();
+  if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
+  vueCourante = { vue, titre: f.titre };
+  poserRetour();
   $("feuille-titre").innerHTML = esc(f.titre)
     + (f.sous ? `<span class="feuille-latin">${esc(f.sous)}</span>` : "");
   $("feuille-corps").innerHTML = `<div class="fiche-v2">${f.corps}</div>`;
@@ -2555,24 +2589,34 @@ function vueEau() {
     `<button type="button" class="sol-opt${t === b.texture ? " actif" : ""}" data-sol="${t}">`
     + `${esc(SOL_LIBELLE[t])}<small>${RESERVE_SOL[t]} mm/m</small></button>`).join("");
 
+  /* La jauge, le chiffre et la conclusion tiennent dans un seul bloc : c'est une
+     seule et même lecture, elle n'a pas à traverser trois cadres. */
   return { titre: "L'eau", sous: "réserve du sol",
-    corps: `<div class="f-carte">`
+    corps: `<div class="f-carte js-bloc">`
+      + `<div class="jauge-cadre">`
       + `<div class="jauge-sol" style="--pleine:${pleine}%;--seuil:${seuil}%">`
       + `<i class="js-eau"></i><i class="js-seuil"></i></div>`
-      + `<p class="js-leg"><b>${pleine} %</b> de la réserve<span>seuil de confort à ${seuil} %</span></p>`
-      + `</div>`
+      + `<span class="js-etiq" style="left:${seuil}%">confort ${seuil} %</span></div>`
+      + `<p class="js-leg"><b>${pleine} %</b> de la réserve</p>`
       + `<p class="f-txt">${conseil}</p>`
-      + `<div class="f-carte"><div class="mt-barres">${barres.join("")}</div>`
-      + `<p class="mt-leg"><i class="p"></i>modèle <i class="s"></i>poste `
-      + `<i class="m"></i>votre relevé <i class="e"></i>consommation</p></div>`
-      + `<p class="f-txt">Sur sept jours, <b>${nombreFr(b.pluie7)} mm</b> sont tombés`
+      + `</div>`
+      + `<div class="f-carte"><div class="f-carte-tete"><h3>Huit jours passés, trois annoncés</h3></div>`
+      + `<div class="mt-barres">${barres.join("")}</div>`
+      + `<p class="mt-leg"><span><i class="p"></i>modèle</span><span><i class="s"></i>poste</span>`
+      + `<span><i class="m"></i>votre relevé</span><span><i class="e"></i>repris</span></p>`
+      + `<p class="f-txt mt-bilan">Sur sept jours, <b>${nombreFr(b.pluie7)} mm</b> sont tombés`
       + (b.apporte7 ? ` et <b>${nombreFr(b.apporte7)} mm</b> ont été apportés` : "")
-      + `, les cultures en ont repris <b>${nombreFr(b.demande7)} mm</b>.</p>`
+      + `, les cultures en ont repris <b>${nombreFr(b.demande7)} mm</b>.</p></div>`
       + (station
         ? `<div class="f-carte"><div class="f-carte-tete"><h3>Poste de mesure</h3></div>`
           + `<p class="f-txt"><b>${esc(station.libelle)}</b>, à ${nombreFr(station.km)} km. `
-          + `${nbMesures} des trente derniers jours viennent de ses relevés, le reste du modèle, `
-          + `le poste publiant avec deux jours de retard.</p>`
+          + (nbMesures === 0
+              ? `Aucun des trente derniers jours ne vient de ses relevés, le poste publiant `
+                + `avec deux jours de retard.`
+              : `${nbMesures} jour${nbMesures > 1 ? "s" : ""} sur les trente derniers `
+                + `vien${nbMesures > 1 ? "nent" : "t"} de ses relevés, le reste du modèle, `
+                + `le poste publiant avec deux jours de retard.`)
+          + `</p>`
           + `<p class="f-note">Fichiers ouverts de Météo-France publiés sur data.gouv.fr, `
           + `relevés chaque matin. Les valeurs douteuses sont écartées.</p></div>`
         : `<p class="f-note">Aucun poste de mesure rattaché à ce jardin, la pluie vient du modèle. `
@@ -2633,22 +2677,59 @@ function brancherEau() {
   }));
 }
 
+/* La course du soleil, en arc au-dessus de l'horizon. La part parcourue depuis
+   le lever est remplie, le disque marque l'heure qu'il est. Un tableau de
+   quatre lignes ne disait pas où l'on en était dans la journée. */
+function arcDuJour(leverMin, coucherMin, oursMin) {
+  const W = 300, x0 = 24, x1 = 276, sol = 96, ht = 68;
+  const f = Math.min(1, Math.max(0, (oursMin - leverMin) / Math.max(1, coucherMin - leverMin)));
+  const pt = t => [x0 + (x1 - x0) * t, sol - Math.sin(Math.PI * t) * ht];
+  const dit = p => p[0].toFixed(1) + " " + p[1].toFixed(1);
+  const pas = [];
+  for (let k = 0; k <= 48; k++) pas.push(pt(k / 48));
+  const arc = "M" + pas.map(dit).join(" L");
+  const n = Math.max(1, Math.round(f * 48));
+  const plein = `M${x0} ${sol} L` + pas.slice(0, n + 1).map(dit).join(" L")
+    + ` L${dit(pt(f))} L${pt(f)[0].toFixed(1)} ${sol} Z`;
+  const s = pt(f), sx = s[0].toFixed(1), sy = s[1].toFixed(1);
+  // La vue est bornée au dessin : l'arc culmine à vingt-huit, l'horizon est à
+  // quatre-vingt-seize, tout le reste était du vide.
+  return `<svg class="f-svg arc-jour" viewBox="0 22 ${W} 82" role="img"`
+    + ` aria-label="Course du soleil, du lever au coucher">`
+    + `<path class="aj-plein" d="${plein}"/>`
+    + `<path class="aj-arc" d="${arc}"/>`
+    + `<line class="aj-sol" x1="8" y1="${sol}" x2="${W - 8}" y2="${sol}"/>`
+    + `<line class="aj-fil" x1="${sx}" y1="${sy}" x2="${sx}" y2="${sol}"/>`
+    + `<circle class="aj-astre" cx="${sx}" cy="${sy}" r="6"/>`
+    + `</svg>`;
+}
+
 function vueLumiere() {
   const d = meteo.daily, i = iJour();
   const dur = d.daylight_duration[i];
   const delta = Math.round((dur - d.daylight_duration[i - 1]) / 60);
-  const solstice = Math.max(...d.daylight_duration);
+  const enMin = t => Number(t.slice(11, 13)) * 60 + Number(t.slice(14, 16));
   const lever = d.sunrise[i].slice(11, 16).replace(":", " h ");
   const coucher = d.sunset[i].slice(11, 16).replace(":", " h ");
-  const sens = delta >= 0 ? "s'allongent" : "raccourcissent";
+  /* L'arc dit le lever, la durée et le coucher : le tableau qui les reprenait
+     ligne à ligne ne disait rien de plus. Reste la tendance, que le dessin ne
+     peut pas porter. */
+  const veille = delta === 0 ? "autant qu'hier"
+    : Math.abs(delta) + " minute" + (Math.abs(delta) > 1 ? "s" : "")
+      + (delta > 0 ? " de plus" : " de moins") + " qu'hier";
+  const sem = d.daylight_duration[i - 7];
+  const eSem = sem ? Math.round((dur - sem) / 60) : 0;
+  const semaine = eSem ? ", " + Math.abs(eSem) + " minute" + (Math.abs(eSem) > 1 ? "s" : "")
+    + (eSem > 0 ? " de plus" : " de moins") + " qu'il y a une semaine" : "";
   return { titre: "La lumière", sous: hhmm(dur) + " de jour",
-    corps: `<dl class="f-kv"><dt>Lever</dt><dd>${esc(lever)}</dd>`
-      + `<dt>Coucher</dt><dd>${esc(coucher)}</dd>`
-      + `<dt>Durée</dt><dd>${esc(hhmm(dur))}</dd>`
-      + `<dt>Variation</dt><dd>${delta >= 0 ? "+" : "−"}${Math.abs(delta)} min par jour</dd></dl>`
-      + `<p class="f-txt">Les jours ${sens} de ${Math.abs(delta)} minutes. `
-      + `La lumière décide de la montée à graine des salades et des épinards, et de la `
-      + `date à partir de laquelle un semis sous abri ne rattrape plus son retard.</p>`
+    corps: `<div class="f-carte aj-bloc">`
+      + arcDuJour(enMin(d.sunrise[i]), enMin(d.sunset[i]), auj.getHours() * 60 + auj.getMinutes())
+      + `<p class="aj-bornes"><span>${esc(lever)}</span><b>${esc(hhmm(dur))} de jour</b>`
+      + `<span>${esc(coucher)}</span></p>`
+      + `<p class="aj-tendance">${esc(veille + semaine)}</p></div>`
+      + `<p class="f-txt">La lumière décide de la montée à graine des salades et des `
+      + `épinards, et de la date à partir de laquelle un semis sous abri ne rattrape `
+      + `plus son retard.</p>`
       + `<p class="f-note">Lever et coucher calculés au point du jardin.</p>` };
 }
 
@@ -2658,8 +2739,25 @@ function vueSaison() {
   const froid = [...sel].map(id => plantes.find(x => x.id === id)).filter(Boolean)
     .filter(x => x.gel !== null && x.gel !== undefined && Number(x.gel) >= -2)
     .sort((a, b) => Number(b.gel) - Number(a.gel)).slice(0, 6);
+  /* Le ruban de la saison est celui du bandeau, avec d'autres bandes : les
+     quatre étapes de la végétation sous ce climat, et le point du jour à sa
+     place dans l'année. Quatre dates alignées ne le disaient pas. */
+  const jq = q => jourDeLAn(AN_EN_COURS, Math.floor((q - 1) / 2), q % 2 ? 1 : 16);
+  const ETAPES = [["Repos", "#C3C9C0"], ["Reprise", "#A5C596"],
+                  ["Pleine saison", "#6FA35A"], ["Ralentissement", "#C9A277"]];
+  const ruban = s ? `<div class="ruban-veget">`
+    + `<div class="regle-annee" aria-hidden="true">` + dessinRuban([
+        { a: 0, t: ETAPES[0][1], b: jq(s.debut_q) },
+        { a: jq(s.debut_q), t: ETAPES[1][1], b: jq(s.pleine_q) },
+        { a: jq(s.pleine_q), t: ETAPES[2][1], b: jq(s.senescence_q) },
+        { a: jq(s.senescence_q), t: ETAPES[3][1], b: jq(s.fin_q) },
+        { a: jq(s.fin_q), t: ETAPES[0][1], b: JOURS_AN },
+      ]) + `</div>`
+    + `<p class="rv-leg">` + ETAPES.map(([nom, t]) =>
+        `<span><i style="--t:${t}"></i>${nom.toLowerCase()}</span>`).join("") + `</p></div>` : "";
+
   return { titre: "La saison", sous: p.long || p.court,
-    corps: (s ? `<dl class="f-kv"><dt>Reprise</dt><dd>${esc(demiTexte(s.debut_q))}</dd>`
+    corps: ruban + (s ? `<dl class="f-kv"><dt>Reprise</dt><dd>${esc(demiTexte(s.debut_q))}</dd>`
       + `<dt>Pleine saison</dt><dd>${esc(demiTexte(s.pleine_q))}</dd>`
       + `<dt>Ralentissement</dt><dd>${esc(demiTexte(s.senescence_q))}</dd>`
       + `<dt>Première gelée</dt><dd>${esc(demiTexte(s.fin_q))}</dd></dl>` : "")
@@ -3480,6 +3578,9 @@ function ouvrirFeuille(p) {
 
 function fermerFeuille() {
   if ($("feuille").hidden) return;
+  pileFeuille = [];
+  vueCourante = null;
+  poserRetour();
   fermerGlose();
   $("voile").classList.remove("visible");
   $("feuille").classList.remove("ouverte");
@@ -3535,6 +3636,7 @@ document.addEventListener("click", e => {
 
 sur("voile", "click", sortirFeuille);
 sur("fermerFeuille", "click", sortirFeuille);
+sur("retourFeuille", "click", retourFeuille);
 // La touche d'échappement referme d'abord la définition, ensuite la feuille.
 document.addEventListener("keydown", e => {
   if (e.key !== "Escape") return;
