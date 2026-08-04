@@ -76,7 +76,7 @@ export default async function essai(navigateur) {
      au-dessus, dont la pastille porte la teinte de la saison traversée. */
   j.section("la ligne de l'année situe le deux août");
   const regle = await pg.evaluate(() => {
-    const r = document.getElementById("regleAnnee");
+    const r = document.getElementById("regleAnneeP");
     if (!r) return null;
     const pc = v => parseFloat(v);
     const pt = r.querySelector(".ra-pt");
@@ -86,7 +86,7 @@ export default async function essai(navigateur) {
       && ici < pc(b.style.left) + pc(b.style.width));
     const mois = [...r.querySelectorAll(".ra-mois b")];
     const av = r.querySelector(".ra-avenir");
-    const past = document.querySelector("#dateJour .dj-saison");
+    const past = document.querySelector("#dateJourP .dj-saison");
     return {
       bandes: bandes.length,
       crans: r.querySelectorAll("u").length,

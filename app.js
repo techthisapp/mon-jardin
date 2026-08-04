@@ -1072,13 +1072,13 @@ function dessinRuban(bandes, opt) {
     + `<span class="ra-mois">${initiales}</span>`;
 }
 
+/* La ligne est posée sur le calendrier, dont l'année est le sujet. L'écran du
+   moment parle de la quinzaine : la date y suffit. */
 function construireRegle() {
-  const dedans = dessinRuban(
+  const r = $("regleAnneeP");
+  if (!r || r.childElementCount) return;
+  r.innerHTML = dessinRuban(
     SAISONS_AN.map(s => ({ a: s.a, b: s.b, t: TEINTE_SAISON[s.nom] })), { fil: true });
-  ["regleAnnee", "regleAnneeP"].forEach(id => {
-    const r = $(id);
-    if (r && !r.childElementCount) r.innerHTML = dedans;
-  });
 }
 
 function shiftPour(k) {

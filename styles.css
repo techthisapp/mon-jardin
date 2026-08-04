@@ -966,6 +966,9 @@ body.fige{overflow:hidden}
 /* La règle des mois se resserre, elle situe sans devoir être lue */
 .bandeau-date{margin-bottom:14px}
 .regle-annee{margin-bottom:0}
+/* Seule, la date n'a plus à ménager la place d'une règle sous elle. */
+.bandeau-date-seule{margin-bottom:11px}
+.bandeau-date-seule .date-jour{margin-bottom:0}
 
 /* ---------- Barre de commandes de l'écran En ce moment ---------- */
 .filtres-moment{margin-bottom:10px;padding:8px 10px}
