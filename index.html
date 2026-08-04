@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=b3dc0ff956">
+<link rel="stylesheet" href="./styles.css?v=79f3ae91ce">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -93,15 +93,16 @@
   </section>
 
   <section id="ec-planning" hidden>
-    <div class="bandeau-date">
-      <div class="regle-annee" id="regleAnneeP" aria-hidden="true"></div>
-    </div>
     <div class="filtres">
       <div class="barre-filtres">
         <button class="mini" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltres" hidden></span></button>
         <button class="chip chip-jardin" id="filtreJardin" aria-pressed="true" type="button">Mon jardin seulement</button>
         <span class="bilan" id="bilanPlan"></span>
+        <div class="jeu-quinz" id="jeuQuinz" hidden>
+          <button class="chip" id="quinz1" type="button" aria-pressed="false">1re quinzaine</button>
+          <button class="chip" id="quinz2" type="button" aria-pressed="false">2de quinzaine</button>
+        </div>
         <button class="lien" id="razMois" type="button" hidden>Tous les mois</button>
       </div>
       <div id="corpsFiltres" hidden>
@@ -130,6 +131,7 @@
         <div class="mois-grille" id="grilleMois"></div>
       </div>
       <div id="zoneRangees">
+        <div class="bande-mois bande-courante" id="bandeCourante" hidden></div>
         <div class="bande-mois" id="bandeMois" hidden></div>
         <div class="marqueur-jour" id="marqueurJour" hidden></div>
         <div id="rangees"></div>
@@ -244,7 +246,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=04290d828f"></script>
+<script type="module" src="./app.js?v=7264a434de"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

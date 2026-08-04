@@ -71,12 +71,17 @@ export default async function essai(navigateur) {
   j.controle("le 2 août est la quinzaine 15",
     repere && QUINZAINE(repere.x) === 15, repere && QUINZAINE(repere.x));
 
-  /* La ligne de l'année situe le jour : quatre saisons en couleur, un cran par
-     quinzaine, l'initiale de chaque mois, et un point relié à la date écrite
-     au-dessus, dont la pastille porte la teinte de la saison traversée. */
-  j.section("la ligne de l'année situe le deux août");
+  /* Le ruban de la saison reprend le dessin de la ligne de l'année : mêmes
+     crans, mêmes initiales, même point du jour. Ses bandes disent les quatre
+     étapes de la végétation sous le climat du jardin. C'est le seul endroit où
+     ce dessin subsiste, la mesure s'y fait donc. */
+  j.section("le ruban de la saison situe le deux août");
+  await pg.locator("#dateJour").click();
+  await pg.waitForTimeout(700);
+  await pg.locator('#feuille-corps .mesure[data-vue="saison"]').click();
+  await pg.waitForTimeout(700);
   const regle = await pg.evaluate(() => {
-    const r = document.getElementById("regleAnneeP");
+    const r = document.querySelector("#feuille-corps .regle-annee");
     if (!r) return null;
     const pc = v => parseFloat(v);
     const pt = r.querySelector(".ra-pt");
@@ -87,7 +92,10 @@ export default async function essai(navigateur) {
     const mois = [...r.querySelectorAll(".ra-mois b")];
     const av = r.querySelector(".ra-avenir");
     const past = document.querySelector("#dateJour .dj-saison");
+    const fond = r.querySelector(".ra-fond").getBoundingClientRect();
+    const rpt = pt.getBoundingClientRect();
     return {
+      dansLesBornes: rpt.left >= fond.left - 5 && rpt.right <= fond.right + 5,
       bandes: bandes.length,
       crans: r.querySelectorAll("u").length,
       forts: r.querySelectorAll("u.fort").length,
@@ -100,8 +108,10 @@ export default async function essai(navigateur) {
       avenir: av.style.left,
     };
   });
-  j.controle("les quatre saisons sont posées, l'hiver aux deux bouts",
+  j.controle("les quatre étapes de la végétation sont posées, le repos aux deux bouts",
     regle && regle.bandes === 5, regle && regle.bandes);
+  j.controle("le point du jour reste dans les bornes du ruban",
+    regle && regle.dansLesBornes);
   j.controle("vingt-trois crans, onze pour les premiers du mois",
     regle && regle.crans === 23 && regle.forts === 11,
     regle && regle.crans + " crans, " + regle.forts + " forts");
@@ -110,12 +120,14 @@ export default async function essai(navigateur) {
   j.controle("août est l'initiale marquée", regle && regle.ici === 7, regle && regle.ici);
   j.controle("le point tombe au deux août, soit 58,49 % de l'année",
     regle && regle.point === "58.49%", regle && regle.point);
-  j.controle("il se pose sur la bande de l'été", regle && regle.teinte === "#C7BE79",
-    regle && regle.teinte);
-  j.controle("la pastille de la date porte la même teinte",
-    regle && regle.pastille === regle.teinte, regle && regle.pastille);
+  j.controle("le deux août tombe en pleine saison sous ce climat",
+    regle && regle.teinte === "#6FA35A", regle && regle.teinte);
+  j.controle("la pastille de la date porte la teinte de l'été",
+    regle && regle.pastille === "#C7BE79", regle && regle.pastille);
   j.controle("la part à venir commence au point",
     regle && regle.avenir === regle.point, regle && regle.avenir);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(600);
 
   const floRef = voie(pommier, "Floraison");
   await ctx.close();

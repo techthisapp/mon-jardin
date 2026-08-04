@@ -113,7 +113,10 @@ let session = null;
 let tri = "categorie";
 let jardinSeul = true;   // le jardin de la personne prime sur le catalogue
 let climatSeul = false;  // Mes plantes, restreint aux plantes adaptées au climat du jardin
-let moisChoisi = null;
+/* La période retenue sur le calendrier, en quinzaines de 1 à 24. Un mois en
+   occupe deux, une quinzaine une seule : la même borne sert aux deux échelles,
+   et le filtre s'affine sans code séparé. */
+let periode = null;
 
 const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Mes plantes
 const etatTypoP = {}, etatCatP = {};                     // écran Calendrier
@@ -319,6 +322,8 @@ const DICTONS = [
   "Noël au balcon, Pâques aux tisons.",
 ];
 const MOIS_ABR = ["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
+// « de avril » ne se dit pas : avril, août et octobre demandent l'élision.
+const deMois = m => (/^[aeiouyâàéèêîôû]/i.test(MOIS[m]) ? "d'" : "de ") + MOIS[m].toLowerCase();
 const MOIS_PLEIN = ["janvier","février","mars","avril","mai","juin","juillet","août",
   "septembre","octobre","novembre","décembre"];
 
@@ -698,7 +703,6 @@ function apresCatalogue() {
   construireMois();
   poserDicton(DICTONS[demi - 1]);
   chargerDictons();
-  construireRegle();
   rendreTout();
   // Le fond se recompose quand la page grandit. Son chargement, lui, part une
   // fois le dessin du bandeau posé : c'est celui-là qui se voit.
@@ -1145,15 +1149,10 @@ const TEXTE_JOUR =
   b.addEventListener("click", () => ouvrirVue("temps"));
 })();
 
-/* L'année sur une ligne : les quatre saisons en bandes de couleur, un cran par
-   quinzaine, l'initiale de chaque mois dessous. Le point d'aujourd'hui remonte
-   par un aplomb vers la date écrite juste au-dessus, qui porte la même teinte de
-   saison. La part écoulée de l'année est légèrement assombrie. */
 /* Le ruban de l'année : des bandes posées en jours, un cran par quinzaine, les
-   initiales des mois, un point pour aujourd'hui. La ligne du bandeau et le
-   ruban de la saison en partagent le dessin, seules les bandes changent. */
-function dessinRuban(bandes, opt) {
-  const o = opt || {};
+   initiales des mois, un point pour aujourd'hui. La feuille de la saison s'en
+   sert pour poser les quatre étapes de la végétation. */
+function dessinRuban(bandes) {
   const pc = j => (100 * j / JOURS_AN).toFixed(2);
   const debutMois = m => jourDeLAn(AN_EN_COURS, m, 1);
   const ici = POS_AN.toFixed(2);
@@ -1178,18 +1177,9 @@ function dessinRuban(bandes, opt) {
      lisent d'un bout à l'autre, et l'année déjà passée est la plus franche. */
   return `<span class="ra-ligne">`
     + `<i class="ra-fond">${bd}<i class="ra-avenir" style="left:${ici}%"></i></i>`
-    + `${crans}${o.fil ? `<i class="ra-fil" style="left:${ici}%"></i>` : ""}`
+    + crans
     + `<i class="ra-pt" style="left:${ici}%"></i></span>`
     + `<span class="ra-mois">${initiales}</span>`;
-}
-
-/* La ligne est posée sur le calendrier, dont l'année est le sujet. L'écran du
-   moment parle de la quinzaine : la date y suffit. */
-function construireRegle() {
-  const r = $("regleAnneeP");
-  if (!r || r.childElementCount) return;
-  r.innerHTML = dessinRuban(
-    SAISONS_AN.map(s => ({ a: s.a, b: s.b, t: TEINTE_SAISON[s.nom] })), { fil: true });
 }
 
 function shiftPour(k) {
@@ -1662,7 +1652,7 @@ function rendreMaintenant() {
 
 function construireMois() {
   const gm = $("grilleMois");
-  if (gm.childElementCount) return;
+  if (gm.childElementCount) { majMois(); return; }
   MOIS.forEach((m, i) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -1672,44 +1662,88 @@ function construireMois() {
     b.title = `N'afficher que les plantes ayant une tâche en ${m.toLowerCase()}`;
     b.setAttribute("aria-pressed", "false");
     b.addEventListener("click", () => {
-      moisChoisi = (moisChoisi === i) ? null : i;   // second clic : on relâche le filtre
+      // Second clic sur le même mois : on relâche le filtre.
+      const meme = periode && periode.a === i * 2 + 1 && periode.b === i * 2 + 2;
+      periode = meme ? null : { a: i * 2 + 1, b: i * 2 + 2, nom: MOIS[i].toLowerCase() };
       majMois();
       rendrePlanning();
     });
     gm.appendChild(b);
   });
+  majMois();
+  /* La case du mois en cours porte sous son initiale un repère en deux
+     segments, un par quinzaine, plein pour celle du jour. Ces moitiés ne sont
+     pas des boutons : une case fait vingt points de large, sa moitié ne se
+     touche pas du doigt. Ce sont les jetons de la barre de filtres qui
+     affinent. */
+  const encours = gm.children[auj.getMonth()];
+  if (encours) encours.classList.add("q" + (demi % 2 === 1 ? 1 : 2));
+
+  ["quinz1", "quinz2"].forEach((id, k) => {
+    const b = $(id);
+    if (!b) return;
+    b.addEventListener("click", () => {
+      const m = periode ? Math.floor((periode.a - 1) / 2) : auj.getMonth();
+      const q = m * 2 + 1 + k;
+      const meme = periode && periode.a === q && periode.b === q;
+      periode = meme ? { a: m * 2 + 1, b: m * 2 + 2, nom: MOIS[m].toLowerCase() }
+        : { a: q, b: q, nom: (k ? "seconde" : "première") + " quinzaine " + deMois(m) };
+      majMois();
+      rendrePlanning();
+    });
+  });
 }
 
-function majMois() {
-  [...$("grilleMois").children].forEach((b, i) =>
-    b.setAttribute("aria-pressed", String(i === moisChoisi)));
-  const bande = $("bandeMois");
-  if (moisChoisi === null) { bande.hidden = true; return; }
+// Une bande couvre une période donnée en quinzaines, sur toute la hauteur.
+function poserBande(id, a, b) {
+  const bande = $(id);
+  if (!bande) return;
+  if (a === null) { bande.hidden = true; return; }
   const col = getComputedStyle(document.documentElement).getPropertyValue("--col-nom").trim();
-  bande.style.left = `calc(${col} + (100% - ${col}) * ${moisChoisi / 12})`;
-  bande.style.width = `calc((100% - ${col}) / 12)`;
+  bande.style.left = `calc(${col} + (100% - ${col}) * ${(a - 1) / 24})`;
+  bande.style.width = `calc((100% - ${col}) * ${(b - a + 1) / 24})`;
   bande.hidden = false;
 }
 
-// Une plante entre dans le mois si l'une de ses tâches encore filtrées y tombe.
+function majMois() {
+  const mois = periode ? Math.floor((periode.a - 1) / 2) : null;
+  [...$("grilleMois").children].forEach((b, i) =>
+    b.setAttribute("aria-pressed", String(i === mois)));
+  // Le mois en cours est marqué en permanence, la période retenue par-dessus.
+  poserBande("bandeCourante", auj.getMonth() * 2 + 1, auj.getMonth() * 2 + 2);
+  poserBande("bandeMois", periode ? periode.a : null, periode ? periode.b : 0);
+
+  const jeu = $("jeuQuinz");
+  if (jeu) {
+    jeu.hidden = periode === null;
+    ["quinz1", "quinz2"].forEach((id, k) => {
+      const b = $(id);
+      if (!b || mois === null) return;
+      const q = mois * 2 + 1 + k;
+      b.setAttribute("aria-pressed", String(periode.a === q && periode.b === q));
+    });
+  }
+}
+
+// Une plante entre dans la période si l'une de ses tâches encore filtrées y tombe.
 function dansMois(p) {
-  if (moisChoisi === null) return true;
-  const h1 = moisChoisi * 2 + 1, h2 = moisChoisi * 2 + 2;
-  return ORDRE.some(k => etatPhase[k] && (segsDe(p, k) || []).some(v => v[0] <= h2 && v[1] >= h1));
+  if (periode === null) return true;
+  return ORDRE.some(k => etatPhase[k]
+    && (segsDe(p, k) || []).some(v => v[0] <= periode.b && v[1] >= periode.a));
 }
 
 function segs(p) {
   // Les périodes sont empilées sur le minimum de voies possible : une voie accueille
   // plusieurs tâches tant qu'elles ne se chevauchent pas. Une plante à dix tâches
   // tient ainsi sur deux ou trois lignes au lieu de dix.
-  const h1 = moisChoisi === null ? 0 : moisChoisi * 2 + 1;
-  const h2 = moisChoisi === null ? 0 : moisChoisi * 2 + 2;
+  const h1 = periode === null ? 0 : periode.a;
+  const h2 = periode === null ? 0 : periode.b;
   const items = [];
   ORDRE.forEach(k => {
     const seg = segsDe(p, k);
     if (!seg || !etatPhase[k] || !phases[k]) return;
     seg.forEach(v => {
-      if (moisChoisi !== null && !(v[0] <= h2 && v[1] >= h1)) return;
+      if (periode !== null && !(v[0] <= h2 && v[1] >= h1)) return;
       items.push({ k, s: v[0], e: v[1] });
     });
   });
@@ -3288,8 +3322,8 @@ function rendrePlanning() {
     return ORDRE.some(k => etatPhase[k] && p.phases[k]);
   });
   $("bilanPlan").textContent = `${lot.length} sur ${plantes.length} affichées`
-    + (moisChoisi === null ? "" : ` · ${MOIS[moisChoisi].toLowerCase()}`);
-  $("razMois").hidden = moisChoisi === null;
+    + (periode === null ? "" : ` · ${periode.nom}`);
+  $("razMois").hidden = periode === null;
   majCompteurFiltres();
 
   lot.forEach(p => {
@@ -3310,9 +3344,9 @@ function rendrePlanning() {
   v.hidden = lot.length > 0;
   v.textContent = (jardinSeul && !sel.size)
     ? "Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour composer votre jardin."
-    : (moisChoisi === null
+    : (periode === null
         ? "Aucune plante ne correspond à ces filtres."
-        : `Aucune tâche en ${MOIS[moisChoisi].toLowerCase()} parmi les plantes filtrées.`);
+        : `Aucune tâche en ${periode.nom} parmi les plantes filtrées.`);
   placerMarqueur();
 }
 
@@ -3334,7 +3368,7 @@ function nbFiltresActifs() {
   const cats = catsVisibles(etatTypoP);
   if (cats.length && cats.some(c => !etatCatP[c])) n++;
   if (espaceChoisi !== null) n++;
-  if (moisChoisi !== null) n++;
+  if (periode !== null) n++;
   return n;
 }
 
@@ -3353,7 +3387,7 @@ sur("basculeFiltres", "click", function () {
 });
 
 sur("razMois", "click", () => {
-  moisChoisi = null; majMois(); rendrePlanning();
+  periode = null; majMois(); rendrePlanning();
 });
 
 sur("filtreJardin", "click", function () {

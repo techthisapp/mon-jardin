@@ -123,26 +123,74 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(900);
   j.controle("le bandeau garde la date sur le calendrier", await visible("#dateJour") === 1,
     await pg.locator("#dateJour").innerText().catch(() => "absente"));
-  /* Le point du jour doit tomber sur la ligne, et l'aplomb monter à son aplomb
-     vers la date : c'est tout le lien entre la date écrite et l'année. La
-     mesure se fait ici, seul écran où la ligne est affichée. */
-  j.section("la ligne de l'année relie le point à la date");
-  const ligne = await pg.evaluate(() => {
-    const r = document.getElementById("regleAnneeP");
-    const b = e => r.querySelector(e).getBoundingClientRect();
-    const pt = b(".ra-pt"), fond = b(".ra-fond"), fil = b(".ra-fil");
+  /* Le calendrier porte déjà l'axe des douze mois. Le repère du jour y est une
+     bande posée sur toute la hauteur du tableau, à l'aplomb de la case du mois
+     en cours, et le filtre s'affine à la quinzaine. La mesure se fait ici, seul
+     écran où le tableau est affiché. */
+  j.section("le calendrier situe le mois en cours");
+  j.controle("la ligne de l'année a quitté le calendrier",
+    await pg.locator("#regleAnneeP").count() === 0);
+  const pose = await pg.evaluate(() => {
+    const b = document.getElementById("bandeCourante");
+    const zone = document.getElementById("zoneRangees");
+    const cases = [...document.getElementById("grilleMois").children];
+    const rb = b.getBoundingClientRect(), rz = zone.getBoundingClientRect();
+    const ra = cases[7].getBoundingClientRect();
     return {
-      surLaLigne: pt.left >= fond.left - 5 && pt.right <= fond.right + 5,
-      centre: Math.round((pt.left + pt.width / 2) - (fil.left + fil.width / 2)),
-      touche: Math.round(pt.top - fil.bottom),
-      mois: r.querySelectorAll(".ra-mois b").length,
+      montre: !b.hidden,
+      centre: Math.round((rb.left + rb.width / 2) - (ra.left + ra.width / 2)),
+      largeur: Math.round(rb.width - ra.width),
+      hauteur: Math.round(rb.height - rz.height),
+      etat: cases[7].className,
     };
   });
-  j.controle("le point reste dans les bornes de la ligne", ligne.surLaLigne);
-  j.controle("l'aplomb est exactement au-dessus du point", Math.abs(ligne.centre) <= 1,
-    ligne.centre + " px");
-  j.controle("il rejoint le point sans laisser d'écart", ligne.touche <= 0, ligne.touche + " px");
-  j.controle("les douze initiales sont sous la ligne", ligne.mois === 12, ligne.mois);
+  j.controle("la bande du mois en cours est posée", pose.montre);
+  j.controle("elle tombe à l'aplomb de la case d'août", Math.abs(pose.centre) <= 1,
+    pose.centre + " px");
+  j.controle("elle a la largeur d'un mois", Math.abs(pose.largeur) <= 1, pose.largeur + " px");
+  j.controle("elle couvre toute la hauteur du tableau", Math.abs(pose.hauteur) <= 1,
+    pose.hauteur + " px");
+  j.controle("la case d'août marque la première quinzaine",
+    pose.etat.includes("en-cours") && pose.etat.includes("q1"), pose.etat);
+
+  j.section("le filtre du calendrier s'affine à la quinzaine");
+  j.controle("les jetons de quinzaine attendent qu'un mois soit retenu",
+    await cache("#jeuQuinz") === 1);
+  await pg.locator("#grilleMois > *").nth(7).click();
+  await pg.waitForTimeout(700);
+  j.controle("la case d'août retient le filtre",
+    await pg.locator("#grilleMois > *").nth(7).getAttribute("aria-pressed") === "true");
+  const fondAout = await pg.locator("#grilleMois > *").nth(7)
+    .evaluate(e => getComputedStyle(e).backgroundColor);
+  j.controle("elle prend l'aplat de sélection, non le dégradé de quinzaine",
+    fondAout === "rgb(76, 140, 63)", fondAout);
+  j.controle("le bilan nomme le mois retenu",
+    (await pg.locator("#bilanPlan").innerText()).includes("août"),
+    await pg.locator("#bilanPlan").innerText());
+  j.controle("les jetons de quinzaine paraissent", await visible("#jeuQuinz") === 1);
+  const bascule = await pg.locator("#basculeFiltres")
+    .evaluate(e => { const s = getComputedStyle(e); return [s.backgroundColor, s.color]; });
+  j.controle("la bascule des filtres garde son encre lisible sur son fond",
+    bascule[0] !== bascule[1], bascule.join(" sur "));
+
+  await pg.locator("#quinz1").click();
+  await pg.waitForTimeout(700);
+  const demi = await pg.evaluate(() => {
+    const b = document.getElementById("bandeMois").getBoundingClientRect();
+    const a = document.getElementById("grilleMois").children[7].getBoundingClientRect();
+    return { part: b.width / a.width, gauche: Math.round(b.left - a.left) };
+  });
+  j.controle("la bande retenue se réduit à une demi-case",
+    Math.abs(demi.part - 0.5) < 0.05, demi.part.toFixed(2));
+  j.controle("et se cale sur la première moitié du mois", Math.abs(demi.gauche) <= 1,
+    demi.gauche + " px");
+  j.controle("le bilan nomme la quinzaine",
+    (await pg.locator("#bilanPlan").innerText()).includes("première quinzaine d'août"),
+    await pg.locator("#bilanPlan").innerText());
+  await pg.locator("#razMois").click();
+  await pg.waitForTimeout(600);
+  j.controle("tous les mois relâche le filtre et remise les jetons",
+    await cache("#jeuQuinz") === 1 && await cache("#bandeMois") === 1);
 
   await pg.locator("#dateJour").click();
   await pg.waitForTimeout(600);
