@@ -23,7 +23,7 @@ export default async function essai(navigateur) {
   // Les trois mesures du jour vivent dans la feuille du jour, ouverte par la date.
   await pg.locator("#dateJour").click();
   await pg.waitForTimeout(500);
-  await pg.locator('.tm-puce[data-vue="eau"]').click();
+  await pg.locator('.mesure[data-vue="eau"]').click();
   await pg.waitForTimeout(800);
   const corps = net(await pg.locator("#feuille-corps").innerText());
 

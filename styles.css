@@ -1330,25 +1330,9 @@ body.fige{overflow:hidden}
 
 /* ---------- Bandeau du jour ---------- */
 .bandeau{margin:0 0 12px}
-.bd-tuiles{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
-  background:var(--filet-clair);border:1px solid var(--filet);
-  border-radius:var(--rayon);overflow:hidden;
-}
-.bd-tuile{
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  background:var(--papier-haut);border:0;padding:11px 4px 10px;cursor:pointer;
-  font-family:inherit;color:var(--encre);min-width:0;
-}
-@media (hover:hover){ .bd-tuile:hover{background:#fff} }
+/* Les quatre tuiles du bandeau sont parties dans la feuille du jour : seule
+   l'icône commune et le bandeau d'alerte restent de ce bloc. */
 .bd-ic{width:22px;height:22px;color:var(--encre-doux);display:block}
-.bd-val{font-size:16.5px;font-weight:700;letter-spacing:-.015em;line-height:1.15;
-  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:clip}
-@media (max-width:400px){ .bd-val{font-size:15px} .bd-sous{font-size:10.5px} }
-.bd-sous{
-  font-size:11px;color:var(--encre-doux);text-align:center;line-height:1.25;
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
 .bd-alerte{
   display:flex;align-items:center;gap:8px;margin-top:8px;padding:9px 12px;
   border-radius:var(--rayon);font-size:13.5px;
@@ -1408,7 +1392,14 @@ body.fige{overflow:hidden}
 }
 @media (hover:hover){.date-jour:hover{color:var(--encre)}}
 /* Les trois mesures du jour, en tête de sa feuille. */
-.tm-puces-f{margin:0 0 16px}
+/* Titre de section dans une feuille : il sépare deux objets de nature
+   différente sans poser de cadre. */
+.f-sect{
+  margin:4px 0 -6px;
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--encre-doux);
+}
 .tm-temps{
   display:flex;align-items:flex-end;gap:12px;background:none;border:0;padding:0;
   cursor:pointer;color:inherit;font-family:inherit;text-align:left;
@@ -1416,15 +1407,37 @@ body.fige{overflow:hidden}
 .tm-deg{font-size:46px;font-weight:600;letter-spacing:-.045em;line-height:.92}
 .tm-etat{padding-bottom:5px;font-size:14px;color:#C6D5CA}
 .tm-etat small{display:block;font-size:11.5px;color:#93A79A;margin-top:2px}
-.tm-puces{display:flex;gap:7px;margin-top:15px;flex-wrap:wrap}
-.tm-puce{
-  display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.11);
-  border:0;border-radius:999px;padding:7px 13px;cursor:pointer;
-  font-family:inherit;font-size:12.5px;color:#CBDACF;
+/* Les trois mesures du jour, en tête de sa feuille. Chacune est une carte
+   nommée : le nom dit de quoi il s'agit, la valeur se lit sur une ligne, et la
+   carte ouvre sa propre feuille. Les pastilles du bandeau, taillées pour un
+   fond sombre, ne se lisaient plus sur le papier de la feuille. */
+.mesures{display:flex;flex-direction:column;gap:7px}
+.mesure{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  border:0;border-radius:12px;background:var(--papier);padding:11px 13px;
+  cursor:pointer;font-family:inherit;color:inherit;
 }
-@media (hover:hover){ .tm-puce:hover{background:rgba(255,255,255,.18)} }
-.tm-puce b{font-weight:600;color:#F2F1EA}
-.tm-ic{width:14px;height:14px;flex:0 0 auto;color:#9FB6A6}
+@media (hover:hover){ .mesure:hover{background:#EDECE4} }
+.mesure:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+.mesure-ic{width:17px;height:17px;flex:0 0 auto;color:#7E8C81;stroke-width:1.7}
+.mesure-txt{flex:1;min-width:0}
+.mesure-nom{
+  display:block;margin-bottom:1px;
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--encre-doux);
+}
+/* Une marque ne signale que l'exception : seule la mesure qui demande un geste
+   aujourd'hui porte le filet d'eau. */
+.mesure-agir{background:#EDF2F7}
+.mesure-agir .mesure-ic{color:#48708F}
+.mesure b{font-size:15px;font-weight:650}
+.mesure i{font-style:normal;font-size:13px;color:var(--encre-doux)}
+.mesure::after{
+  content:"";width:6px;height:6px;flex:0 0 auto;
+  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
+  transform:rotate(-45deg);opacity:.4;
+}
 
 /* La synthèse perd son cadre et gagne une ombre. */
 .synthese{

@@ -2342,11 +2342,11 @@ function vigilanceDuJour() {
 }
 
 // La pastille d'eau porte la décision du jour, non un écart à combler.
-function puceEau(b) {
-  if (!b) return ["eau", "réserve inconnue"];
-  if (b.etat === "arroser") return [nombreFr(b.apport) + " mm", "à apporter"];
-  if (b.etat === "attendre") return [nombreFr(b.prevue) + " mm", "annoncés, attendre"];
-  return [b.jours + (b.jours > 1 ? " jours" : " jour"), "de réserve"];
+function mesureEau(b) {
+  if (!b) return ["Réserve inconnue", ""];
+  if (b.etat === "arroser") return [nombreFr(b.apport) + " litres par m²", "à apporter aujourd'hui", "agir"];
+  if (b.etat === "attendre") return [nombreFr(b.prevue) + " mm annoncés", "attendre la pluie"];
+  return [b.jours + (b.jours > 1 ? " jours" : " jour") + " de réserve", "sans arroser"];
 }
 
 function rendreBandeau() {
@@ -2371,15 +2371,8 @@ function rendreBandeau() {
   const delta = Math.round((dur - veille) / 60);
   const sais = positionSaison();
 
-  const tuile = (vue, icone, val, sous, ton) =>
-    `<button type="button" class="bd-tuile${ton ? " t-" + ton : ""}" data-vue="${vue}">`
-    + icoM(icone) + `<span class="bd-val">${val}</span><span class="bd-sous">${esc(sous)}</span></button>`;
-
   // La météo tient dans l'en-tête, en pastilles ; le corps ne porte que l'alerte.
   const t = $("teteMeteo");
-  const puce = (vue, icone, val, sous) =>
-    `<button type="button" class="tm-puce" data-vue="${vue}">${icoM(icone, "tm-ic")}`
-    + `<b>${esc(val)}</b><span>${esc(sous)}</span></button>`;
   // Grand chiffre : la température de l'heure. Le code du jour est celui de la
   // condition la plus sévère des vingt-quatre heures, il annoncerait de la pluie
   // pour un dixième de millimètre tombé à midi.
@@ -2427,9 +2420,8 @@ function positionSaison() {
   const long = { Repos: "repos végétatif", Reprise: "reprise de végétation",
     Pleine: "pleine saison", "Déclin": "ralentissement" }[etape];
   const reste = ((s.fin_q - demi) % 24 + 24) % 24;
-  const m = MOIS_ABR[Math.ceil(s.fin_q / 2) - 1];
   return { court: etape, long,
-    sous: reste ? "gelée " + (s.fin_q % 2 ? "début " : "fin ") + m : "gelée imminente" };
+    sous: reste ? "gelée " + demiTexte(s.fin_q) : "gelée imminente" };
 }
 
 /* ---------- Deuxième profondeur, en feuille ---------- */
@@ -2481,17 +2473,27 @@ function vueTemps() {
   const dur = d.daylight_duration[i], veille = d.daylight_duration[i - 1];
   const delta = Math.round((dur - veille) / 60);
   const sais = positionSaison();
-  const puce = (vue, icone, val, sous) =>
-    `<button type="button" class="tm-puce" data-vue="${vue}">${icoM(icone, "tm-ic")}`
-    + `<b>${esc(val)}</b><span>${esc(sous)}</span></button>`;
-  const puces = `<div class="tm-puces tm-puces-f">`
-    + puce("eau", "goutte", ...puceEau(b))
-    + puce("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
-    + puce("saison", "feuille", sais.court.toLowerCase(), sais.sous)
+  const mesure = (vue, icone, nom, val, sous, ton) =>
+    `<button type="button" class="mesure${ton ? " mesure-" + ton : ""}" data-vue="${vue}">`
+    + `${icoM(icone, "mesure-ic")}`
+    + `<span class="mesure-txt"><span class="mesure-nom">${nom}</span>`
+    + `<b>${esc(val)}</b>${sous ? ` <i>${esc(sous)}</i>` : ""}</span></button>`;
+  // Le jour s'allonge ou raccourcit : la minute se lit mieux en toutes lettres
+  // qu'en signe, la feuille ayant la place que le bandeau n'avait pas.
+  const ecart = delta === 0 ? "autant qu'hier"
+    : Math.abs(delta) + " minute" + (Math.abs(delta) > 1 ? "s" : "")
+      + (delta > 0 ? " de plus" : " de moins") + " qu'hier";
+  const etat = sais.long ? sais.long[0].toUpperCase() + sais.long.slice(1)
+    : sais.court[0].toUpperCase() + sais.court.slice(1);
+  const mesures = `<div class="mesures">`
+    + mesure("eau", "goutte", "L'eau", ...mesureEau(b))
+    + mesure("lumiere", "arc", "La lumière", hhmm(dur), ecart)
+    + mesure("saison", "feuille", "La saison", etat, sais.sous)
     + `</div>`;
   return { titre: "Le jour",
     sous: (jardinActif() || {}).commune || "",
-    corps: puces + `<table class="mt-table">${lignes.join("")}</table>`
+    corps: mesures + `<h3 class="f-sect">La semaine</h3>`
+      + `<table class="mt-table">${lignes.join("")}</table>`
       + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
       + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
     brancher() {

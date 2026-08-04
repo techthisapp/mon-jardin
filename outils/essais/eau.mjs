@@ -14,7 +14,7 @@ export default async function essai(navigateur) {
   // Les trois mesures du jour vivent dans la feuille du jour, ouverte par la date.
   await pg.locator("#dateJour").click();
   await pg.waitForTimeout(500);
-  await pg.locator('.tm-puce[data-vue="eau"]').click();
+  await pg.locator('.mesure[data-vue="eau"]').click();
   await pg.waitForTimeout(700);
   j.controle("la jauge affiche un remplissage", (await pg.locator(".jauge-sol").count()) === 1);
   const avant = await pleine(pg);
@@ -62,7 +62,7 @@ export default async function essai(navigateur) {
 
   /* Une seule autorité sur l'arrosage. L'alerte de pluie ne conseille rien que
      le bilan du sol ne dise déjà : elle énonce le fait quand le sol reste en
-     dette malgré l'averse, se tait quand la pastille annonce la pluie à venir,
+     dette malgré l'averse, se tait quand la mesure annonce la pluie à venir,
      et ne dissuade d'arroser que lorsque le bilan est au confort. */
   j.section("la pluie du jour ne contredit pas le bilan");
   const scene = async retouche => {
@@ -73,8 +73,9 @@ export default async function essai(navigateur) {
     await p.locator("#dateJour").click();
     await p.waitForTimeout(400);
     const r = await p.evaluate(() => ({
-      eau: (document.querySelector('.tm-puce[data-vue="eau"]') || {}).textContent
-             ? document.querySelector('.tm-puce[data-vue="eau"]').textContent.replace(/\s+/g, " ").trim() : "",
+      eau: (document.querySelector('.mesure[data-vue="eau"]') || {}).textContent
+             ? document.querySelector('.mesure[data-vue="eau"]').textContent.replace(/\s+/g, " ").trim() : "",
+      marquee: !!document.querySelector('.mesure[data-vue="eau"].mesure-agir'),
       alertes: [...document.querySelectorAll(".bd-alerte")].map(e => e.textContent.replace(/\s+/g, " ").trim()),
     }));
     await c.close();
@@ -86,10 +87,13 @@ export default async function essai(navigateur) {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map((v, k) => k === IJOUR ? 19 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
   });
-  j.controle("sol en dette : la pastille demande un apport",
+  j.controle("sol en dette : la mesure demande un apport",
     /à apporter/.test(dette.eau), dette.eau);
   j.controle("l'alerte énonce la lame sans dissuader d'arroser",
     dette.alertes.some(a => a === "19 mm attendus aujourd'hui"), JSON.stringify(dette.alertes));
+  // Une marque ne signale que l'exception : seule la mesure qui demande un geste
+  // aujourd'hui se distingue des deux autres.
+  j.controle("elle seule porte la marque du geste", dette.marquee === true);
 
   const confort = await scene(d => {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map(() => 19);
@@ -103,9 +107,10 @@ export default async function essai(navigateur) {
       k === IJOUR + 1 ? 30 : k === IJOUR ? 16 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
   });
-  j.controle("pluie annoncée : la pastille dit d'attendre",
+  j.controle("pluie annoncée : la mesure dit d'attendre",
     /attendre/.test(attente.eau), attente.eau);
-  j.controle("et l'alerte se tait, pour ne pas répéter la pastille",
+  j.controle("et elle ne porte plus la marque du geste", attente.marquee === false);
+  j.controle("et l'alerte se tait, pour ne pas répéter la mesure",
     !attente.alertes.some(a => /mm attendus/.test(a)), JSON.stringify(attente.alertes));
 
   return j.fin(erreurs);

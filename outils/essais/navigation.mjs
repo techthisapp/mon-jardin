@@ -83,15 +83,22 @@ export default async function essai(navigateur) {
   j.controle("la date est ouverte par sa pastille de saison", ligne.pastille === 8, ligne.pastille);
 
   j.section("la date ouvre le jour, sur les deux écrans");
-  const mesuresEnTete = await pg.locator(".tete .tm-puce").count();
+  const mesuresEnTete = await pg.locator(".tete .mesure").count();
   j.controle("le bandeau ne porte plus les trois mesures", mesuresEnTete === 0, mesuresEnTete);
   await pg.locator("#dateJour").click();
   await pg.waitForTimeout(600);
   const titreJour = (await pg.locator("#feuille-titre").innerText()).split("\n")[0];
   j.controle("la pression sur la date ouvre la feuille du jour", titreJour === "Le jour", titreJour);
-  const mesures = await pg.locator("#feuille-corps .tm-puce").count();
+  const mesures = await pg.locator("#feuille-corps .mesure").count();
   j.controle("elle porte l'eau, la lumière et la saison", mesures === 3, mesures);
-  await pg.locator('#feuille-corps .tm-puce[data-vue="lumiere"]').click();
+  /* Chaque mesure se nomme : « pleine » ou « 14 h 49 » ne disaient pas de quoi
+     il s'agissait, la valeur seule ne suffit pas à porter la mesure. */
+  const noms = await pg.locator("#feuille-corps .mesure-nom").allInnerTexts();
+  j.controle("chacune est nommée",
+    noms.join(" | ") === "L'EAU | LA LUMIÈRE | LA SAISON", noms.join(" | "));
+  const section = await pg.locator("#feuille-corps .f-sect").innerText().catch(() => "absente");
+  j.controle("la prévision est annoncée par son titre", section === "LA SEMAINE", section);
+  await pg.locator('#feuille-corps .mesure[data-vue="lumiere"]').click();
   await pg.waitForTimeout(500);
   j.controle("chaque mesure ouvre encore sa propre feuille",
     /jour|lumière|soleil/i.test(await pg.locator("#feuille-titre").innerText()),
