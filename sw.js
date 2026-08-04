@@ -45,7 +45,17 @@ const ACTIFS = [
 
 /* L'adresse porte une empreinte de version en paramètre. La clé de cache
    l'ignore, sans quoi le même fichier serait rangé deux fois. */
-const cle = url => { const u = new URL(url); u.search = ""; return u.href; };
+/* La clé de cache garde l'empreinte de version des actifs qui en portent une.
+   Sans elle, un agent de service encore en place sert l'ancien script à un
+   document tout neuf : l'application se retrouve avec le squelette d'une
+   version et le comportement d'une autre. Le reste perd sa requête, qui ne
+   distingue rien. */
+const cle = url => {
+  const u = new URL(url);
+  const v = u.searchParams.get("v");
+  u.search = v ? "?v=" + v : "";
+  return u.href;
+};
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE)

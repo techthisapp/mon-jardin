@@ -201,6 +201,12 @@ if (picto && ordre) {
   const actifs = listes ? [...listes[1].matchAll(/"\.\/([^"]*)"/g)].map(m => m[1]).filter(Boolean) : [];
   const manquants = actifs.filter(a => !existsSync(join(RACINE, a)));
   if (!actifs.length) faute("agent de service", "sw.js ne déclare aucun actif à mettre en cache");
+  /* La clé de cache doit garder l'empreinte de version : sinon un agent de
+     service encore en place sert l'ancien script à un document tout neuf, et
+     l'application mélange deux versions d'elle-même. */
+  if (!/searchParams\.get\("v"\)/.test(sw)) {
+    faute("agent de service", "la clé de cache efface la requête, elle doit garder l'empreinte de version");
+  }
   if (manquants.length) faute("agent de service", `actifs déclarés mais absents : ${manquants.join(", ")}`);
   // index.html est écarté du calcul : il ne change que pour porter les empreintes
   // des autres actifs, et l'inclure demanderait deux passages pour converger. Le
