@@ -20,7 +20,10 @@ export default async function essai(navigateur) {
   const j = journal("Poste de mesure et pluie relevée");
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur, { pluies: PLUIES });
 
-  await pg.locator('[data-vue="eau"]').click();
+  // Les trois mesures du jour vivent dans la feuille du jour, ouverte par la date.
+  await pg.locator("#dateJour").click();
+  await pg.waitForTimeout(500);
+  await pg.locator('.tm-puce[data-vue="eau"]').click();
   await pg.waitForTimeout(800);
   const corps = net(await pg.locator("#feuille-corps").innerText());
 

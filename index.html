@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=3237555ce3">
+<link rel="stylesheet" href="./styles.css?v=03b5c8233b">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -51,7 +51,8 @@
   <section id="ec-maintenant">
     <div id="vueEnsemble">
       <div class="bandeau-date">
-        <p class="date-jour" id="dateJour"></p>
+        <button class="date-jour" id="dateJour" type="button"
+                aria-label="Le jour : météo, eau, lumière et saison"></button>
         <div class="regle-annee" id="regleAnnee" aria-hidden="true"></div>
       </div>
       <div class="bandeau" id="bandeau" hidden></div>
@@ -90,6 +91,11 @@
   </section>
 
   <section id="ec-planning" hidden>
+    <div class="bandeau-date">
+      <button class="date-jour" id="dateJourP" type="button"
+              aria-label="Le jour : météo, eau, lumière et saison"></button>
+      <div class="regle-annee" id="regleAnneeP" aria-hidden="true"></div>
+    </div>
     <div class="filtres">
       <div class="barre-filtres">
         <button class="mini" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">
@@ -238,7 +244,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=307b681f7a"></script>
+<script type="module" src="./app.js?v=ab520aa59c"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

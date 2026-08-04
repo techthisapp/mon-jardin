@@ -1369,6 +1369,21 @@ body.fige{overflow:hidden}
 
 /* ---------- En-tête météo, direction tableau de bord ---------- */
 .tete-meteo{position:relative;z-index:1;padding:14px 0 18px}
+/* La date ouvre le jour : elle en porte la marque, sans devenir un bouton. */
+.date-jour{
+  display:inline-flex;align-items:center;gap:7px;
+  border:0;background:none;padding:0;cursor:pointer;
+  font-family:inherit;font-size:12.5px;font-weight:500;letter-spacing:.04em;
+  color:var(--encre-doux);margin-bottom:9px;
+}
+.date-jour::after{
+  content:"";width:6px;height:6px;flex:0 0 auto;
+  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(-45deg) translate(-1px,-1px);opacity:.5;
+}
+@media (hover:hover){.date-jour:hover{color:var(--encre)}}
+/* Les trois mesures du jour, en tête de sa feuille. */
+.tm-puces-f{margin:0 0 16px}
 .tm-temps{
   display:flex;align-items:flex-end;gap:12px;background:none;border:0;padding:0;
   cursor:pointer;color:inherit;font-family:inherit;text-align:left;

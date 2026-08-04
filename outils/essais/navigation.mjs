@@ -58,6 +58,31 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(700);
   j.controle("dernier retour, ensemble revenu", await visible("#vueEnsemble") === 1);
 
+  j.section("la date ouvre le jour, sur les deux écrans");
+  const mesuresEnTete = await pg.locator(".tete .tm-puce").count();
+  j.controle("le bandeau ne porte plus les trois mesures", mesuresEnTete === 0, mesuresEnTete);
+  await pg.locator("#dateJour").click();
+  await pg.waitForTimeout(600);
+  const titreJour = (await pg.locator("#feuille-titre").innerText()).split("\n")[0];
+  j.controle("la pression sur la date ouvre la feuille du jour", titreJour === "Le jour", titreJour);
+  const mesures = await pg.locator("#feuille-corps .tm-puce").count();
+  j.controle("elle porte l'eau, la lumière et la saison", mesures === 3, mesures);
+  await pg.locator('#feuille-corps .tm-puce[data-vue="lumiere"]').click();
+  await pg.waitForTimeout(500);
+  j.controle("chaque mesure ouvre encore sa propre feuille",
+    /jour|lumière|soleil/i.test(await pg.locator("#feuille-titre").innerText()),
+    (await pg.locator("#feuille-titre").innerText()).split("\n")[0]);
+  await pg.goBack();
+  await pg.waitForTimeout(600);
+  await pg.locator('.onglet[data-ecran="planning"]').click();
+  await pg.waitForTimeout(900);
+  j.controle("le calendrier porte la même date", await visible("#dateJourP") === 1,
+    await pg.locator("#dateJourP").innerText().catch(() => "absente"));
+  await pg.locator("#dateJourP").click();
+  await pg.waitForTimeout(600);
+  j.controle("et la même feuille du jour",
+    (await pg.locator("#feuille-titre").innerText()).split("\n")[0] === "Le jour");
+
   await ctx.close();
   return j.fin(erreurs);
 }

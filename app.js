@@ -995,19 +995,30 @@ sur("vider", "click", async () => {
 
 /* ================== Écran 2 : en ce moment ================== */
 
-if ($("dateJour")) $("dateJour").textContent =
+/* La date nomme le jour et l'ouvre : une pression donne la météo, l'eau, la
+   lumière et la saison, que le bandeau n'a plus à porter. Les deux écrans la
+   montrent, le calendrier ne disait jusqu'ici pas la date du jour. */
+const TEXTE_JOUR =
   auj.toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) +
   " · " + (auj.getDate() <= 15 ? "première" : "seconde") + " quinzaine";
+["dateJour", "dateJourP"].forEach(id => {
+  const b = $(id);
+  if (!b) return;
+  b.textContent = TEXTE_JOUR;
+  b.addEventListener("click", () => ouvrirVue("temps"));
+});
 
 // Douze traits pour l'année, un seul plein : la position se lit sans lire.
 function construireRegle() {
-  const r = $("regleAnnee");
-  if (r.childElementCount) return;
-  MOIS.forEach((m, i) => {
-    const d = document.createElement("i");
-    d.className = i < auj.getMonth() ? "passe" : i === auj.getMonth() ? "ici" : "";
-    d.title = m;
-    r.appendChild(d);
+  ["regleAnnee", "regleAnneeP"].forEach(id => {
+    const r = $(id);
+    if (!r || r.childElementCount) return;
+    MOIS.forEach((m, i) => {
+      const d = document.createElement("i");
+      d.className = i < auj.getMonth() ? "passe" : i === auj.getMonth() ? "ici" : "";
+      d.title = m;
+      r.appendChild(d);
+    });
   });
 }
 
@@ -2331,12 +2342,7 @@ function rendreBandeau() {
     + `<span class="tm-deg">${Math.round(maintenant.deg)}°</span>`
     + `<span class="tm-etat">${esc(maintenant.lib)}<small>`
     + `${Math.round(d.temperature_2m_max[i])}° le jour, ${Math.round(d.temperature_2m_min[i])}° la nuit, `
-    + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`
-    + `<div class="tm-puces">`
-    + puce("eau", "goutte", ...puceEau(b))
-    + puce("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
-    + puce("saison", "feuille", sais.court.toLowerCase(), sais.sous)
-    + `</div>`;
+    + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`;
   t.hidden = false;
   t.querySelectorAll("[data-vue]").forEach(x =>
     x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
@@ -2419,11 +2425,29 @@ function vueTemps() {
       + `<span>${tn === null || tn === undefined ? "" : Math.round(tn) + "°"}</span></td>`
       + `<td class="mt-p">${p >= 0.2 ? p.toFixed(1).replace(".", ",") + " mm" : ""}</td></tr>`);
   }
-  return { titre: lignes.length > 1 ? lignes.length + " jours" : "Aujourd'hui",
+  /* Les trois mesures du jour ouvrent la feuille : elles tenaient le tiers du
+     bandeau pour un usage rare, elles sont ici à un geste. */
+  const b = bilanHydrique();
+  const dur = d.daylight_duration[i], veille = d.daylight_duration[i - 1];
+  const delta = Math.round((dur - veille) / 60);
+  const sais = positionSaison();
+  const puce = (vue, icone, val, sous) =>
+    `<button type="button" class="tm-puce" data-vue="${vue}">${icoM(icone, "tm-ic")}`
+    + `<b>${esc(val)}</b><span>${esc(sous)}</span></button>`;
+  const puces = `<div class="tm-puces tm-puces-f">`
+    + puce("eau", "goutte", ...puceEau(b))
+    + puce("lumiere", "arc", hhmm(dur), (delta >= 0 ? "+" : "−") + Math.abs(delta) + " min")
+    + puce("saison", "feuille", sais.court.toLowerCase(), sais.sous)
+    + `</div>`;
+  return { titre: "Le jour",
     sous: (jardinActif() || {}).commune || "",
-    corps: `<table class="mt-table">${lignes.join("")}</table>`
+    corps: puces + `<table class="mt-table">${lignes.join("")}</table>`
       + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
-      + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>` };
+      + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
+    brancher() {
+      $("feuille-corps").querySelectorAll("[data-vue]").forEach(x =>
+        x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
+    } };
 }
 
 function vueEau() {
@@ -2808,7 +2832,7 @@ function rendreSynthese(paires) {
   // du jardin, elle retombe sur le besoin moyen de la normale de saison.
   const bh = meteo ? bilanHydrique() : null;
   if (bh && bh.etat === "arroser") {
-    pied.push(`arroser environ <b>${nombreFr(bh.apport)} mm</b> sur les cultures arrosées`);
+    pied.push(`arroser environ <b>${nombreFr(bh.apport)} litres par m²</b> sur les cultures arrosées`);
   } else if (bh && bh.etat === "attendre") {
     pied.push(`ne pas arroser, il est annoncé <b>${nombreFr(bh.prevue)} mm</b>`);
   } else if (bh) {

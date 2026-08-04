@@ -11,7 +11,10 @@ export default async function essai(navigateur) {
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur);
 
   j.section("ouverture de la feuille de l'eau");
-  await pg.locator('[data-vue="eau"]').click();
+  // Les trois mesures du jour vivent dans la feuille du jour, ouverte par la date.
+  await pg.locator("#dateJour").click();
+  await pg.waitForTimeout(500);
+  await pg.locator('.tm-puce[data-vue="eau"]').click();
   await pg.waitForTimeout(700);
   j.controle("la jauge affiche un remplissage", (await pg.locator(".jauge-sol").count()) === 1);
   const avant = await pleine(pg);
@@ -67,6 +70,8 @@ export default async function essai(navigateur) {
     d.daily.temperature_2m_max = d.daily.temperature_2m_max.map(() => 26);
     retouche(d);
     const { ctx: c, pg: p } = await ouvrirContexte(navigateur, { meteo: JSON.stringify(d) });
+    await p.locator("#dateJour").click();
+    await p.waitForTimeout(400);
     const r = await p.evaluate(() => ({
       eau: (document.querySelector('.tm-puce[data-vue="eau"]') || {}).textContent
              ? document.querySelector('.tm-puce[data-vue="eau"]').textContent.replace(/\s+/g, " ").trim() : "",
