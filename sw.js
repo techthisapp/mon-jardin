@@ -15,7 +15,7 @@
    La version est réécrite par outils/verification.mjs à partir des empreintes
    des actifs. Un changement de version vide l'ancien cache à l'activation. */
 
-const VERSION = "779a57b54c";
+const VERSION = "90fd9064af";
 const CACHE = "monjardin-" + VERSION;
 
 const ACTIFS = [
@@ -28,6 +28,18 @@ const ACTIFS = [
   "./polices/plex-cond-500.woff2", "./polices/plex-cond-600.woff2",
   "./polices/plex-cond-700.woff2", "./polices/plex-mono-400.woff2",
   "./polices/plex-mono-500.woff2",
+  "./motifs/1.svg",
+  "./motifs/2.svg",
+  "./motifs/3.svg",
+  "./motifs/4.svg",
+  "./motifs/5.svg",
+  "./motifs/6.svg",
+  "./motifs/7.svg",
+  "./motifs/8.svg",
+  "./motifs/9.svg",
+  "./motifs/10.svg",
+  "./motifs/11.svg",
+  "./motifs/12.svg",
 ];
 
 /* L'adresse porte une empreinte de version en paramètre. La clé de cache

@@ -439,6 +439,19 @@ async function lirePlanches() {
   } catch (e) { /* manifeste indisponible, aucune vignette */ }
 }
 
+/* Le motif d'entête change avec le mois affiché. Les douze dessins pèsent
+   trente-cinq kilo-octets compressés : trop pour le chemin critique, alors que
+   le motif est décoratif. Seul celui du mois est demandé, après le premier
+   rendu, et l'agent de service garde les douze pour l'usage hors ligne. */
+async function poserMotifMois() {
+  const hote = $("motifMois");
+  if (!hote) return;
+  try {
+    const r = await fetch(`./motifs/${new Date().getMonth() + 1}.svg`);
+    if (r.ok) hote.innerHTML = await r.text();
+  } catch (e) { /* motif indisponible, le bandeau reste nu */ }
+}
+
 /* Les masques ne sont posés qu'à l'approche de la rangée. Sans cela, ouvrir
    l'écran des plantes demanderait les 184 fichiers d'un coup, une image de
    fond n'ayant pas de chargement paresseux. */
@@ -3225,6 +3238,7 @@ try { await chargerCatalogue(); }
 catch (e) { info("Catalogue indisponible : " + e.message, true); }
 lireGlossaire().catch(() => { /* glossaire indisponible, les textes restent bruts */ });
 lirePlanches();
+poserMotifMois();
 const { data: { session: s0 } } = await db.auth.getSession();
 if (!s0) $("zone-connexion").hidden = false;
 

@@ -51,14 +51,65 @@ body{
   content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(130% 100% at 6% -10%, rgba(239,239,232,.085), transparent 62%);
 }
-/* La pousse devient une architecture : surdimensionnée, débordante, en filigrane. */
-.filigrane{
-  position:absolute;left:-72px;top:50%;
-  transform:translateY(-50%) rotate(-9deg);
-  width:236px;height:236px;color:#EFEFE8;opacity:.085;
-  pointer-events:none;z-index:0;
+/* Motif d'entête, un dessin par mois. Il occupe l'espace libre à droite du
+   bandeau et passe derrière le texte, que son z-index maintient au premier plan.
+   Le dessin du mois courant est appelé par app.js après le premier affichage. */
+.motif-mois{
+  position:absolute;top:-14px;right:max(6px, calc(50% - 524px));
+  width:306px;height:271px;pointer-events:none;z-index:0;
 }
-.filigrane svg{display:block;width:100%;height:100%}
+.motif-mois svg{display:block;width:100%;height:100%;overflow:visible}
+/* Sur écran large le bandeau est plus court : le cadre suit, sans rien tronquer
+   d'autre que les tiges basses. */
+@media (min-width:700px){.motif-mois{top:-12px;width:274px;height:243px}}
+@media (max-width:400px){.motif-mois{width:288px;height:255px}}
+
+.motif-mois .vert{fill:#7FBF6A;opacity:.07}
+.motif-mois .masse{fill:#EFEFE8;opacity:.05}
+.motif-mois .trait{fill:none;stroke:#EFEFE8;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;opacity:.26}
+.motif-mois .trait .fin{stroke-width:.62;opacity:.74}
+.motif-mois .trait .pt{fill:#EFEFE8;stroke:none;opacity:.80}
+.motif-mois .trait .apl{fill:#EFEFE8;fill-opacity:.30}
+.motif-mois .trait .plein{fill:#EFEFE8;fill-opacity:.42;stroke:none}
+.motif-mois .trait .plein2{fill:#EFEFE8;fill-opacity:.26;stroke:none}
+.motif-mois .trait .apl2{fill:#EFEFE8;fill-opacity:.20}
+.motif-mois .pollen{fill:#EFEFE8;opacity:0;animation:mm-pollen var(--d,26s) ease-out infinite;
+  animation-delay:var(--r,0s)}
+@keyframes mm-pollen{0%{transform:translate(0,0);opacity:0}14%{opacity:.40}
+  62%{opacity:.24}100%{transform:translate(var(--dx),var(--dy));opacity:0}}
+.motif-mois .envol{opacity:0;animation:mm-envol var(--d,28s) ease-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-envol{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.92}
+  68%{opacity:.55}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot,26deg));opacity:0}}
+.motif-mois .chute{fill:#EFEFE8;opacity:0;animation:mm-chute var(--d,30s) linear infinite;animation-delay:var(--r,0s)}
+@keyframes mm-chute{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.30}
+  78%{opacity:.16}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot,50deg));opacity:0}}
+.motif-mois .souffle{transform-box:view-box;transform-origin:var(--o);
+  animation:mm-souffle var(--d,22s) ease-in-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-souffle{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+.motif-mois .vent{transform-box:view-box;transform-origin:var(--o);
+  animation:mm-vent var(--d,20s) ease-in-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-vent{0%,100%{transform:rotate(var(--a1,-1.1deg))}50%{transform:rotate(var(--a2,1.1deg))}}
+.motif-mois .ouvre{transform-box:fill-box;transform-origin:50% 0;
+  animation:mm-ouvre var(--d,28s) ease-in-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-ouvre{0%,100%{transform:rotate(var(--a1,-5deg)) scale(.84)}46%,64%{transform:rotate(0deg) scale(1)}}
+.motif-mois .respire{transform-box:fill-box;transform-origin:50% 0;
+  animation:mm-respire var(--d,24s) ease-in-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-respire{0%,100%{transform:scale(.975)}50%{transform:scale(1.03)}}
+.motif-mois .eclot{transform-box:view-box;transform-origin:var(--o);
+  animation:mm-eclot var(--d,26s) ease-in-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-eclot{0%,100%{transform:rotate(-3deg) scale(.94)}50%{transform:rotate(0deg) scale(1)}}
+.motif-mois .spirale{transform-box:view-box;transform-origin:var(--o);
+  animation:mm-spirale var(--d,27s) ease-in-out infinite;animation-delay:var(--r,0s)}
+@keyframes mm-spirale{0%,100%{transform:rotate(-2.4deg) scale(.94)}50%{transform:rotate(2.4deg) scale(1.06)}}
+/* Le mouvement s'arrête entièrement quand le système en demande moins : les
+   particules disparaissent et les animations sont retirées, pas seulement
+   masquées, pour qu'aucune ne reste inscrite dans la page. */
+@media (prefers-reduced-motion:reduce){
+  .motif-mois .pollen,.motif-mois .chute,.motif-mois .envol{display:none}
+  .motif-mois .pollen,.motif-mois .chute,.motif-mois .envol,
+  .motif-mois .souffle,.motif-mois .vent,.motif-mois .ouvre,
+  .motif-mois .eclot,.motif-mois .spirale,.motif-mois .respire{animation:none}}
+
 .tete-corps{max-width:1060px;margin:0 auto;padding:16px 16px 0}
 .tete-haut{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
 .tete h1{
@@ -995,7 +1046,7 @@ body.fige{overflow:hidden}
 .carte-espace .tete-section .nb{margin-left:auto}
 
 /* ---------- Bandeau : accords fins ---------- */
-/* Le titre respire au-dessus du filigrane sans jamais le heurter. */
+/* Le titre respire au-dessus du motif sans jamais le heurter. */
 .tete-haut{padding-left:6px}
 .puce-climat{
   border-color:rgba(239,239,232,.22);
@@ -1005,13 +1056,10 @@ body.fige{overflow:hidden}
 }
 .puce-climat:hover,.puce-climat:active{opacity:1;background:rgba(239,239,232,.10)}
 
-/* Sur écran large, la pousse peut s'étirer davantage sans gêner la lecture. */
 @media (min-width:700px){
-  .filigrane{left:-86px;width:300px;height:300px;opacity:.075}
   .tete-haut{padding-left:14px}
 }
 @media (max-width:400px){
-  .filigrane{left:-64px;width:206px;height:206px}
   .tete h1{font-size:21px}
 }
 
