@@ -1128,20 +1128,22 @@ sur("vider", "click", async () => {
 /* ================== Écran 2 : en ce moment ================== */
 
 /* La date nomme le jour et l'ouvre : une pression donne la météo, l'eau, la
-   lumière et la saison, que le bandeau n'a plus à porter. Les deux écrans la
-   montrent, le calendrier ne disait jusqu'ici pas la date du jour. */
+   lumière et la saison. Elle est dans le bandeau, à la place du climat du
+   jardin, qui ne change pas d'un jour à l'autre et n'avait rien à faire sur un
+   écran qui parle du moment. La quinzaine n'y est plus : elle se déduit de la
+   date, et le calendrier la porte déjà sur sa ligne de l'année. */
 const TEXTE_JOUR =
-  auj.toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) +
-  " · " + (auj.getDate() <= 15 ? "première" : "seconde") + " quinzaine";
-["dateJour", "dateJourP"].forEach(id => {
-  const b = $(id);
+  auj.toLocaleDateString("fr-FR", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+(() => {
+  const b = $("dateJour");
   if (!b) return;
-  /* La pastille porte la teinte de la saison en cours : c'est elle qui relie la
-     date à l'endroit du point sur la ligne, sans avoir à déplacer le texte. */
+  /* La pastille porte la teinte de la saison en cours : elle dit la saison sans
+     un mot, et c'est elle qui relie la date à la bande que le point traverse sur
+     la ligne de l'année, côté calendrier. */
   b.innerHTML = `<i class="dj-saison" style="--t:${TEINTE_SAISON[SAISON_DU_JOUR]}"></i>`
     + `<span>${esc(TEXTE_JOUR)}</span>`;
   b.addEventListener("click", () => ouvrirVue("temps"));
-});
+})();
 
 /* L'année sur une ligne : les quatre saisons en bandes de couleur, un cran par
    quinzaine, l'initiale de chaque mois dessous. Le point d'aujourd'hui remonte
@@ -3400,10 +3402,13 @@ function majJardinUI() {
   const g = jardinActif();
   const c = g && g.climate_key ? climats[g.climate_key] : null;
   $("titreJardin").textContent = g && g.name ? g.name : "Mon jardin";
+  /* Le climat du jardin ne paraît plus que lorsqu'il manque : une marque ne
+     signale que l'exception, et sa mention quotidienne n'apprenait rien. Il
+     reste lisible et modifiable sur l'écran du jardin. */
   const puce = $("puceClimat");
-  puce.textContent = c ? c.label : "Choisir un climat";
+  puce.textContent = "Choisir un climat";
   puce.classList.toggle("a-renseigner", !c);
-  puce.hidden = !connecte;
+  puce.hidden = !connecte || Boolean(c);
 
   const vc = $("valCommune");
   if (vc) vc.textContent = g && g.commune

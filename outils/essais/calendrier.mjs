@@ -86,7 +86,7 @@ export default async function essai(navigateur) {
       && ici < pc(b.style.left) + pc(b.style.width));
     const mois = [...r.querySelectorAll(".ra-mois b")];
     const av = r.querySelector(".ra-avenir");
-    const past = document.querySelector("#dateJourP .dj-saison");
+    const past = document.querySelector("#dateJour .dj-saison");
     return {
       bandes: bandes.length,
       crans: r.querySelectorAll("u").length,

@@ -58,14 +58,22 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(700);
   j.controle("dernier retour, ensemble revenu", await visible("#vueEnsemble") === 1);
 
-  j.section("l'écran du moment ne porte que la date");
-  j.controle("la ligne de l'année n'y est plus, elle parle de l'année",
-    await pg.locator("#vueEnsemble .regle-annee").count() === 0);
-  j.controle("la date y reste, ouverte par sa pastille de saison",
+  /* La date est montée dans le bandeau, à la place du climat du jardin, qui ne
+     change pas d'un jour à l'autre. Elle y est unique et suit les deux écrans. */
+  j.section("la date est dans le bandeau, une seule fois");
+  j.controle("elle est dans le bandeau", await pg.locator(".tete #dateJour").count() === 1);
+  j.controle("il n'y en a pas d'autre ailleurs", await pg.locator(".date-jour").count() === 1);
+  j.controle("elle est ouverte par sa pastille de saison",
     Math.round(await pg.locator("#dateJour .dj-saison").evaluate(
       e => e.getBoundingClientRect().width)) === 8);
+  const txt = await pg.locator("#dateJour").innerText();
+  j.controle("la quinzaine n'y est plus", !/quinzaine/.test(txt), txt);
+  j.controle("le climat du jardin ne paraît plus quand il est renseigné",
+    await pg.locator("#puceClimat").isVisible() === false);
+  j.controle("l'écran du moment ne porte plus la ligne de l'année",
+    await pg.locator("#vueEnsemble .regle-annee").count() === 0);
 
-  j.section("la date ouvre le jour, sur les deux écrans");
+  j.section("la date ouvre le jour");
   const mesuresEnTete = await pg.locator(".tete .mesure").count();
   j.controle("le bandeau ne porte plus les trois mesures", mesuresEnTete === 0, mesuresEnTete);
   await pg.locator("#dateJour").click();
@@ -113,8 +121,8 @@ export default async function essai(navigateur) {
 
   await pg.locator('.onglet[data-ecran="planning"]').click();
   await pg.waitForTimeout(900);
-  j.controle("le calendrier porte la même date", await visible("#dateJourP") === 1,
-    await pg.locator("#dateJourP").innerText().catch(() => "absente"));
+  j.controle("le bandeau garde la date sur le calendrier", await visible("#dateJour") === 1,
+    await pg.locator("#dateJour").innerText().catch(() => "absente"));
   /* Le point du jour doit tomber sur la ligne, et l'aplomb monter à son aplomb
      vers la date : c'est tout le lien entre la date écrite et l'année. La
      mesure se fait ici, seul écran où la ligne est affichée. */
@@ -123,11 +131,9 @@ export default async function essai(navigateur) {
     const r = document.getElementById("regleAnneeP");
     const b = e => r.querySelector(e).getBoundingClientRect();
     const pt = b(".ra-pt"), fond = b(".ra-fond"), fil = b(".ra-fil");
-    const date = document.getElementById("dateJourP").getBoundingClientRect();
     return {
       surLaLigne: pt.left >= fond.left - 5 && pt.right <= fond.right + 5,
       centre: Math.round((pt.left + pt.width / 2) - (fil.left + fil.width / 2)),
-      sousLaDate: Math.round(fil.top - date.bottom),
       touche: Math.round(pt.top - fil.bottom),
       mois: r.querySelectorAll(".ra-mois b").length,
     };
@@ -135,12 +141,10 @@ export default async function essai(navigateur) {
   j.controle("le point reste dans les bornes de la ligne", ligne.surLaLigne);
   j.controle("l'aplomb est exactement au-dessus du point", Math.abs(ligne.centre) <= 1,
     ligne.centre + " px");
-  j.controle("il monte jusqu'à la date sans la toucher",
-    ligne.sousLaDate >= 0 && ligne.sousLaDate <= 6 && ligne.touche <= 0,
-    ligne.sousLaDate + " px sous la date");
+  j.controle("il rejoint le point sans laisser d'écart", ligne.touche <= 0, ligne.touche + " px");
   j.controle("les douze initiales sont sous la ligne", ligne.mois === 12, ligne.mois);
 
-  await pg.locator("#dateJourP").click();
+  await pg.locator("#dateJour").click();
   await pg.waitForTimeout(600);
   j.controle("et la même feuille du jour",
     (await pg.locator("#feuille-titre").innerText()).split("\n")[0] === "Le jour");

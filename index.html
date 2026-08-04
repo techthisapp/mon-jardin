@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=6b9e5f8fc3">
+<link rel="stylesheet" href="./styles.css?v=b3dc0ff956">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -27,7 +27,11 @@
     <div class="tete-haut">
       <div class="tete-textes">
         <h1 id="titreJardin">Mon jardin</h1>
-        <button class="puce-climat" id="puceClimat" type="button"></button>
+        <div class="tete-ligne">
+          <button class="date-jour" id="dateJour" type="button"
+                  aria-label="Le jour : météo, eau, lumière et saison"></button>
+          <button class="puce-climat" id="puceClimat" type="button" hidden></button>
+        </div>
       </div>
       <button class="bouton-compte" id="btnConfig" type="button" aria-expanded="false" aria-label="Réglages" title="Réglages">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -51,10 +55,6 @@
   <section id="ec-maintenant">
     <div class="prairie" id="prairie" aria-hidden="true"></div>
     <div id="vueEnsemble">
-      <div class="bandeau-date bandeau-date-seule">
-        <button class="date-jour" id="dateJour" type="button"
-                aria-label="Le jour : météo, eau, lumière et saison"></button>
-      </div>
       <div class="bandeau" id="bandeau" hidden></div>
       <div class="carte-fleur" id="carteFleur" hidden></div>
       <div class="synthese" id="synthese" hidden></div>
@@ -94,8 +94,6 @@
 
   <section id="ec-planning" hidden>
     <div class="bandeau-date">
-      <button class="date-jour" id="dateJourP" type="button"
-              aria-label="Le jour : météo, eau, lumière et saison"></button>
       <div class="regle-annee" id="regleAnneeP" aria-hidden="true"></div>
     </div>
     <div class="filtres">
@@ -246,7 +244,7 @@
 
 </main>
 
-<script type="module" src="./app.js?v=35ef4000a4"></script>
+<script type="module" src="./app.js?v=04290d828f"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
