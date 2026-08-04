@@ -130,7 +130,12 @@ body{
    SVG en ligne : aucune image à charger. Les onze autres mois de l'année sont
    imprimés dessous en filigrane, et les blocs sont assez translucides pour
    qu'on les devine sans qu'ils gênent la lecture. */
-#ec-maintenant{position:relative;overflow:hidden;isolation:isolate}
+#ec-maintenant{
+  position:relative;isolation:isolate;
+  /* « clip » rogne sans faire de la section une zone défilante : « hidden »
+     en crée une, et le navigateur peut alors lui réserver une gouttière. */
+  overflow:hidden;overflow:clip;
+}
 #ec-maintenant::before{
   content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
   background-image:linear-gradient(rgba(206,193,152,.13),rgba(206,193,152,.13)),
@@ -142,10 +147,18 @@ body{
 /* Les blocs de cet écran laissent voir le papier imprimé dessous. */
 #ec-maintenant{--papier-haut:rgba(251,250,247,.70)}
 
-.prairie{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+/* Le rognage est doublé : « overflow » pour la mise en page, « clip-path »
+   pour les calques que le compositeur sort du flux. Sans lui, un dessin qui
+   mord sur le bord droit rend la page glissante de côté sur WebKit. */
+.prairie{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  overflow:hidden;overflow:clip;clip-path:inset(0);
+}
+/* Pas de rotation : elle ne se voyait qu'à peine et c'est elle qui faisait
+   composer chaque dessin dans son propre calque. */
 .pr-i{
   position:absolute;width:calc(260px * var(--s));height:calc(220px * var(--s));
-  transform:rotate(var(--r));opacity:var(--o);
+  opacity:var(--o);
 }
 .pr-i svg{width:100%;height:100%;display:block;overflow:visible}
 .prairie .vert{fill:#4C8C3F;opacity:.20}
@@ -177,7 +190,10 @@ body{
   font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--encre-doux);margin-bottom:9px;
 }
-.fl-rail{display:flex;gap:9px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.fl-rail{
+  display:flex;gap:9px;overflow-x:auto;overscroll-behavior-x:contain;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
 .fl-rail::-webkit-scrollbar{display:none}
 .fl-i{
   flex:0 0 auto;width:74px;display:flex;flex-direction:column;align-items:center;gap:3px;

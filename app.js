@@ -531,10 +531,9 @@ function poserPrairie() {
     const gauche = k % 2 === 0;
     const x = gauche ? -6 + (k % 3) * 2 : 30 + (k % 3) * 3;
     const s = (1.15 + ((k * 7) % 4) * .10).toFixed(2);
-    const r = (k % 2 ? 1 : -1) * (2 + (k % 4));
     const op = (.23 + ((k * 5) % 4) * .02).toFixed(3);
     o.push(`<div class="pr-i" style="left:${x}%;top:${200 + k * PAS_PRAIRIE}px;`
-      + `--s:${s};--r:${r}deg;--o:${op}">${prairieSvg[k % prairieSvg.length]}</div>`);
+      + `--s:${s};--o:${op}">${prairieSvg[k % prairieSvg.length]}</div>`);
   }
   z.innerHTML = o.join("");
 }

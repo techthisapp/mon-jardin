@@ -31,6 +31,50 @@ export default async function essai(navigateur) {
   j.controle("elle est détaillée", fond.traces > 200, fond.traces + " tracés");
   j.controle("elle passe sous le contenu", fond.dessous);
 
+  /* Un dessin qui mord sur le bord droit ne doit jamais rendre la page
+     glissante de côté : une gouttière apparaîtrait à droite, sur tous les
+     écrans, y compris le bandeau. */
+  j.section("rien ne dépasse de la page");
+  const debord = await pg.evaluate(() => {
+    const doc = document.documentElement;
+    const sortis = [];
+    // Un élément qui dépasse n'est un défaut que si rien ne le rogne : le rail
+    // des fleurs déborde par construction, il défile dans son propre cadre.
+    const rogne = e => {
+      for (let p = e.parentElement; p; p = p.parentElement) {
+        const o = getComputedStyle(p);
+        if (/auto|scroll|hidden|clip/.test(o.overflowX)) return true;
+      }
+      return false;
+    };
+    document.querySelectorAll("#vueEnsemble *, .tete *").forEach(e => {
+      const r = e.getBoundingClientRect();
+      if (r.width && (r.right > window.innerWidth + 1 || r.left < -1) && !rogne(e)) {
+        sortis.push((e.tagName + "." + (e.getAttribute("class") || "")).slice(0, 30));
+      }
+    });
+    return { large: doc.scrollWidth, vue: window.innerWidth,
+      corps: document.body.scrollWidth, sortis: sortis.slice(0, 4) };
+  });
+  j.controle("la page n'est pas plus large que la vue",
+    debord.large <= debord.vue, debord.large + " px sur " + debord.vue);
+  j.controle("le corps non plus", debord.corps <= debord.vue, debord.corps + " px");
+  j.controle("aucun élément du contenu ne sort du cadre", debord.sortis.length === 0,
+    debord.sortis.join(" | "));
+  const rogne = await pg.evaluate(() => {
+    const p = getComputedStyle(document.getElementById("prairie"));
+    return { chemin: p.clipPath, deborde: p.overflow };
+  });
+  j.controle("la prairie est rognée deux fois",
+    rogne.chemin !== "none" && /hidden|clip/.test(rogne.deborde),
+    rogne.deborde + ", " + rogne.chemin);
+  const tourne = await pg.evaluate(() => {
+    const e = document.querySelector(".pr-i");
+    return e ? getComputedStyle(e).transform : "aucun";
+  });
+  j.controle("aucun dessin du fond n'est composé par une transformation",
+    tourne === "none" || tourne === "aucun", tourne);
+
   j.section("le fond ne coûte rien au démarrage");
   const appels = await pg.evaluate(() =>
     performance.getEntriesByType("resource")
