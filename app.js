@@ -143,6 +143,29 @@ const NIVEAUX = {
 const auj = new Date();
 const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
 
+/* Repères de l'année, pour la ligne du bandeau et pour la pastille de la date.
+   Les quatre saisons civiles sont bornées aux équinoxes et aux solstices,
+   calculées sur l'année en cours pour suivre les années bissextiles. Les
+   teintes sont celles du papier de saison, soutenues juste assez pour tenir sur
+   quatre points de haut : gris bleu l'hiver, vert tendre le printemps, blé
+   l'été, terre brûlée l'automne. */
+const TEINTE_SAISON = { hiver:"#AFBCC2", printemps:"#A5C596", ete:"#C7BE79", automne:"#C9A277" };
+const jourDeLAn = (an, m, d) => Math.round((Date.UTC(an, m, d) - Date.UTC(an, 0, 1)) / 864e5);
+const AN_EN_COURS = auj.getFullYear();
+const JOURS_AN = jourDeLAn(AN_EN_COURS, 11, 31) + 1;
+const SAISONS_AN = [
+  { nom:"hiver",     a:0,                                b:jourDeLAn(AN_EN_COURS, 2, 20) },
+  { nom:"printemps", a:jourDeLAn(AN_EN_COURS, 2, 20),    b:jourDeLAn(AN_EN_COURS, 5, 21) },
+  { nom:"ete",       a:jourDeLAn(AN_EN_COURS, 5, 21),    b:jourDeLAn(AN_EN_COURS, 8, 22) },
+  { nom:"automne",   a:jourDeLAn(AN_EN_COURS, 8, 22),    b:jourDeLAn(AN_EN_COURS, 11, 21) },
+  { nom:"hiver",     a:jourDeLAn(AN_EN_COURS, 11, 21),   b:JOURS_AN },
+];
+const JOUR_AN = jourDeLAn(AN_EN_COURS, auj.getMonth(), auj.getDate());
+// Le point se pose au milieu du jour, non à sa charnière.
+const POS_AN = 100 * (JOUR_AN + .5) / JOURS_AN;
+const SAISON_DU_JOUR =
+  (SAISONS_AN.find(s => JOUR_AN >= s.a && JOUR_AN < s.b) || SAISONS_AN[0]).nom;
+
 /* Constantes partagées, déclarées avant tout rendu : une constante n'est pas
    remontée en tête de module comme l'est une déclaration de fonction. */
 const OEIL_BARRE = '<svg viewBox="0 0 24 24" aria-hidden="true">'
@@ -1004,21 +1027,48 @@ const TEXTE_JOUR =
 ["dateJour", "dateJourP"].forEach(id => {
   const b = $(id);
   if (!b) return;
-  b.textContent = TEXTE_JOUR;
+  /* La pastille porte la teinte de la saison en cours : c'est elle qui relie la
+     date à l'endroit du point sur la ligne, sans avoir à déplacer le texte. */
+  b.innerHTML = `<i class="dj-saison" style="--t:${TEINTE_SAISON[SAISON_DU_JOUR]}"></i>`
+    + `<span>${esc(TEXTE_JOUR)}</span>`;
   b.addEventListener("click", () => ouvrirVue("temps"));
 });
 
-// Douze traits pour l'année, un seul plein : la position se lit sans lire.
+/* L'année sur une ligne : les quatre saisons en bandes de couleur, un cran par
+   quinzaine, l'initiale de chaque mois dessous. Le point d'aujourd'hui remonte
+   par un aplomb vers la date écrite juste au-dessus, qui porte la même teinte de
+   saison. La part écoulée de l'année est légèrement assombrie. */
 function construireRegle() {
+  const pc = j => (100 * j / JOURS_AN).toFixed(2);
+  const debutMois = m => jourDeLAn(AN_EN_COURS, m, 1);
+  const ici = POS_AN.toFixed(2);
+
+  const bandes = SAISONS_AN.map(s =>
+    `<i class="ra-s" style="left:${pc(s.a)}%;width:${pc(s.b - s.a)}%;--t:${TEINTE_SAISON[s.nom]}"></i>`).join("");
+  let crans = "";
+  for (let m = 0; m < 12; m++) {
+    // Le cran du premier du mois est un peu plus marqué que celui du seize :
+    // le mois se lit d'abord, la quinzaine le divise.
+    if (m) crans += `<u class="fort" style="left:${pc(debutMois(m))}%"></u>`;
+    crans += `<u style="left:${pc(debutMois(m) + 15)}%"></u>`;
+  }
+  const initiales = MOIS.map((nom, m) => {
+    const milieu = (debutMois(m) + (m === 11 ? JOURS_AN : debutMois(m + 1))) / 2;
+    return `<b class="${m === auj.getMonth() ? "ici" : ""}" style="left:${pc(milieu)}%">`
+      + nom[0] + `</b>`;
+  }).join("");
+
+  /* Les bandes sont enfermées dans le fond, qui les rogne à ses coins arrondis.
+     La part à venir n'est pas grisée mais lavée de papier : les saisons se
+     lisent d'un bout à l'autre, et l'année déjà passée est la plus franche. */
+  const dedans = `<span class="ra-ligne">`
+    + `<i class="ra-fond">${bandes}<i class="ra-avenir" style="left:${ici}%"></i></i>`
+    + `${crans}<i class="ra-fil" style="left:${ici}%"></i>`
+    + `<i class="ra-pt" style="left:${ici}%"></i></span>`
+    + `<span class="ra-mois">${initiales}</span>`;
   ["regleAnnee", "regleAnneeP"].forEach(id => {
     const r = $(id);
-    if (!r || r.childElementCount) return;
-    MOIS.forEach((m, i) => {
-      const d = document.createElement("i");
-      d.className = i < auj.getMonth() ? "passe" : i === auj.getMonth() ? "ici" : "";
-      d.title = m;
-      r.appendChild(d);
-    });
+    if (r && !r.childElementCount) r.innerHTML = dedans;
   });
 }
 

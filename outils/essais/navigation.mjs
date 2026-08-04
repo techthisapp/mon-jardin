@@ -58,6 +58,30 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(700);
   j.controle("dernier retour, ensemble revenu", await visible("#vueEnsemble") === 1);
 
+  /* Le point du jour doit tomber sur la ligne, et l'aplomb monter à son aplomb
+     vers la date : c'est tout le lien entre la date écrite et l'année. */
+  j.section("la ligne de l'année relie le point à la date");
+  const ligne = await pg.evaluate(() => {
+    const r = document.getElementById("regleAnnee");
+    const b = e => r.querySelector(e).getBoundingClientRect();
+    const pt = b(".ra-pt"), fond = b(".ra-fond"), fil = b(".ra-fil");
+    const date = document.getElementById("dateJour").getBoundingClientRect();
+    return {
+      surLaLigne: pt.left >= fond.left - 5 && pt.right <= fond.right + 5,
+      centre: Math.round((pt.left + pt.width / 2) - (fil.left + fil.width / 2)),
+      sousLaDate: Math.round(fil.top - date.bottom),
+      touche: Math.round(pt.top - fil.bottom),
+      pastille: Math.round(document.querySelector("#dateJour .dj-saison").getBoundingClientRect().width),
+    };
+  });
+  j.controle("le point reste dans les bornes de la ligne", ligne.surLaLigne);
+  j.controle("l'aplomb est exactement au-dessus du point", Math.abs(ligne.centre) <= 1,
+    ligne.centre + " px");
+  j.controle("il monte jusqu'à la date sans la toucher",
+    ligne.sousLaDate >= 0 && ligne.sousLaDate <= 6 && ligne.touche <= 0,
+    ligne.sousLaDate + " px sous la date");
+  j.controle("la date est ouverte par sa pastille de saison", ligne.pastille === 8, ligne.pastille);
+
   j.section("la date ouvre le jour, sur les deux écrans");
   const mesuresEnTete = await pg.locator(".tete .tm-puce").count();
   j.controle("le bandeau ne porte plus les trois mesures", mesuresEnTete === 0, mesuresEnTete);

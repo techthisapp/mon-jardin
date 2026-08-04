@@ -71,17 +71,51 @@ export default async function essai(navigateur) {
   j.controle("le 2 août est la quinzaine 15",
     repere && QUINZAINE(repere.x) === 15, repere && QUINZAINE(repere.x));
 
-  j.section("la règle des mois marque le mois en cours");
+  /* La ligne de l'année situe le jour : quatre saisons en couleur, un cran par
+     quinzaine, l'initiale de chaque mois, et un point relié à la date écrite
+     au-dessus, dont la pastille porte la teinte de la saison traversée. */
+  j.section("la ligne de l'année situe le deux août");
   const regle = await pg.evaluate(() => {
     const r = document.getElementById("regleAnnee");
     if (!r) return null;
-    const t = [...r.children];
-    return { total: t.length, ici: t.findIndex(e => e.classList.contains("ici")),
-             passes: t.filter(e => e.classList.contains("passe")).length };
+    const pc = v => parseFloat(v);
+    const pt = r.querySelector(".ra-pt");
+    const ici = pc(pt.style.left);
+    const bandes = [...r.querySelectorAll(".ra-s")];
+    const sous = bandes.find(b => ici >= pc(b.style.left)
+      && ici < pc(b.style.left) + pc(b.style.width));
+    const mois = [...r.querySelectorAll(".ra-mois b")];
+    const av = r.querySelector(".ra-avenir");
+    const past = document.querySelector("#dateJour .dj-saison");
+    return {
+      bandes: bandes.length,
+      crans: r.querySelectorAll("u").length,
+      forts: r.querySelectorAll("u.fort").length,
+      mois: mois.length,
+      ici: mois.findIndex(e => e.classList.contains("ici")),
+      lettres: mois.map(e => e.textContent).join(""),
+      point: pt.style.left,
+      teinte: sous ? getComputedStyle(sous).getPropertyValue("--t").trim() : null,
+      pastille: past ? getComputedStyle(past).getPropertyValue("--t").trim() : null,
+      avenir: av.style.left,
+    };
   });
-  j.controle("douze mois", regle && regle.total === 12, regle && regle.total);
-  j.controle("août est le mois marqué", regle && regle.ici === 7, regle && regle.ici);
-  j.controle("les sept mois précédents sont passés", regle && regle.passes === 7, regle && regle.passes);
+  j.controle("les quatre saisons sont posées, l'hiver aux deux bouts",
+    regle && regle.bandes === 5, regle && regle.bandes);
+  j.controle("vingt-trois crans, onze pour les premiers du mois",
+    regle && regle.crans === 23 && regle.forts === 11,
+    regle && regle.crans + " crans, " + regle.forts + " forts");
+  j.controle("les douze initiales sont là", regle && regle.lettres === "JFMAMJJASOND",
+    regle && regle.lettres);
+  j.controle("août est l'initiale marquée", regle && regle.ici === 7, regle && regle.ici);
+  j.controle("le point tombe au deux août, soit 58,49 % de l'année",
+    regle && regle.point === "58.49%", regle && regle.point);
+  j.controle("il se pose sur la bande de l'été", regle && regle.teinte === "#C7BE79",
+    regle && regle.teinte);
+  j.controle("la pastille de la date porte la même teinte",
+    regle && regle.pastille === regle.teinte, regle && regle.pastille);
+  j.controle("la part à venir commence au point",
+    regle && regle.avenir === regle.point, regle && regle.avenir);
 
   const floRef = voie(pommier, "Floraison");
   await ctx.close();
