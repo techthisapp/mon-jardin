@@ -4246,11 +4246,38 @@ const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
 const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
 
-/* La vignette de cent cinquante points sert la bande, celle de six cents le
-   plein écran. Les deux existent chez le fonds, rien n'est fabriqué ici. */
+/* La bande demande la petite taille, le plein écran la moyenne. Les deux
+   existent chez le fonds, rien n'est fabriqué ici.
+
+   Pl@ntNet sert trois tailles au même identifiant, une lettre les sépare.
+   Wikimedia ne sert plus qu'une échelle fixe de largeurs, cent vingt, deux cent
+   cinquante, cinq cents et mille deux cent quatre-vingts points : toute autre
+   largeur rend une erreur. La bande demande deux cent cinquante, le plein écran
+   cinq cents. */
 function photoGrande(ph) {
   if (ph.fonds === "plantnet") return ph.url.replace("/image/s/", "/image/m/");
-  return (ph.url || "").replace(/\/thumb\/(.+)\/\d+px-[^/]+$/, "/thumb/$1/900px-$2");
+  return (ph.url || "").replace(/(\/thumb\/.+\/)\d+px-/, "$1500px-");
+}
+
+/* L'attribution portée sous la bande. Un lot Pl@ntNet est sous une licence
+   unique et la phrase la nomme une fois. Un lot Wikimedia mêle les licences,
+   quarante-cinq fiches sur soixante-deux en portent plusieurs : chaque auteur
+   est alors suivi de la sienne, faute de quoi la mention serait fausse pour
+   toutes les images sauf la première. */
+function creditPhotos(lot) {
+  const fonds = lot[0].fonds === "commons" ? "Wikimedia Commons" : "Pl@ntNet";
+  const licences = [...new Set(lot.map(x => x.licence || "CC BY-SA"))];
+  if (licences.length === 1) {
+    const auteurs = [...new Set(lot.map(x => x.auteur).filter(Boolean))];
+    return `${esc(fonds)}, sous licence ${esc(licences[0])}`
+      + (auteurs.length ? ` : ${esc(enumerer(auteurs, auteurs.length))}` : "") + ".";
+  }
+  const paires = [];
+  lot.forEach(x => {
+    const t = `${x.auteur || "auteur non renseigné"} (${x.licence || "CC BY-SA"})`;
+    if (paires.indexOf(t) === -1) paires.push(t);
+  });
+  return `${esc(fonds)} : ${esc(enumerer(paires, paires.length))}.`;
 }
 
 async function chargerPhotos(id) {
@@ -4279,15 +4306,11 @@ function poserPhotos(p) {
     if (!zz || zz.dataset.plante !== String(p.id)) return;
     if (!lot.length) { zz.hidden = true; return; }
     photosVues = lot;
-    const auteurs = [...new Set(lot.map(x => x.auteur).filter(Boolean))];
     zz.innerHTML = `<h3 class="f-sect">Photographies</h3><div class="ph-rail">`
       + lot.map((x, i) => `<button type="button" class="ph-i" data-photo="${i}">`
           + `<img src="${esc(x.url)}" alt="" loading="lazy" decoding="async">`
           + `<span>${esc(PH_NOM[x.organe] || x.organe)}</span></button>`).join("")
-      + `</div><p class="ph-credit">${esc(lot[0].fonds === "commons"
-          ? "Wikimedia Commons" : "Pl@ntNet")}, sous licence `
-      + `${esc(lot[0].licence || "CC BY-SA")}`
-      + (auteurs.length ? ` : ${esc(enumerer(auteurs, auteurs.length))}` : "") + `.`
+      + `</div><p class="ph-credit">${creditPhotos(lot)}`
       /* Une photographie de terrain porte le nom que l'observateur a donné à la
          plante, au rang de la fiche. Rien ne distingue à l'oeil deux variétés
          d'hortensia : la fiche le dit plutôt que de laisser croire au portrait

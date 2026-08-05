@@ -175,6 +175,32 @@ export default async function essai(navigateur) {
     String(await pg2.locator(".ph-i img").count()));
   await ctx2.close();
 
+  /* Wikimedia ne sert qu'une échelle fixe de largeurs et mêle les licences d'une
+     image à l'autre : l'attribution ne peut pas en nommer une seule pour tout
+     le lot. */
+  j.section("le fonds Wikimedia porte ses propres règles");
+  await ouvrirFiche(pg, "Framboise");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(500);
+  const cw = net(await pg.locator(".ph-credit").innerText());
+  j.controle("le fonds est nommé", /Wikimedia Commons/.test(cw), cw);
+  j.controle("chaque auteur porte sa licence",
+    /Ivar Leidus \(CC BY-SA 4\.0\)/.test(cw) && /Kristian Peters \(CC BY-SA 3\.0\)/.test(cw), cw);
+  j.controle("une image sans auteur le dit sans mentir sur sa licence",
+    /auteur non renseigné \(CC0\)/.test(cw), cw);
+  j.controle("aucune licence unique n'est annoncée pour tout le lot",
+    !/sous licence/.test(cw), cw);
+  const pw = await pg.locator(".ph-i img").first().getAttribute("src");
+  await pg.locator('.ph-i[data-photo="0"]').click();
+  await pg.waitForTimeout(400);
+  const gw = await pg.locator(".ph-plein img").getAttribute("src");
+  j.controle("la tuile demande deux cent cinquante points", /\/250px-/.test(pw), pw);
+  j.controle("le plein écran demande cinq cents points, taille servie par le fonds",
+    /\/500px-/.test(gw) && gw === pw.replace("/250px-", "/500px-"), gw);
+  await pg.locator("#fermerPhoto").click();
+  await pg.waitForTimeout(300);
+  await fermerFiche(pg);
+
   j.section("une fiche sans photo n'ouvre pas de section vide");
   await fermerFiche(pg);
   await ouvrirFiche(pg, "Tomate");

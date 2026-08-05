@@ -310,5 +310,41 @@
   "source": "https://identify.plantnet.org/observations/2",
   "note": 0.6,
   "retenue": true
+ },
+ {
+  "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
+  "organe": "fleur",
+  "rang": 1,
+  "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Rubus_idaeus_fleur.jpg/250px-Rubus_idaeus_fleur.jpg",
+  "auteur": "Ivar Leidus",
+  "licence": "CC BY-SA 4.0",
+  "fonds": "commons",
+  "source": "https://commons.wikimedia.org/wiki/File:Rubus_idaeus_fleur.jpg",
+  "note": 0.9,
+  "retenue": true
+ },
+ {
+  "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
+  "organe": "feuille",
+  "rang": 1,
+  "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Rubus_idaeus_feuille.jpg/250px-Rubus_idaeus_feuille.jpg",
+  "auteur": "Kristian Peters",
+  "licence": "CC BY-SA 3.0",
+  "fonds": "commons",
+  "source": "https://commons.wikimedia.org/wiki/File:Rubus_idaeus_feuille.jpg",
+  "note": 0.9,
+  "retenue": true
+ },
+ {
+  "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
+  "organe": "fruit",
+  "rang": 1,
+  "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Rubus_idaeus_fruit.jpg/250px-Rubus_idaeus_fruit.jpg",
+  "auteur": "",
+  "licence": "CC0",
+  "fonds": "commons",
+  "source": "https://commons.wikimedia.org/wiki/File:Rubus_idaeus_fruit.jpg",
+  "note": 0.9,
+  "retenue": true
  }
 ]
