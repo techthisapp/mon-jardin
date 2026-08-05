@@ -1990,10 +1990,21 @@ const CORPS_HUMAIN = "M-1.6 0.6C2.4 -0.6 5.6 2.4 5.8 7.2C6.0 11.0 5.0 14.4 3.4 1
   + "C-11.4 25.8 -8.8 22.8 -4.6 21.6C-3.9 20.6 -3.6 19.0 -3.4 17.0"
   + "C-5.0 14.4 -6.0 11.0 -5.8 7.2C-5.6 2.4 -4.0 0.0 -1.6 0.6Z";
 
-// Le motif est densifié : fondu dans l'écran il disparaîtrait à cette taille.
-function densifie(m, k) {
-  return m.replace(/opacity="\.(\d+)"/g, (t, d) =>
-    `opacity="${Math.min(0.85, (Number("0." + d) * k)).toFixed(3)}"`);
+/* Le motif est densifié : fondu dans l'écran il disparaîtrait à cette taille.
+
+   Le paramètre des couches sert la rangée de pieds voisins. Là où l'écartement
+   est plus étroit que la plante, plusieurs dessins se recouvrent et leurs
+   opacités s'additionnent : une rangée de radis tous les trois centimètres
+   virerait au noir. L'opacité de chaque dessin est donc abaissée pour que leur
+   superposition reste lisible. La compensation n'est que partielle, en racine
+   du nombre de couches : une rangée dense est réellement plus opaque qu'un pied
+   seul, un rang de radis fait un ruban de feuillage continu. */
+function densifie(m, k, couches) {
+  return m.replace(/opacity="\.(\d+)"/g, (t, d) => {
+    const o = Math.min(0.85, Number("0." + d) * k);
+    const c = couches && couches > 1 ? 1 - Math.pow(1 - o, 1 / Math.sqrt(couches)) : o;
+    return `opacity="${c.toFixed(3)}"`;
+  });
 }
 
 // Une distance de jardin s'écrit en centimètres sous le mètre, en mètres au-delà.
@@ -2008,8 +2019,13 @@ function distance(cm) {
    échelle : c'est ce qui rend la comparaison juste, un framboisier de deux
    mètres planté tous les cinquante centimètres se lit comme une haie, un
    pommier de six mètres tous les quatre mètres laisse voir le sol entre les
-   pieds. Les voisins sont posés en gris clair derrière, ils disent la densité
-   sans disputer la lecture de la hauteur. */
+   pieds.
+
+   La rangée occupe toute la largeur de la bande, avec autant de pieds que
+   l'écartement en demande : trois pour un pommier, sept pour un framboisier,
+   plus de cent pour un radis. Le pied du milieu porte la couleur de la plante,
+   les autres restent en gris clair derrière, ils disent la densité sans
+   disputer la lecture de la hauteur. */
 function matureSVG(p) {
   if (!p.hmin || !p.hmax) return "";
   const W = 344, H = 104, G = 102, ZG = 104, ZD = 294;
@@ -2019,28 +2035,44 @@ function matureSVG(p) {
   const lar = MOTIF_LARGE[cle] || [20, 180];
   const milieu = (p.hmin + p.hmax) / 2;
   const k = (H - y(milieu)) / (sp[1] - sp[0]);
-  const larg = (lar[1] - lar[0]) * k;
+  const aGauche = (100 - lar[0]) * k, aDroite = (lar[1] - 100) * k;
   const d = p.ecart ? p.ecart * (H - 6) / hautMax : 0;
-  // Deux voisins si la bande les porte, un seul sinon, aucun si l'écartement
-  // dépasse la largeur du cadre. Aucune fiche du référentiel n'en est là.
-  const n = !d ? 0 : (larg + 2 * d <= ZD - ZG ? 2 : (larg + d <= ZD - ZG ? 1 : 0));
-  const groupe = larg + n * d;
-  const gauche = ZG + (ZD - ZG - groupe) / 2 + (100 - lar[0]) * k;
-  const cx = n === 2 ? gauche + d : n === 1 ? gauche : 196;
+  const cx = (ZG + ZD) / 2;
+  /* Le nombre de voisins de chaque côté est celui qui remplit la bande jusqu'aux
+     bords, un pied de plus que ce qu'elle contient en entier. Les deux pieds des
+     extrémités sont coupés par le cadre, ce qui se lit comme une rangée qui
+     continue, et c'est le cas. Le garde-fou de quatre-vingts ne sert qu'à borner
+     le dessin si une donnée d'écartement devenait absurde : la fiche la plus
+     dense du référentiel, le pois semé tous les trois centimètres, en demande
+     soixante-seize. */
+  const n = d > 0
+    ? Math.min(80, Math.floor(((ZD - ZG) / 2 + Math.min(aGauche, aDroite)) / d)) : 0;
+  // Nombre de dessins qui se recouvrent en un point, pour l'opacité de chacun.
+  const couches = d > 0 ? Math.max(1, Math.round((aGauche + aDroite) / d)) : 1;
   const bas = n ? 32 : 16;
   const cote = distance(p.ecart);
   const s = [`<svg class="f-svg" viewBox="0 0 ${W} ${H + bas}" role="img" aria-label="Taille à maturité`
-    + (n ? ` et écartement de ${cote}` : "") + `">`];
+    + (n ? ` et écartement de ${cote}, ${2 * n + 1} pieds` : "") + `">`];
+  /* Le motif n'est décrit qu'une fois et rappelé à chaque position : une rangée
+     de radis pèserait sinon quatre-vingts kilo-octets de balises. */
+  const idg = `tm-gris-${cle}`, idp = `tm-plante-${cle}`;
+  const idc = `tm-cadre-${cle}`;
+  s.push(`<defs><g id="${idg}">${densifie(MOTIF[cle], 0.85, couches)}</g>`
+    + `<g id="${idp}">${densifie(MOTIF[cle], 2.8)}</g>`
+    + `<clipPath id="${idc}"><rect x="${ZG}" y="0" width="${ZD - ZG}" height="${H}"/></clipPath>`
+    + `</defs>`);
   const pied = (x, gris) =>
-    `<g class="${gris ? "tm-voisin" : "tm-pied"}" `
+    `<use href="#${gris ? idg : idp}" class="${gris ? "tm-voisin" : "tm-pied"}" `
     + `transform="translate(${(x - 100 * k).toFixed(2)},${(H - sp[1] * k).toFixed(2)}) `
-    + `scale(${k.toFixed(4)})" fill="${gris ? "var(--f-ink3)" : TEINTE.plant}"`
-    + (gris ? ` opacity=".55"` : "") + `>${densifie(MOTIF[cle], gris ? 1.5 : 2.8)}</g>`;
+    + `scale(${k.toFixed(4)})" fill="${gris ? "var(--f-ink3)" : TEINTE.plant}"/>`;
 
   s.push(`<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="var(--f-ink3)" opacity=".45"/>`);
   // Les voisins passent avant la bande de hauteur : elle doit rester lisible.
-  if (n === 2) s.push(pied(cx - d, true));
-  if (n >= 1) s.push(pied(cx + d, true));
+  if (n) {
+    s.push(`<g clip-path="url(#${idc})">`);
+    for (let i = n; i >= 1; i--) { s.push(pied(cx - i * d, true)); s.push(pied(cx + i * d, true)); }
+    s.push(`</g>`);
+  }
 
   /* Une plage étroite rapproche les deux cotes au point qu'elles se recouvrent :
      sur une laitue, dix centimètres séparent le bas du haut. Les deux traits

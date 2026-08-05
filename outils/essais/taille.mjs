@@ -8,7 +8,7 @@
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
          fermerFiche, ongletIdentite, net } from "./commun.mjs";
 
-const LARGEUR = 344;   // largeur du repère du dessin
+const BANDE = [104, 294];   // la bande où la rangée est dessinée, dans le repère
 
 /* Les grandeurs dessinées, relevées dans le rendu. La transformation de chaque
    pied porte sa position et son échelle : tout se déduit de là. */
@@ -33,6 +33,9 @@ async function releve(pg, nom) {
       pied: lire(pied), voisins,
       humain: lire(svg.querySelector(".tm-humain")),
       cote: cote ? [...cote.querySelectorAll("line")].map(l => Number(l.getAttribute("x1"))) : null,
+      coupe: !!svg.querySelector("[clip-path]"),
+      motifs: svg.querySelectorAll("defs > g").length,
+      balises: svg.outerHTML.length,
       ecart: net(t(".tm-ecart")), plage: net(t(".tm-plage")),
       // Les cotes de hauteur sont les seules calées sur le bord droit de la bande.
       cotes: [...svg.querySelectorAll("text.f-cote")]
@@ -45,8 +48,12 @@ async function releve(pg, nom) {
   return r;
 }
 
-// L'écart dessiné entre deux pieds, en points du repère.
-const pas = r => r.voisins.length ? Math.abs(r.voisins[0].x - r.pied.x) : 0;
+/* L'écart dessiné entre deux pieds voisins. Les pieds sont posés du plus
+   éloigné au plus proche : c'est le plus petit intervalle qui vaut écartement. */
+function pas(r) {
+  const xs = [...r.voisins.map(v => v.x), r.pied.x].sort((a, b) => a - b);
+  return xs.length < 2 ? 0 : Math.min(...xs.slice(1).map((x, i) => x - xs[i]));
+}
 
 export default async function essai(navigateur) {
   const j = journal("Taille à maturité et écartement");
@@ -64,26 +71,37 @@ export default async function essai(navigateur) {
       Math.abs(pas(r) - attendu) < 0.6, `${pas(r).toFixed(1)} contre ${attendu.toFixed(1)}`);
   }
 
-  j.section("les voisins encadrent le pied sans sortir du cadre");
+  /* La rangée occupe toute la bande, avec autant de pieds que l'écartement en
+     demande : trois arbres, une haie de framboisiers, un ruban de radis. */
+  j.section("la rangée remplit la bande");
   const fra = await releve(pg, "Framboise");
-  j.controle("deux voisins, un de chaque côté", fra.voisins.length === 2
-    && fra.voisins.some(v => v.x < fra.pied.x) && fra.voisins.some(v => v.x > fra.pied.x),
-    String(fra.voisins.length));
-  j.controle("ils sont à égale distance du pied",
-    Math.abs((fra.pied.x - Math.min(...fra.voisins.map(v => v.x)))
-      - (Math.max(...fra.voisins.map(v => v.x)) - fra.pied.x)) < 0.2);
-  j.controle("ils portent la même échelle que le pied",
-    fra.voisins.every(v => Math.abs(v.k - fra.pied.k) < 1e-6));
   const pom = await releve(pg, "Pommier");
-  /* Le motif est dessiné dans une boîte de deux cents points ; le pommier est
-     la fiche dont l'écartement occupe la plus grande part du cadre. */
-  for (const [nom, r] of [["framboise", fra], ["pommier", pom]]) {
-    const bords = [...r.voisins, r.pied].map(v => [v.x, v.x + 200 * v.k]);
-    j.controle(`${nom}, la rangée tient dans le cadre`,
-      Math.min(...bords.map(b => b[0])) > -2
-      && Math.max(...bords.map(b => b[1])) < LARGEUR + 2,
-      bords.map(b => `${b[0].toFixed(0)}..${b[1].toFixed(0)}`).join(" "));
+  const rad = await releve(pg, "Radis");
+  j.controle("le nombre de pieds suit l'écartement",
+    pom.voisins.length < fra.voisins.length && fra.voisins.length < rad.voisins.length,
+    `pommier ${pom.voisins.length + 1}, framboise ${fra.voisins.length + 1}, `
+    + `radis ${rad.voisins.length + 1}`);
+  for (const [nom, r] of [["framboise", fra], ["pommier", pom], ["radis", rad]]) {
+    const xs = [...r.voisins.map(v => v.x), r.pied.x].sort((a, b) => a - b);
+    const ecarts = xs.slice(1).map((x, i) => x - xs[i]);
+    j.controle(`${nom}, le pas est constant d'un pied à l'autre`,
+      Math.max(...ecarts) - Math.min(...ecarts) < 0.02, ecarts.length + " intervalles");
+    j.controle(`${nom}, la rangée est centrée sur le pied de la plante`,
+      Math.abs((r.pied.x - xs[0]) - (xs[xs.length - 1] - r.pied.x)) < 0.2);
+    j.controle(`${nom}, elle couvre la bande d'un bord à l'autre`,
+      xs[0] + 200 * r.pied.k > BANDE[0] && xs[xs.length - 1] < BANDE[1],
+      `${xs[0].toFixed(0)}..${(xs[xs.length - 1] + 200 * r.pied.k).toFixed(0)}`);
+    j.controle(`${nom}, les pieds des bords sont coupés par le cadre`, r.coupe);
+    j.controle(`${nom}, tous les pieds portent la même échelle`,
+      r.voisins.every(v => Math.abs(v.k - r.pied.k) < 1e-6));
   }
+  /* Cent quarante et un dessins de radis recopiés en clair pèseraient plus de
+     quatre-vingts kilo-octets : le motif est décrit deux fois, en gris et en
+     couleur, et rappelé à chaque position. */
+  j.controle("le motif n'est décrit que deux fois, quel que soit le nombre de pieds",
+    rad.motifs === 2 && rad.balises < 30000,
+    `${rad.motifs} motifs, ${(rad.balises / 1024).toFixed(1)} Ko pour `
+    + `${rad.voisins.length + 1} pieds`);
 
   j.section("la cote dit la distance, et le rang quand il diffère");
   j.controle("framboise, l'écartement et le rang sont énoncés",
@@ -96,8 +114,9 @@ export default async function essai(navigateur) {
   j.controle("la cote est tracée d'un pied à l'autre",
     fra.cote !== null && Math.abs((Math.max(...fra.cote) - Math.min(...fra.cote)) - pas(fra)) < 0.2,
     String(fra.cote));
-  j.controle("l'étiquette de lecture d'écran porte l'écartement",
-    /écartement de 50 cm/.test(fra.etiquette), fra.etiquette);
+  j.controle("l'étiquette de lecture d'écran porte l'écartement et le nombre de pieds",
+    new RegExp(`écartement de 50 cm, ${fra.voisins.length + 1} pieds`).test(fra.etiquette),
+    fra.etiquette);
 
   /* Huit centimètres sous une plante de quarante de large : la cote se réduit à
      deux crans collés, que l'oeil lit comme un défaut. */
@@ -106,7 +125,8 @@ export default async function essai(navigateur) {
   j.controle("aucun trait de cote", har.cote === null);
   j.controle("le chiffre reste, exact",
     har.ecart === "8 cm entre deux pieds, rangs à 40 cm", har.ecart);
-  j.controle("les voisins sont tout de même posés", har.voisins.length === 2);
+  j.controle("la rangée est tout de même posée", har.voisins.length > 20,
+    String(har.voisins.length + 1));
 
   /* Vingt à trente centimètres : les deux cotes de hauteur se recouvriraient. */
   j.section("une plage de hauteur étroite n'écrit qu'une cote");
