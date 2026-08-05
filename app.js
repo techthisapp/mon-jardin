@@ -2057,7 +2057,7 @@ function matureSVG(p) {
      de radis pèserait sinon quatre-vingts kilo-octets de balises. */
   const idg = `tm-gris-${cle}`, idp = `tm-plante-${cle}`;
   const idc = `tm-cadre-${cle}`;
-  s.push(`<defs><g id="${idg}">${densifie(MOTIF[cle], 0.85, couches)}</g>`
+  s.push(`<defs><g id="${idg}">${densifie(MOTIF[cle], 1.8, couches)}</g>`
     + `<g id="${idp}">${densifie(MOTIF[cle], 2.8)}</g>`
     + `<clipPath id="${idc}"><rect x="${ZG}" y="0" width="${ZD - ZG}" height="${H}"/></clipPath>`
     + `</defs>`);
@@ -2067,12 +2067,12 @@ function matureSVG(p) {
     + `scale(${k.toFixed(4)})" fill="${gris ? "var(--f-ink3)" : TEINTE.plant}"/>`;
 
   s.push(`<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="var(--f-ink3)" opacity=".45"/>`);
-  // Les voisins passent avant la bande de hauteur : elle doit rester lisible.
-  if (n) {
+  const rangee = () => {
+    if (!n) return;
     s.push(`<g clip-path="url(#${idc})">`);
     for (let i = n; i >= 1; i--) { s.push(pied(cx - i * d, true)); s.push(pied(cx + i * d, true)); }
     s.push(`</g>`);
-  }
+  };
 
   /* Une plage étroite rapproche les deux cotes au point qu'elles se recouvrent :
      sur une laitue, dix centimètres séparent le bas du haut. Les deux traits
@@ -2098,6 +2098,9 @@ function matureSVG(p) {
       s.push(`<text class="f-cote" x="304" y="${(yb + 4).toFixed(1)}">${distance(p.hmin)}</text>`);
     }
   }
+  /* La rangée passe après la bande de hauteur : sous elle, le lavis vert de la
+     bande l'effaçait presque, et une rangée qu'on ne voit pas ne dit rien. */
+  rangee();
   // silhouette humaine à l'échelle, 1,70 m
   const kh = (H - y(170)) / 100;
   s.push(`<g class="tm-humain" transform="translate(46,${(H - (H - y(170))).toFixed(2)}) scale(${kh.toFixed(4)})" fill="var(--f-ink3)"><path d="${CORPS_HUMAIN}"/></g>`);
