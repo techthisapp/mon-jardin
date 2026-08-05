@@ -29,13 +29,29 @@ export default async function essai(navigateur) {
     return pan.firstElementChild === s;
   });
   j.controle("elle ouvre l'onglet de l'identité", place === true);
-  j.controle("l'onglet porte aussi le bloc Identité",
-    await pg.locator('.f-pan[data-pan="identite"] .f-bloc').count() === 1);
-  j.controle("l'onglet de l'année ne porte plus les photographies ni l'identité",
+  /* Ce que la plante apporte est un caractère et non un geste : « Au jardin »
+     suit la bande, avant la taille à maturité et le bloc Identité. */
+  j.controle("l'onglet enchaîne Au jardin puis Identité",
+    JSON.stringify(await pg.evaluate(() =>
+      [...document.querySelectorAll('.f-pan[data-pan="identite"] .f-bloc h3')]
+        .map(h => h.textContent))) === JSON.stringify(["Au jardin", "Identité"]),
+    JSON.stringify(await pg.evaluate(() =>
+      [...document.querySelectorAll('.f-pan[data-pan="identite"] .f-bloc h3')]
+        .map(h => h.textContent))));
+  j.controle("Au jardin précède la taille à maturité",
+    await pg.evaluate(() => {
+      const pan = document.querySelector('.f-pan[data-pan="identite"]');
+      const enfants = [...pan.children];
+      const jardin = enfants.findIndex(e => e.querySelector("h3")
+        && e.querySelector("h3").textContent === "Au jardin");
+      const taille = enfants.findIndex(e => e.classList.contains("f-carte"));
+      return jardin === 1 && taille === 2;
+    }));
+  j.controle("l'onglet de l'année ne porte plus que Culture",
     await pg.evaluate(() => {
       const a = document.querySelector('.f-pan[data-pan="annee"]');
       return !a.querySelector(".f-photos")
-        && [...a.querySelectorAll(".f-bloc h3")].every(h => h.textContent !== "Identité");
+        && [...a.querySelectorAll(".f-bloc h3")].map(h => h.textContent).join() === "Culture";
     }));
   j.controle("les tuiles sont carrées",
     await pg.locator(".ph-i img").first().evaluate(e => {

@@ -5,14 +5,17 @@
 import { ouvrirContexte, journal, catalogueAvecProduction, PRODUCTION,
          ouvrirListeDesPlantes, ouvrirFiche, fermerFiche, ongletAnnee, ongletIdentite, net } from "./commun.mjs";
 
-/* Toutes les paires étiquette et valeur des blocs de la fiche. Culture et
-   « Au jardin » sont dans l'onglet de l'année, Identité dans le sien. */
+/* Toutes les paires étiquette et valeur des blocs de la fiche. Culture est dans
+   l'onglet de l'année, « Au jardin » et Identité dans celui de l'identité. */
+const ONGLET_DU_BLOC = { "Culture": ongletAnnee, "Au jardin": ongletIdentite,
+                         "Identité": ongletIdentite };
 async function lireBlocs(pg, nom) {
   await ouvrirFiche(pg, nom);
-  await ongletAnnee(pg);
   const paires = {};
+  let ici = null;
   for (const titre of ["Culture", "Au jardin", "Identité"]) {
-    if (titre === "Identité") await ongletIdentite(pg);
+    const aller = ONGLET_DU_BLOC[titre];
+    if (aller !== ici) { await aller(pg); ici = aller; }
     const bloc = pg.locator(".f-bloc", { hasText: titre }).first();
     if (!await bloc.count()) continue;
     const dts = await bloc.locator("dt").allInnerTexts();

@@ -2249,6 +2249,9 @@ function blocCulture(p) {
   ]);
 }
 
+/* Ce que la plante apporte : nectar, parfum, feuillage, usage, voisinage. Ce
+   sont des caractères et non des gestes, le bloc ouvre donc l'onglet de
+   l'identité, juste sous les photographies. */
 function blocJardin(p) {
   const a = p.attr || {};
   // La couleur de fleur n'a pas de ligne ici : la légende du ruban la nomme
@@ -2293,11 +2296,11 @@ function ficheHTML(p) {
     <div class="f-pan f-pan-moment" role="tabpanel" data-pan="moment"${
       ouvre === "moment" ? "" : " hidden"}>${ficheMoment(p)}</div>
     <div class="f-pan f-pan-annee" role="tabpanel" data-pan="annee"${
-      ouvre === "annee" ? "" : " hidden"}>${ficheAnnee(p)}${blocCulture(p)}${blocJardin(p)}</div>
+      ouvre === "annee" ? "" : " hidden"}>${ficheAnnee(p)}${blocCulture(p)}</div>
     <div class="f-pan f-pan-identite" role="tabpanel" data-pan="identite"${
       ouvre === "identite" ? "" : " hidden"}>${
       `<section class="f-photos" id="fPhotos" data-plante="${esc(p.id)}" hidden></section>`
-      }${ficheTaille(p)}${blocIdentite(p)}</div>
+      }${blocJardin(p)}${ficheTaille(p)}${blocIdentite(p)}</div>
   </div>`;
 }
 
