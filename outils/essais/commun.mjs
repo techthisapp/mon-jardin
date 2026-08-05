@@ -41,11 +41,37 @@ const scriptHorloge = `(() => {
   window.Date = Fige;
 })();`;
 
+/* Un catalogue tel qu'une version antérieure l'avait gardé en mémoire locale :
+   les lignes n'y portent ni l'écartement chiffré ni le nom accepté, et la clé de
+   fraîcheur est celle que la base rendra, si bien que rien ne pousse à relire.
+   Seule la signature de forme peut faire écarter ce cache. */
+export function cacheAncien() {
+  const c = JSON.parse(CATALOGUE);
+  const phases = {};
+  c.phases.forEach(p => phases[p.key] = { label: p.label, color: p.color });
+  const climats = {};
+  (c.climates || []).forEach(x => climats[x.key] = x);
+  const plantes = c.plants.map(p => ({
+    id: p.id, slug: p.slug, nom: p.name, cat: p.category, typo: p.typology,
+    espacement: p.spacing, prof: p.depth, assoc: p.companions, phases: p.phases || {},
+    conseil: "", attr: {}, guide: {}, guide_periode: {},
+    latin: p.latin || "", famille: p.family || "",
+    port: p.habit || "", expo: p.exposure || "", eauNiv: p.water_need || "",
+    nectar: p.nectar || "", pollen: p.pollen || "", gel: p.frost_min_c,
+    hmin: p.height_min_cm, hmax: p.height_max_cm,
+    couleurs: p.flower_colors || [], pic: p.floraison_pic_q,
+    picNote: p.floraison_pic_note || "", article: p.nom_article || "",
+    propagation: p.propagation || "",
+  })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+  return JSON.stringify({ phases, plantes, climats, shifts: {}, saison: {},
+                          empreinte: `${c.plants.length}|2026-07-31` });
+}
+
 export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
-    session = true,
+    session = true, cache = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -61,6 +87,8 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + `window.__PHOTOS__ = ${photos};`
     + (jardin ? `window.__JARDIN__ = ${JSON.stringify(jardin)};` : "")
     + (session ? "" : "window.__SANS_SESSION__ = 1;")
+    // La clé est celle d'app.js : un cache posé ici imite une installation ancienne.
+    + (cache ? `try { localStorage.setItem("monjardin.catalogue.v6", ${JSON.stringify(cache)}); } catch (e) {}` : "")
     + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
   await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: "text/css", body: "" }));

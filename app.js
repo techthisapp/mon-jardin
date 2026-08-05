@@ -620,21 +620,6 @@ function poserPlanches(racine) {
 
 /* ================== Catalogue ================== */
 
-async function chargerCatalogue() {
-  try {
-    const brut = localStorage.getItem(CACHE);
-    if (brut) {
-      const c = JSON.parse(brut);
-      phases = c.phases; plantes = c.plantes; climats = c.climats || {}; shifts = c.shifts || {};
-      saison = c.saison || {};
-      apresCatalogue();
-      verifierFraicheur(c.empreinte);
-      return;
-    }
-  } catch (e) { /* cache indisponible */ }
-  await lireCatalogue();
-}
-
 /* Le catalogue est lu en deux requêtes parallèles. La première porte ce que le
    premier écran affiche, 26 kilo-octets ; la seconde les quatre colonnes de
    texte long, 162 kilo-octets, qui ne servent qu'au libellé de l'action en cours
@@ -646,6 +631,31 @@ const COL_LEGERES = "id,slug,name,category,typology,phases,spacing,spacing_cm,ro
   + "height_max_cm,flower_colors,floraison_pic_q,floraison_pic_note,nom_article,propagation,"
   + "nom_accepte";
 const COL_LONGUES = "id,attributes,guide,guide_periode,advice";
+/* Signature de la forme des lignes gardées en cache. La clé de fraîcheur ne
+   porte que le nombre de plantes et la date de la base : ajouter une colonne à
+   la requête ne la change pas, et une installation qui a déjà un catalogue
+   continuerait de servir des lignes sans cette colonne. La signature suit les
+   colonnes demandées, elle change donc d'elle-même. Le nombre en tête se relève
+   à la main quand la forme change sans qu'aucune colonne bouge. */
+const FORME_CACHE = "1|" + COL_LEGERES + "|" + COL_LONGUES;
+
+async function chargerCatalogue() {
+  try {
+    const brut = localStorage.getItem(CACHE);
+    const c0 = brut ? JSON.parse(brut) : null;
+    if (c0 && c0.forme === FORME_CACHE) {
+      const c = c0;
+      phases = c.phases; plantes = c.plantes; climats = c.climats || {}; shifts = c.shifts || {};
+      saison = c.saison || {};
+      apresCatalogue();
+      verifierFraicheur(c.empreinte);
+      return;
+    }
+  } catch (e) { /* cache indisponible */ }
+  await lireCatalogue();
+}
+
+
 
 async function lireCatalogue() {
   const promesseLongues = avecReprise(() =>
@@ -697,7 +707,8 @@ async function lireCatalogue() {
   rendreMaintenant();
   try {
     localStorage.setItem(CACHE, JSON.stringify({
-      phases, plantes, climats, shifts, saison, empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
+      phases, plantes, climats, shifts, saison, forme: FORME_CACHE,
+      empreinte: rm.data ? `${rm.data.plant_count}|${rm.data.updated_at}` : "",
     }));
   } catch (e) { /* stockage indisponible */ }
 }

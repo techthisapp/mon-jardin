@@ -6,7 +6,7 @@
    sur cette échelle commune, sur ce que le cadre peut contenir, et sur les cas
    où une cote deviendrait illisible. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
-         fermerFiche, ongletIdentite, net } from "./commun.mjs";
+         fermerFiche, ongletIdentite, net, cacheAncien } from "./commun.mjs";
 
 const BANDE = [104, 294];   // la bande où la rangée est dessinée, dans le repère
 
@@ -143,6 +143,21 @@ export default async function essai(navigateur) {
   j.controle("thym, l'écartement est là aussi",
     thym.ecart === "30 cm entre deux pieds", thym.ecart);
 
+  /* Le catalogue est gardé en mémoire locale et la clé de fraîcheur ne porte que
+     le nombre de plantes et la date de la base : ajouter une colonne à la requête
+     ne la change pas. Sans autre garde, une installation qui avait déjà un
+     catalogue continuait de servir des lignes sans écartement, et le dessin
+     restait celui d'un pied seul. */
+  j.section("un catalogue mis en cache par une version antérieure est écarté");
+  const v = await ouvrirContexte(navigateur, { cache: cacheAncien() });
+  await ouvrirListeDesPlantes(v.pg);
+  const vieux = await releve(v.pg, "Framboise");
+  j.controle("la rangée est bien là", vieux.voisins.length > 2,
+    `${vieux.voisins.length + 1} pieds`);
+  j.controle("la cote aussi", vieux.ecart === "50 cm entre deux pieds, rangs à 1,5 m",
+    vieux.ecart);
+  await v.ctx.close();
+
   await ctx.close();
-  return j.fin(erreurs);
+  return j.fin(erreurs.concat(v.erreurs));
 }
