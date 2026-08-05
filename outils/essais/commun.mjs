@@ -18,6 +18,7 @@ const lire = nom => readFileSync(join(ICI, "donnees", nom), "utf8");
 export const CATALOGUE = lire("catalogue.json");
 export const METEO = lire("meteo.json");
 export const GLOSSAIRE = lire("glossaire.json");
+export const PHOTOS = lire("photos.json");
 export const PRODUCTION = JSON.parse(lire("plantes-production.json"));
 const DOUBLURE = readFileSync(join(ICI, "doublure.mjs"), "utf8");
 
@@ -43,7 +44,7 @@ const scriptHorloge = `(() => {
 export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
-    glossaire = GLOSSAIRE, meteo = METEO, climat = null,
+    glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -56,9 +57,16 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + `window.__PLUIES__ = ${JSON.stringify(pluies)};`
     + `window.__VIGILANCE__ = ${JSON.stringify(vigilance)};`
     + `window.__GLOSSAIRE__ = ${glossaire};`
+    + `window.__PHOTOS__ = ${photos};`
     + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
   await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: "text/css", body: "" }));
+  /* Les photographies vivent chez leur fonds : la doublure en sert une, d'un
+     seul point, pour que la fiche ne parte pas sur le réseau. */
+  await ctx.route(/bs\.plantnet\.org|upload\.wikimedia\.org/, r => r.fulfill({
+    status: 200, contentType: "image/png",
+    body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=", "base64"),
+  }));
   await ctx.route(/api\.open-meteo\.com/, route => {
     const d = JSON.parse(meteo);
     if (route.request().url().includes("hourly=")) {

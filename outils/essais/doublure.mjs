@@ -20,6 +20,7 @@ const TABLES = {
   pluie_station: (window.__PLUIES__ || []),
   vigilance: (window.__VIGILANCE__ || []),
   glossaire: (window.__GLOSSAIRE__ || []),
+  plant_images: (window.__PHOTOS__ || []),
 };
 function requete(table) {
   let lignes = (TABLES[table] || []).slice();

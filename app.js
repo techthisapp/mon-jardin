@@ -1280,6 +1280,10 @@ function poserEtatFeuille() {
 }
 
 // L'historique fait foi : l'affichage se remet dans l'état de l'entrée courante.
+window.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !$("photoPlein").hidden) { e.stopPropagation(); fermerPhoto(); }
+}, true);
+
 window.addEventListener("popstate", () => {
   const e = history.state || {};
   if (!e.feuille) fermerFeuille();
@@ -2190,7 +2194,8 @@ function ficheBlocs(p) {
     const c = kv(rows);
     return c ? `<section class="f-bloc"><h3>${esc(titre)}</h3><dl class="f-kv">${c}</dl></section>` : "";
   };
-  return bloc("Identité", [
+  return `<section class="f-photos" id="fPhotos" data-plante="${esc(p.id)}" hidden></section>`
+    + bloc("Identité", [
     ["Famille", p.famille], ["Cycle", a.type], ["Hauteur", a.hauteur],
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
     ["Rusticité", nuanceRusticite(p)],
@@ -4162,12 +4167,109 @@ function majEau(p) {
   if (m) m.innerHTML = ficheMoment(p);
 }
 
+/* ---------------------------------------------------------------------------
+   Photographies de la fiche. Les images ne sont pas réhébergées : la table
+   porte l'adresse du fonds, l'auteur et la licence, et le carré de la tuile se
+   fait à l'affichage. Recadrer un fichier produirait une oeuvre dérivée, que la
+   licence obligerait à rediffuser sous les mêmes termes.
+   --------------------------------------------------------------------------- */
+
+/* L'ordre est le même d'une plante à l'autre. Cet ordre imposé et le carré
+   identique tiennent lieu d'homogénéité, puisque les photographes changent
+   d'une image à l'autre. Une tuile manque quand la source ne couvre pas
+   l'organe, la bande raccourcit, aucune case vide. */
+const PH_ORDRE = ["fleur", "feuille", "fruit", "port", "ecorce"];
+const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
+                 port: "port", ecorce: "écorce" };
+const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
+let photosVues = [];              // la bande à l'affiche, pour le plein écran
+
+/* La vignette de cent cinquante points sert la bande, celle de six cents le
+   plein écran. Les deux existent chez le fonds, rien n'est fabriqué ici. */
+function photoGrande(ph) {
+  if (ph.fonds === "plantnet") return ph.url.replace("/image/s/", "/image/m/");
+  return (ph.url || "").replace(/\/thumb\/(.+)\/\d+px-[^/]+$/, "/thumb/$1/900px-$2");
+}
+
+async function chargerPhotos(id) {
+  if (photosPlante.has(id)) return photosPlante.get(id);
+  let lot = [];
+  try {
+    const { data } = await db.from("plant_images").select("*").eq("plant_id", id);
+    lot = data || [];
+  } catch (e) { /* sans réseau la section reste absente */ }
+  // Le plus petit rang retenu de chaque organe, dans l'ordre d'affichage.
+  const par = {};
+  lot.filter(x => x.retenue !== false).forEach(x => {
+    if (!par[x.organe] || x.rang < par[x.organe].rang) par[x.organe] = x;
+  });
+  const suite = PH_ORDRE.map(o => par[o]).filter(Boolean);
+  photosPlante.set(id, suite);
+  return suite;
+}
+
+function poserPhotos(p) {
+  const z = $("fPhotos");
+  if (!z) return;
+  chargerPhotos(p.id).then(lot => {
+    // La fiche a pu changer pendant la requête.
+    const zz = $("fPhotos");
+    if (!zz || zz.dataset.plante !== String(p.id)) return;
+    if (!lot.length) { zz.hidden = true; return; }
+    photosVues = lot;
+    const auteurs = [...new Set(lot.map(x => x.auteur).filter(Boolean))];
+    zz.innerHTML = `<h3 class="f-sect">Photographies</h3><div class="ph-rail">`
+      + lot.map((x, i) => `<button type="button" class="ph-i" data-photo="${i}">`
+          + `<img src="${esc(x.url)}" alt="" loading="lazy" decoding="async">`
+          + `<span>${esc(PH_NOM[x.organe] || x.organe)}</span></button>`).join("")
+      + `</div><p class="ph-credit">${esc(lot[0].fonds === "commons"
+          ? "Wikimedia Commons" : "Pl@ntNet")}, sous licence `
+      + `${esc(lot[0].licence || "CC BY-SA")}`
+      + (auteurs.length ? ` : ${esc(enumerer(auteurs, auteurs.length))}` : "") + `.</p>`;
+    zz.hidden = false;
+    zz.querySelectorAll("[data-photo]").forEach(b =>
+      b.addEventListener("click", () => ouvrirPhoto(Number(b.dataset.photo))));
+  });
+}
+
+/* Le plein écran nomme l'organe, l'auteur et la licence, et renvoie à la
+   source. L'attribution est une obligation de la licence, elle est portée aux
+   deux endroits, sous la bande et ici. */
+function ouvrirPhoto(i) {
+  const x = photosVues[i];
+  if (!x) return;
+  const z = $("photoPlein");
+  const fonds = x.fonds === "commons" ? "Wikimedia Commons" : "Pl@ntNet";
+  z.innerHTML = `<button type="button" class="ph-fx" id="fermerPhoto" aria-label="Fermer">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
+    + `<p class="ph-org">${esc(PH_NOM[x.organe] || x.organe)}</p>`
+    + `<img src="${esc(photoGrande(x))}" alt="${esc(PH_NOM[x.organe] || x.organe)}">`
+    + `<p class="ph-bas"><b>${esc(x.auteur || "auteur non renseigné")}</b><br>`
+    + `${esc(fonds)}, sous licence ${esc(x.licence || "CC BY-SA")}`
+    + (x.source ? `. <a href="${esc(x.source)}" target="_blank" rel="noopener">Voir la source</a>` : "")
+    + `</p><p class="ph-pts">`
+    + photosVues.map((_, k) => `<i class="${k === i ? "ici" : ""}"></i>`).join("") + `</p>`;
+  z.hidden = false;
+  document.body.classList.add("fige");
+  sur("fermerPhoto", "click", fermerPhoto);
+  z.addEventListener("click", e => { if (e.target === z) fermerPhoto(); }, { once: true });
+}
+
+function fermerPhoto() {
+  const z = $("photoPlein");
+  if (!z || z.hidden) return;
+  z.hidden = true;
+  z.innerHTML = "";
+  if ($("feuille").hidden) document.body.classList.remove("fige");
+}
+
 function ouvrirFeuille(p) {
   fermerGlose();
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
   $("feuille-corps").innerHTML = ficheHTML(p);
   brancherFiche(p);
+  poserPhotos(p);
   chargerEau(p).then(() => majEau(p)).catch(() => {});
   $("feuille-corps").scrollTop = 0;
   poserEtatFeuille();
@@ -4182,6 +4284,7 @@ function ouvrirFeuille(p) {
 }
 
 function fermerFeuille() {
+  fermerPhoto();
   if ($("feuille").hidden) return;
   pileFeuille = [];
   vueCourante = null;
