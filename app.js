@@ -1146,7 +1146,7 @@ const TEXTE_JOUR =
      la ligne de l'année, côté calendrier. */
   b.innerHTML = `<i class="dj-saison" style="--t:${TEINTE_SAISON[SAISON_DU_JOUR]}"></i>`
     + `<span>${esc(TEXTE_JOUR)}</span>`;
-  b.addEventListener("click", () => ouvrirVue("temps"));
+  b.addEventListener("click", () => ouvrirVue("jour"));
 })();
 
 /* Le ruban de l'année : des bandes posées en jours, un cran par quinzaine, les
@@ -2246,7 +2246,7 @@ function ficheHTML(p) {
    le lieu de la Base Adresse Nationale, l'évapotranspiration est celle du
    bulletin FAO 56 calculée au point du jardin. */
 
-const METEO_CACHE = "monjardin.meteo.v3";
+const METEO_CACHE = "monjardin.meteo.v4";
 const METEO_TTL = 3600 * 1000;   // une heure, la prévision ne bouge pas plus vite
 
 // Codes de temps sensible de l'Organisation météorologique mondiale.
@@ -2280,6 +2280,17 @@ const GM = {
   feuille: '<path d="M20 4c0 9-5.4 14-12 14-1.4 0-2.6-.2-3.6-.6C5.6 9.6 11.4 4.6 20 4z"/>'
     + '<path d="M4 21c1.6-4.6 4.4-8.2 8.4-10.8"/>',
   alerte: '<path d="M12 3.6 21.4 20H2.6z" stroke-linejoin="round"/><path d="M12 9.6v4.6M12 17.2v.1"/>',
+  vent: '<path d="M3 8.4h11a3 3 0 1 0-3-3M3 13h15a3 3 0 1 1-3 3M3 17.6h8"/>',
+  lune: '<path d="M20.2 14.6A8.6 8.6 0 0 1 9.4 3.8a8.6 8.6 0 1 0 10.8 10.8z"/>',
+  lune_nuage: '<path d="M12.9 9.1A5 5 0 0 1 6.5 2.7a5 5 0 1 0 6.4 6.4z"/>'
+    + '<path d="M8.4 19.4h9.2a3.6 3.6 0 0 0 .3-7.2 5 5 0 0 0-9.6 1.2 3 3 0 0 0 .1 6z"/>',
+};
+/* Le ciel clair et les éclaircies ne se dessinent pas de la même façon selon
+   l'heure : un soleil sur une nuit se lit comme une erreur. */
+const icoCiel = (code, jour) => {
+  const n = tempsDe(code)[2];
+  if (jour) return n;
+  return n === "soleil" ? "lune" : n === "soleil_nuage" ? "lune_nuage" : n;
 };
 const icoM = (n, cls) => `<svg class="${cls || "bd-ic"}" viewBox="0 0 24 24" aria-hidden="true" `
   + `fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${GM[n] || ""}</svg>`;
@@ -2307,7 +2318,14 @@ async function lireMeteo(g) {
     + "&past_days=30&forecast_days=7";
   // L'heure en cours dans un appel séparé : le quotidien porte le maximum du jour,
   // qui n'est pas ce qu'il fait dehors quand on ouvre l'application le soir.
-  const uh = base + "&hourly=temperature_2m,weather_code,wind_speed_10m&forecast_days=1";
+  /* Deux jours d'horaire : la feuille du temps lit vingt-quatre heures à partir
+     de l'heure en cours, elle traverse donc minuit. Quatorze grandeurs pour une
+     seule requête, environ neuf kilo-octets, mise en cache une heure comme le
+     reste. */
+  const uh = base + "&hourly=temperature_2m,apparent_temperature,dew_point_2m,"
+    + "relative_humidity_2m,precipitation,precipitation_probability,weather_code,"
+    + "cloud_cover,pressure_msl,wind_speed_10m,wind_gusts_10m,wind_direction_10m,"
+    + "uv_index,is_day&forecast_days=2";
   try {
     const [r, rh] = await Promise.all([fetch(u), fetch(uh).catch(() => null)]);
     if (!r.ok) throw new Error(r.status);
@@ -2618,7 +2636,7 @@ function retourFeuille() {
 
 function ouvrirVue(vue, enRetour) {
   fermerGlose();
-  const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
+  const rendus = { jour: vueJour, temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance };
   const f = (rendus[vue] || vueLieu)();
   if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
@@ -2643,8 +2661,393 @@ function ouvrirVue(vue, enRetour) {
 
 const jourCourt = t => new Date(t + "T12:00")
   .toLocaleDateString("fr-FR", { weekday: "short" }).replace(".", "");
+const jourLong = t => new Date(t + "T12:00")
+  .toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+// Sévérité d'un code de temps, pour retenir le ciel dominant d'une tranche.
+const GRAVITE_CIEL = c => (c >= 95 ? 100 : c >= 80 ? 90 : c >= 71 ? 80 : c >= 51 ? 70 : c);
+
+/* ---------------------------------------------------------------------------
+   La feuille du temps. Elle s'ouvre par la pastille météo du bandeau, quand la
+   date ouvre la feuille du jour : l'une porte la prévision, l'autre les mesures.
+   --------------------------------------------------------------------------- */
+
+/* Les vingt-quatre heures à venir, à partir de l'heure en cours. La fenêtre
+   traverse minuit : au jardin la nuit qui vient pèse autant que la fin de
+   l'après-midi, et le soir la journée écoulée n'apprend plus rien. */
+function serieHoraire() {
+  const i = iHeure();
+  if (i < 0 || !meteo.hourly || !meteo.hourly.wind_gusts_10m) return null;
+  const h = meteo.hourly;
+  const n = Math.min(24, h.time.length - i);
+  if (n < 8) return null;
+  const p = c => (h[c] || []).slice(i, i + n)
+    .map(v => (v === null || v === undefined ? 0 : v));
+  return { n,
+    heure: h.time.slice(i, i + n).map(t => Number(t.slice(11, 13))),
+    jour: h.time.slice(i, i + n).map(t => t.slice(0, 10)),
+    t: p("temperature_2m"), res: p("apparent_temperature"), ros: p("dew_point_2m"),
+    hum: p("relative_humidity_2m"), mm: p("precipitation"), pb: p("precipitation_probability"),
+    code: p("weather_code"), nua: p("cloud_cover"), pres: p("pressure_msl"),
+    v: p("wind_speed_10m"), raf: p("wind_gusts_10m"), dir: p("wind_direction_10m"),
+    uv: p("uv_index"), clair: p("is_day") };
+}
+
+// Les plages d'heures consécutives qui vérifient une condition.
+function plagesDe(n, test) {
+  const out = [];
+  for (let k = 0; k < n;) {
+    if (!test(k)) { k++; continue; }
+    let j = k;
+    while (j < n && test(j)) j++;
+    out.push([k, j - 1]);
+    k = j;
+  }
+  return out;
+}
+
+const CARDINAUX = ["nord", "nord-est", "est", "sud-est", "sud",
+                   "sud-ouest", "ouest", "nord-ouest"];
+const CARD_ABR = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+const iCard = d => Math.round((((d % 360) + 360) % 360) / 45) % 8;
+const cardinal = d => CARDINAUX[iCard(d)];
+// « de est » et « de ouest » ne se disent pas.
+const dCardinal = d => {
+  const c = cardinal(d);
+  return (c[0] === "e" || c[0] === "o" ? "d'" : "de ") + c;
+};
+
+/* ---------- Le météogramme ----------
+   Une voie par grandeur, empilées sur le même axe des heures. Deux tracés ne
+   partagent une voie que s'ils partagent l'unité et se lisent l'un par rapport
+   à l'autre : la température avec le ressenti et le point de rosée, le vent
+   avec ses rafales. Superposer la pluie en millimètres et le vent en kilomètres
+   par heure aurait mis deux échelles sous une seule graduation. */
+const MG_L = 358, MG_M = 5, MG_P = MG_L - 2 * MG_M;
+
+function mgVoie(nom, droite, haut, dedans, legende) {
+  return `<div class="mg-v"><p class="mg-t">${esc(nom)}<span>${esc(droite)}</span></p>`
+    + `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}</svg>`
+    + (legende ? `<p class="mg-l">${esc(legende)}</p>` : "") + `</div>`;
+}
+
+function dessinMeteogramme(s) {
+  const X = k => MG_M + k / s.n * MG_P;
+  const LA = MG_P / s.n;
+  const u = v => v.toFixed(1);
+  const bornes = t => `${Math.round(Math.min(...t))} à ${Math.round(Math.max(...t))}`;
+
+  /* La nuit est lavée dans toutes les voies, et minuit y est marqué d'un trait :
+     la fenêtre traverse deux journées civiles. */
+  const fond = h => {
+    let o = "";
+    plagesDe(s.n, k => !s.clair[k]).forEach(([a, b]) => {
+      o += `<rect x="${u(X(a))}" y="0" width="${u(X(b + 1) - X(a))}" height="${h}" `
+        + `fill="#16241E" opacity=".045"/>`;
+    });
+    const m = s.heure.indexOf(0);
+    if (m > 0) o += `<line x1="${u(X(m))}" y1="0" x2="${u(X(m))}" y2="${h}" `
+      + `stroke="#16241E" opacity=".22" stroke-dasharray="2 3"/>`;
+    return o;
+  };
+  const pts = (vals, y0, y1, mn, mx) => vals.map((v, k) =>
+    `${u(X(k + .5))},${u(y1 - (v - mn) / ((mx - mn) || 1) * (y1 - y0))}`).join(" ");
+  const aire = (vals, y0, y1, mn, mx) => `M${u(X(.5))},${u(y1)} L`
+    + pts(vals, y0, y1, mn, mx).replace(/ /g, " L") + ` L${u(X(s.n - .5))},${u(y1)} Z`;
+  const fil = (y, h, teinte, op) => `<line x1="${MG_M}" y1="${u(y)}" x2="${MG_L - MG_M}" `
+    + `y2="${u(y)}" stroke="${teinte}" opacity="${op}" stroke-dasharray="2 3"/>` + h;
+  // Une étiquette près d'un bord se cale sur ce bord plutôt que de le dépasser.
+  const etiq = (k, y, txt, cls) => {
+    const anc = k < 2 ? "start" : k > s.n - 3 ? "end" : "middle";
+    const x = k < 2 ? MG_M + 1 : k > s.n - 3 ? MG_L - MG_M - 1 : X(k + .5);
+    return `<text class="${cls}" x="${u(x)}" y="${u(y)}" text-anchor="${anc}">${esc(txt)}</text>`;
+  };
+  const voies = [];
+
+  // La température, avec le ressenti et le point de rosée : même unité, et
+  // l'écart entre la courbe et le point de rosée dit l'humidité de l'air.
+  const tt = s.t.concat(s.res, s.ros);
+  const tn = Math.min(...tt) - 1, tx = Math.max(...tt) + 1;
+  const ressenti = s.res.some((v, k) => Math.abs(v - s.t[k]) >= 1.5);
+  let temp = fond(66);
+  temp += `<path d="${aire(s.t, 10, 56, tn, tx)}" fill="#C7BE79" opacity=".28"/>`;
+  temp += `<polyline points="${pts(s.ros, 10, 56, tn, tx)}" fill="none" stroke="#4A7CA8" `
+    + `stroke-width="1.2" stroke-dasharray="3 3" opacity=".7"/>`;
+  if (ressenti)
+    temp += `<polyline points="${pts(s.res, 10, 56, tn, tx)}" fill="none" stroke="#8A7A34" `
+      + `stroke-width="1" opacity=".45"/>`;
+  temp += `<polyline points="${pts(s.t, 10, 56, tn, tx)}" fill="none" stroke="#8A7A34" `
+    + `stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+  const kx = s.t.indexOf(Math.max(...s.t)), kn = s.t.indexOf(Math.min(...s.t));
+  [[kx, -6], [kn, 12]].forEach(([k, dy]) => {
+    temp += etiq(k, 56 - (s.t[k] - tn) / (tx - tn) * 46 + dy,
+      Math.round(s.t[k]) + "°", "mg-c");
+  });
+  voies.push(mgVoie("La température", `${bornes(s.t)} degrés`, 66, temp,
+    "Pointillé bleu, le point de rosée : plus il est proche de la courbe, plus l'air est humide."
+    + (ressenti ? " Trait fin, le ressenti." : "")));
+
+  // La pluie : le risque en barre pâle derrière, la lame en barre pleine devant.
+  const mmx = Math.max(2, ...s.mm), tot = s.mm.reduce((a, b) => a + b, 0);
+  let pluie = fond(42);
+  for (let k = 0; k < s.n; k++) {
+    const hp = s.pb[k] / 100 * 32;
+    if (hp > .6) pluie += `<rect x="${u(X(k) + 1)}" y="${u(36 - hp)}" width="${u(LA - 2)}" `
+      + `height="${u(hp)}" rx="1.5" fill="#4A7CA8" opacity=".18"/>`;
+    if (s.mm[k] > 0) {
+      const hb = Math.max(2, s.mm[k] / mmx * 32);
+      pluie += `<rect x="${u(X(k) + 2.2)}" y="${u(36 - hb)}" width="${u(LA - 4.4)}" `
+        + `height="${u(hb)}" rx="1.5" fill="#4A7CA8"/>`;
+    }
+  }
+  if (tot >= 0.2) pluie += etiq(s.mm.indexOf(Math.max(...s.mm)),
+    36 - Math.max(2, Math.max(...s.mm) / mmx * 32) - 4, nombreFr(tot) + " mm", "mg-mm");
+  pluie += `<line x1="${MG_M}" y1="36.5" x2="${MG_L - MG_M}" y2="36.5" stroke="#16241E" opacity=".13"/>`;
+  const dPluie = tot >= 0.2 ? `${nombreFr(tot)} mm attendus`
+    : Math.max(...s.pb) >= 20 ? `aucune lame, risque ${Math.max(...s.pb)} %` : "aucune";
+  voies.push(mgVoie("La pluie", dPluie, 42, pluie,
+    "Barre pleine, la lame attendue. Barre pâle, le risque de pluie."));
+
+  // Le vent : la moyenne en aire, les rafales en pointillé, l'orientation en
+  // flèches toutes les trois heures, dans le sens où il souffle.
+  const vmx = Math.max(30, ...s.raf);
+  let vent = fond(54);
+  vent += `<path d="${aire(s.v, 4, 34, 0, vmx)}" fill="#7E8C81" opacity=".26"/>`;
+  vent += `<polyline points="${pts(s.raf, 4, 34, 0, vmx)}" fill="none" stroke="#8A4A10" `
+    + `stroke-width="1.1" stroke-dasharray="3 2.5" opacity=".65"/>`;
+  vent += `<polyline points="${pts(s.v, 4, 34, 0, vmx)}" fill="none" stroke="#5F6E63" stroke-width="1.6"/>`;
+  vent = fil(34 - 20 / vmx * 30, vent, "#8A4A10", ".30");
+  vent += `<line x1="${MG_M}" y1="34.5" x2="${MG_L - MG_M}" y2="34.5" stroke="#16241E" opacity=".13"/>`;
+  for (let k = 1; k < s.n; k += 3) {
+    vent += `<g transform="translate(${u(X(k + .5))},46) rotate(${Math.round(s.dir[k] + 180)})" `
+      + `fill="none" stroke="${s.v[k] >= 20 ? "#8A4A10" : "#5F6E63"}" stroke-width="1.4" `
+      + `stroke-linecap="round" stroke-linejoin="round">`
+      + `<path d="M0,-6 L0,6 M-2.8,-2.8 L0,-6 L2.8,-2.8"/></g>`;
+  }
+  const kv = s.v.indexOf(Math.max(...s.v));
+  voies.push(mgVoie("Le vent", `${Math.round(Math.max(...s.v))} km/h `
+    + `${dCardinal(s.dir[kv])}, rafales ${Math.round(Math.max(...s.raf))}`, 54, vent,
+    "Pointillé brun, les rafales. Le filet marque vingt kilomètres par heure, "
+    + "au-delà un traitement dérive."));
+
+  // La couverture du ciel, en bande : c'est un taux d'occultation, une courbe
+  // lui donnerait une précision qu'elle n'a pas.
+  let ciel = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#4A5A52" opacity=".06"/>`;
+  let uvb = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#C8892F" opacity=".07"/>`;
+  for (let k = 0; k < s.n; k++) {
+    ciel += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="12" fill="#4A5A52" `
+      + `opacity="${(s.nua[k] / 100 * .5).toFixed(3)}"/>`;
+    const q = Math.min(1, s.uv[k] / 9);
+    if (q > .02) uvb += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="12" `
+      + `fill="#C8892F" opacity="${(q * .85).toFixed(3)}"/>`;
+  }
+  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel));
+  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb));
+
+  // L'humidité de l'air, avec le seuil de quatre-vingt-dix pour cent au-delà
+  // duquel le feuillage reste mouillé et les maladies s'installent.
+  let hum = fond(30);
+  hum += `<path d="${aire(s.hum, 4, 26, 0, 100)}" fill="#8FA5B5" opacity=".30"/>`;
+  hum += `<polyline points="${pts(s.hum, 4, 26, 0, 100)}" fill="none" stroke="#5F7D91" stroke-width="1.3"/>`;
+  hum = fil(26 - 90 / 100 * 22, hum, "#5F7D91", ".35");
+  voies.push(mgVoie("L'humidité de l'air", `${bornes(s.hum)} %`, 30, hum,
+    "Le filet marque quatre-vingt-dix pour cent, au-delà le feuillage ne sèche pas."));
+
+  // La pression : sa valeur importe moins que sa pente, une baisse annonce.
+  const pn = Math.min(...s.pres) - .8, px = Math.max(...s.pres) + .8;
+  let pres = fond(30);
+  pres += `<polyline points="${pts(s.pres, 4, 26, pn, px)}" fill="none" stroke="#6E7A70" `
+    + `stroke-width="1.5" stroke-linejoin="round"/>`;
+  const dp = s.pres[s.n - 1] - s.pres[0];
+  voies.push(mgVoie("La pression", `${Math.round(s.pres[0])} hPa, `
+    + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), 30, pres));
+
+  // L'axe des heures, commun aux voies.
+  let axe = `<text class="mg-h mg-ici" x="${MG_M}" y="11" text-anchor="start">maintenant</text>`;
+  for (let k = 0; k < s.n; k++) {
+    if (s.heure[k] % 6 !== 0 || X(k) < 74) continue;
+    const lib = s.heure[k] === 0 ? jourCourt(s.jour[k]) : String(s.heure[k]).padStart(2, "0") + " h";
+    axe += `<text class="mg-h" x="${u(X(k))}" y="11" text-anchor="middle">${esc(lib)}</text>`;
+  }
+  return `<div class="mg">${voies.join("")}`
+    + `<svg class="mg-s" viewBox="0 0 ${MG_L} 14" aria-hidden="true">${axe}</svg></div>`;
+}
+
+/* ---------- La liste ---------- */
+function listeHoraire(s) {
+  const r = [];
+  for (let k = 0; k < s.n; k++) {
+    if (k && s.jour[k] !== s.jour[k - 1]) r.push(`<tr class="hh-jour"><th colspan="6">`
+      + `${esc(jourLong(s.jour[k]))}</th></tr>`);
+    const ic = icoCiel(s.code[k], s.clair[k]);
+    r.push(`<tr class="hh${k === 0 ? " hh-ici" : ""}">`
+      + `<th>${String(s.heure[k]).padStart(2, "0")} h</th>`
+      + `<td class="hh-ic">${icoM(ic, "hh-svg")}</td>`
+      + `<td class="hh-t">${Math.round(s.t[k])}°</td>`
+      + `<td class="hh-v${s.v[k] >= 20 ? " hh-fort" : ""}">`
+      + `<i style="transform:rotate(${Math.round(s.dir[k] + 180)}deg)">`
+      + `<svg viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" `
+      + `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
+      + `<path d="M7,1.5 L7,12.5 M4.2,4.3 L7,1.5 L9.8,4.3"/></svg></i>`
+      + `${Math.round(s.v[k])}<small>${CARD_ABR[iCard(s.dir[k])]}</small></td>`
+      + `<td class="hh-p">${s.mm[k] >= 0.1 ? `<b>${nombreFr(s.mm[k])}</b> mm` : ""}</td>`
+      + `<td class="hh-pb">${s.pb[k] >= 15 ? s.pb[k] + " %" : ""}</td></tr>`);
+  }
+  return `<table class="hh-table">${r.join("")}</table>`;
+}
+
+/* ---------- Les moments ----------
+   Les tranches suivent les bornes civiles de six heures : la matinée et la
+   soirée disent quelque chose, six heures comptées depuis l'heure courante ne
+   diraient rien. Les bouts de la fenêtre sont donc rognés. */
+const NOM_TRANCHE = ["la nuit", "la matinée", "l'après-midi", "la soirée"];
+
+function momentsHoraires(s) {
+  const tr = [];
+  for (let k = 0; k < s.n;) {
+    const b = Math.floor(s.heure[k] / 6);
+    let j = k;
+    while (j < s.n && Math.floor(s.heure[j] / 6) === b && s.jour[j] === s.jour[k]) j++;
+    tr.push({ a: k, b: j - 1, nom: NOM_TRANCHE[b], demain: s.jour[k] !== s.jour[0] });
+    k = j;
+  }
+  // Une tranche d'une heure en bout de fenêtre est un reste, pas un moment.
+  if (tr.length > 1 && tr[tr.length - 1].b - tr[tr.length - 1].a < 1) tr.pop();
+
+  return `<div class="mo">` + tr.map(x => {
+    const q = c => s[c].slice(x.a, x.b + 1);
+    const mm = q("mm").reduce((p, n) => p + n, 0);
+    const code = q("code").reduce((p, n) => (GRAVITE_CIEL(n) > GRAVITE_CIEL(p) ? n : p), 0);
+    const clair = q("clair").some(Boolean);
+    const pb = Math.max(...q("pb")), raf = Math.max(...q("raf"));
+    const dir = s.dir[Math.floor((x.a + x.b) / 2)];
+    const pluie = mm >= 0.2 ? `<b>${nombreFr(mm)} mm</b> attendus, risque ${pb} %`
+      : pb >= 20 ? `sec, risque ${pb} %` : "sec";
+    return `<div class="mo-c${x.a === 0 ? " mo-ici" : ""}">`
+      + `<p class="mo-h">${esc(x.demain ? "demain, " : "")}${esc(x.nom)}, `
+      + `de ${String(s.heure[x.a]).padStart(2, "0")} h à `
+      + `${String((s.heure[x.b] + 1) % 24).padStart(2, "0")} h</p>`
+      + `<div class="mo-l">${icoM(icoCiel(code, clair), "mo-ic")}<div class="mo-x">`
+      + `<b>${Math.round(Math.min(...q("t")))} à ${Math.round(Math.max(...q("t")))}°</b>`
+      + `<span>${esc(tempsDe(code)[1].toLowerCase())}, ${pluie}</span>`
+      + `<span>vent ${Math.round(Math.max(...q("v")))} km/h ${esc(dCardinal(dir))}`
+      + `${raf >= 40 ? `, rafales ${Math.round(raf)}` : ""}</span></div></div></div>`;
+  }).join("") + `</div>`;
+}
+
+/* ---------- Ce que ces heures demandent au jardin ----------
+   Chaque règle lit la série et rend une ligne ou rien. La pluie passe toujours
+   en tête, c'est la question qu'on se pose en ouvrant, et les deux plus graves
+   des autres la suivent. */
+function jardinDuJour(s) {
+  const H = k => String(s.heure[k]).padStart(2, "0") + " h";
+  const dem = k => (s.jour[k] !== s.jour[0] ? "demain " : "") + H(k);
+  const fin = k => (s.jour[Math.min(k + 1, s.n - 1)] !== s.jour[0]
+    && s.heure[k] === 23 ? "demain " : "") + String((s.heure[k] + 1) % 24).padStart(2, "0") + " h";
+  const lignes = [];
+
+  const pl = plagesDe(s.n, k => s.mm[k] >= 0.1);
+  const tot = s.mm.reduce((a, b) => a + b, 0);
+  if (pl.length) {
+    lignes.push({ i: "goutte", g: 9,
+      t: `Pluie ${pl.length > 1 ? "par intervalles " : ""}de ${dem(pl[0][0])} à `
+        + `${fin(pl[pl.length - 1][1])}, ${nombreFr(tot)} mm attendus.` });
+  } else if (Math.max(...s.pb) >= 40) {
+    lignes.push({ i: "goutte", g: 9, t: `Aucune lame annoncée, mais un risque de pluie `
+      + `qui monte à ${Math.max(...s.pb)} % vers ${dem(s.pb.indexOf(Math.max(...s.pb)))}.` });
+  } else {
+    lignes.push({ i: "goutte", g: 9,
+      t: `Aucune pluie annoncée d'ici ${dem(s.n - 1)}.` });
+  }
+
+  const gel = plagesDe(s.n, k => s.t[k] <= 1);
+  if (gel.length) lignes.push({ i: "alerte", g: 6, t: `Gel probable de ${dem(gel[0][0])} `
+    + `à ${fin(gel[gel.length - 1][1])}, jusqu'à ${nombreFr(Math.min(...s.t))} degrés. `
+    + `Voiler ce qui craint.` });
+
+  const gv = plagesDe(s.n, k => s.raf[k] >= 40 || s.v[k] >= 25);
+  if (gv.length) lignes.push({ i: "vent", g: 5, t: `Rafales à `
+    + `${Math.round(Math.max(...s.raf))} km/h de ${dem(gv[0][0])} à ${fin(gv[gv.length - 1][1])}. `
+    + `Pas de traitement, ni voile ni tuteur léger à poser.` });
+
+  const tmax = Math.max(...s.t);
+  if (tmax >= 30) lignes.push({ i: "soleil", g: 4, t: `Jusqu'à ${Math.round(tmax)} degrés vers `
+    + `${dem(s.t.indexOf(tmax))}. Arroser au petit matin ou à la nuit, jamais en plein soleil.` });
+
+  const mal = plagesDe(s.n, k => s.hum[k] >= 90 && s.t[k] >= 10 && s.t[k] <= 26)
+    .filter(([a, b]) => b - a >= 4);
+  if (mal.length) lignes.push({ i: "goutte", g: 3, t: `Air saturé de ${dem(mal[0][0])} à `
+    + `${fin(mal[0][1])} sous une température douce. Le feuillage reste mouillé, aérer les `
+    + `abris et arroser au pied.` });
+
+  const arr = plagesDe(s.n, k => s.mm[k] < 0.1 && s.pb[k] < 40 && s.v[k] < 15 && s.uv[k] < 2)
+    .filter(([a, b]) => b - a >= 1).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
+  if (arr && tot < 3) lignes.push({ i: "arc", g: 2, t: `Créneau d'arrosage de ${dem(arr[0])} à `
+    + `${fin(arr[1])} : sec, sans vent et hors soleil.` });
+
+  const uvx = Math.max(...s.uv);
+  if (uvx >= 7) lignes.push({ i: "soleil", g: 1, t: `Indice UV ${nombreFr(uvx)} vers `
+    + `${dem(s.uv.indexOf(uvx))}. Ombrer les repiquages du jour.` });
+
+  const rangees = [lignes[0]].concat(lignes.slice(1).sort((a, b) => b.g - a.g).slice(0, 2));
+  return `<div class="jd">` + rangees.map(l =>
+    `<p class="jd-l">${icoM(l.i, "jd-ic")}<span>${esc(l.t)}</span></p>`).join("") + `</div>`;
+}
+
+/* ---------- La feuille ---------- */
+const MODE_TEMPS = "monjardin.temps.mode";
+const MODES_TEMPS = [["ruban", "Ruban"], ["liste", "Liste"], ["moments", "Moments"]];
+
+function modeTemps() {
+  try {
+    const v = localStorage.getItem(MODE_TEMPS);
+    if (MODES_TEMPS.some(m => m[0] === v)) return v;
+  } catch (e) { /* stockage indisponible */ }
+  return "ruban";
+}
+
+const ecritureTemps = (s, m) => m === "liste" ? listeHoraire(s)
+  : m === "moments" ? momentsHoraires(s) : dessinMeteogramme(s);
 
 function vueTemps() {
+  const s = serieHoraire();
+  const g = jardinActif() || {};
+  /* La lecture du moment est reprise en tête : la feuille recouvre le bandeau
+     qui la portait. */
+  const tete = s ? `<div class="tp-tete"><span class="tp-deg">${Math.round(s.t[0])}°</span>`
+    + `<span class="tp-etat">${esc(tempsDe(s.code[0])[1])}<small>`
+    + `ressenti ${Math.round(s.res[0])}°, vent ${Math.round(s.v[0])} km/h `
+    + `${esc(dCardinal(s.dir[0]))}, humidité ${Math.round(s.hum[0])} %</small></span></div>` : "";
+  const m = modeTemps();
+  const seg = `<div class="f-seg" role="group" aria-label="Écriture des heures">`
+    + MODES_TEMPS.map(([c, nom]) => `<button type="button" data-mode="${c}" `
+      + `class="${c === m ? "actif" : ""}" aria-pressed="${c === m}">${nom}</button>`).join("")
+    + `</div>`;
+  const heures = s ? jardinDuJour(s)
+      + `<div class="f-carte-tete"><h3>Heure par heure</h3>${seg}</div>`
+      + `<div id="tempsCorps">${ecritureTemps(s, m)}</div>`
+    : `<p class="f-vide">La prévision heure par heure n'est pas disponible pour ce jardin.</p>`;
+
+  return { titre: "Le temps", sous: g.commune || "",
+    corps: tete + heures + `<h3 class="f-sect">La semaine</h3>` + tableSemaine()
+      + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
+      + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
+    brancher() {
+      if (!s) return;
+      $("feuille-corps").querySelectorAll("[data-mode]").forEach(b =>
+        b.addEventListener("click", () => {
+          const c = b.dataset.mode;
+          try { localStorage.setItem(MODE_TEMPS, c); } catch (e) { /* stockage indisponible */ }
+          $("tempsCorps").innerHTML = ecritureTemps(s, c);
+          $("feuille-corps").querySelectorAll("[data-mode]").forEach(x => {
+            x.classList.toggle("actif", x.dataset.mode === c);
+            x.setAttribute("aria-pressed", String(x.dataset.mode === c));
+          });
+        }));
+    } };
+}
+
+// La prévision à sept jours, en table.
+function tableSemaine() {
   const d = meteo.daily, i = iJour();
   const lignes = [];
   for (let k = i; k <= Math.min(i + 6, d.time.length - 1); k++) {
@@ -2660,8 +3063,13 @@ function vueTemps() {
       + `<span>${tn === null || tn === undefined ? "" : Math.round(tn) + "°"}</span></td>`
       + `<td class="mt-p">${p >= 0.2 ? p.toFixed(1).replace(".", ",") + " mm" : ""}</td></tr>`);
   }
-  /* Les trois mesures du jour ouvrent la feuille : elles tenaient le tiers du
-     bandeau pour un usage rare, elles sont ici à un geste. */
+  return `<table class="mt-table">${lignes.join("")}</table>`;
+}
+
+/* La feuille du jour porte les trois mesures et rien d'autre : le temps qu'il
+   fait a la sienne, ouverte par la pastille du bandeau. */
+function vueJour() {
+  const d = meteo.daily, i = iJour();
   const b = bilanHydrique();
   const dur = d.daylight_duration[i], veille = d.daylight_duration[i - 1];
   const delta = Math.round((dur - veille) / 60);
@@ -2685,10 +3093,7 @@ function vueTemps() {
     + `</div>`;
   return { titre: "Le jour",
     sous: (jardinActif() || {}).commune || "",
-    corps: mesures + `<h3 class="f-sect">La semaine</h3>`
-      + `<table class="mt-table">${lignes.join("")}</table>`
-      + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
-      + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
+    corps: mesures,
     brancher() {
       $("feuille-corps").querySelectorAll("[data-vue]").forEach(x =>
         x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));

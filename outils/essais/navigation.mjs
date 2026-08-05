@@ -87,8 +87,8 @@ export default async function essai(navigateur) {
   const noms = await pg.locator("#feuille-corps .mesure-nom").allInnerTexts();
   j.controle("chacune est nommée",
     noms.join(" | ") === "L'EAU | LA LUMIÈRE | LA SAISON", noms.join(" | "));
-  const section = await pg.locator("#feuille-corps .f-sect").innerText().catch(() => "absente");
-  j.controle("la prévision est annoncée par son titre", section === "LA SEMAINE", section);
+  j.controle("la prévision à sept jours a suivi le temps dans sa propre feuille",
+    await pg.locator("#feuille-corps .mt-table").count() === 0);
   j.controle("la feuille du jour n'a pas de retour, elle vient de l'écran",
     await pg.locator("#retourFeuille").isVisible() === false);
   await pg.locator('#feuille-corps .mesure[data-vue="lumiere"]').click();

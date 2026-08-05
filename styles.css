@@ -1465,6 +1465,80 @@ body.fige{overflow:hidden}
 }
 .bd-invite .bd-ic{width:19px;height:19px}
 
+/* ---------- Feuille du temps ---------- */
+/* La lecture du moment, reprise en tête de la feuille qui recouvre le bandeau
+   où elle se lisait. */
+.tp-tete{display:flex;align-items:flex-end;gap:12px;margin-bottom:2px}
+.tp-deg{font-size:44px;font-weight:600;letter-spacing:-.045em;line-height:.92;color:var(--f-ink)}
+.tp-etat{padding-bottom:4px;font-size:14px;color:var(--f-ink2);min-width:0}
+.tp-etat small{display:block;font-size:11.5px;color:var(--f-ink3);margin-top:2px;line-height:1.4}
+
+/* Ce que les vingt-quatre heures demandent au jardin, en tête : la feuille
+   répond d'abord à la question posée, le détail vient ensuite. */
+.jd{display:flex;flex-direction:column;gap:7px}
+.jd-l{
+  display:flex;gap:9px;align-items:flex-start;font-size:13px;line-height:1.45;
+  color:var(--f-ink2);background:var(--papier);border-radius:12px;padding:10px 12px;
+}
+.jd-ic{width:17px;height:17px;flex:0 0 auto;margin-top:2px;color:var(--f-ink3);stroke-width:1.7}
+
+/* Le météogramme : une voie par grandeur, chacune nommée et chiffrée, toutes
+   sur le même axe des heures. */
+.mg{display:flex;flex-direction:column;gap:9px}
+.mg-t{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:1px;
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--encre-doux);
+}
+.mg-t span{
+  font-family:"IBM Plex Sans",sans-serif;font-size:12px;font-weight:400;
+  letter-spacing:0;text-transform:none;color:var(--f-ink3);text-align:right;
+}
+.mg-s{display:block;width:100%;height:auto;overflow:visible}
+.mg-l{font-size:11.5px;color:var(--f-ink3);line-height:1.4;margin-top:1px}
+.mg-c{font-size:10px;fill:var(--f-ink2);font-weight:600;font-family:"IBM Plex Mono",monospace}
+.mg-mm{font-size:10px;fill:#1F4F8F;font-weight:600;font-family:"IBM Plex Mono",monospace}
+.mg-h{font-size:10px;fill:var(--f-ink3);font-family:"IBM Plex Mono",monospace}
+.mg-ici{fill:var(--terre)}
+
+/* La liste : une ligne par heure, la coupure de minuit annoncée par son jour. */
+.hh-table{width:100%;border-collapse:collapse;font-size:13px}
+.hh th{
+  width:42px;text-align:left;padding:5px 0;font-weight:400;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--f-ink3);
+}
+.hh td{padding:5px 0;vertical-align:middle}
+.hh+.hh{border-top:1px solid var(--filet-clair)}
+.hh-ici{background:rgba(76,140,63,.09)}
+.hh-ici th{color:var(--terre);font-weight:500}
+.hh-jour th{
+  padding:12px 0 5px;text-align:left;font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--encre-doux);width:auto;
+}
+.hh-ic{width:26px}
+.hh-svg{width:17px;height:17px;color:var(--f-ink3);stroke-width:1.6}
+.hh-t{width:40px;font-weight:600;font-variant-numeric:tabular-nums}
+.hh-v{width:76px;color:var(--f-ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hh-v i{display:inline-block;vertical-align:-1px;margin-right:3px}
+.hh-v i svg{width:11px;height:11px;display:block}
+.hh-v small{font-size:10.5px;color:var(--f-ink3);margin-left:3px}
+.hh-fort{color:#8A4A10;font-weight:600}
+.hh-p{width:58px;color:#1F4F8F;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hh-pb{text-align:right;font-size:11.5px;color:var(--f-ink3);font-variant-numeric:tabular-nums}
+
+/* Les moments : les tranches de six heures de la fenêtre, chacune nommée. */
+.mo{display:flex;flex-direction:column;gap:7px}
+.mo-c{background:var(--papier);border-radius:12px;padding:10px 12px}
+.mo-ici{background:rgba(76,140,63,.10)}
+.mo-h{font-size:11.5px;color:var(--f-ink3);margin-bottom:3px}
+.mo-l{display:flex;gap:11px;align-items:flex-start}
+.mo-ic{width:20px;height:20px;flex:0 0 auto;margin-top:1px;color:var(--f-ink2);stroke-width:1.6}
+.mo-x{min-width:0}
+.mo-x>b{display:block;font-size:14.5px;font-weight:650}
+.mo-x span{display:block;font-size:12.5px;color:var(--f-ink2);line-height:1.45}
+
 /* Deuxième profondeur */
 .mt-table{width:100%;border-collapse:collapse;font-size:14px}
 .mt-table th{text-align:left;font-weight:500;color:var(--encre-doux);padding:7px 0}

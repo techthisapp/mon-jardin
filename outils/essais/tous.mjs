@@ -43,6 +43,7 @@ const SUITES = [
   ["eau", () => import("./eau.mjs")],
   ["station", () => import("./station.mjs")],
   ["vigilance", () => import("./vigilance.mjs")],
+  ["temps", () => import("./temps.mjs")],
   ["glossaire", () => import("./glossaire.mjs")],
   ["ecarts", () => import("./ecarts.mjs")],
   ["blocs", () => import("./blocs.mjs")],

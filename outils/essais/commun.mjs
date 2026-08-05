@@ -48,7 +48,8 @@ export async function ouvrirContexte(navigateur, options = {}) {
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
   const ctx = await navigateur.newContext({ viewport: { width: 430, height: 940 },
-                                            deviceScaleFactor: 2, serviceWorkers: "block" });
+                                            deviceScaleFactor: 2, serviceWorkers: "block",
+                                            timezoneId: "Europe/Paris", locale: "fr-FR" });
   await ctx.addInitScript(scriptHorloge);
   await ctx.addInitScript(`window.__FIXTURES__ = ${catalogue};`
     + `window.__RELEVES__ = ${JSON.stringify(releves)};`
