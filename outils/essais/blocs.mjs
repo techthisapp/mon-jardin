@@ -124,10 +124,17 @@ export default async function essai(navigateur) {
   j.controle("hortensia, l'épithète répétée n'est écrite qu'une fois",
     hort["Nom accepté"] === "Hydrangea serrata", hort["Nom accepté"]);
 
-  /* L'entête écrit déjà le nom latin suivi de la famille : la ligne du bloc ne
-     la reprend pas. */
-  j.controle("la famille n'est pas écrite deux fois", !("Famille" in prim),
-    prim["Famille"]);
+  /* L'entête écrit le nom latin suivi de la famille : le bloc ne la reprend
+     pas. Le contrôle porte sur les deux moitiés de la règle, l'absence dans le
+     bloc et la présence dans l'entête, faute de quoi la famille pourrait
+     disparaître de la fiche sans que rien ne le signale. */
+  j.section("la famille est écrite une fois, dans l'entête");
+  j.controle("le bloc ne la reprend pas", !("Famille" in prim), prim["Famille"]);
+  await ouvrirFiche(pg, "Primevère");
+  const entete = net(await pg.locator(".feuille-latin").innerText());
+  j.controle("l'entête porte le nom latin et la famille",
+    /Primula vulgaris/.test(entete) && /Primulaceae/.test(entete), entete);
+  await fermerFiche(pg);
 
   j.section("rusticité, la nuance seule quand le seuil est connu");
   j.controle("lavande, la nuance sans la classe",

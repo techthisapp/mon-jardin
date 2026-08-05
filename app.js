@@ -2224,9 +2224,10 @@ function blocFiche(titre, rows) {
 function blocIdentite(p) {
   const a = p.attr || {};
   return blocFiche("Identité", [
-    /* L'entête écrit déjà le nom latin suivi de la famille. La ligne ne la
-       reprend que pour les quatre fiches sans nom latin, où l'entête se tait. */
-    ["Famille", p.latin ? "" : p.famille],
+    /* Pas de ligne Famille : l'entête écrit le nom latin suivi de la famille,
+       et les 316 fiches actives portent toutes un nom latin. Les quatre sans
+       nom latin sont désactivées et remplacées, l'application ne les charge
+       pas. */
     ["Nom accepté", nomAccepte(p)],
     ["Cycle", a.type], ["Hauteur", a.hauteur],
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
