@@ -213,6 +213,18 @@ const MOTIF_SPAN = {
   "aromatique": [44, 190],
 };
 
+/* Largeur réellement occupée par chaque motif dans son repère de deux cents
+   points. Elle sert à poser les pieds voisins : la boîte est la même pour tous,
+   le dessin qu'elle contient non, et deux arbres se toucheraient là où deux
+   touffes d'aromatique laisseraient un vide. */
+const MOTIF_LARGE = {
+  "arbre": [24, 176],
+  "fruit": [39, 161],
+  "ornement": [50, 158],
+  "legume": [36, 164],
+  "aromatique": [26, 175],
+};
+
 const FLEUR = {
   "blanc": ["#ffffff", "#a8a498"],
   "creme": ["#fdf6e3", "#b5ac8c"],
@@ -629,7 +641,7 @@ async function chargerCatalogue() {
    et à la fiche. Le premier rendu n'attend plus que la première, et les deux
    partent en même temps : le catalogue complet arrive plus tôt qu'en une seule
    requête. */
-const COL_LEGERES = "id,slug,name,category,typology,phases,spacing,depth,companions,"
+const COL_LEGERES = "id,slug,name,category,typology,phases,spacing,spacing_cm,row_cm,depth,companions,"
   + "latin,family,habit,exposure,water_need,nectar,pollen,frost_min_c,height_min_cm,"
   + "height_max_cm,flower_colors,floraison_pic_q,floraison_pic_note,nom_article,propagation,"
   + "nom_accepte";
@@ -657,7 +669,8 @@ async function lireCatalogue() {
   rp.data.forEach(p => phases[p.key] = { label: p.label, color: p.color });
   plantes = rl.data.map(p => ({
     id: p.id, slug: p.slug, nom: p.name, cat: p.category, typo: p.typology,
-    espacement: p.spacing, prof: p.depth, assoc: p.companions,
+    espacement: p.spacing, ecart: p.spacing_cm, rang: p.row_cm,
+    prof: p.depth, assoc: p.companions,
     phases: p.phases || {},
     // remplis par la seconde requête, jamais absents pour le code qui les lit
     conseil: "", attr: {}, guide: {}, guide_periode: {},
@@ -1983,31 +1996,100 @@ function densifie(m, k) {
     `opacity="${Math.min(0.85, (Number("0." + d) * k)).toFixed(3)}"`);
 }
 
+// Une distance de jardin s'écrit en centimètres sous le mètre, en mètres au-delà.
+function distance(cm) {
+  if (!cm) return "";
+  if (cm < 100) return `${cm} cm`;
+  const m = cm / 100;
+  return `${(m % 1 ? m.toFixed(1) : m.toFixed(0)).replace(".", ",")} m`;
+}
+
+/* Hauteur et écartement dans le même dessin. Les deux se mesurent à la même
+   échelle : c'est ce qui rend la comparaison juste, un framboisier de deux
+   mètres planté tous les cinquante centimètres se lit comme une haie, un
+   pommier de six mètres tous les quatre mètres laisse voir le sol entre les
+   pieds. Les voisins sont posés en gris clair derrière, ils disent la densité
+   sans disputer la lecture de la hauteur. */
 function matureSVG(p) {
   if (!p.hmin || !p.hmax) return "";
-  const W = 344, H = 104, G = 102;
+  const W = 344, H = 104, G = 102, ZG = 104, ZD = 294;
   const hautMax = Math.max(p.hmax, 180) * 1.12;
   const y = cm => H - Math.min(H - 6, (cm / hautMax) * (H - 6));
-  const s = [`<svg class="f-svg" viewBox="0 0 ${W} ${H + 16}" role="img" aria-label="Taille à maturité">`];
+  const cle = cleMotif(p), sp = MOTIF_SPAN[cle] || [20, 190];
+  const lar = MOTIF_LARGE[cle] || [20, 180];
+  const milieu = (p.hmin + p.hmax) / 2;
+  const k = (H - y(milieu)) / (sp[1] - sp[0]);
+  const larg = (lar[1] - lar[0]) * k;
+  const d = p.ecart ? p.ecart * (H - 6) / hautMax : 0;
+  // Deux voisins si la bande les porte, un seul sinon, aucun si l'écartement
+  // dépasse la largeur du cadre. Aucune fiche du référentiel n'en est là.
+  const n = !d ? 0 : (larg + 2 * d <= ZD - ZG ? 2 : (larg + d <= ZD - ZG ? 1 : 0));
+  const groupe = larg + n * d;
+  const gauche = ZG + (ZD - ZG - groupe) / 2 + (100 - lar[0]) * k;
+  const cx = n === 2 ? gauche + d : n === 1 ? gauche : 196;
+  const bas = n ? 32 : 16;
+  const cote = distance(p.ecart);
+  const s = [`<svg class="f-svg" viewBox="0 0 ${W} ${H + bas}" role="img" aria-label="Taille à maturité`
+    + (n ? ` et écartement de ${cote}` : "") + `">`];
+  const pied = (x, gris) =>
+    `<g class="${gris ? "tm-voisin" : "tm-pied"}" `
+    + `transform="translate(${(x - 100 * k).toFixed(2)},${(H - sp[1] * k).toFixed(2)}) `
+    + `scale(${k.toFixed(4)})" fill="${gris ? "var(--f-ink3)" : TEINTE.plant}"`
+    + (gris ? ` opacity=".55"` : "") + `>${densifie(MOTIF[cle], gris ? 1.5 : 2.8)}</g>`;
+
   s.push(`<line x1="0" y1="${H}" x2="${W}" y2="${H}" stroke="var(--f-ink3)" opacity=".45"/>`);
+  // Les voisins passent avant la bande de hauteur : elle doit rester lisible.
+  if (n === 2) s.push(pied(cx - d, true));
+  if (n >= 1) s.push(pied(cx + d, true));
+
+  /* Une plage étroite rapproche les deux cotes au point qu'elles se recouvrent :
+     sur une laitue, dix centimètres séparent le bas du haut. Les deux traits
+     restent, la cote devient une seule mention de la plage, calée sur le bord
+     droit puisqu'elle est plus longue. */
   const yh = y(p.hmax), yb = y(p.hmin);
-  s.push(`<rect x="${G}" y="${yh.toFixed(1)}" width="${296 - G}" height="${(yb - yh).toFixed(1)}" fill="${TEINTE.plant}" opacity=".12"/>`);
-  s.push(`<line x1="${G}" y1="${yh.toFixed(1)}" x2="296" y2="${yh.toFixed(1)}" stroke="${TEINTE.plant}" stroke-width="2"/>`);
-  s.push(`<text class="f-cote fort" x="304" y="${(yh + 4).toFixed(1)}">${(p.hmax / 100).toFixed(1).replace(".", ",")} m</text>`);
+  const plage = p.hmin !== p.hmax && yb - yh < 13;
+  const XD = plage ? 286 : 296;
+  s.push(`<rect x="${G}" y="${yh.toFixed(1)}" width="${XD - G}" height="${(yb - yh).toFixed(1)}" fill="${TEINTE.plant}" opacity=".12"/>`);
+  s.push(`<line x1="${G}" y1="${yh.toFixed(1)}" x2="${XD}" y2="${yh.toFixed(1)}" stroke="${TEINTE.plant}" stroke-width="2"/>`);
   if (p.hmin !== p.hmax) {
-    s.push(`<line x1="${G}" y1="${yb.toFixed(1)}" x2="296" y2="${yb.toFixed(1)}" stroke="${TEINTE.plant}" stroke-width="2" stroke-dasharray="4 3"/>`);
-    s.push(`<text class="f-cote" x="304" y="${(yb + 4).toFixed(1)}">${(p.hmin / 100).toFixed(1).replace(".", ",")} m</text>`);
+    s.push(`<line x1="${G}" y1="${yb.toFixed(1)}" x2="${XD}" y2="${yb.toFixed(1)}" stroke="${TEINTE.plant}" stroke-width="2" stroke-dasharray="4 3"/>`);
+  }
+  if (plage) {
+    // L'unité n'est écrite qu'une fois quand les deux bornes la partagent.
+    const bas1 = p.hmin < 100 === p.hmax < 100
+      ? distance(p.hmin).replace(/ (cm|m)$/, "") : distance(p.hmin);
+    s.push(`<text class="f-cote fort tm-plage" x="${W - 2}" y="${((yh + yb) / 2 + 4).toFixed(1)}" `
+      + `text-anchor="end">${bas1} à ${distance(p.hmax)}</text>`);
+  } else {
+    s.push(`<text class="f-cote fort" x="304" y="${(yh + 4).toFixed(1)}">${distance(p.hmax)}</text>`);
+    if (p.hmin !== p.hmax) {
+      s.push(`<text class="f-cote" x="304" y="${(yb + 4).toFixed(1)}">${distance(p.hmin)}</text>`);
+    }
   }
   // silhouette humaine à l'échelle, 1,70 m
   const kh = (H - y(170)) / 100;
-  s.push(`<g transform="translate(46,${(H - (H - y(170))).toFixed(2)}) scale(${kh.toFixed(4)})" fill="var(--f-ink3)"><path d="${CORPS_HUMAIN}"/></g>`);
+  s.push(`<g class="tm-humain" transform="translate(46,${(H - (H - y(170))).toFixed(2)}) scale(${kh.toFixed(4)})" fill="var(--f-ink3)"><path d="${CORPS_HUMAIN}"/></g>`);
   s.push(`<text class="f-cote" x="46" y="${(y(170) - 6).toFixed(1)}" text-anchor="middle">1,70 m</text>`);
   // motif de la plante, sommet calé sur le milieu de la plage
-  const cle = cleMotif(p), sp = MOTIF_SPAN[cle] || [20, 190];
-  const milieu = (p.hmin + p.hmax) / 2;
-  const k = (H - y(milieu)) / (sp[1] - sp[0]);
-  s.push(`<g transform="translate(${(196 - 100 * k).toFixed(2)},${(H - sp[1] * k).toFixed(2)}) scale(${k.toFixed(4)})" `
-    + `fill="${TEINTE.plant}">${densifie(MOTIF[cle], 2.8)}</g>`);
+  s.push(pied(cx, false));
+
+  if (n) {
+    /* La cote se prend d'un pied à l'autre, sous le sol pour ne rien recouvrir.
+       Sous douze points elle n'est plus qu'un trait entre deux crans collés,
+       que l'oeil lit comme un défaut : la mention chiffrée la remplace, seule
+       et centrée sous les pieds. */
+    const yc = H + 12;
+    if (d >= 12) {
+      s.push(`<g class="tm-cote" stroke="var(--f-ink3)" opacity=".6">`
+        + `<line x1="${cx.toFixed(1)}" y1="${yc}" x2="${(cx + d).toFixed(1)}" y2="${yc}"/>`
+        + `<line x1="${cx.toFixed(1)}" y1="${yc - 3.5}" x2="${cx.toFixed(1)}" y2="${yc + 3.5}"/>`
+        + `<line x1="${(cx + d).toFixed(1)}" y1="${yc - 3.5}" x2="${(cx + d).toFixed(1)}" y2="${yc + 3.5}"/></g>`);
+    }
+    const txt = `${cote} entre deux pieds`
+      + (p.rang && p.rang !== p.ecart ? `, rangs à ${distance(p.rang)}` : "");
+    const xt = Math.min(Math.max(cx + d / 2, 100), W - 100);
+    s.push(`<text class="f-cote tm-ecart" x="${xt.toFixed(1)}" y="${yc + 15}" text-anchor="middle">${esc(txt)}</text>`);
+  }
   return s.join("") + "</svg>";
 }
 

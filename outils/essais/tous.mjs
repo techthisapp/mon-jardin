@@ -48,6 +48,7 @@ const SUITES = [
   ["glossaire", () => import("./glossaire.mjs")],
   ["ecarts", () => import("./ecarts.mjs")],
   ["blocs", () => import("./blocs.mjs")],
+  ["taille", () => import("./taille.mjs")],
   ["calendrier", () => import("./calendrier.mjs")],
   ["planches", () => import("./planches.mjs")],
   ["motif", () => import("./motif.mjs")],
