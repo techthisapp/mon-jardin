@@ -109,6 +109,21 @@ export default async function essai(navigateur) {
   j.controle("le formulaire de connexion se tait quand on est connecté",
     await pg.locator("#feuille-corps #zone-connexion[hidden]").count() === 1);
 
+  /* Le numéro de la copie installée est celui de l'agent de service : c'est lui
+     qui identifie ce qui tourne réellement, et il change dès qu'un actif
+     change. */
+  j.section("le numéro de version est au bas de la feuille");
+  const v = net(await pg.locator("#feuille-corps #versionAppli").innerText());
+  j.controle("il est écrit", /^Version [a-z0-9]{10}$/.test(v), v);
+  j.controle("il reprend celui de la balise du document",
+    v === "Version " + await pg.evaluate(() =>
+      document.querySelector('meta[name="version-appli"]').content), v);
+  j.controle("il est écrit petit et discret",
+    await pg.locator("#feuille-corps #versionAppli").evaluate(e => {
+      const s = getComputedStyle(e);
+      return parseFloat(s.fontSize) <= 12 && s.textAlign === "center";
+    }));
+
   /* Une fiche de plante écrase le corps de la feuille : si le bloc y était
      resté, il serait perdu et le réglage suivant ouvrirait une feuille vide. */
   j.section("ouvrir une fiche ne détruit pas les panneaux");
@@ -141,6 +156,11 @@ export default async function essai(navigateur) {
     await b.pg.locator("#feuille-corps #form-connexion").count() === 1);
   j.controle("le panneau du compte se tait, il n'a rien à dire",
     await b.pg.locator("#feuille-corps #panneau-compte[hidden]").count() === 1);
+  /* Le numéro de version est hors du panneau : c'est quand rien ne marche qu'on
+     le cherche, et il ne faut pas être connecté pour le lire. */
+  j.controle("le numéro de version reste lisible sans compte",
+    /^Version [a-z0-9]{10}$/.test(net(await b.pg.locator("#feuille-corps #versionAppli").innerText())),
+    net(await b.pg.locator("#feuille-corps #versionAppli").innerText()));
   await b.pg.locator("#fermerFeuille").click();
   await b.pg.waitForTimeout(400);
   await b.pg.locator("#btnJardin").click();

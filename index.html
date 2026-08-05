@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=bf9cb7f5a6">
+<link rel="stylesheet" href="./styles.css?v=a0aa70c832">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -14,6 +14,9 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <meta name="theme-color" content="#16241E">
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
+<!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
+     outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
+<meta name="version-appli" content="621ed0769a">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -206,6 +209,7 @@
         <p class="aide-reglage" id="codeReprise" hidden></p>
         <p class="aide-reglage" id="tete-total"></p>
       </section>
+      <p class="version-appli" id="versionAppli"></p>
   </div>
   <div id="bloc-jardin" hidden>
 
@@ -246,7 +250,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=3b20c2d2a6"></script>
+<script type="module" src="./app.js?v=7486c59aba"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

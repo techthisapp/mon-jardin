@@ -4044,6 +4044,15 @@ db.auth.onAuthStateChange((_e, s) => {
 });
 
 
+/* Le numéro de la copie installée, au bas de la feuille du compte. Il est hors
+   du panneau du compte : c'est quand rien ne marche qu'on le cherche, et il ne
+   faut pas être connecté pour le lire. */
+(() => {
+  const b = document.querySelector('meta[name="version-appli"]');
+  const z = $("versionAppli");
+  if (b && z) z.textContent = "Version " + b.content;
+})();
+
 /* ================== Écran 4 : jardin ================== */
 
 function majJardinUI() {

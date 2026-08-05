@@ -261,6 +261,26 @@ for (const actif of ["app.js", "styles.css", "vendor/supabase.js"]) {
   if (CORRIGER) html = html.replace(motif, `$1${attendu}`);
 }
 
+/* La copie installée porte son numéro dans une balise meta, pour que la feuille
+   du compte puisse l'écrire. C'est le numéro de l'agent de service, qui change
+   dès qu'un actif change. Il passe par index.html, seul fichier écarté du calcul
+   de ce numéro : l'écrire dans app.js aurait modifié l'empreinte qui sert à le
+   calculer, et le contrôle n'aurait jamais convergé. */
+{
+  const v = (lire("sw.js").match(/const VERSION = "([A-Za-z0-9.]+)"/) || [])[1];
+  const motif = /(<meta name="version-appli" content=")([A-Za-z0-9.]*)(")/;
+  const t = html.match(motif);
+  if (!t) faute("versions", 'index.html : aucune balise meta version-appli');
+  else if (v && t[2] !== v) {
+    if (CORRIGER) {
+      html = html.replace(motif, `$1${v}$3`);
+      corrections.push(`numéro de version affiché : ${t[2] || "vide"} devient ${v}`);
+    } else {
+      faute("versions", `index.html : le numéro affiché est ${t[2]}, l'agent de service porte ${v}`);
+    }
+  }
+}
+
 if (CORRIGER && html !== indexHtml) writeFileSync(join(RACINE, "index.html"), html);
 
 /* ------------------------------------------------------------------ */
