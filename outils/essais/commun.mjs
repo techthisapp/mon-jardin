@@ -129,3 +129,8 @@ export async function ongletAnnee(pg) {
   await pg.locator('.f-onglets button[data-pan="annee"]').dispatchEvent("click");
   await pg.waitForTimeout(350);
 }
+
+export async function ongletIdentite(pg) {
+  await pg.locator('.f-onglets button[data-pan="identite"]').dispatchEvent("click");
+  await pg.waitForTimeout(350);
+}

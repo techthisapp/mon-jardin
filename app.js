@@ -2160,9 +2160,14 @@ function ficheAnnee(p) {
       + `<p class="f-txt">Le point marque le pic, ${demiTexte(p.pic)}.`
       + (p.picNote ? " " + esc(p.picNote) : "") + `</p></div>`);
   }
-  const mat = matureSVG(p);
-  if (mat) h.push(`<div class="f-carte"><div class="f-carte-tete"><h3>Taille à maturité</h3></div>${mat}</div>`);
   return h.join("");
+}
+
+/* La taille à maturité dit ce que la plante est, non ce qu'elle fait au fil de
+   l'année : elle a suivi l'identité. */
+function ficheTaille(p) {
+  const mat = matureSVG(p);
+  return mat ? `<div class="f-carte"><div class="f-carte-tete"><h3>Taille à maturité</h3></div>${mat}</div>` : "";
 }
 
 /* La jauge de gel donne déjà le seuil en degrés. La ligne de rusticité ne
@@ -2181,34 +2186,47 @@ function nuanceRusticite(p) {
   return (p.gel === null || p.gel === undefined) ? t : "";
 }
 
-function ficheBlocs(p) {
-  const a = p.attr || {};
-  /* Un troisième élément porte le texte du conseil. Il tient sous la valeur,
-     à gauche comme elle : un paragraphe aligné à droite se lit mal. */
-  const kv = rows => rows.filter(r => r[1] || r[2]).map(r =>
+/* Un bloc de couples clé et valeur. Un troisième élément porte le texte du
+   conseil : il tient sous la valeur, à gauche comme elle, un paragraphe aligné
+   à droite se lisant mal. Un bloc dont toutes les lignes sont vides ne paraît
+   pas du tout. */
+function blocFiche(titre, rows) {
+  const c = rows.filter(r => r[1] || r[2]).map(r =>
     `<dt>${esc(r[0])}</dt><dd${r[2] ? ' class="avec-note"' : ""}>`
     + (r[1] ? marquerTermes(r[1]) : "")
     + (r[2] ? `<small class="kv-note">${marquerTermes(r[2])}</small>` : "")
     + `</dd>`).join("");
-  const bloc = (titre, rows) => {
-    const c = kv(rows);
-    return c ? `<section class="f-bloc"><h3>${esc(titre)}</h3><dl class="f-kv">${c}</dl></section>` : "";
-  };
-  return `<section class="f-photos" id="fPhotos" data-plante="${esc(p.id)}" hidden></section>`
-    + bloc("Identité", [
+  return c ? `<section class="f-bloc"><h3>${esc(titre)}</h3><dl class="f-kv">${c}</dl></section>` : "";
+}
+
+function blocIdentite(p) {
+  const a = p.attr || {};
+  return blocFiche("Identité", [
     ["Famille", p.famille], ["Cycle", a.type], ["Hauteur", a.hauteur],
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
     ["Rusticité", nuanceRusticite(p)],
     // La planche du genre montre une plante voisine, pas celle de la fiche : la
     // provenance le dit plutôt que de laisser croire au portrait de l'espèce.
     ["Planche", creditPlanche(p)],
-  ]) + bloc("Culture", [
+  ]);
+}
+
+function blocCulture(p) {
+  const a = p.attr || {};
+  return blocFiche("Culture", [
     ["Sol", a.sol], ["Eau", a.arrosage], ["Fertilité", a.fertilisation],
     ["Profondeur", p.prof], ["Pollinisation", a.pollinisation],
     // Cent douze plantes portent un conseil de multiplication sans période de
     // multiplication : sans cette ligne il ne serait affiché nulle part.
     ["Multiplication", a.multiplication, p.guide.multiplication || ""],
-  ]) + bloc("Au jardin", [
+  ]);
+}
+
+function blocJardin(p) {
+  const a = p.attr || {};
+  // La couleur de fleur n'a pas de ligne ici : la légende du ruban la nomme
+  // déjà, avec sa fenêtre de floraison et ses pastilles.
+  return blocFiche("Au jardin", [
     ["Nectar", a.mellifere], ["Parfum", a.parfum],
     ["Feuillage", a.feuillage],
     /* Une seule ligne d'usage. La note sourcée est la formulation lisible,
@@ -2221,8 +2239,6 @@ function ficheBlocs(p) {
        les associations de tradition ont été retirées. */
     ["Voisinage", p.assoc],
   ]);
-  // La couleur de fleur n'a pas de ligne ici : la légende du ruban la nomme
-  // déjà, avec sa fenêtre de floraison et ses pastilles.
 }
 
 function ficheHTML(p) {
@@ -2237,11 +2253,19 @@ function ficheHTML(p) {
       ${p.conseil ? `<p class="f-intro">${marquerTermes(p.conseil)}</p>` : ""}
     </div>
     <div class="f-onglets" role="tablist">
-      <button type="button" role="tab" class="actif" data-pan="moment">En ce moment</button>
-      <button type="button" role="tab" data-pan="annee">Toute l'année</button>
+      <button type="button" role="tab" class="actif" aria-selected="true"
+              data-pan="moment">En ce moment</button>
+      <button type="button" role="tab" aria-selected="false"
+              data-pan="annee">Toute l'année</button>
+      <button type="button" role="tab" aria-selected="false"
+              data-pan="identite">Identité</button>
     </div>
-    <div class="f-pan f-pan-moment">${ficheMoment(p)}</div>
-    <div class="f-pan f-pan-annee" hidden>${ficheAnnee(p)}${ficheBlocs(p)}</div>
+    <div class="f-pan f-pan-moment" role="tabpanel" data-pan="moment">${ficheMoment(p)}</div>
+    <div class="f-pan f-pan-annee" role="tabpanel" data-pan="annee" hidden>${
+      ficheAnnee(p)}${blocCulture(p)}${blocJardin(p)}</div>
+    <div class="f-pan f-pan-identite" role="tabpanel" data-pan="identite" hidden>${
+      `<section class="f-photos" id="fPhotos" data-plante="${esc(p.id)}" hidden></section>`
+      }${ficheTaille(p)}${blocIdentite(p)}</div>
   </div>`;
 }
 
@@ -4139,9 +4163,12 @@ function brancherFiche(p) {
   const onglets = [...c.querySelectorAll(".f-onglets button")];
   onglets.forEach(b => b.addEventListener("click", () => {
     fermerGlose();
-    onglets.forEach(x => x.classList.toggle("actif", x === b));
-    c.querySelector(".f-pan-moment").hidden = b.dataset.pan !== "moment";
-    c.querySelector(".f-pan-annee").hidden = b.dataset.pan !== "annee";
+    onglets.forEach(x => {
+      x.classList.toggle("actif", x === b);
+      x.setAttribute("aria-selected", String(x === b));
+    });
+    c.querySelectorAll(".f-pan").forEach(z => { z.hidden = z.dataset.pan !== b.dataset.pan; });
+    c.scrollTop = 0;
   }));
   const formes = [...c.querySelectorAll(".f-seg button")];
   formes.forEach(b => b.addEventListener("click", () => {

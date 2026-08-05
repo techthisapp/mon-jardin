@@ -3,14 +3,16 @@
    associations débarrassées de l'écho de l'usage, et ressource pour les
    butineurs limitée aux plantes que la liste Val'hor cote. */
 import { ouvrirContexte, journal, catalogueAvecProduction, PRODUCTION,
-         ouvrirListeDesPlantes, ouvrirFiche, fermerFiche, ongletAnnee, net } from "./commun.mjs";
+         ouvrirListeDesPlantes, ouvrirFiche, fermerFiche, ongletAnnee, ongletIdentite, net } from "./commun.mjs";
 
-/* Toutes les paires étiquette et valeur des trois blocs de l'onglet annuel. */
+/* Toutes les paires étiquette et valeur des blocs de la fiche. Culture et
+   « Au jardin » sont dans l'onglet de l'année, Identité dans le sien. */
 async function lireBlocs(pg, nom) {
   await ouvrirFiche(pg, nom);
   await ongletAnnee(pg);
   const paires = {};
-  for (const titre of ["Identité", "Culture", "Au jardin"]) {
+  for (const titre of ["Culture", "Au jardin", "Identité"]) {
+    if (titre === "Identité") await ongletIdentite(pg);
     const bloc = pg.locator(".f-bloc", { hasText: titre }).first();
     if (!await bloc.count()) continue;
     const dts = await bloc.locator("dt").allInnerTexts();

@@ -4,7 +4,7 @@
    relecture cède la place à la suivante, et l'attribution est portée sous la
    bande comme au plein écran. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
-         fermerFiche, ongletAnnee, net } from "./commun.mjs";
+         fermerFiche, ongletIdentite, net } from "./commun.mjs";
 
 const ORDRE = ["FLEUR", "FEUILLE", "FRUIT", "PORT", "ÉCORCE"];
 
@@ -15,20 +15,28 @@ export default async function essai(navigateur) {
 
   j.section("la bande suit un ordre d'organes fixe");
   await ouvrirFiche(pg, "Pommier");
-  await ongletAnnee(pg);
+  await ongletIdentite(pg);
   await pg.waitForTimeout(500);
   const org = await pg.locator(".ph-i span").allInnerTexts();
   j.controle("les cinq organes sont là, dans l'ordre",
     org.join(" ") === ORDRE.join(" "), org.join(" "));
-  /* La section vit avec l'identité : c'est de la même nature, ce que la plante
-     est, et non ce qu'il y a à en faire. */
+  /* La section vit dans l'onglet de l'identité, en tête : c'est de la même
+     nature, ce que la plante est, et non ce qu'il y a à en faire. */
   const place = await pg.evaluate(() => {
+    const pan = document.querySelector('.f-pan[data-pan="identite"]');
     const s = document.getElementById("fPhotos");
-    const id = [...document.querySelectorAll(".f-bloc h3")]
-      .find(h => h.textContent === "Identité");
-    return s && id ? (s.compareDocumentPosition(id.closest(".f-bloc")) & 4) === 4 : null;
+    if (!pan || !s || s.closest(".f-pan") !== pan) return null;
+    return pan.firstElementChild === s;
   });
-  j.controle("elle est posée juste avant le bloc Identité", place === true);
+  j.controle("elle ouvre l'onglet de l'identité", place === true);
+  j.controle("l'onglet porte aussi le bloc Identité",
+    await pg.locator('.f-pan[data-pan="identite"] .f-bloc').count() === 1);
+  j.controle("l'onglet de l'année ne porte plus les photographies ni l'identité",
+    await pg.evaluate(() => {
+      const a = document.querySelector('.f-pan[data-pan="annee"]');
+      return !a.querySelector(".f-photos")
+        && [...a.querySelectorAll(".f-bloc h3")].every(h => h.textContent !== "Identité");
+    }));
   j.controle("les tuiles sont carrées",
     await pg.locator(".ph-i img").first().evaluate(e => {
       const r = e.getBoundingClientRect();
@@ -44,7 +52,7 @@ export default async function essai(navigateur) {
   j.section("la bande raccourcit quand un organe manque");
   await fermerFiche(pg);
   await ouvrirFiche(pg, "Basilic");
-  await ongletAnnee(pg);
+  await ongletIdentite(pg);
   await pg.waitForTimeout(500);
   const org2 = await pg.locator(".ph-i span").allInnerTexts();
   j.controle("trois tuiles, sans case vide",
@@ -57,7 +65,7 @@ export default async function essai(navigateur) {
   j.section("une image écartée cède la place à la suivante");
   await fermerFiche(pg);
   await ouvrirFiche(pg, "Lavande");
-  await ongletAnnee(pg);
+  await ongletIdentite(pg);
   await pg.waitForTimeout(500);
   const org3 = await pg.locator(".ph-i span").allInnerTexts();
   j.controle("le fruit est toujours montré",
@@ -107,7 +115,7 @@ export default async function essai(navigateur) {
   j.section("une fiche sans photo n'ouvre pas de section vide");
   await fermerFiche(pg);
   await ouvrirFiche(pg, "Tomate");
-  await ongletAnnee(pg);
+  await ongletIdentite(pg);
   await pg.waitForTimeout(500);
   j.controle("la section reste absente",
     await pg.locator("#fPhotos:not([hidden])").count() === 0);

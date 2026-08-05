@@ -3,7 +3,7 @@
    posé qu'à l'approche de la rangée, la planche remplace le motif décoratif
    dans l'entête, et la provenance est énoncée, planche du genre comprise. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
-         fermerFiche, ongletAnnee, net } from "./commun.mjs";
+         fermerFiche, ongletIdentite, net } from "./commun.mjs";
 
 const rangee = (pg, nom) => pg.locator(".item-bloc", { hasText: nom }).first();
 
@@ -50,7 +50,7 @@ export default async function essai(navigateur) {
     return i ? i.naturalWidth : 0;
   });
   j.controle("le fichier est bien servi", chargee === 320, chargee);
-  await ongletAnnee(pg);
+  await ongletIdentite(pg);
   const ident = net(await pg.locator(".f-bloc", { hasText: "Identité" }).first().innerText());
   j.controle("la provenance est énoncée",
     /Planche\s+Vilmorin-Andrieux/.test(ident), (ident.match(/Planche[^\n]{0,60}/) || [""])[0]);
@@ -60,7 +60,7 @@ export default async function essai(navigateur) {
 
   j.section("la planche du genre se signale");
   await ouvrirFiche(pg, "Rosier");
-  await ongletAnnee(pg);
+  await ongletIdentite(pg);
   const rosier = net(await pg.locator(".f-bloc", { hasText: "Identité" }).first().innerText());
   j.controle("le rosier annonce une planche du genre",
     /Planche\s+Masclef.*planche du genre/.test(rosier),
