@@ -49,6 +49,7 @@ const SUITES = [
   ["ecarts", () => import("./ecarts.mjs")],
   ["blocs", () => import("./blocs.mjs")],
   ["taille", () => import("./taille.mjs")],
+  ["reglages", () => import("./reglages.mjs")],
   ["calendrier", () => import("./calendrier.mjs")],
   ["planches", () => import("./planches.mjs")],
   ["motif", () => import("./motif.mjs")],

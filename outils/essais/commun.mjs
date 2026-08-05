@@ -45,6 +45,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
+    session = true,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -59,6 +60,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + `window.__GLOSSAIRE__ = ${glossaire};`
     + `window.__PHOTOS__ = ${photos};`
     + (jardin ? `window.__JARDIN__ = ${JSON.stringify(jardin)};` : "")
+    + (session ? "" : "window.__SANS_SESSION__ = 1;")
     + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
   await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: "text/css", body: "" }));
@@ -107,11 +109,10 @@ export function journal(titre) {
 export const net = s => String(s || "").replace(/\s+/g, " ").trim();
 export const nombre = s => Number(String(s).replace(",", ".").replace(/[^0-9.-]/g, ""));
 
-/* Les rangées de plantes vivent dans un écran de réglage que l'essai n'a pas à
-   traverser : la barre est dévoilée puis l'onglet activé directement. */
+/* Les rangées de plantes sont une destination de plein droit : le bouton rond
+   au milieu de la barre du bas y mène. */
 export async function ouvrirListeDesPlantes(pg) {
-  await pg.evaluate(() => { document.getElementById("sousOnglets").hidden = false; });
-  await pg.locator('.sous-onglet[data-ecran="selection"]').dispatchEvent("click");
+  await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
   await pg.waitForTimeout(900);
 }
 

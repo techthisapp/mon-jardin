@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=fbda14b02f">
+<link rel="stylesheet" href="./styles.css?v=bf9cb7f5a6">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -26,27 +26,24 @@
   <div class="tete-corps">
     <div class="tete-haut">
       <div class="tete-textes">
-        <h1 id="titreJardin">Mon jardin</h1>
+        <h1><button class="titre-jardin" id="btnJardin" type="button"
+                    aria-label="Le jardin : climat, commune et espaces"><span
+                    id="titreJardin">Mon jardin</span></button></h1>
         <div class="tete-ligne">
           <button class="date-jour" id="dateJour" type="button"
                   aria-label="Le jour : météo, eau, lumière et saison"></button>
           <button class="puce-climat" id="puceClimat" type="button" hidden></button>
         </div>
       </div>
-      <button class="bouton-compte" id="btnConfig" type="button" aria-expanded="false" aria-label="Réglages" title="Réglages">
+      <button class="bouton-compte" id="btnConfig" type="button" aria-label="Compte" title="Compte">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/>
-          <circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/>
+          <circle cx="12" cy="8.4" r="3.5"/>
+          <path d="M5.2 19.4c1.2-3.3 3.8-5 6.8-5s5.6 1.7 6.8 5"/>
         </svg>
       </button>
     </div>
     <div class="tete-meteo" id="teteMeteo" hidden></div>
   </div>
-  <nav class="sous-onglets" id="sousOnglets" role="tablist" hidden>
-    <button class="sous-onglet" role="tab" aria-selected="true"  data-ecran="jardin">Jardin et espaces</button>
-    <button class="sous-onglet" role="tab" aria-selected="false" data-ecran="selection">Mes plantes</button>
-    <button class="lien-clair" id="fermerConfig" type="button">Retour</button>
-  </nav>
 </header>
 
 <main>
@@ -141,7 +138,7 @@
   </section>
 
   <section id="ec-selection" hidden>
-    <p class="vide" id="videSelection" hidden>Connectez-vous depuis Réglages puis Jardin et espaces pour enregistrer votre sélection.</p>
+    <p class="vide" id="videSelection" hidden>Connectez-vous pour enregistrer votre sélection. Le bouton du compte est en haut à droite de l'écran.</p>
 
     <div class="filtres">
       <div class="ligne-rech">
@@ -175,7 +172,12 @@
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
   </section>
-  <section id="ec-jardin" hidden>
+</main>
+
+<!-- Les panneaux de réglage attendent ici et sont déplacés dans la feuille
+     à son ouverture : ils gardent ainsi leurs écouteurs et leur état. -->
+<div id="reserve-reglages" hidden>
+  <div id="bloc-compte">
     <div id="zone-connexion" class="carte connexion" hidden>
       <h2>Accéder à votre jardin</h2>
       <p>Saisissez votre adresse électronique. Si vous avez déjà un jardin, vous le retrouvez tel que vous l'avez laissé. Sinon, il est créé à la première connexion. La même adresse ouvre toujours le même jardin, sans mot de passe.</p>
@@ -191,7 +193,21 @@
       <p class="note" id="aide-code" hidden>Ce champ accepte trois formes : un code de reprise, un lien de connexion collé, ou un code à six chiffres.</p>
       <p class="note" id="note-connexion" hidden></p>
     </div>
-    <div id="bloc-jardin" hidden>
+      <section class="panneau" id="panneau-compte" hidden>
+        <div class="ligne-reglage">
+          <span class="etiq-reglage">Connecté</span>
+          <span class="valeur-reglage" id="utilisateur"></span>
+          <button class="lien" id="deconnexion" hidden type="button">Se déconnecter</button>
+        </div>
+        <div class="ligne-reglage">
+          <span class="etiq-reglage">Autre appareil</span>
+          <button class="lien" id="genererReprise" type="button">Générer un code de reprise</button>
+        </div>
+        <p class="aide-reglage" id="codeReprise" hidden></p>
+        <p class="aide-reglage" id="tete-total"></p>
+      </section>
+  </div>
+  <div id="bloc-jardin" hidden>
 
       <section class="panneau">
         <h2 class="titre-panneau">Jardin</h2>
@@ -226,31 +242,26 @@
         <div id="listeEspaces"></div>
       </section>
 
-      <section class="panneau">
-        <h2 class="titre-panneau">Compte</h2>
-        <div class="ligne-reglage">
-          <span class="etiq-reglage">Connecté</span>
-          <span class="valeur-reglage" id="utilisateur"></span>
-          <button class="lien" id="deconnexion" hidden type="button">Se déconnecter</button>
-        </div>
-        <div class="ligne-reglage">
-          <span class="etiq-reglage">Autre appareil</span>
-          <button class="lien" id="genererReprise" type="button">Générer un code de reprise</button>
-        </div>
-        <p class="aide-reglage" id="codeReprise" hidden></p>
-        <p class="aide-reglage" id="tete-total"></p>
-      </section>
 
-    </div>
-  </section>
+  </div>
+</div>
 
-</main>
-
-<script type="module" src="./app.js?v=093b0e41a4"></script>
+<script type="module" src="./app.js?v=3b20c2d2a6"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
     <span>En ce moment</span>
+  </button>
+  <button class="onglet onglet-rond" role="tab" aria-selected="false" data-ecran="selection"
+          aria-label="Mes plantes" title="Mes plantes">
+    <!-- La marque de l'application, une tige à deux feuilles, reprise du fichier
+         d'icône : le bouton dit les plantes et l'application d'un même dessin. -->
+    <svg viewBox="0 0 24 24" aria-hidden="true"><g
+         transform="translate(12 20) scale(0.0298) translate(-512 -824)">
+      <path d="M512 824V470" fill="none" stroke="currentColor" stroke-width="56" stroke-linecap="round"/>
+      <path d="M512 620C474 487 406 440 268 452c38 133 106 180 244 168z" fill="#BFD3A0"/>
+      <path d="M512 512c146 15 216-34 252-176-146-15-216 34-252 176z" fill="currentColor"/>
+    </g></svg>
   </button>
   <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/></svg>

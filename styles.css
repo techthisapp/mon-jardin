@@ -255,6 +255,27 @@ body::after{
 .onglet[aria-selected="true"]{background:var(--encre);color:#EFEFE8}
 .onglet:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
 
+/* Le bouton des plantes est rond et remonte au-dessus de la barre. Il porte la
+   marque de l'application, une tige à deux feuilles. Sa couronne claire est du
+   ton du papier : elle le détache de la barre translucide comme du contenu qui
+   défile dessous. */
+.onglet-rond{
+  flex:0 0 auto;width:56px;height:56px;padding:0;gap:0;
+  align-self:center;margin:-18px 3px 0;border-radius:50%;
+  background:var(--encre);color:#F2EFE7;
+  box-shadow:0 8px 20px rgba(22,36,30,.28), 0 0 0 4px rgba(248,247,243,.80);
+  transition:box-shadow .18s ease, transform .18s ease;
+}
+.onglet-rond svg{width:30px;height:30px}
+.onglet-rond[aria-selected="true"]{
+  background:var(--encre);
+  box-shadow:0 8px 20px rgba(22,36,30,.34), 0 0 0 4px rgba(248,247,243,.80),
+             0 0 0 6.5px var(--terre);
+}
+@media (hover:hover){.onglet-rond:hover{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.onglet-rond{transition:none}
+  .onglet-rond:hover{transform:none}}
+
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .barre-basse{background:rgba(248,247,243,.97)}
 }
@@ -262,7 +283,7 @@ body::after{
 /* Les marges de la page sont nommées : la prairie s'en sert pour déborder
    jusqu'aux bords de l'écran. */
 main{
-  --marge-h:16px; --marge-g:16px; --marge-d:16px; --marge-b:96px;
+  --marge-h:16px; --marge-g:16px; --marge-d:16px; --marge-b:112px;
   max-width:1060px;margin:0 auto;
   padding:var(--marge-h) var(--marge-d) var(--marge-b) var(--marge-g);
 }
@@ -600,30 +621,15 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 main{
   --marge-g:calc(16px + env(safe-area-inset-left));
   --marge-d:calc(16px + env(safe-area-inset-right));
-  --marge-b:calc(96px + env(safe-area-inset-bottom));
+  --marge-b:calc(112px + env(safe-area-inset-bottom));
 }
-.tete-corps,.onglets,.sous-onglets{
+.tete-corps,.onglets{
   padding-left:calc(16px + env(safe-area-inset-left));
   padding-right:calc(16px + env(safe-area-inset-right));
 }
 
 /* ---------- Correctif : l'attribut hidden prime sur les mises en page ---------- */
 [hidden]{display:none !important}
-
-/* ---------- Navigation de configuration ---------- */
-.compte-util #btnConfig[aria-expanded="true"]{text-decoration:underline}
-.sous-onglets{
-  display:flex;align-items:center;gap:4px;
-  max-width:1060px;margin:0 auto;padding:0 16px;
-  background:var(--encre);
-}
-.sous-onglet{
-  font:600 13px/1 "IBM Plex Sans",sans-serif;letter-spacing:.01em;
-  padding:10px 12px;border:0;background:none;color:#A8B2A6;cursor:pointer;
-  border-bottom:2px solid transparent;
-}
-.sous-onglet[aria-selected="true"]{color:#EFEFE8;border-bottom-color:var(--terre)}
-.sous-onglets #fermerConfig{margin-left:auto;font-size:12.5px}
 
 /* ---------- Barre de filtres compacte ---------- */
 .barre-filtres{
@@ -670,8 +676,24 @@ main{
   width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;
   stroke-linecap:round;
 }
-.bouton-compte[aria-expanded="true"]{background:#EFEFE8;color:var(--encre);border-color:#EFEFE8}
 .bouton-compte:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
+@media (hover:hover){.bouton-compte:hover{background:rgba(239,239,232,.16)}}
+
+/* Le nom du jardin est une commande : il ouvre le jardin, son climat, sa
+   commune et ses espaces. Le chevron est celui de la date, en plus grand. */
+.titre-jardin{
+  display:inline-flex;align-items:center;gap:9px;max-width:100%;
+  border:0;background:none;padding:0;margin:0;cursor:pointer;
+  font:inherit;color:inherit;letter-spacing:inherit;text-align:left;
+}
+.titre-jardin span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.titre-jardin::after{
+  content:"";width:8px;height:8px;flex:0 0 auto;
+  border-right:2px solid currentColor;border-bottom:2px solid currentColor;
+  transform:rotate(-45deg) translate(-1px,-1px);opacity:.42;
+}
+@media (hover:hover){.titre-jardin:hover::after{opacity:.85}}
+.titre-jardin:focus-visible{outline:2px solid #EFEFE8;outline-offset:5px;border-radius:6px}
 
 .puce-climat{
   display:inline-block;margin:0;
@@ -682,9 +704,6 @@ main{
 .puce-climat:hover{opacity:1}
 .puce-climat.a-renseigner{color:#E4B9A8;text-decoration:underline;text-underline-offset:3px}
 .puce-climat:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
-
-/* La sous-navigation se distingue de la navigation principale par son fond */
-.sous-onglets{position:relative;z-index:1;background:rgba(239,239,232,.05);box-shadow:inset 0 1px 0 rgba(239,239,232,.08)}
 
 /* ---------- Panneaux de réglage ---------- */
 .panneau{

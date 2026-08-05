@@ -931,32 +931,29 @@ function chipsEspaces(conteneur, ligne, apres) {
 
 /* ================== Onglets ================== */
 
-const ECRANS = ["maintenant", "planning", "selection", "jardin"];
-const CONFIG = ["jardin", "selection"];
+/* Trois destinations, toutes de même rang. Les plantes ne sont pas un réglage :
+   c'est là qu'on décide ce qu'on cultive, et l'écran est atteint par le bouton
+   rond au milieu de la barre. Ce qui reste des réglages n'est plus un écran mais
+   deux feuilles, celle du jardin et celle du compte. */
+const ECRANS = ["maintenant", "planning", "selection"];
 const onglets = [...document.querySelectorAll(".onglet")];
-const sousOnglets = [...document.querySelectorAll(".sous-onglet")];
 let ecranCourant = "maintenant";
-let ecranConfig = "jardin";
 
 function afficher(ecran) {
   ecranCourant = ecran;
   // Changer d'écran principal rend la vue d'ensemble, jamais une tâche ouverte.
   if (vueDetail !== null) { vueDetail = null; rendreMaintenant(); }
-  const enConfig = CONFIG.includes(ecran);
-  if (enConfig) ecranConfig = ecran;
   ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== ecran); });
-  onglets.forEach(x => x.setAttribute("aria-selected", String(!enConfig && x.dataset.ecran === ecran)));
-  sousOnglets.forEach(x => x.setAttribute("aria-selected", String(x.dataset.ecran === ecran)));
-  $("sousOnglets").hidden = !enConfig;
-  $("btnConfig").setAttribute("aria-expanded", String(enConfig));
+  onglets.forEach(x => x.setAttribute("aria-selected", String(x.dataset.ecran === ecran)));
   window.scrollTo(0, 0);
   if (ecran === "planning") placerMarqueur();
 }
 
 onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
-sousOnglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
-sur("btnConfig", "click", () => afficher(CONFIG.includes(ecranCourant) ? "maintenant" : ecranConfig));
-sur("fermerConfig", "click", () => afficher("maintenant"));
+/* Le titre ouvre le jardin quand il y en a un. Sans compte, il annonce la
+   connexion et ouvre la feuille qui la porte : c'est la seule chose à faire. */
+sur("btnJardin", "click", () => ouvrirVue(session ? "jardin" : "compte"));
+sur("btnConfig", "click", () => ouvrirVue("compte"));
 
 document.querySelectorAll(".segment").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
@@ -1322,7 +1319,7 @@ function rendreMaintenant() {
     vueDetail = null; majNiveau();
     $("synthese").hidden = true;
     $("piedVue").hidden = true;
-    $("videMoment").innerHTML = '<p class="vide">Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour indiquer ce que vous cultivez.</p>';
+    $("videMoment").innerHTML = '<p class="vide">Aucune plante retenue. Le bouton rond au milieu de la barre du bas ouvre vos plantes.</p>';
     return;
   }
   const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
@@ -2815,10 +2812,41 @@ function retourFeuille() {
   ouvrirVue(p.vue, true);
 }
 
+/* Les deux panneaux de réglage ne sont pas reconstruits à chaque ouverture :
+   ils vivent dans une réserve hors écran et sont déplacés dans la feuille, puis
+   rangés. Leurs champs, leurs sélecteurs et leurs écouteurs survivent ainsi
+   intacts, ce qu'une reconstruction en chaîne de caractères perdrait. */
+function rangerBlocs() {
+  const r = $("reserve-reglages");
+  if (!r) return;
+  ["bloc-jardin", "bloc-compte"].forEach(id => {
+    const b = $(id);
+    if (b && b.parentNode !== r) r.appendChild(b);
+  });
+}
+
+function poserBloc(id) {
+  const b = $(id);
+  if (b) $("feuille-corps").appendChild(b);
+}
+
+function vueJardin() {
+  const g = jardinActif();
+  return { titre: g && g.name ? g.name : "Mon jardin",
+           sous: "Climat, commune et espaces", corps: "",
+           brancher: () => poserBloc("bloc-jardin") };
+}
+
+function vueCompte() {
+  return { titre: "Compte", corps: "", brancher: () => poserBloc("bloc-compte") };
+}
+
 function ouvrirVue(vue, enRetour) {
   fermerGlose();
+  rangerBlocs();
   const rendus = { jour: vueJour, temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
-                   saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance };
+                   saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance,
+                   jardin: vueJardin, compte: vueCompte };
   const f = (rendus[vue] || vueLieu)();
   if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
   vueCourante = { vue, titre: f.titre };
@@ -3176,6 +3204,7 @@ function jardinDuJour(s) {
 
 /* ---------- La feuille ---------- */
 const MODE_TEMPS = "monjardin.temps.mode";
+const CLE_VENUE = "monjardin.venue";
 const MODES_TEMPS = [["ruban", "Ruban"], ["liste", "Liste"], ["moments", "Moments"]];
 
 function modeTemps() {
@@ -3929,7 +3958,7 @@ function rendrePlanning() {
   const v = $("videPlanning");
   v.hidden = lot.length > 0;
   v.textContent = (jardinSeul && !sel.size)
-    ? "Aucune plante retenue. Ouvrez Réglages puis Mes plantes pour composer votre jardin."
+    ? "Aucune plante retenue. Le bouton rond au milieu de la barre du bas ouvre vos plantes."
     : (periode === null
         ? "Aucune plante ne correspond à ces filtres."
         : `Aucune tâche en ${periode.nom} parmi les plantes filtrées.`);
@@ -4005,6 +4034,7 @@ db.auth.onAuthStateChange((_e, s) => {
   session = s;
   const connecte = Boolean(s);
   $("zone-connexion").hidden = connecte;
+  $("panneau-compte").hidden = !connecte;
   $("videSelection").hidden = connecte;
   if (connecte) { $("aide-code").hidden = true; $("code").value = ""; $("codeReprise").hidden = true; }
   $("deconnexion").hidden = !connecte;
@@ -4021,7 +4051,11 @@ function majJardinUI() {
   $("bloc-jardin").hidden = !connecte;
   const g = jardinActif();
   const c = g && g.climate_key ? climats[g.climate_key] : null;
-  $("titreJardin").textContent = g && g.name ? g.name : "Mon jardin";
+  /* Sans compte il n'y a pas de jardin à nommer : le titre porte alors la seule
+     action qui vaille, et le chevron ouvre la feuille du compte. */
+  $("titreJardin").textContent = g && g.name ? g.name : (connecte ? "Mon jardin" : "Se connecter");
+  $("btnJardin").setAttribute("aria-label", connecte
+    ? "Le jardin : climat, commune et espaces" : "Se connecter");
   /* Le climat du jardin ne paraît plus que lorsqu'il manque : une marque ne
      signale que l'exception, et sa mention quotidienne n'apprenait rien. Il
      reste lisible et modifiable sur l'écran du jardin. */
@@ -4091,7 +4125,7 @@ function rendreEspaces() {
       corps.appendChild(l);
     });
     if (!membres.length) {
-      corps.innerHTML = '<p class="vide">Aucune plante rattachée. Ouvrez Réglages puis Mes plantes pour en rattacher.</p>';
+      corps.innerHTML = '<p class="vide">Aucune plante rattachée. Le bouton rond au milieu de la barre du bas ouvre vos plantes.</p>';
     }
     d.appendChild(corps);
     d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
@@ -4213,7 +4247,18 @@ lireGlossaire().catch(() => { /* glossaire indisponible, les textes restent brut
 lirePlanches();
 poserMotifMois();
 const { data: { session: s0 } } = await db.auth.getSession();
-if (!s0) $("zone-connexion").hidden = false;
+if (!s0) {
+  $("zone-connexion").hidden = false;
+  /* Sans compte, l'écran du moment est vide et rien n'indique par où commencer.
+     La feuille du compte s'ouvre donc d'elle-même, une seule fois par appareil.
+     Ensuite le titre suffit, il annonce « Se connecter ». */
+  try {
+    if (!localStorage.getItem(CLE_VENUE)) {
+      localStorage.setItem(CLE_VENUE, "1");
+      ouvrirVue("compte");
+    }
+  } catch (e) { /* stockage indisponible, la feuille ne s'ouvre pas seule */ }
+}
 
 // Le lien reçu par courrier électronique s'ouvre dans le navigateur, jamais dans
 // l'application ajoutée à l'écran d'accueil, qui dispose de son propre stockage.
@@ -4474,6 +4519,7 @@ function fermerPhoto() {
 
 function ouvrirFeuille(p) {
   fermerGlose();
+  rangerBlocs();
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
   $("feuille-corps").innerHTML = ficheHTML(p);
@@ -4495,6 +4541,7 @@ function ouvrirFeuille(p) {
 function fermerFeuille() {
   fermerPhoto();
   if ($("feuille").hidden) return;
+  rangerBlocs();
   pileFeuille = [];
   vueCourante = null;
   poserRetour();

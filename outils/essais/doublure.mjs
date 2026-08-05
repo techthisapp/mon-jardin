@@ -52,10 +52,12 @@ function requete(table) {
 export const createClient = () => ({
   from: requete,
   auth: {
-    getSession: async () => ({ data: { session: { user: { id: "u1", email: "jerome@exemple.fr" } } } }),
+    getSession: async () => ({ data: { session: window.__SANS_SESSION__ ? null
+      : { user: { id: "u1", email: "jerome@exemple.fr" } } } }),
     onAuthStateChange(cb) {
       // Le vrai client émet l'état initial ; le faux doit le faire aussi.
-      setTimeout(() => cb("INITIAL_SESSION", { user: { id: "u1", email: "jerome@exemple.fr" } }), 0);
+      setTimeout(() => cb("INITIAL_SESSION", window.__SANS_SESSION__ ? null
+        : { user: { id: "u1", email: "jerome@exemple.fr" } }), 0);
       return { data: { subscription: { unsubscribe() {} } } };
     },
     signInWithOtp: async () => ({ error: null }),
