@@ -1476,12 +1476,15 @@ body.fige{overflow:hidden}
   -webkit-overflow-scrolling:touch;
 }
 .ph-rail::-webkit-scrollbar{display:none}
+/* La bande est le contenu de tête d'un onglet consacré à l'identité : ses
+   tuiles ont la largeur qui va avec cette place. La vignette servie par le
+   fonds fait cent cinquante points, elle n'est pas agrandie pour autant. */
 .ph-i{
-  flex:0 0 auto;width:112px;border:0;background:none;padding:0;cursor:pointer;
+  flex:0 0 auto;width:132px;border:0;background:none;padding:0;cursor:pointer;
   font-family:inherit;color:inherit;text-align:center;scroll-snap-align:start;
 }
 .ph-i img{
-  width:112px;height:112px;object-fit:cover;border-radius:10px;display:block;
+  width:132px;height:132px;object-fit:cover;border-radius:11px;display:block;
   background:var(--panneau);
 }
 .ph-i span{

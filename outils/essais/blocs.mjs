@@ -108,6 +108,27 @@ export default async function essai(navigateur) {
   j.controle("tomate, aucune ligne Parfum, la source ne l'établit pas",
     !("Parfum" in tomate), tomate["Parfum"]);
 
+  /* Le nom accepté n'est énoncé que lorsqu'il apprend quelque chose. Un
+     rabattement de rang et une marque d'hybride ne sont pas des divergences. */
+  j.section("le nom accepté, seulement quand il diverge vraiment");
+  const prim = await lireBlocs(pg, "Primevère");
+  j.controle("primevère, le nom accepté est écrit",
+    prim["Nom accepté"] === "Primula acaulis", prim["Nom accepté"]);
+  const radis = await lireBlocs(pg, "Radis");
+  j.controle("radis, le rabattement de rang ne dit rien",
+    !("Nom accepté" in radis), radis["Nom accepté"]);
+  const fra = await lireBlocs(pg, "Fraise");
+  j.controle("fraise, la marque d'hybride seule ne dit rien",
+    !("Nom accepté" in fra), fra["Nom accepté"]);
+  const hort = await lireBlocs(pg, "Hortensia");
+  j.controle("hortensia, l'épithète répétée n'est écrite qu'une fois",
+    hort["Nom accepté"] === "Hydrangea serrata", hort["Nom accepté"]);
+
+  /* L'entête écrit déjà le nom latin suivi de la famille : la ligne du bloc ne
+     la reprend pas. */
+  j.controle("la famille n'est pas écrite deux fois", !("Famille" in prim),
+    prim["Famille"]);
+
   j.section("rusticité, la nuance seule quand le seuil est connu");
   j.controle("lavande, la nuance sans la classe",
     lavande["Rusticité"] === "Craint l'humidité", lavande["Rusticité"]);

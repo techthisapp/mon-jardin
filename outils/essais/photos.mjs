@@ -4,7 +4,7 @@
    relecture cède la place à la suivante, et l'attribution est portée sous la
    bande comme au plein écran. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
-         fermerFiche, ongletIdentite, net } from "./commun.mjs";
+         fermerFiche, ongletIdentite, net, CATALOGUE } from "./commun.mjs";
 
 const ORDRE = ["FLEUR", "FEUILLE", "FRUIT", "PORT", "ÉCORCE"];
 
@@ -48,6 +48,12 @@ export default async function essai(navigateur) {
   j.controle("chaque auteur est nommé",
     ["Lit Cu", "serafina.pal", "Lin Ferber", "KP Laer", "David Grant"]
       .every(a => credit.indexOf(a) !== -1), credit);
+  /* Une photographie de terrain porte le nom que l'observateur a donné à la
+     plante, au rang de la fiche : rien ne distingue à l'oeil deux variétés de
+     jardin, et la fiche le dit plutôt que de laisser croire au portrait de la
+     variété cultivée. */
+  j.controle("la portée de la photographie est énoncée",
+    /documente l'espèce, une variété de jardin peut en différer/.test(credit), credit);
 
   j.section("la bande raccourcit quand un organe manque");
   await fermerFiche(pg);
@@ -112,6 +118,47 @@ export default async function essai(navigateur) {
   await pg.locator("#fermerPhoto").click();
   await pg.waitForTimeout(300);
 
+  /* La fiche s'ouvre sur ce qu'on est venu y chercher : le geste du moment
+     pour une plante du jardin, ce qu'elle est pour une plante du catalogue. */
+  j.section("l'onglet d'ouverture suit l'appartenance au jardin");
+  await fermerFiche(pg);
+  const ouvert = async nom => {
+    await ouvrirFiche(pg, nom);
+    const t = await pg.locator(".f-onglets button.actif").innerText();
+    await fermerFiche(pg);
+    return net(t);
+  };
+  j.controle("une plante du jardin ouvre sur le moment",
+    await ouvert("Pommier") === "En ce moment");
+
+  /* La branche inverse demande un jardin où la plante n'est pas plantée : la
+     même fiche s'ouvre alors sur ce que la plante est. */
+  const catalogue = JSON.parse(CATALOGUE);
+  const dehors = catalogue.plants.find(p => p.name === "Pommier").id;
+  const { ctx: ctx2, pg: pg2, erreurs: err2 } = await ouvrirContexte(navigateur, {
+    jardin: catalogue.plants.map(p => p.id).filter(id => id !== dehors),
+  });
+  await ouvrirListeDesPlantes(pg2);
+  /* Une plante absente du jardin ne se rencontre qu'en dépliant le catalogue,
+     le chemin même par lequel on la découvre. */
+  await pg2.locator("#filtreJardin").dispatchEvent("click");
+  await pg2.waitForTimeout(500);
+  await ouvrirFiche(pg2, "Pommier");
+  j.controle("une plante hors du jardin ouvre sur l'identité",
+    net(await pg2.locator(".f-onglets button.actif").innerText()) === "Identité",
+    net(await pg2.locator(".f-onglets button.actif").innerText()));
+  j.controle("le panneau du moment est replié, celui de l'identité déplié",
+    await pg2.locator('.f-pan[data-pan="identite"]:not([hidden])').count() === 1
+    && await pg2.locator('.f-pan[data-pan="moment"][hidden]').count() === 1);
+  j.controle("l'onglet actif est le seul annoncé au lecteur d'écran",
+    await pg2.locator('.f-onglets button[aria-selected="true"]').count() === 1
+    && net(await pg2.locator('.f-onglets button[aria-selected="true"]').innerText()) === "Identité");
+  await pg2.waitForTimeout(500);
+  j.controle("la bande des photographies est posée sans autre geste",
+    await pg2.locator(".ph-i img").count() === 5,
+    String(await pg2.locator(".ph-i img").count()));
+  await ctx2.close();
+
   j.section("une fiche sans photo n'ouvre pas de section vide");
   await fermerFiche(pg);
   await ouvrirFiche(pg, "Tomate");
@@ -122,5 +169,5 @@ export default async function essai(navigateur) {
   j.controle("aucun titre ni cadre vide", await pg.locator(".ph-rail").count() === 0);
 
   await ctx.close();
-  return j.fin(erreurs);
+  return j.fin(erreurs.concat(err2));
 }

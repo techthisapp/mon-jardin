@@ -631,7 +631,8 @@ async function chargerCatalogue() {
    requête. */
 const COL_LEGERES = "id,slug,name,category,typology,phases,spacing,depth,companions,"
   + "latin,family,habit,exposure,water_need,nectar,pollen,frost_min_c,height_min_cm,"
-  + "height_max_cm,flower_colors,floraison_pic_q,floraison_pic_note,nom_article,propagation";
+  + "height_max_cm,flower_colors,floraison_pic_q,floraison_pic_note,nom_article,propagation,"
+  + "nom_accepte";
 const COL_LONGUES = "id,attributes,guide,guide_periode,advice";
 
 async function lireCatalogue() {
@@ -660,7 +661,7 @@ async function lireCatalogue() {
     phases: p.phases || {},
     // remplis par la seconde requête, jamais absents pour le code qui les lit
     conseil: "", attr: {}, guide: {}, guide_periode: {},
-    latin: p.latin || "", famille: p.family || "",
+    latin: p.latin || "", famille: p.family || "", nomAccepte: p.nom_accepte || "",
     // colonnes lues par la fiche détaillée
     port: p.habit || "", expo: p.exposure || "", eauNiv: p.water_need || "",
     nectar: p.nectar || "", pollen: p.pollen || "", gel: p.frost_min_c,
@@ -2170,6 +2171,27 @@ function ficheTaille(p) {
   return mat ? `<div class="f-carte"><div class="f-carte-tete"><h3>Taille à maturité</h3></div>${mat}</div>` : "";
 }
 
+/* Deux référentiels de nomenclature accompagnent chaque fiche. La vue ne rend
+   un nom accepté que lorsque POWO et GBIF convergent vers le même, différent de
+   celui d'usage : quand ils divergent, le cas est ouvert et rien n'est affirmé.
+   Reste à écarter ici les rabattements de rang, où le nom rendu n'est que la
+   forme moins précise de celui de la fiche. « Brassica oleracea » face à
+   « Brassica oleracea var. capitata » ne dit rien qu'un jardinier veuille lire. */
+const motsNom = n => String(n || "").toLowerCase()
+  .replace(/\s+[×x]\s+/g, " ")
+  .replace(/\b(var|subsp|ssp|f|cv)\.\s*/g, "")
+  .trim().split(/\s+/).filter((m, i, t) => m && m !== t[i - 1]);
+
+function nomAccepte(p) {
+  const a = motsNom(p.nomAccepte), ici = motsNom(p.latin);
+  if (!a.length || !ici.length) return "";
+  // Le nom rendu est un préfixe du nôtre : le référentiel a rabattu le rang.
+  if (a.every((m, i) => m === ici[i])) return "";
+  // L'épithète répétée que rendent certains référentiels ne s'écrit qu'une fois.
+  return String(p.nomAccepte).trim().split(/\s+/)
+    .filter((m, i, t) => i === 0 || m.toLowerCase() !== t[i - 1].toLowerCase()).join(" ");
+}
+
 /* La jauge de gel donne déjà le seuil en degrés. La ligne de rusticité ne
    répète pas la classe : elle ne garde que la nuance qui suit, et ne reprend la
    classe entière que pour les plantes dont le seuil n'est pas renseigné. */
@@ -2202,7 +2224,11 @@ function blocFiche(titre, rows) {
 function blocIdentite(p) {
   const a = p.attr || {};
   return blocFiche("Identité", [
-    ["Famille", p.famille], ["Cycle", a.type], ["Hauteur", a.hauteur],
+    /* L'entête écrit déjà le nom latin suivi de la famille. La ligne ne la
+       reprend que pour les quatre fiches sans nom latin, où l'entête se tait. */
+    ["Famille", p.latin ? "" : p.famille],
+    ["Nom accepté", nomAccepte(p)],
+    ["Cycle", a.type], ["Hauteur", a.hauteur],
     ["Écartement", p.espacement], ["Première récolte", a.recolte],
     ["Rusticité", nuanceRusticite(p)],
     // La planche du genre montre une plante voisine, pas celle de la fiche : la
@@ -2244,6 +2270,10 @@ function blocJardin(p) {
 function ficheHTML(p) {
   const ad = adapt[p.id];
   const tox = p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite);
+  /* La fiche s'ouvre sur ce qu'on est venu y chercher. Pour une plante du
+     jardin, ce qu'il y a à faire cette quinzaine. Pour une plante du catalogue
+     qu'on découvre, ce qu'elle est. */
+  const ouvre = sel.has(p.id) ? "moment" : "identite";
   return `<div class="fiche-v2">
     <div class="f-entete">${motifFiche(p)}
       <div class="f-chips"><span class="f-chip">${esc(p.typo || p.cat)}</span>
@@ -2252,18 +2282,19 @@ function ficheHTML(p) {
       ${tox ? `<p class="f-tox"><span aria-hidden="true">&#9670;</span>${esc(p.attr.toxicite)}</p>` : ""}
       ${p.conseil ? `<p class="f-intro">${marquerTermes(p.conseil)}</p>` : ""}
     </div>
-    <div class="f-onglets" role="tablist">
-      <button type="button" role="tab" class="actif" aria-selected="true"
-              data-pan="moment">En ce moment</button>
-      <button type="button" role="tab" aria-selected="false"
-              data-pan="annee">Toute l'année</button>
-      <button type="button" role="tab" aria-selected="false"
-              data-pan="identite">Identité</button>
+    <div class="f-onglets" role="tablist">${
+      ["moment,En ce moment", "annee,Toute l'année", "identite,Identité"].map(x => {
+        const [cle, nom] = x.split(",");
+        return `<button type="button" role="tab" class="${cle === ouvre ? "actif" : ""}" `
+          + `aria-selected="${cle === ouvre}" data-pan="${cle}">${nom}</button>`;
+      }).join("")}
     </div>
-    <div class="f-pan f-pan-moment" role="tabpanel" data-pan="moment">${ficheMoment(p)}</div>
-    <div class="f-pan f-pan-annee" role="tabpanel" data-pan="annee" hidden>${
-      ficheAnnee(p)}${blocCulture(p)}${blocJardin(p)}</div>
-    <div class="f-pan f-pan-identite" role="tabpanel" data-pan="identite" hidden>${
+    <div class="f-pan f-pan-moment" role="tabpanel" data-pan="moment"${
+      ouvre === "moment" ? "" : " hidden"}>${ficheMoment(p)}</div>
+    <div class="f-pan f-pan-annee" role="tabpanel" data-pan="annee"${
+      ouvre === "annee" ? "" : " hidden"}>${ficheAnnee(p)}${blocCulture(p)}${blocJardin(p)}</div>
+    <div class="f-pan f-pan-identite" role="tabpanel" data-pan="identite"${
+      ouvre === "identite" ? "" : " hidden"}>${
       `<section class="f-photos" id="fPhotos" data-plante="${esc(p.id)}" hidden></section>`
       }${ficheTaille(p)}${blocIdentite(p)}</div>
   </div>`;
@@ -4252,7 +4283,14 @@ function poserPhotos(p) {
       + `</div><p class="ph-credit">${esc(lot[0].fonds === "commons"
           ? "Wikimedia Commons" : "Pl@ntNet")}, sous licence `
       + `${esc(lot[0].licence || "CC BY-SA")}`
-      + (auteurs.length ? ` : ${esc(enumerer(auteurs, auteurs.length))}` : "") + `.</p>`;
+      + (auteurs.length ? ` : ${esc(enumerer(auteurs, auteurs.length))}` : "") + `.`
+      /* Une photographie de terrain porte le nom que l'observateur a donné à la
+         plante, au rang de la fiche. Rien ne distingue à l'oeil deux variétés
+         d'hortensia : la fiche le dit plutôt que de laisser croire au portrait
+         de la variété cultivée. C'est le principe de la provenance, la mention
+         dit ce que la source établit. */
+      + `<br>La photographie documente ${esc(p.latin && p.latin.indexOf(" ") === -1
+          ? "le genre" : "l'espèce")}, une variété de jardin peut en différer.</p>`;
     zz.hidden = false;
     zz.querySelectorAll("[data-photo]").forEach(b =>
       b.addEventListener("click", () => ouvrirPhoto(Number(b.dataset.photo))));

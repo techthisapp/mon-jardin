@@ -44,7 +44,7 @@ const scriptHorloge = `(() => {
 export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
-    glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS,
+    glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -58,6 +58,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + `window.__VIGILANCE__ = ${JSON.stringify(vigilance)};`
     + `window.__GLOSSAIRE__ = ${glossaire};`
     + `window.__PHOTOS__ = ${photos};`
+    + (jardin ? `window.__JARDIN__ = ${JSON.stringify(jardin)};` : "")
     + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
   await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: "text/css", body: "" }));

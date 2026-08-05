@@ -154,7 +154,8 @@
    "541": "Seconde floraison, sur les pousses de l'année. C'est elle qui porte la récolte d'arrière-saison. Deux périodes distinguent les variétés. La non remontante fleurit sur les cannes, les tiges du framboisier, de l'année précédente, la remontante sur celles de l'année, et c'est cette différence qui décide de la taille. Floraison mellifère, elle offre à la fois du nectar et du pollen.",
    "543": "Palisser les cannes conservées à l'automne et raccourcir leur extrémité sèche. Sur les variétés remontantes conduites pour une seule récolte d'automne, tout rabattre au ras du sol.",
    "544": "Couper au ras du sol les cannes, les tiges du framboisier, qui viennent de fructifier, elles ne repousseront pas. Conserver six à huit jeunes cannes vigoureuses par pied et supprimer les autres."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -294,7 +295,8 @@
   "floraison_pic_q": null,
   "floraison_pic_note": null,
   "nom_article": "la",
-  "guide_periode": {}
+  "guide_periode": {},
+  "nom_accepte": null
  },
  {
   "id": "6481b2fa-c186-4954-8423-f3c5793df422",
@@ -403,7 +405,8 @@
   "floraison_pic_q": null,
   "floraison_pic_note": null,
   "nom_article": "la",
-  "guide_periode": {}
+  "guide_periode": {},
+  "nom_accepte": "Primula acaulis"
  },
  {
   "id": "bd8927e6-7f65-4478-9dc7-d1d44e567668",
@@ -543,7 +546,8 @@
   "guide_periode": {
    "636": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Planter en sol frais et humifère, à l'abri du soleil brûlant. Prévoir 100 cm entre deux sujets.",
    "637": "Plantation de fin d'hiver, en repos végétatif et hors période de gel. Arroser copieusement à la plantation, puis régulièrement tout le premier été, la reprise en dépend. Planter en sol frais et humifère, à l'abri du soleil brûlant. Prévoir 100 cm entre deux sujets."
-  }
+  },
+  "nom_accepte": "Hydrangea serrata serrata"
  },
  {
   "id": "b26ff8c3-9119-402d-9a33-63bfc06a1729",
@@ -666,7 +670,8 @@
   "guide_periode": {
    "1680": "Apport de fond, avant ou à la plantation. Il porte la première partie de la culture. Compost mûr avant plantation. Un sol riche intensifie la coloration du feuillage. Besoin élevé, un apport unique ne suffit pas, la culture épuise le sol.",
    "2361": "Apport d'entretien, en pleine production. Fractionner en petites doses plutôt qu'en une seule fois, l'excès d'azote part en feuillage. Compost mûr avant plantation. Un sol riche intensifie la coloration du feuillage. Besoin élevé, un apport unique ne suffit pas, la culture épuise le sol."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "d7d300fc-4b5d-4d61-93dc-fd93d681b1bc",
@@ -801,7 +806,8 @@
    "214": "Plantation de fin d'été. Le sol est encore chaud, la touffe s'enracine avant l'hiver et démarre plus vite au printemps suivant. Planter en automne, collet au ras du sol. Arroser à la reprise puis laisser la plante s'installer. Espacer les plants de 45 cm.",
    "216": "Rabattre les tiges sèches au ras du sol avant le départ de végétation.",
    "217": "Pincer les tiges de moitié en juin. La touffe reste compacte, fleurit un peu plus tard et se passe de tuteur."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "97a865e7-4539-460b-ba24-5b628e3a3b25",
@@ -957,7 +963,8 @@
    "534": "Plantation de printemps. L'enracinement prend toute la saison. Prévoir un arrosage suivi jusqu'aux pluies d'automne la première année. Planter collet au ras du sol, ni enterré ni déchaussé. Pailler pour garder les fruits propres. Espacer les plants de 30 cm.",
    "1525": "Apport de fin d'hiver, avant le démarrage. Un compost bien décomposé en surface convient, il apporte peu d'éléments et complète un engrais sans le remplacer. L'azote frais à ce stade pousse au feuillage et retarde la fructification. Besoin moyen, un apport annuel de compost mûr couvre les besoins.",
    "2366": "Apport d'entretien, en pleine production. Fractionner en petites doses plutôt qu'en une seule fois, l'excès d'azote part en feuillage. Apport de compost après la récolte, en juillet. C'est à ce moment que la plante forme ses boutons de l'année suivante. Besoin moyen, un apport annuel de compost mûr couvre la saison."
-  }
+  },
+  "nom_accepte": "Fragaria ananassa"
  },
  {
   "id": "64b4cce9-c75f-49e9-9403-5c322f904a9b",
@@ -1095,7 +1102,8 @@
    "573": "Plantation de fin d'hiver, en repos végétatif et hors période de gel. Arroser copieusement à la plantation, puis régulièrement tout le premier été, la reprise en dépend. Installer un support très solide avant la plantation, un sujet adulte pèse lourd et déforme une structure légère. Planter à 40 cm du mur, à l'écart des gouttières et des descentes. Prévoir 300 cm entre deux sujets.",
    "575": "Taille d'été. Raccourcir les longues pousses de l'année à cinq ou six feuilles. C'est elle qui prépare les boutons floraux du printemps suivant.",
    "576": "Taille d'hiver. Ramener à deux ou trois yeux les rameaux déjà raccourcis en août, ce sont eux qui porteront les grappes."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "c6901ed9-1f09-428b-bebf-304659637b7d",
@@ -1244,7 +1252,8 @@
   "guide_periode": {
    "143": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine, sauf si les racines tournent en rond dans le pot, auquel cas les dégager avant de planter. L'arrosage se poursuit jusqu'aux pluies d'automne. Sol acide, léger et frais, en terre de bruyère si le sol du jardin ne convient pas. Planter la motte affleurante et pailler, les racines sont superficielles. Prévoir 30 cm entre deux sujets.",
    "144": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Sol acide, léger et frais, en terre de bruyère si le sol du jardin ne convient pas. Planter la motte affleurante et pailler, les racines sont superficielles. Prévoir 30 cm entre deux sujets."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "e83cc081-2d9e-43a5-b3ff-17c2a36031fd",
@@ -1364,7 +1373,8 @@
   "floraison_pic_q": null,
   "floraison_pic_note": null,
   "nom_article": "le",
-  "guide_periode": {}
+  "guide_periode": {},
+  "nom_accepte": null
  },
  {
   "id": "cdb877bc-bd83-4d22-ac06-8df9292d17aa",
@@ -1492,7 +1502,8 @@
   "guide_periode": {
    "724": "Plantation de printemps, pour un sujet vendu en conteneur. La motte se défait à peine, sauf si les racines tournent en rond dans le pot, auquel cas les dégager avant de planter. L'arrosage se poursuit jusqu'aux pluies d'automne. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets.",
    "725": "Plantation d'automne, la période de référence pour un ligneux. Le sol est encore chaud et les racines s'installent avant l'hiver. Le premier été demande moins d'arrosage qu'après une plantation de printemps, sans s'en passer par temps sec. Cette grimpante s'accroche seule par racines adventives, aucun support n'est nécessaire. Planter à 20 cm du mur, en sachant que les crampons marquent les enduits. Prévoir 150 cm entre deux sujets."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "2577ff13-5eaa-4b59-9340-59c8f81be44e",
@@ -1571,7 +1582,7 @@
    "fertilisation": "Ne jamais apporter de fumier frais, il fait fourcher les racines. Compost bien décomposé l'automne précédent. Besoin faible, un seul apport modéré par an, l'excès nuisant plus qu'il ne profite.",
    "multiplication": "Allogame, se croise avec les autres radis. Bisannuel pour les variétés d'hiver, annuel pour les radis de tous les mois."
   },
-  "latin": "Raphanus sativus",
+  "latin": "Raphanus sativus var. niger",
   "family": "Brassicaceae",
   "genus": "Raphanus",
   "spacing_cm": 3,
@@ -1610,7 +1621,8 @@
   "floraison_pic_q": null,
   "floraison_pic_note": null,
   "nom_article": "le",
-  "guide_periode": {}
+  "guide_periode": {},
+  "nom_accepte": "Raphanus sativus"
  },
  {
   "id": "d7ab4f6d-b604-4b38-811d-f230dbe41e28",
@@ -1779,7 +1791,8 @@
   "guide_periode": {
    "1456": "Compost mûr à la plantation, enfoui au fond du trou. Un excès d'azote à ce stade donne du feuillage et retarde les fruits.",
    "2378": "Engrais riche en potasse dès la première fleur nouée, tous les quinze jours. La culture épuise le sol, un apport unique ne suffit pas."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "4b1e2001-4667-486c-886a-d57f2b3b71af",
@@ -1916,7 +1929,8 @@
   "floraison_pic_q": null,
   "floraison_pic_note": null,
   "nom_article": "la",
-  "guide_periode": {}
+  "guide_periode": {},
+  "nom_accepte": null
  },
  {
   "id": "8598c698-d74b-4325-97b4-eb19ff2a3bc3",
@@ -2034,7 +2048,8 @@
   "guide_periode": {
    "1265": "Division de printemps. La reprise prend toute la saison et la floraison peut être plus tardive la première année. Arroser jusqu'à la reprise. Prélever des fragments de rhizome portant des racines. Culture en pot ou en barrière anti-rhizome recommandée.",
    "1266": "Division d'automne. Le sol est encore chaud, les éclats s'enracinent avant l'hiver et repartent tôt au printemps. Rabattre le feuillage avant de diviser. Prélever des fragments de rhizome portant des racines. Culture en pot ou en barrière anti-rhizome recommandée."
-  }
+  },
+  "nom_accepte": null
  },
  {
   "id": "d2db4147-19c5-457d-9139-a0eb132097af",
@@ -2153,6 +2168,7 @@
   "floraison_pic_q": null,
   "floraison_pic_note": null,
   "nom_article": "l'",
-  "guide_periode": {}
+  "guide_periode": {},
+  "nom_accepte": null
  }
 ]

@@ -11,7 +11,8 @@ const TABLES = {
               altitude: null, last_opened_at: null, code_postal: "21500", commune: "Fain-lès-Moutiers",
               lat: 47.58371, lon: 4.21265, sol_texture: null, station_num: "21425001",
               code_postal_reel: "21500" }],
-  garden_plants: FX.plants.map(p => ({ garden_id: "g1", plant_id: p.id })),
+  garden_plants: (window.__JARDIN__ || FX.plants.map(p => p.id))
+    .map(id => ({ garden_id: "g1", plant_id: id })),
   espaces: [], garden_plant_espaces: [], sourdines: [],
   saison_vegetation: FX.saison || [],
   releves_eau: (window.__RELEVES__ || []),
