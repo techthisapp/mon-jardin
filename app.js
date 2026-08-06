@@ -4272,14 +4272,100 @@ db.auth.onAuthStateChange((_e, s) => {
 });
 
 
-/* Le numéro de la copie installée, au bas de la feuille du compte. Il est hors
-   du panneau du compte : c'est quand rien ne marche qu'on le cherche, et il ne
-   faut pas être connecté pour le lire. */
-(() => {
-  const b = document.querySelector('meta[name="version-appli"]');
-  const z = $("versionAppli");
-  if (b && z) z.textContent = "Version " + b.content;
-})();
+/* ================== Version installée et mise à jour ================== */
+
+/* Le numéro de la copie installée paraît au bas de la feuille du compte, hors
+   du panneau : c'est quand rien ne marche qu'on le cherche, et il ne faut pas
+   être connecté pour le lire.
+
+   Le numéro seul ne suffisait pas. Posée sur l'écran d'accueil, l'application
+   est réveillée sans être rechargée : le document reste celui du jour de
+   l'installation, parfois pendant des semaines, alors que le site en sert un
+   autre. Le numéro affiché était donc juste, et pourtant introuvable, puisque
+   la copie qui tournait avait été installée avant qu'il existe. D'où deux
+   ajouts : un contrôle au réveil, et une recherche à la demande.
+
+   Le point de comparaison est l'agent de service. Sa version est calculée sur
+   les empreintes de tous les actifs, elle change dès que l'un d'eux change, et
+   le document en porte une copie dans une balise meta. Deux numéros différents
+   disent qu'une copie plus récente attend. */
+const VERSION_DOC = (document.querySelector('meta[name="version-appli"]') || {}).content || "";
+const DELAI_CONTROLE = 600000;   // dix minutes entre deux contrôles automatiques
+let agentMaj = null;             // l'inscription de l'agent de service
+let dernierControleMaj = 0;
+let majPrete = false;    // une copie plus récente attend en ligne
+let majEcartee = false;  // le bandeau a été écarté, il ne revient pas de lui-même
+
+if ($("versionAppli") && VERSION_DOC) $("versionAppli").textContent = "Version " + VERSION_DOC;
+
+/* L'agent de service n'est pas interrogé par son cache : il est écarté de
+   l'interception, sans quoi la première réponse serait servie indéfiniment et
+   le numéro en ligne resterait figé. */
+async function versionEnLigne() {
+  const r = await fetch("./sw.js", { cache: "no-store" });
+  if (!r.ok) throw new Error("agent de service indisponible");
+  const m = (await r.text()).match(/const VERSION = "([A-Za-z0-9.]+)"/);
+  if (!m) throw new Error("numéro illisible");
+  return m[1];
+}
+
+/* Rend vrai quand le site sert une copie plus récente. Le contrôle automatique
+   est espacé, celui demandé par une personne ne l'est pas. */
+async function controlerMaj(force) {
+  const t = Date.now();
+  if (!force && t - dernierControleMaj < DELAI_CONTROLE) return majPrete;
+  dernierControleMaj = t;
+  const v = await versionEnLigne();
+  if (!VERSION_DOC || v === VERSION_DOC) return false;
+  /* La copie neuve est mise en cache avant le redémarrage : le rechargement
+     part alors du disque et non du réseau. */
+  if (agentMaj) agentMaj.update().catch(() => { /* sans effet sur la suite */ });
+  return true;
+}
+
+/* Écarté, le bandeau ne revient pas au réveil suivant : la recherche reste
+   offerte au bas de la feuille du compte. */
+function annoncerMaj() {
+  majPrete = true;
+  const b = $("bandeauMaj");
+  if (b && !majEcartee) b.hidden = false;
+}
+
+function controlerEtAnnoncer() {
+  controlerMaj(false).then(n => { if (n) annoncerMaj(); })
+    .catch(() => { /* hors ligne : le contrôle reprendra au réveil suivant */ });
+}
+
+/* Le navigateur ne va voir de lui-même s'il existe une copie neuve qu'à la
+   navigation, qui n'a jamais lieu dans une application posée sur l'écran
+   d'accueil. Le retour au premier plan en tient lieu. */
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) controlerEtAnnoncer();
+});
+/* Un lancement hors ligne sert le document mis en cache : le contrôle est repris
+   une fois la page en place, sans retarder l'affichage. */
+setTimeout(controlerEtAnnoncer, 4000);
+
+sur("appliquerMaj", "click", () => location.reload());
+sur("ecarterMaj", "click", () => { majEcartee = true; $("bandeauMaj").hidden = true; });
+
+sur("chercherMaj", "click", async () => {
+  const bouton = $("chercherMaj"), note = $("noteMaj");
+  note.hidden = false;
+  note.textContent = "Recherche en cours.";
+  bouton.disabled = true;
+  try {
+    if (await controlerMaj(true)) {
+      note.textContent = "Nouvelle version trouvée, redémarrage.";
+      setTimeout(() => location.reload(), 500);
+      return;
+    }
+    note.textContent = "Cette copie est déjà la plus récente.";
+  } catch {
+    note.textContent = "Vérification impossible sans réseau.";
+  }
+  bouton.disabled = false;
+});
 
 /* ================== Écran 4 : jardin ================== */
 
@@ -4472,8 +4558,17 @@ function rendreTout() {
    pas une panne : le site fonctionne, il repart simplement du réseau. */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch(() => { /* contexte non sécurisé */ });
+    navigator.serviceWorker.register("./sw.js")
+      .then(reg => { agentMaj = reg; })
+      .catch(() => { /* contexte non sécurisé */ });
   });
+  /* Une copie neuve prend la main sans attendre : le document qui tourne n'est
+     alors plus celui du site, et le bandeau le dit. Le contrôle n'a lieu que si
+     une copie tenait déjà la main, faute de quoi la première installation
+     l'annoncerait elle-même. */
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.addEventListener("controllerchange", annoncerMaj);
+  }
 }
 
 window.addEventListener("resize", () => { placerMarqueur(); majMois(); });

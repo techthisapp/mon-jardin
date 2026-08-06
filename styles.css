@@ -280,6 +280,42 @@ body::after{
   .barre-basse{background:rgba(248,247,243,.97)}
 }
 
+/* ---------- Bandeau de mise à jour ---------- */
+/* Il se pose au-dessus de la barre, dans le même langage de pastille, et
+   n'existe que le temps d'être touché. */
+.bandeau-maj{
+  position:fixed;z-index:31;
+  left:50%;transform:translateX(-50%);
+  bottom:calc(84px + env(safe-area-inset-bottom));
+  width:min(420px, calc(100% - 24px));
+  display:flex;align-items:stretch;gap:2px;padding:4px;
+  border-radius:999px;border:1px solid rgba(22,36,30,.10);
+  background:var(--encre);
+  box-shadow:0 8px 24px rgba(22,36,30,.26);
+}
+.maj-appliquer{
+  flex:1;border:0;background:none;cursor:pointer;color:#DCE6DA;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  padding:9px 8px 9px 14px;border-radius:999px;
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:13px;font-weight:500;letter-spacing:.02em;
+}
+.maj-appliquer b{
+  color:#16241E;background:#E8EFE3;border-radius:999px;padding:4px 12px;
+  font-size:12.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+}
+.maj-plus-tard{
+  flex:none;width:38px;border:0;background:none;cursor:pointer;color:#8FA396;
+  display:flex;align-items:center;justify-content:center;border-radius:50%;
+}
+.maj-plus-tard svg{
+  width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;
+}
+.maj-appliquer:focus-visible,.maj-plus-tard:focus-visible{
+  outline:2px solid #E8EFE3;outline-offset:-2px;
+}
+
 /* Les marges de la page sont nommées : la prairie s'en sert pour déborder
    jusqu'aux bords de l'écran. */
 main{
@@ -714,6 +750,11 @@ main{
   margin:2px 0 0;text-align:center;
   font:400 11px/1.4 "IBM Plex Mono",monospace;letter-spacing:.06em;
   color:#9A968C;
+}
+.version-maj{margin:5px 0 0;text-align:center}
+.version-maj .lien{font-size:12px}
+.version-note{
+  margin:5px 0 0;text-align:center;font-size:12px;color:var(--encre-doux);
 }
 .titre-panneau{
   font-family:"IBM Plex Sans",sans-serif;font-size:11px;font-weight:600;

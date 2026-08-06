@@ -71,7 +71,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
-    session = true, cache = null,
+    session = true, cache = null, versionSite = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -91,6 +91,13 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + (cache ? `try { localStorage.setItem("monjardin.catalogue.v6", ${JSON.stringify(cache)}); } catch (e) {}` : "")
     + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
   await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
+  /* Le numéro que le site sert est celui de l'agent de service. En donner un
+     autre revient à mettre en ligne une version plus récente que la copie
+     ouverte, ce qu'aucun autre moyen ne permet d'imiter dans un essai. */
+  if (versionSite) {
+    await ctx.route(/\/sw\.js(\?|$)/, r => r.fulfill({ status: 200,
+      contentType: "text/javascript", body: `const VERSION = "${versionSite}";\n` }));
+  }
   await ctx.route(/fonts\.(googleapis|gstatic)\.com/, r => r.fulfill({ status: 200, contentType: "text/css", body: "" }));
   /* Les photographies vivent chez leur fonds : la doublure en sert une, d'un
      seul point, pour que la fiche ne parte pas sur le réseau. */

@@ -15,7 +15,7 @@
    La version est réécrite par outils/verification.mjs à partir des empreintes
    des actifs. Un changement de version vide l'ancien cache à l'activation. */
 
-const VERSION = "47c79b7efb";
+const VERSION = "3afe52080b";
 const CACHE = "monjardin-" + VERSION;
 
 const ACTIFS = [
@@ -76,6 +76,10 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  /* Ce fichier porte le numéro de version, que l'application relit pour savoir
+     si le site en sert une plus récente. Mis en cache, il rendrait toujours le
+     numéro du jour de l'installation, et la question n'aurait plus de sens. */
+  if (url.pathname.endsWith("/sw.js")) return;
 
   if (req.mode === "navigate") {
     e.respondWith(fetch(req)

@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=19c89fdd0d">
+<link rel="stylesheet" href="./styles.css?v=fe2118e38a">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="47c79b7efb">
+<meta name="version-appli" content="3afe52080b">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -210,6 +210,10 @@
         <p class="aide-reglage" id="tete-total"></p>
       </section>
       <p class="version-appli" id="versionAppli"></p>
+      <p class="version-maj">
+        <button class="lien" id="chercherMaj" type="button">Rechercher une mise à jour</button>
+      </p>
+      <p class="version-note" id="noteMaj" hidden></p>
   </div>
   <div id="bloc-jardin" hidden>
 
@@ -250,7 +254,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=80f841f378"></script>
+<script type="module" src="./app.js?v=921a88c97d"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
@@ -272,6 +276,18 @@
     <span>Calendrier</span>
   </button>
 </nav>
+
+<!-- Installée sur l'écran d'accueil, l'application est réveillée sans être
+     rechargée : elle peut tourner des semaines sur une copie ancienne. Ce
+     bandeau paraît quand une copie plus récente a pris la main. -->
+<div class="bandeau-maj" id="bandeauMaj" hidden>
+  <button class="maj-appliquer" id="appliquerMaj" type="button">
+    Nouvelle version disponible<b>Actualiser</b>
+  </button>
+  <button class="maj-plus-tard" id="ecarterMaj" type="button" aria-label="Plus tard">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 18 18M18 6 6 18"/></svg>
+  </button>
+</div>
 
 <div id="voile" class="voile" hidden></div>
 <div class="ph-plein" id="photoPlein" role="dialog" aria-modal="true"

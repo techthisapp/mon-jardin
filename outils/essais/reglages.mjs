@@ -124,6 +124,22 @@ export default async function essai(navigateur) {
       return parseFloat(s.fontSize) <= 12 && s.textAlign === "center";
     }));
 
+  /* Posée sur l'écran d'accueil, l'application est réveillée sans être
+     rechargée : elle peut tourner des semaines sur la copie du jour de son
+     installation. Le numéro affiché était alors juste et pourtant introuvable,
+     puisque la copie installée était antérieure à son ajout. */
+  j.section("la copie récente se cherche depuis la feuille");
+  j.controle("aucun bandeau quand le site sert la même version",
+    await pg.locator("#bandeauMaj[hidden]").count() === 1);
+  await pg.locator("#feuille-corps #chercherMaj").click();
+  await pg.waitForTimeout(700);
+  j.controle("la recherche le dit",
+    net(await pg.locator("#feuille-corps #noteMaj").innerText())
+      === "Cette copie est déjà la plus récente.",
+    net(await pg.locator("#feuille-corps #noteMaj").innerText()));
+  j.controle("la feuille est restée ouverte",
+    await pg.locator("#feuille:not([hidden])").count() === 1);
+
   /* Une fiche de plante écrase le corps de la feuille : si le bloc y était
      resté, il serait perdu et le réglage suivant ouvrirait une feuille vide. */
   j.section("ouvrir une fiche ne détruit pas les panneaux");
@@ -169,5 +185,71 @@ export default async function essai(navigateur) {
     net(await b.pg.locator("#feuille-titre").innerText()) === "Compte");
   await b.ctx.close();
 
-  return j.fin(erreurs.concat(b.erreurs));
+  /* Le site sert un numéro que la copie ouverte ne porte pas : c'est ce que voit
+     une application restée des semaines sur l'écran d'accueil. */
+  j.section("une version plus récente en ligne s'annonce et s'applique");
+  const c = await ouvrirContexte(navigateur, { versionSite: "0123456789" });
+  await c.pg.waitForSelector("#bandeauMaj:not([hidden])", { timeout: 6000 });
+  j.controle("le bandeau paraît de lui-même",
+    await c.pg.locator("#bandeauMaj:not([hidden])").count() === 1);
+  /* Il se pose au-dessus de la barre : posé dessous, il couvrirait les onglets
+     et le bouton rond. */
+  const place = await c.pg.evaluate(() => {
+    const m = document.getElementById("bandeauMaj").getBoundingClientRect();
+    const r = document.querySelector(".onglet-rond").getBoundingClientRect();
+    return { sous: m.bottom - r.top, dedans: m.top, ecran: innerHeight };
+  });
+  j.controle("il ne recouvre ni la barre ni le bouton rond",
+    place.sous <= 0 && place.dedans > 0 && place.dedans < place.ecran,
+    `${place.sous.toFixed(1)} de recouvrement`);
+  // La feuille de style met l'action en capitales : le texte rendu l'est aussi.
+  j.controle("il porte l'action de reprise",
+    net(await c.pg.locator("#appliquerMaj").innerText()).toLowerCase()
+      .includes("actualiser"),
+    net(await c.pg.locator("#appliquerMaj").innerText()));
+  await c.pg.locator("#ecarterMaj").click();
+  await c.pg.waitForTimeout(200);
+  j.controle("il s'écarte", await c.pg.locator("#bandeauMaj[hidden]").count() === 1);
+  /* Le contrôle est repris à chaque retour au premier plan : écarté une fois,
+     le bandeau ne doit pas revenir à la mise en veille suivante. */
+  await c.pg.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await c.pg.waitForTimeout(500);
+  j.controle("il ne revient pas au réveil suivant",
+    await c.pg.locator("#bandeauMaj[hidden]").count() === 1);
+
+  await c.pg.locator("#btnConfig").click();
+  await c.pg.waitForTimeout(600);
+  await c.pg.evaluate(() => { window.__avantMaj = 1; });
+  await c.pg.locator("#feuille-corps #chercherMaj").click();
+  await c.pg.waitForTimeout(300);
+  j.controle("la recherche annonce le redémarrage",
+    net(await c.pg.locator("#feuille-corps #noteMaj").innerText())
+      === "Nouvelle version trouvée, redémarrage.",
+    net(await c.pg.locator("#feuille-corps #noteMaj").innerText()));
+  await c.pg.waitForTimeout(2500);
+  j.controle("le document est bien rechargé",
+    await c.pg.evaluate(() => window.__avantMaj === undefined));
+  await c.ctx.close();
+
+  /* Hors ligne, le numéro en ligne est hors d'atteinte : la recherche le dit et
+     ne laisse pas croire que la copie est à jour. */
+  j.section("hors réseau, la recherche ne conclut pas");
+  const h = await ouvrirContexte(navigateur);
+  await h.ctx.route(/\/sw\.js(\?|$)/, r => r.abort());
+  await h.pg.locator("#btnConfig").click();
+  await h.pg.waitForTimeout(600);
+  await h.pg.locator("#feuille-corps #chercherMaj").click();
+  await h.pg.waitForTimeout(700);
+  j.controle("elle le dit sans conclure",
+    net(await h.pg.locator("#feuille-corps #noteMaj").innerText())
+      === "Vérification impossible sans réseau.",
+    net(await h.pg.locator("#feuille-corps #noteMaj").innerText()));
+  j.controle("le bouton reste offert",
+    await h.pg.locator("#feuille-corps #chercherMaj:not([disabled])").count() === 1);
+  await h.ctx.close();
+
+  /* La requête refusée est le propos de la section : le navigateur la porte au
+     journal, ce que le contrôle ne doit pas compter comme une panne. */
+  return j.fin(erreurs.concat(b.erreurs, c.erreurs,
+    h.erreurs.filter(e => !/Failed to load resource/.test(e))));
 }
