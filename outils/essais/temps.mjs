@@ -44,8 +44,24 @@ export default async function essai(navigateur) {
     .map(e => Math.round(e.getBoundingClientRect().width)));
   j.controle("toutes les voies partagent la largeur de l'axe",
     new Set(larg).size === 1, larg.join(", "));
+  /* Une voie vide occupait quarante points de haut et deux lignes de légende
+     pour ne montrer qu'un filet : quand rien n'est attendu et que le risque
+     reste bas, la ligne de titre le dit seule. Le jeu figé est sec. */
+  const dessinees = await pg.locator(".mg-v .mg-s").count();
+  j.controle("la voie de la pluie se replie quand il ne tombe rien",
+    dessinees === 6 && /aucune/.test(voies.find(v => /PLUIE/i.test(v)) || ""),
+    `${dessinees} voies dessinées sur ${voies.length}`);
+  j.controle("elle garde son titre et sa lecture",
+    (voies.find(v => /PLUIE/i.test(v)) || "").split("\n").length === 2);
   const legendes = await pg.locator(".mg-l").count();
-  j.controle("les voies à plusieurs tracés portent leur lecture", legendes === 4, legendes);
+  j.controle("les voies à plusieurs tracés portent leur lecture", legendes === 3, legendes);
+  /* Les deux bandes de valeur portent le trait de minuit comme les courbes,
+     sans quoi elles ne se lisent plus en regard des voies du dessus. */
+  const traits = await pg.evaluate(() => [...document.querySelectorAll(".mg-v")]
+    .filter(v => /CIEL|UV/i.test(v.textContent))
+    .map(v => v.querySelectorAll("line[stroke-dasharray]").length));
+  j.controle("le ciel et l'indice UV portent le repère de minuit",
+    traits.length === 2 && traits.every(n => n === 1), traits.join(", "));
 
   /* La fenêtre part de l'heure en cours et court sur vingt-quatre heures : elle
      traverse minuit, et la journée civile ne la borne pas. */

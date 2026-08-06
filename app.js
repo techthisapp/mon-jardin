@@ -2944,9 +2944,10 @@ const dCardinal = d => {
    par heure aurait mis deux échelles sous une seule graduation. */
 const MG_L = 358, MG_M = 5, MG_P = MG_L - 2 * MG_M;
 
+// Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni légende.
 function mgVoie(nom, droite, haut, dedans, legende) {
   return `<div class="mg-v"><p class="mg-t">${esc(nom)}<span>${esc(droite)}</span></p>`
-    + `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}</svg>`
+    + (haut ? `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}</svg>` : "")
     + (legende ? `<p class="mg-l">${esc(legende)}</p>` : "") + `</div>`;
 }
 
@@ -2992,9 +2993,12 @@ function dessinMeteogramme(s) {
   temp += `<path d="${aire(s.t, 10, 56, tn, tx)}" fill="#C7BE79" opacity=".28"/>`;
   temp += `<polyline points="${pts(s.ros, 10, 56, tn, tx)}" fill="none" stroke="#4A7CA8" `
     + `stroke-width="1.2" stroke-dasharray="3 3" opacity=".7"/>`;
+  /* Le ressenti partageait la teinte et le trait plein de la température : les
+     deux courbes se confondaient là où elles se rapprochent, c'est-à-dire
+     presque partout. Le pointillé les sépare sans ajouter de couleur. */
   if (ressenti)
     temp += `<polyline points="${pts(s.res, 10, 56, tn, tx)}" fill="none" stroke="#8A7A34" `
-      + `stroke-width="1" opacity=".45"/>`;
+      + `stroke-width="1.1" stroke-dasharray="1 2.6" stroke-linecap="round" opacity=".75"/>`;
   temp += `<polyline points="${pts(s.t, 10, 56, tn, tx)}" fill="none" stroke="#8A7A34" `
     + `stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
   const kx = s.t.indexOf(Math.max(...s.t)), kn = s.t.indexOf(Math.min(...s.t));
@@ -3004,7 +3008,7 @@ function dessinMeteogramme(s) {
   });
   voies.push(mgVoie("La température", `${bornes(s.t)} degrés`, 66, temp,
     "Pointillé bleu, le point de rosée : plus il est proche de la courbe, plus l'air est humide."
-    + (ressenti ? " Trait fin, le ressenti." : "")));
+    + (ressenti ? " Pointillé serré, le ressenti." : "")));
 
   // La pluie : le risque en barre pâle derrière, la lame en barre pleine devant.
   const mmx = Math.max(2, ...s.mm), tot = s.mm.reduce((a, b) => a + b, 0);
@@ -3024,8 +3028,13 @@ function dessinMeteogramme(s) {
   pluie += `<line x1="${MG_M}" y1="36.5" x2="${MG_L - MG_M}" y2="36.5" stroke="#16241E" opacity=".13"/>`;
   const dPluie = tot >= 0.2 ? `${nombreFr(tot)} mm attendus`
     : Math.max(...s.pb) >= 20 ? `aucune lame, risque ${Math.max(...s.pb)} %` : "aucune";
-  voies.push(mgVoie("La pluie", dPluie, 42, pluie,
-    "Barre pleine, la lame attendue. Barre pâle, le risque de pluie."));
+  /* Une voie vide occupait quarante points de haut et deux lignes de légende
+     pour ne montrer qu'un filet horizontal. Quand rien n'est attendu et que le
+     risque reste bas, la ligne de titre le dit déjà, et elle seule paraît. */
+  const pluieVide = tot < 0.2 && Math.max(...s.pb) < 20;
+  voies.push(pluieVide ? mgVoie("La pluie", dPluie, 0, "")
+    : mgVoie("La pluie", dPluie, 42, pluie,
+      "Barre pleine, la lame attendue. Barre pâle, le risque de pluie."));
 
   // Le vent : la moyenne en aire, les rafales en pointillé, l'orientation en
   // flèches toutes les trois heures, dans le sens où il souffle.
@@ -3038,19 +3047,30 @@ function dessinMeteogramme(s) {
   vent = fil(34 - 20 / vmx * 30, vent, "#8A4A10", ".30");
   vent += `<line x1="${MG_M}" y1="34.5" x2="${MG_L - MG_M}" y2="34.5" stroke="#16241E" opacity=".13"/>`;
   for (let k = 1; k < s.n; k += 3) {
+    /* Les flèches accompagnent la courbe, elles ne la commentent pas : plus
+       courtes, plus fines et plus pâles, sauf là où le vent passe le seuil. */
+    const fort = s.v[k] >= 20;
     vent += `<g transform="translate(${u(X(k + .5))},46) rotate(${Math.round(s.dir[k] + 180)})" `
-      + `fill="none" stroke="${s.v[k] >= 20 ? "#8A4A10" : "#5F6E63"}" stroke-width="1.4" `
-      + `stroke-linecap="round" stroke-linejoin="round">`
-      + `<path d="M0,-6 L0,6 M-2.8,-2.8 L0,-6 L2.8,-2.8"/></g>`;
+      + `fill="none" stroke="${fort ? "#8A4A10" : "#5F6E63"}" stroke-width="1.1" `
+      + `opacity="${fort ? ".85" : ".55"}" stroke-linecap="round" stroke-linejoin="round">`
+      + `<path d="M0,-4.6 L0,4.6 M-2.2,-2.2 L0,-4.6 L2.2,-2.2"/></g>`;
   }
   const kv = s.v.indexOf(Math.max(...s.v));
   voies.push(mgVoie("Le vent", `${Math.round(Math.max(...s.v))} km/h `
-    + `${dCardinal(s.dir[kv])}, rafales ${Math.round(Math.max(...s.raf))}`, 54, vent,
+    + `${dCardinal(s.dir[kv])}, rafales à ${Math.round(Math.max(...s.raf))} km/h`, 54, vent,
     "Pointillé brun, les rafales. Le filet marque vingt kilomètres par heure, "
     + "au-delà un traitement dérive."));
 
   // La couverture du ciel, en bande : c'est un taux d'occultation, une courbe
   // lui donnerait une précision qu'elle n'a pas.
+  /* Les deux bandes portent le trait de minuit comme les courbes : sans lui,
+     elles ne se lisaient plus en regard des voies du dessus. Le lavis de nuit
+     leur est épargné, il se confondrait avec la valeur qu'elles montrent. */
+  const minuit = h => {
+    const m = s.heure.indexOf(0);
+    return m > 0 ? `<line x1="${u(X(m))}" y1="0" x2="${u(X(m))}" y2="${h}" `
+      + `stroke="#16241E" opacity=".22" stroke-dasharray="2 3"/>` : "";
+  };
   let ciel = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#4A5A52" opacity=".06"/>`;
   let uvb = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#C8892F" opacity=".07"/>`;
   for (let k = 0; k < s.n; k++) {
@@ -3060,8 +3080,8 @@ function dessinMeteogramme(s) {
     if (q > .02) uvb += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="12" `
       + `fill="#C8892F" opacity="${(q * .85).toFixed(3)}"/>`;
   }
-  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel));
-  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb));
+  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel + minuit(14)));
+  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb + minuit(14)));
 
   // L'humidité de l'air, avec le seuil de quatre-vingt-dix pour cent au-delà
   // duquel le feuillage reste mouillé et les maladies s'installent.
@@ -3081,11 +3101,16 @@ function dessinMeteogramme(s) {
   voies.push(mgVoie("La pression", `${Math.round(s.pres[0])} hPa, `
     + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), 30, pres));
 
-  // L'axe des heures, commun aux voies.
+  /* L'axe des heures, commun aux voies. Le mot « maintenant » occupe le début de
+     la ligne : un repère est écarté quand il viendrait s'y coller. La place se
+     calcule sur la longueur des libellés, en chasse fixe, six points par signe :
+     une garde à distance fixe laissait les deux se toucher selon l'heure. */
+  const CHASSE = 6, FIN_ICI = MG_M + "maintenant".length * CHASSE + 9;
   let axe = `<text class="mg-h mg-ici" x="${MG_M}" y="11" text-anchor="start">maintenant</text>`;
   for (let k = 0; k < s.n; k++) {
-    if (s.heure[k] % 6 !== 0 || X(k) < 74) continue;
+    if (s.heure[k] % 6 !== 0) continue;
     const lib = s.heure[k] === 0 ? jourCourt(s.jour[k]) : String(s.heure[k]).padStart(2, "0") + " h";
+    if (X(k) - lib.length * CHASSE / 2 < FIN_ICI) continue;
     axe += `<text class="mg-h" x="${u(X(k))}" y="11" text-anchor="middle">${esc(lib)}</text>`;
   }
   return `<div class="mg">${voies.join("")}`
@@ -3259,6 +3284,11 @@ function vueTemps() {
           const c = b.dataset.mode;
           try { localStorage.setItem(MODE_TEMPS, c); } catch (e) { /* stockage indisponible */ }
           $("tempsCorps").innerHTML = ecritureTemps(s, c);
+          /* Les trois écritures n'ont pas la même hauteur : garder la position
+             de défilement laissait la barre des écritures à moitié cachée sous
+             l'entête de la feuille. Le titre de la section reprend la tête. */
+          const tete = b.closest(".f-carte-tete");
+          if (tete) $("feuille-corps").scrollTop = Math.max(0, tete.offsetTop - 8);
           $("feuille-corps").querySelectorAll("[data-mode]").forEach(x => {
             x.classList.toggle("actif", x.dataset.mode === c);
             x.setAttribute("aria-pressed", String(x.dataset.mode === c));
