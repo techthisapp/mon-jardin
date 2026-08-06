@@ -72,7 +72,8 @@ export default async function essai(navigateur) {
      heures traverse chaque voie, aux abscisses mêmes des libellés. */
   j.section("les heures se lisent d'un bout à l'autre de la pile");
   const grille = await pg.evaluate(() => {
-    const abs = e => [...e.querySelectorAll("line[y1='0']")]
+    // Le montant de lecture partage l'abscisse de départ des autres : il est écarté.
+    const abs = e => [...e.querySelectorAll("line[y1='0']:not(.mg-cur)")]
       .map(l => Math.round(Number(l.getAttribute("x1"))));
     // L'axe est un dessin frère des voies, il n'est pas dans .mg-v.
     const voies = [...document.querySelectorAll(".mg-v .mg-s")];
@@ -129,6 +130,50 @@ export default async function essai(navigateur) {
     .map(v => v.querySelectorAll("line[stroke-dasharray]").length));
   j.controle("le ciel et l'indice UV portent le repère de minuit",
     traits.length === 2 && traits.every(n => n === 1), traits.join(", "));
+
+  /* Un doigt posé sur les courbes désigne une heure : un montant la marque dans
+     toutes les voies, et chaque plage cède la place à la valeur de cette heure.
+     Les sept grandeurs se lisent ainsi ensemble, ce qu'une bulle flottante ne
+     permettrait pas sans recouvrir le dessin qu'on interroge. */
+  j.section("un doigt sur les courbes lit une heure");
+  // L'espace insécable des unités se lit autrement d'un côté et de l'autre.
+  const plages = (await pg.locator(".mg-r").evaluateAll(l => l.map(e => e.dataset.plage)))
+    .map(net);
+  j.controle("chaque voie garde sa plage de côté",
+    plages.length === 7 && plages.every(t => t && t.length), plages.filter(Boolean).length + " sur 7");
+  const cadre = await pg.locator(".mg-v .mg-s").first().boundingBox();
+  await pg.mouse.move(cadre.x + cadre.width * 0.62, cadre.y + cadre.height / 2);
+  await pg.mouse.down();
+  await pg.mouse.up();
+  await pg.waitForTimeout(300);
+  const heureLue = net(await pg.locator(".mg-sel span").innerText());
+  j.controle("l'heure lue est annoncée", /^Valeurs à \d{2} h$/.test(heureLue), heureLue);
+  const lues = await pg.locator(".mg-r").allInnerTexts();
+  j.controle("les sept voies donnent leur valeur à cette heure",
+    lues.length === 7 && lues.every((t, i) => net(t) !== plages[i] && /\d/.test(t)),
+    lues.map(net).join(" | "));
+  const curseurs = await pg.evaluate(() => [...document.querySelectorAll(".mg-cur")]
+    .filter(l => !l.hasAttribute("hidden")).map(l => Math.round(Number(l.getAttribute("x1")))));
+  j.controle("un montant marque l'heure dans chaque voie dessinée",
+    curseurs.length === 6 && new Set(curseurs).size === 1, curseurs.join(", "));
+  /* La lecture reste après le doigt levé : sur un téléphone, le doigt cache la
+     zone qu'il désigne, et une valeur qui disparaît au relâchement ne se lit
+     jamais. */
+  j.controle("elle reste après le doigt levé",
+    await pg.locator(".mg-sel:not([hidden])").count() === 1);
+  await pg.locator("#mgRendre").click();
+  await pg.waitForTimeout(300);
+  j.controle("le retour rend les plages",
+    (await pg.locator(".mg-r").allInnerTexts()).map(net).join("|") === plages.join("|"));
+  j.controle("et retire les montants de lecture",
+    await pg.evaluate(() => [...document.querySelectorAll(".mg-cur")]
+      .every(l => l.hasAttribute("hidden")))
+    && await pg.locator(".mg-sel[hidden]").count() === 1);
+  // Un doigt reposé au même endroit rend les plages, sans passer par le lien.
+  await pg.mouse.down(); await pg.mouse.up(); await pg.waitForTimeout(250);
+  await pg.mouse.down(); await pg.mouse.up(); await pg.waitForTimeout(250);
+  j.controle("un second appui au même endroit rend aussi les plages",
+    await pg.locator(".mg-sel[hidden]").count() === 1);
 
   /* La fenêtre part de l'heure en cours et court sur vingt-quatre heures : elle
      traverse minuit, et la journée civile ne la borne pas. */

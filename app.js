@@ -2944,6 +2944,10 @@ const dCardinal = d => {
    par heure aurait mis deux échelles sous une seule graduation. */
 const MG_L = 358, MG_M = 5, MG_P = MG_L - 2 * MG_M;
 
+/* Ce que le ruban en cours de rendu sait dire d'une heure. Une seule variable
+   suffit : un seul ruban est à l'écran à la fois. */
+let mgLecture = null;
+
 /* Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni légende.
 
    La lecture d'une voie apprend quelque chose la première fois et se lit en
@@ -2952,16 +2956,20 @@ const MG_L = 358, MG_M = 5, MG_P = MG_L - 2 * MG_M;
    ouvrir ; une voie sans lecture garde un titre ordinaire, sans commande. */
 let nVoie = 0;
 function mgVoie(nom, droite, haut, dedans, legende) {
+  /* Le montant de lecture est posé dès le dessin, replié : le faire naître au
+     toucher obligerait à recomposer un dessin à chaque déplacement du doigt. */
   const dessin = haut
-    ? `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}</svg>` : "";
+    ? `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}`
+      + `<line class="mg-cur" x1="0" y1="0" x2="0" y2="${haut}" hidden/></svg>` : "";
+  // La plage est gardée sur la balise : la lecture d'une heure la remplace.
+  const val = `<span class="mg-r" data-plage="${esc(droite)}">${esc(droite)}</span>`;
   if (!legende) {
-    return `<div class="mg-v"><p class="mg-t">${esc(nom)}`
-      + `<span class="mg-r">${esc(droite)}</span></p>` + dessin + `</div>`;
+    return `<div class="mg-v"><p class="mg-t">${esc(nom)}` + val + `</p>` + dessin + `</div>`;
   }
   const id = `mgl${++nVoie}`;
   return `<div class="mg-v"><button type="button" class="mg-t mg-b" aria-expanded="false" `
     + `aria-controls="${id}"><span class="mg-n">${esc(nom)}<i aria-hidden="true">?</i></span>`
-    + `<span class="mg-r">${esc(droite)}</span></button>`
+    + val + `</button>`
     + dessin + `<p class="mg-l" id="${id}" hidden>${esc(legende)}</p></div>`;
 }
 
@@ -3138,8 +3146,28 @@ function dessinMeteogramme(s) {
   montants.forEach(([k, lib]) => {
     axe += `<text class="mg-h" x="${u(X(k))}" y="11" text-anchor="middle">${esc(lib)}</text>`;
   });
+  /* Ce que chaque voie sait dire d'une heure, dans l'ordre où elles sont
+     empilées. La lecture au doigt s'en sert pour remplacer les plages. */
+  mgLecture = {
+    n: s.n, x: k => X(k + .5),
+    heure: k => (s.jour[k] !== s.jour[0] ? "demain " : "")
+      + String(s.heure[k]).padStart(2, "0") + " h",
+    voies: [
+      k => `${Math.round(s.t[k])}°`
+        + (Math.abs(s.res[k] - s.t[k]) >= 1 ? `, ressenti ${Math.round(s.res[k])}°` : ""),
+      k => s.mm[k] >= 0.1 ? `${nombreFr(s.mm[k])} mm` : `risque ${Math.round(s.pb[k])} %`,
+      k => `${Math.round(s.v[k])} km/h ${dCardinal(s.dir[k])}, `
+        + `rafales ${Math.round(s.raf[k])} km/h`,
+      k => `${Math.round(s.nua[k])} %`,
+      k => nombreFr(s.uv[k]),
+      k => `${Math.round(s.hum[k])} %`,
+      k => `${Math.round(s.pres[k])} hPa`,
+    ],
+  };
   return `<div class="mg">${voies.join("")}`
-    + `<svg class="mg-s" viewBox="0 0 ${MG_L} 14" aria-hidden="true">${axe}</svg></div>`;
+    + `<svg class="mg-s" viewBox="0 0 ${MG_L} 14" aria-hidden="true">${axe}</svg>`
+    + `<p class="mg-sel" hidden><span></span>`
+    + `<button type="button" id="mgRendre">Revenir aux plages</button></p></div>`;
 }
 
 /* ---------- La liste ---------- */
@@ -3286,11 +3314,89 @@ function modeTemps() {
   return "ruban";
 }
 
-const ecritureTemps = (s, m) => m === "liste" ? listeHoraire(s)
-  : m === "moments" ? momentsHoraires(s) : dessinMeteogramme(s);
+const ecritureTemps = (s, m) => {
+  mgLecture = null;
+  return m === "liste" ? listeHoraire(s)
+    : m === "moments" ? momentsHoraires(s) : dessinMeteogramme(s);
+};
+
+/* Lire une heure sur les courbes. Un doigt posé désigne une heure, un montant
+   la marque dans toutes les voies, et chaque plage cède la place à la valeur de
+   cette heure. Les sept grandeurs se lisent ainsi ensemble, ce qu'une bulle
+   flottante ne permettrait pas sans recouvrir le dessin qu'on interroge.
+
+   La lecture reste après le doigt levé : sur un téléphone, le doigt cache la
+   zone qu'il désigne, et une valeur qui disparaît au relâchement ne se lit
+   jamais. Une ligne sous le ruban dit l'heure retenue et la rend. */
+function brancherRuban() {
+  const bloc = $("feuille-corps").querySelector(".mg");
+  if (!bloc || !mgLecture) return;
+  const L = mgLecture;
+  const lignes = [...bloc.querySelectorAll(".mg-v")].map((v, i) => ({
+    val: v.querySelector(".mg-r"), cur: v.querySelector(".mg-cur"), dit: L.voies[i],
+  }));
+  const dit = bloc.querySelector(".mg-sel");
+  const nom = dit.querySelector("span");
+  let lu = -1;
+
+  const rendre = () => {
+    lu = -1;
+    bloc.classList.remove("mg-lu");
+    dit.hidden = true;
+    lignes.forEach(l => {
+      if (l.val) l.val.textContent = l.val.dataset.plage;
+      if (l.cur) l.cur.setAttribute("hidden", "");
+    });
+  };
+
+  const lire = k => {
+    if (k === lu) { rendre(); return; }
+    lu = k;
+    bloc.classList.add("mg-lu");
+    nom.textContent = `Valeurs à ${L.heure(k)}`;
+    dit.hidden = false;
+    const x = L.x(k).toFixed(1);
+    lignes.forEach(l => {
+      if (l.val && l.dit) l.val.textContent = l.dit(k);
+      if (l.cur) {
+        l.cur.setAttribute("x1", x); l.cur.setAttribute("x2", x);
+        l.cur.removeAttribute("hidden");
+      }
+    });
+  };
+
+  // L'abscisse est ramenée au repère du dessin, commun à toutes les voies.
+  const indice = ev => {
+    const s = bloc.querySelector(".mg-s");
+    if (!s) return -1;
+    const r = s.getBoundingClientRect();
+    const xv = (ev.clientX - r.left) / r.width * MG_L;
+    return Math.max(0, Math.min(L.n - 1, Math.floor((xv - MG_M) / MG_P * L.n)));
+  };
+
+  let glisse = false, depart = -1;
+  bloc.addEventListener("pointerdown", ev => {
+    if (ev.target.closest(".mg-b, #mgRendre")) return;
+    glisse = true; depart = indice(ev);
+    if (depart >= 0) { lu = depart === lu ? lu : -1; lire(depart); }
+  });
+  bloc.addEventListener("pointermove", ev => {
+    if (!glisse) return;
+    const k = indice(ev);
+    /* Un glissement n'est pas une bascule : seul un doigt reposé au même
+       endroit rend les plages. */
+    if (k >= 0 && k !== lu) { lu = -1; lire(k); }
+  });
+  const fini = () => { glisse = false; };
+  bloc.addEventListener("pointerup", fini);
+  bloc.addEventListener("pointercancel", fini);
+  bloc.addEventListener("pointerleave", fini);
+  sur("mgRendre", "click", rendre);
+}
 
 // Le titre d'une voie déplie sa lecture, et la replie.
 function brancherLectures() {
+  brancherRuban();
   $("feuille-corps").querySelectorAll(".mg-b").forEach(b => b.addEventListener("click", () => {
     const l = document.getElementById(b.getAttribute("aria-controls"));
     if (!l) return;
