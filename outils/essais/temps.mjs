@@ -19,9 +19,31 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(700);
   const titre = (await pg.locator("#feuille-titre").innerText()).split("\n")[0];
   j.controle("elle ouvre la feuille du temps", titre === "Le temps", titre);
-  j.controle("la lecture du moment y est reprise",
-    await pg.locator(".tp-deg").count() === 1,
-    await pg.locator(".tp-deg").innerText().catch(() => "absente"));
+  /* Le bandeau reste visible au-dessus de la feuille : elle ne redit ni le grand
+     chiffre ni l'état du ciel, elle porte les mesures que le bandeau ne tient
+     pas. La température et le ciel descendent dans le sous-titre, d'un rang qui
+     ne rivalise pas et qui reste lisible quand la feuille défile. */
+  const sousTitre = net((await pg.locator("#feuille-titre").innerText()).split("\n")[1] || "");
+  j.controle("le sous-titre porte le lieu, la température et le ciel",
+    /Fain-lès-Moutiers/.test(sousTitre) && /\d+°/.test(sousTitre)
+    && /clair|éclaircie|couvert|nuage|pluie|orage/i.test(sousTitre), sousTitre);
+  j.controle("le grand chiffre du bandeau n'est plus redit",
+    await pg.locator(".tp-deg").count() === 0);
+  const mesures = await pg.locator(".tp-m span").allInnerTexts();
+  j.controle("quatre mesures que le bandeau ne peut pas tenir",
+    mesures.map(t => net(t).toLowerCase()).join(", ")
+      === "ressenti, vent, humidité, indice uv", mesures.join(", "));
+  const damier = net(await pg.locator(".tp-mes").innerText());
+  j.controle("l'état du ciel n'y paraît pas une seconde fois",
+    !/clair|éclaircie|couvert/i.test(damier), damier);
+  j.controle("chaque mesure porte un chiffre",
+    await pg.locator(".tp-m b").count() === 4
+    && (await pg.locator(".tp-m b").allInnerTexts()).every(t => /\d/.test(t)),
+    (await pg.locator(".tp-m b").allInnerTexts()).join(" | "));
+  /* Les vitesses sans unité et les prépositions doublées sont les deux fautes
+     que ce damier a connues à l'écriture. */
+  j.controle("les vitesses portent leur unité, sans préposition doublée",
+    /rafales \d+ km\/h/.test(damier) && !/de de |d'de /.test(damier), damier);
   j.controle("la prévision à sept jours est descendue dans cette feuille",
     await pg.locator("#feuille-corps .mt-table").count() === 1);
 

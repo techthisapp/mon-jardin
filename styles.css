@@ -1550,10 +1550,18 @@ body.fige{overflow:hidden}
 /* ---------- Feuille du temps ---------- */
 /* La lecture du moment, reprise en tête de la feuille qui recouvre le bandeau
    où elle se lisait. */
-.tp-tete{display:flex;align-items:flex-end;gap:12px;margin-bottom:2px}
-.tp-deg{font-size:44px;font-weight:600;letter-spacing:-.045em;line-height:.92;color:var(--f-ink)}
-.tp-etat{padding-bottom:4px;font-size:14px;color:var(--f-ink2);min-width:0}
-.tp-etat small{display:block;font-size:11.5px;color:var(--f-ink3);margin-top:2px;line-height:1.4}
+/* Les quatre mesures du moment, en damier : elles se lisent d'un coup d'oeil
+   et n'entrent pas en concurrence avec le grand chiffre du bandeau. */
+.tp-mes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tp-m{background:var(--papier);border-radius:12px;padding:9px 12px 10px}
+.tp-m span{
+  display:block;margin-bottom:2px;
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--encre-doux);
+}
+.tp-m b{display:block;font-size:19px;font-weight:600;line-height:1.05;color:var(--f-ink)}
+.tp-m i{display:block;margin-top:2px;font-style:normal;font-size:11.5px;color:var(--f-ink3)}
 
 /* Ce que les vingt-quatre heures demandent au jardin, en tête : la feuille
    répond d'abord à la question posée, le détail vient ensuite. */

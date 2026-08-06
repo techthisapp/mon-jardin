@@ -3302,12 +3302,29 @@ function brancherLectures() {
 function vueTemps() {
   const s = serieHoraire();
   const g = jardinActif() || {};
-  /* La lecture du moment est reprise en tête : la feuille recouvre le bandeau
-     qui la portait. */
-  const tete = s ? `<div class="tp-tete"><span class="tp-deg">${Math.round(s.t[0])}°</span>`
-    + `<span class="tp-etat">${esc(tempsDe(s.code[0])[1])}<small>`
-    + `ressenti ${Math.round(s.res[0])}°, vent ${Math.round(s.v[0])} km/h `
-    + `${esc(dCardinal(s.dir[0]))}, humidité ${Math.round(s.hum[0])} %</small></span></div>` : "";
+  /* Le bandeau reste visible au-dessus de la feuille : il porte déjà le grand
+     chiffre, l'état du ciel et la vitesse du vent. La feuille ne les redit pas.
+     Elle porte les quatre mesures du moment que le bandeau ne peut pas tenir,
+     et que le jardinier lit avant d'agir : ce qu'il fait vraiment, d'où vient
+     le vent et jusqu'où il monte, ce que l'air a d'humide, ce que le soleil
+     brûle. */
+  const mes = (nom, val, sous) => `<div class="tp-m"><span>${esc(nom)}</span>`
+    + `<b>${esc(val)}</b>${sous ? `<i>${esc(sous)}</i>` : ""}</div>`;
+  let tete = "";
+  if (s) {
+    const dt = s.res[0] - s.t[0];
+    const uvx = Math.max(...s.uv), kuv = s.uv.indexOf(uvx);
+    const H = k => String(s.heure[k]).padStart(2, "0") + " h";
+    tete = `<div class="tp-mes">`
+      + mes("Ressenti", `${Math.round(s.res[0])}°`,
+            Math.abs(dt) >= 1 ? `${Math.round(s.t[0])}° mesurés` : "")
+      + mes("Vent", `${Math.round(s.v[0])} km/h`,
+            `${cardinal(s.dir[0])}, rafales ${Math.round(s.raf[0])} km/h`)
+      + mes("Humidité", `${Math.round(s.hum[0])} %`, `rosée à ${Math.round(s.ros[0])}°`)
+      + mes("Indice UV", nombreFr(s.uv[0]),
+            uvx > s.uv[0] + 0.4 ? `jusqu'à ${nombreFr(uvx)} vers ${H(kuv)}` : "au plus haut")
+      + `</div>`;
+  }
   const m = modeTemps();
   const seg = `<div class="f-seg" role="group" aria-label="Écriture des heures">`
     + MODES_TEMPS.map(([c, nom]) => `<button type="button" data-mode="${c}" `
@@ -3318,7 +3335,12 @@ function vueTemps() {
       + `<div id="tempsCorps">${ecritureTemps(s, m)}</div>`
     : `<p class="f-vide">La prévision heure par heure n'est pas disponible pour ce jardin.</p>`;
 
-  return { titre: "Le temps", sous: g.commune || "",
+  /* La température et le ciel descendent dans le sous-titre : la feuille reste
+     ainsi lisible seule quand elle défile et couvre le bandeau, sans lui faire
+     concurrence quand les deux sont à l'écran. */
+  const sous = [g.commune, s ? `${Math.round(s.t[0])}° et ${tempsDe(s.code[0])[1].toLowerCase()}` : ""]
+    .filter(Boolean).join(", ");
+  return { titre: "Le temps", sous,
     corps: tete + heures + `<h3 class="f-sect">La semaine</h3>` + tableSemaine()
       + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
       + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
