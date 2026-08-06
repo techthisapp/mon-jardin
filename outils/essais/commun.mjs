@@ -160,6 +160,36 @@ export async function ongletAnnee(pg) {
   await pg.waitForTimeout(350);
 }
 
+/* Un geste tactile joué à la main, image par image. Playwright ne sait pas
+   composer un glissement d'un doigt sur un élément précis : les évènements sont
+   fabriqués et distribués sur la cible, comme le ferait un doigt réel. */
+export async function glisserSurFeuille(pg, x, yDepart, yArrivee, pas = 8, delai = 16) {
+  await pg.evaluate(([x, y]) => {
+    const c = document.elementFromPoint(x, y);
+    window.__cible__ = c;
+    const t = new Touch({ identifier: 1, target: c, clientX: x, clientY: y });
+    c.dispatchEvent(new TouchEvent("touchstart", { touches: [t], targetTouches: [t],
+      changedTouches: [t], bubbles: true, cancelable: true }));
+  }, [x, yDepart]);
+  const sens = yArrivee >= yDepart ? 1 : -1;
+  for (let y = yDepart; sens > 0 ? y <= yArrivee : y >= yArrivee; y += sens * pas) {
+    await pg.evaluate(([x, y]) => {
+      const c = window.__cible__;
+      const t = new Touch({ identifier: 1, target: c, clientX: x, clientY: y });
+      c.dispatchEvent(new TouchEvent("touchmove", { touches: [t], targetTouches: [t],
+        changedTouches: [t], bubbles: true, cancelable: true }));
+    }, [x, y]);
+    await pg.waitForTimeout(delai);
+  }
+  await pg.evaluate(([x, y]) => {
+    const c = window.__cible__;
+    const t = new Touch({ identifier: 1, target: c, clientX: x, clientY: y });
+    c.dispatchEvent(new TouchEvent("touchend", { touches: [], targetTouches: [],
+      changedTouches: [t], bubbles: true, cancelable: true }));
+  }, [x, yArrivee]);
+  await pg.waitForTimeout(450);
+}
+
 export async function ongletIdentite(pg) {
   await pg.locator('.f-onglets button[data-pan="identite"]').dispatchEvent("click");
   await pg.waitForTimeout(350);

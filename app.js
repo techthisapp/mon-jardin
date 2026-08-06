@@ -3374,23 +3374,35 @@ function brancherRuban() {
     return Math.max(0, Math.min(L.n - 1, Math.floor((xv - MG_M) / MG_P * L.n)));
   };
 
-  let glisse = false, depart = -1;
+  /* La lecture ne s'engage pas au poser du doigt : un glissement vers le bas
+     sur les courbes est un geste de fermeture de la feuille, et il ne doit pas
+     laisser une heure lue derrière lui. Elle s'engage au premier déplacement
+     horizontal, ou au relâchement si le doigt n'a pas bougé. */
+  let glisse = false, depart = -1, x0 = 0, y0 = 0, bouge = false;
   bloc.addEventListener("pointerdown", ev => {
     if (ev.target.closest(".mg-b, #mgRendre")) return;
-    glisse = true; depart = indice(ev);
-    if (depart >= 0) { lu = depart === lu ? lu : -1; lire(depart); }
+    glisse = true; bouge = false;
+    x0 = ev.clientX; y0 = ev.clientY; depart = indice(ev);
   });
   bloc.addEventListener("pointermove", ev => {
     if (!glisse) return;
+    const dx = Math.abs(ev.clientX - x0), dy = Math.abs(ev.clientY - y0);
+    if (!bouge) {
+      if (dy > 8 && dy > dx) { glisse = false; return; }   // la feuille se ferme
+      if (dx <= 6) return;
+      bouge = true;
+    }
     const k = indice(ev);
-    /* Un glissement n'est pas une bascule : seul un doigt reposé au même
-       endroit rend les plages. */
     if (k >= 0 && k !== lu) { lu = -1; lire(k); }
   });
-  const fini = () => { glisse = false; };
+  const fini = () => {
+    // Un doigt posé sans déplacement lit l'heure, et la rend s'il la relit.
+    if (glisse && !bouge && depart >= 0) lire(depart);
+    glisse = false;
+  };
   bloc.addEventListener("pointerup", fini);
-  bloc.addEventListener("pointercancel", fini);
-  bloc.addEventListener("pointerleave", fini);
+  bloc.addEventListener("pointercancel", () => { glisse = false; });
+  bloc.addEventListener("pointerleave", () => { glisse = false; });
   sur("mgRendre", "click", rendre);
 }
 
@@ -4762,6 +4774,76 @@ function ouvrirFeuille(p) {
     $("feuille").focus();
   });
 }
+
+/* Glisser la feuille vers le bas la ferme. Le geste part de n'importe quel
+   point, à une condition : que le corps soit déjà en haut de son défilement,
+   sinon c'est le contenu qui glisse. C'est la règle de toutes les feuilles de
+   téléphone, et elle évite d'avoir à viser la croix ou la poignée.
+
+   Le seuil seul ne suffit pas : un geste vif et court est une intention de
+   fermeture aussi nette qu'une longue course, la vitesse est donc mesurée. */
+const TIRER_SEUIL = 96, TIRER_VITESSE = 0.55;
+
+function brancherGlissementFeuille() {
+  const f = $("feuille"), corps = $("feuille-corps"), voile = $("voile");
+  if (!f || !corps || !voile) return;
+  let y0 = 0, t0 = 0, dy = 0, vy = 0, yv = 0, tv = 0, suit = false, pris = false;
+
+  const poser = v => {
+    f.style.setProperty("--tirer", v.toFixed(1) + "px");
+    voile.style.opacity = String(Math.max(0.06, 1 - v / 300));
+  };
+  const relacher = () => {
+    f.classList.remove("tire");
+    voile.style.removeProperty("opacity");
+  };
+
+  f.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1 || f.hidden) { suit = false; return; }
+    const t = e.touches[0];
+    y0 = yv = t.clientY; t0 = tv = e.timeStamp; dy = 0; vy = 0; pris = false;
+    /* Le geste n'appartient à la feuille que si le contenu ne peut plus
+       descendre. Un geste né hors du corps, sur la poignée ou l'entête, lui
+       appartient toujours. */
+    suit = !corps.contains(e.target) || corps.scrollTop <= 0;
+  }, { passive: true });
+
+  f.addEventListener("touchmove", e => {
+    if (!suit || e.touches.length !== 1) return;
+    const t = e.touches[0], d = t.clientY - y0;
+    if (!pris) {
+      // Un geste qui monte appartient au contenu, il ne sera pas repris.
+      if (d < -4) { suit = false; return; }
+      if (d < 8) return;
+      pris = true;
+      f.classList.add("tire");
+    }
+    const dt = e.timeStamp - tv;
+    if (dt > 0) { vy = (t.clientY - yv) / dt; yv = t.clientY; tv = e.timeStamp; }
+    dy = Math.max(0, d);
+    e.preventDefault();
+    poser(dy);
+  }, { passive: false });
+
+  const fini = () => {
+    if (!pris) { suit = false; return; }
+    suit = pris = false;
+    if (dy >= TIRER_SEUIL || vy >= TIRER_VITESSE) {
+      /* La transition reprend la main au même instant : elle part de la
+         position atteinte par le doigt et va jusqu'en bas, d'un seul trait. */
+      relacher();
+      f.style.removeProperty("--tirer");
+      fermerFeuille();
+      return;
+    }
+    relacher();
+    f.style.setProperty("--tirer", "0px");
+    setTimeout(() => f.style.removeProperty("--tirer"), 260);
+  };
+  f.addEventListener("touchend", fini);
+  f.addEventListener("touchcancel", fini);
+}
+brancherGlissementFeuille();
 
 function fermerFeuille() {
   fermerPhoto();

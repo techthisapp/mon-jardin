@@ -853,10 +853,15 @@ body.fige{overflow:hidden}
   max-height:86vh;display:flex;flex-direction:column;
   background:var(--papier-haut);border-radius:18px 18px 0 0;
   box-shadow:0 -8px 40px rgba(22,36,30,.22);
-  transform:translateY(100%);transition:transform .22s cubic-bezier(.32,.72,0,1);
+  /* La course du doigt entre dans la transformation : la feuille se ferme par
+     la même propriété qui l'ouvre, sans second calque à animer. */
+  transform:translateY(calc(100% + var(--tirer, 0px)));
+  transition:transform .22s cubic-bezier(.32,.72,0,1);
   padding-bottom:env(safe-area-inset-bottom);
 }
-.feuille.ouverte{transform:translateY(0)}
+.feuille.ouverte{transform:translateY(var(--tirer, 0px))}
+/* Pendant le geste, la feuille suit le doigt sans amortissement. */
+.feuille.tire{transition:none}
 .poignee{
   width:38px;height:4px;border-radius:999px;background:var(--filet);
   margin:9px auto 4px;flex:none;
@@ -875,8 +880,11 @@ body.fige{overflow:hidden}
 }
 .feuille-corps .fiche{display:block}
 @media (min-width:640px){
-  .feuille{left:50%;right:auto;width:560px;transform:translate(-50%,100%);border-radius:18px 18px 0 0}
-  .feuille.ouverte{transform:translate(-50%,0)}
+  .feuille{
+    left:50%;right:auto;width:560px;border-radius:18px 18px 0 0;
+    transform:translate(-50%, calc(100% + var(--tirer, 0px)));
+  }
+  .feuille.ouverte{transform:translate(-50%, var(--tirer, 0px))}
 }
 
 /* ---------- Tiroirs de sourdine ---------- */
