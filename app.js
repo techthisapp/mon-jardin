@@ -2944,11 +2944,25 @@ const dCardinal = d => {
    par heure aurait mis deux échelles sous une seule graduation. */
 const MG_L = 358, MG_M = 5, MG_P = MG_L - 2 * MG_M;
 
-// Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni légende.
+/* Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni légende.
+
+   La lecture d'une voie apprend quelque chose la première fois et se lit en
+   pure perte ensuite : elle est repliée, et le titre devient une commande qui
+   la déplie. Un point d'interrogation discret dit qu'il y a quelque chose à
+   ouvrir ; une voie sans lecture garde un titre ordinaire, sans commande. */
+let nVoie = 0;
 function mgVoie(nom, droite, haut, dedans, legende) {
-  return `<div class="mg-v"><p class="mg-t">${esc(nom)}<span>${esc(droite)}</span></p>`
-    + (haut ? `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}</svg>` : "")
-    + (legende ? `<p class="mg-l">${esc(legende)}</p>` : "") + `</div>`;
+  const dessin = haut
+    ? `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}</svg>` : "";
+  if (!legende) {
+    return `<div class="mg-v"><p class="mg-t">${esc(nom)}`
+      + `<span class="mg-r">${esc(droite)}</span></p>` + dessin + `</div>`;
+  }
+  const id = `mgl${++nVoie}`;
+  return `<div class="mg-v"><button type="button" class="mg-t mg-b" aria-expanded="false" `
+    + `aria-controls="${id}"><span class="mg-n">${esc(nom)}<i aria-hidden="true">?</i></span>`
+    + `<span class="mg-r">${esc(droite)}</span></button>`
+    + dessin + `<p class="mg-l" id="${id}" hidden>${esc(legende)}</p></div>`;
 }
 
 function dessinMeteogramme(s) {
@@ -2957,17 +2971,40 @@ function dessinMeteogramme(s) {
   const u = v => v.toFixed(1);
   const bornes = t => `${Math.round(Math.min(...t))} à ${Math.round(Math.max(...t))}`;
 
-  /* La nuit est lavée dans toutes les voies, et minuit y est marqué d'un trait :
-     la fenêtre traverse deux journées civiles. */
-  const fond = h => {
+  /* Les montants et les libellés de l'axe sont décidés ensemble : un montant
+     sans libellé laisserait une graduation muette. Le premier libellé est
+     l'heure en cours, en vert comme dans la liste ; les suivants tombent sur
+     les six heures, et l'un d'eux est écarté s'il vient se coller au premier.
+     La chasse est fixe, six points par signe. */
+  const CHASSE = 6;
+  const ICI = String(s.heure[0]).padStart(2, "0") + " h";
+  const finIci = MG_M + ICI.length * CHASSE + 7;
+  const montants = [];
+  for (let k = 1; k < s.n; k++) {
+    if (s.heure[k] % 6 !== 0) continue;
+    const lib = s.heure[k] === 0 ? jourCourt(s.jour[k]) : String(s.heure[k]).padStart(2, "0") + " h";
+    if (X(k) - lib.length * CHASSE / 2 < finIci) continue;
+    montants.push([k, lib]);
+  }
+
+  /* La nuit est lavée dans toutes les voies, et un montant marque chaque tranche
+     de six heures, aux abscisses mêmes où l'axe pose ses libellés. Sans ces
+     montants, une bosse au milieu de la pile ne se rattachait à aucune heure :
+     il fallait descendre jusqu'à l'axe et remonter à l'oeil. Minuit garde son
+     pointillé plus marqué, c'est une frontière de journée et non une graduation.
+     Le lavis de nuit est facultatif : sur les bandes de valeur il se confondrait
+     avec ce qu'elles montrent. */
+  const fond = (h, lavis) => {
     let o = "";
-    plagesDe(s.n, k => !s.clair[k]).forEach(([a, b]) => {
+    if (lavis !== false) plagesDe(s.n, k => !s.clair[k]).forEach(([a, b]) => {
       o += `<rect x="${u(X(a))}" y="0" width="${u(X(b + 1) - X(a))}" height="${h}" `
         + `fill="#16241E" opacity=".045"/>`;
     });
-    const m = s.heure.indexOf(0);
-    if (m > 0) o += `<line x1="${u(X(m))}" y1="0" x2="${u(X(m))}" y2="${h}" `
-      + `stroke="#16241E" opacity=".22" stroke-dasharray="2 3"/>`;
+    montants.forEach(([k]) => {
+      const nuit = s.heure[k] === 0;
+      o += `<line x1="${u(X(k))}" y1="0" x2="${u(X(k))}" y2="${h}" stroke="#16241E" `
+        + `opacity="${nuit ? ".22" : ".10"}"${nuit ? ' stroke-dasharray="2 3"' : ""}/>`;
+    });
     return o;
   };
   const pts = (vals, y0, y1, mn, mx) => vals.map((v, k) =>
@@ -3063,14 +3100,6 @@ function dessinMeteogramme(s) {
 
   // La couverture du ciel, en bande : c'est un taux d'occultation, une courbe
   // lui donnerait une précision qu'elle n'a pas.
-  /* Les deux bandes portent le trait de minuit comme les courbes : sans lui,
-     elles ne se lisaient plus en regard des voies du dessus. Le lavis de nuit
-     leur est épargné, il se confondrait avec la valeur qu'elles montrent. */
-  const minuit = h => {
-    const m = s.heure.indexOf(0);
-    return m > 0 ? `<line x1="${u(X(m))}" y1="0" x2="${u(X(m))}" y2="${h}" `
-      + `stroke="#16241E" opacity=".22" stroke-dasharray="2 3"/>` : "";
-  };
   let ciel = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#4A5A52" opacity=".06"/>`;
   let uvb = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#C8892F" opacity=".07"/>`;
   for (let k = 0; k < s.n; k++) {
@@ -3080,8 +3109,8 @@ function dessinMeteogramme(s) {
     if (q > .02) uvb += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="12" `
       + `fill="#C8892F" opacity="${(q * .85).toFixed(3)}"/>`;
   }
-  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel + minuit(14)));
-  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb + minuit(14)));
+  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel + fond(14, false)));
+  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb + fond(14, false)));
 
   // L'humidité de l'air, avec le seuil de quatre-vingt-dix pour cent au-delà
   // duquel le feuillage reste mouillé et les maladies s'installent.
@@ -3101,18 +3130,14 @@ function dessinMeteogramme(s) {
   voies.push(mgVoie("La pression", `${Math.round(s.pres[0])} hPa, `
     + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), 30, pres));
 
-  /* L'axe des heures, commun aux voies. Le mot « maintenant » occupe le début de
-     la ligne : un repère est écarté quand il viendrait s'y coller. La place se
-     calcule sur la longueur des libellés, en chasse fixe, six points par signe :
-     une garde à distance fixe laissait les deux se toucher selon l'heure. */
-  const CHASSE = 6, FIN_ICI = MG_M + "maintenant".length * CHASSE + 9;
-  let axe = `<text class="mg-h mg-ici" x="${MG_M}" y="11" text-anchor="start">maintenant</text>`;
-  for (let k = 0; k < s.n; k++) {
-    if (s.heure[k] % 6 !== 0) continue;
-    const lib = s.heure[k] === 0 ? jourCourt(s.jour[k]) : String(s.heure[k]).padStart(2, "0") + " h";
-    if (X(k) - lib.length * CHASSE / 2 < FIN_ICI) continue;
+  /* L'axe des heures, commun aux voies. Le premier libellé est l'heure en cours,
+     marquée de la même teinte que la ligne du moment dans la liste : le mot
+     « maintenant » occupait la place de deux graduations et en faisait sauter
+     une. Les autres sont exactement les montants du quadrillage. */
+  let axe = `<text class="mg-h mg-ici" x="${MG_M}" y="11" text-anchor="start">${esc(ICI)}</text>`;
+  montants.forEach(([k, lib]) => {
     axe += `<text class="mg-h" x="${u(X(k))}" y="11" text-anchor="middle">${esc(lib)}</text>`;
-  }
+  });
   return `<div class="mg">${voies.join("")}`
     + `<svg class="mg-s" viewBox="0 0 ${MG_L} 14" aria-hidden="true">${axe}</svg></div>`;
 }
@@ -3134,10 +3159,20 @@ function listeHoraire(s) {
       + `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
       + `<path d="M7,1.5 L7,12.5 M4.2,4.3 L7,1.5 L9.8,4.3"/></svg></i>`
       + `${Math.round(s.v[k])}<small>${CARD_ABR[iCard(s.dir[k])]}</small></td>`
-      + `<td class="hh-p">${s.mm[k] >= 0.1 ? `<b>${nombreFr(s.mm[k])}</b> mm` : ""}</td>`
-      + `<td class="hh-pb">${s.pb[k] >= 15 ? s.pb[k] + " %" : ""}</td></tr>`);
+      /* La lame et le risque tenaient chacun une colonne, toutes deux muettes
+         par temps sec, ce qui laissait la moitié droite de la table vide. Une
+         seule colonne les porte, la lame quand il en tombe, le risque sinon, et
+         l'humidité de l'air occupe la place gagnée. */
+      + `<td class="hh-p">${s.mm[k] >= 0.1 ? `<b>${nombreFr(s.mm[k])}</b> mm`
+          : s.pb[k] >= 15 ? s.pb[k] + ` %` : ""}</td>`
+      + `<td class="hh-hu${s.hum[k] >= 90 ? " hh-moite" : ""}">`
+      + `${Math.round(s.hum[k])} %</td></tr>`);
   }
-  return `<table class="hh-table">${r.join("")}</table>`;
+  /* Sans entête, deux colonnes en pour cent se confondraient : la ligne de tête
+     les nomme, et c'est aussi ce qu'attend un lecteur d'écran d'une table. */
+  const tete = `<thead><tr class="hh-tete"><th>heure</th><th></th><th>temp.</th>`
+    + `<th>vent</th><th>pluie</th><th>humidité</th></tr></thead>`;
+  return `<table class="hh-table">${tete}<tbody>${r.join("")}</tbody></table>`;
 }
 
 /* ---------- Les moments ----------
@@ -3254,6 +3289,16 @@ function modeTemps() {
 const ecritureTemps = (s, m) => m === "liste" ? listeHoraire(s)
   : m === "moments" ? momentsHoraires(s) : dessinMeteogramme(s);
 
+// Le titre d'une voie déplie sa lecture, et la replie.
+function brancherLectures() {
+  $("feuille-corps").querySelectorAll(".mg-b").forEach(b => b.addEventListener("click", () => {
+    const l = document.getElementById(b.getAttribute("aria-controls"));
+    if (!l) return;
+    l.hidden = !l.hidden;
+    b.setAttribute("aria-expanded", String(!l.hidden));
+  }));
+}
+
 function vueTemps() {
   const s = serieHoraire();
   const g = jardinActif() || {};
@@ -3279,6 +3324,7 @@ function vueTemps() {
       + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
     brancher() {
       if (!s) return;
+      brancherLectures();
       $("feuille-corps").querySelectorAll("[data-mode]").forEach(b =>
         b.addEventListener("click", () => {
           const c = b.dataset.mode;
@@ -3289,6 +3335,7 @@ function vueTemps() {
              l'entête de la feuille. Le titre de la section reprend la tête. */
           const tete = b.closest(".f-carte-tete");
           if (tete) $("feuille-corps").scrollTop = Math.max(0, tete.offsetTop - 8);
+          brancherLectures();
           $("feuille-corps").querySelectorAll("[data-mode]").forEach(x => {
             x.classList.toggle("actif", x.dataset.mode === c);
             x.setAttribute("aria-pressed", String(x.dataset.mode === c));

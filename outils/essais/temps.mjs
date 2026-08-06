@@ -37,9 +37,54 @@ export default async function essai(navigateur) {
   const voies = await pg.locator(".mg-v .mg-t").allInnerTexts();
   j.controle("sept voies, une par grandeur", voies.length === 7,
     voies.map(v => v.split("\n")[0]).join(", "));
+  /* Le nom, le point d'interrogation quand une lecture est repliée, puis la
+     valeur : trois lignes de texte au plus, dont deux qui disent quelque chose. */
   j.controle("chacune est nommée et chiffrée",
-    voies.every(v => v.split("\n").length === 2 && v.split("\n")[1].trim().length > 0),
-    voies.map(v => net(v.replace("\n", " : "))).join(" | "));
+    voies.every(v => {
+      const l = v.split("\n").map(x => x.trim()).filter(x => x && x !== "?");
+      return l.length === 2 && l[1].length > 0;
+    }), voies.map(v => net(v.replace(/\n/g, " : "))).join(" | "));
+
+  /* Une bosse au milieu de la pile ne se rattachait à aucune heure : il fallait
+     descendre jusqu'à l'axe et remonter à l'oeil. Un montant tous les six
+     heures traverse chaque voie, aux abscisses mêmes des libellés. */
+  j.section("les heures se lisent d'un bout à l'autre de la pile");
+  const grille = await pg.evaluate(() => {
+    const abs = e => [...e.querySelectorAll("line[y1='0']")]
+      .map(l => Math.round(Number(l.getAttribute("x1"))));
+    // L'axe est un dessin frère des voies, il n'est pas dans .mg-v.
+    const voies = [...document.querySelectorAll(".mg-v .mg-s")];
+    const axe = [...document.querySelectorAll(".mg-s text.mg-h:not(.mg-ici)")]
+      .map(t => Math.round(Number(t.getAttribute("x"))));
+    return { par: voies.map(abs), axe };
+  });
+  j.controle("chaque voie porte les mêmes montants",
+    grille.par.length >= 6 && new Set(grille.par.map(a => a.join(","))).size === 1,
+    grille.par.map(a => a.length).join(", "));
+  j.controle("ils tombent sous les libellés de l'axe",
+    JSON.stringify(grille.par[0]) === JSON.stringify(grille.axe),
+    `${grille.par[0].join(", ")} contre ${grille.axe.join(", ")}`);
+  // Un texte de dessin n'est pas un élément de page : il se lit par son contenu.
+  const ici = net(await pg.locator(".mg-ici").evaluate(e => e.textContent));
+  j.controle("le premier libellé est l'heure en cours, marquée",
+    ici === String(H0).padStart(2, "0") + " h", ici);
+
+  /* La lecture d'une voie apprend quelque chose la première fois et se lit en
+     pure perte ensuite : elle est repliée derrière le titre. */
+  j.section("la lecture d'une voie se déplie au toucher");
+  j.controle("les lectures sont repliées",
+    await pg.locator(".mg-l:not([hidden])").count() === 0);
+  await pg.locator(".mg-b").first().click();
+  await pg.waitForTimeout(300);
+  j.controle("le titre touché déplie la sienne",
+    await pg.locator(".mg-l:not([hidden])").count() === 1
+    && await pg.locator(".mg-b").first().getAttribute("aria-expanded") === "true");
+  j.controle("elle parle bien de cette voie",
+    /point de rosée/.test(await pg.locator(".mg-l:not([hidden])").innerText()));
+  await pg.locator(".mg-b").first().click();
+  await pg.waitForTimeout(300);
+  j.controle("un second toucher la replie",
+    await pg.locator(".mg-l:not([hidden])").count() === 0);
   const larg = await pg.evaluate(() => [...document.querySelectorAll(".mg-s")]
     .map(e => Math.round(e.getBoundingClientRect().width)));
   j.controle("toutes les voies partagent la largeur de l'axe",
@@ -78,6 +123,27 @@ export default async function essai(navigateur) {
     await pg.locator(".hh-jour").count() === 1,
     await pg.locator(".hh-jour").innerText().catch(() => "absente"));
   j.controle("l'heure en cours est marquée", await pg.locator(".hh-ici").count() === 1);
+
+  /* La lame et le risque tenaient chacun une colonne, toutes deux muettes par
+     temps sec : la moitié droite de la table restait vide. Une seule colonne
+     les porte, et l'humidité de l'air occupe la place gagnée. */
+  const colonnes = (await pg.locator(".hh-tete th").allInnerTexts()).map(t => net(t).toLowerCase());
+  j.controle("la ligne de tête nomme les colonnes",
+    colonnes.join(" ") === "heure  temp. vent pluie humidité", colonnes.join(" | "));
+  j.controle("une seule colonne de pluie",
+    await pg.locator(".hh-p").count() === 24 && await pg.locator(".hh-pb").count() === 0);
+  const hu = await pg.locator(".hh-hu").allInnerTexts();
+  j.controle("chaque heure porte son humidité",
+    hu.length === 24 && hu.every(t => /^\d+\s*%$/.test(net(t))), net(hu[0] || ""));
+  j.controle("la table occupe la largeur de la feuille",
+    await pg.evaluate(() => {
+      const t = document.querySelector(".hh-table").getBoundingClientRect();
+      const d = [...document.querySelectorAll(".hh-hu")].pop().getBoundingClientRect();
+      return t.right - d.right < 4;
+    }));
+  j.controle("un air moite est marqué",
+    await pg.locator(".hh-moite").count() >= 1,
+    String(await pg.locator(".hh-moite").count()));
 
   j.section("les moments suivent les bornes civiles");
   await pg.locator('[data-mode="moments"]').click();
