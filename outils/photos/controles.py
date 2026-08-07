@@ -46,7 +46,7 @@ def generaux(m):
 # L'absence de sujet végétal ne vaut pas pour l'écorce, dont le cadre est par
 # nature sans feuillage et sans couleur.
 def sans_sujet(m, organe):
-    if organe == "ecorce":
+    if organe in ("ecorce", "racine"):
         return []
     if m["p_feuillage"] < 0.12 and m["tache"] < 0.05 and m["p_corolle"] < 0.12:
         return ["cadre sans sujet végétal, ni feuillage ni masse colorée, "
@@ -94,6 +94,16 @@ def ecorce(m):
                  f"l'écorce n'est pas le sujet")
     return r
 
+# La racine est arrachée, lavée, posée sur une table ou tenue en main : elle n'a
+# ni feuillage attendu ni couleur vive. Le seul contrôle qui vaille est qu'elle
+# soit le sujet, et non un rang de feuilles au-dessus du sol.
+def racine(m):
+    r = []
+    if m["p_feuillage"] > 0.60:
+        r.append(f"feuillage dominant à {m['p_feuillage'] * 100:.0f} pour cent, "
+                 f"la racine n'est pas le sujet")
+    return r
+
 def port(m):
     r = []
     if m["p_feuillage"] < 0.12:
@@ -101,7 +111,7 @@ def port(m):
     return r
 
 PAR_ORGANE = {"fleur": fleur, "feuille": feuille, "fruit": fruit,
-              "ecorce": ecorce, "port": port}
+              "racine": racine, "ecorce": ecorce, "port": port}
 
 # Teintes de référence en degrés, pour confronter la couleur mesurée aux clés
 # de flower_colors. Les clés larges ne contraignent rien.
@@ -151,6 +161,6 @@ def suspicion(m, organe):
         s += max(0.0, (0.35 - m["p_feuillage"]) / 0.35) * 2.0
     if organe == "feuille":
         s += max(0.0, (m["p_taches"] - 0.20)) * 3.0
-    if organe == "ecorce":
+    if organe in ("ecorce", "racine"):
         s += max(0.0, (m["p_vert"] - 0.50)) * 2.0
     return round(s, 3)

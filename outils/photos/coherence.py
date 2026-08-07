@@ -57,8 +57,16 @@ def controler_lot(tuiles):
 # lavande, sauge, garde une base ligneuse et reste admis.
 PORTS_LIGNEUX = {"arbre", "arbuste", "liane", "sous_arbrisseau"}
 
-def organe_compatible(tuiles, ports):
-    """Signale une tuile dont l'organe n'existe pas chez la plante."""
+# Catégories de légumes dont le fruit n'est jamais vu. Le fruit y est celui du
+# porte-graine, monté après la récolte : la silique de la laitue, l'ombelle de
+# la carotte, la fleur montée de l'oignon. Le jardinier ne les reconnaît pas et
+# la tuile ne lui apprend rien. Les fruits d'été, les légumineuses et les choux
+# ne sont pas concernés, leur fruit est ce qu'on récolte ou ce qu'on sème.
+CATEGORIES_SANS_FRUIT = {"Feuilles", "Racines", "Bulbes"}
+
+def organe_compatible(tuiles, ports, categories=None):
+    """Signale une tuile dont l'organe n'existe pas ou n'a pas d'objet."""
+    categories = categories or {}
     motifs = {}
     for t in tuiles:
         p = ports.get(t["slug"])
@@ -66,6 +74,11 @@ def organe_compatible(tuiles, ports):
             motifs[(t["slug"], t["organe"])] = [
                 f"organe sans objet, une plante de port {p.replace('_', ' ')} "
                 f"n'a pas d'écorce"]
+        c = categories.get(t["slug"])
+        if t["organe"] == "fruit" and c in CATEGORIES_SANS_FRUIT:
+            motifs[(t["slug"], t["organe"])] = [
+                f"organe sans objet, le fruit d'un légume de la catégorie "
+                f"{c.lower()} est celui du porte-graine"]
     return motifs
 
 # Organes attendus selon le port et la typologie, pour signaler un manque.

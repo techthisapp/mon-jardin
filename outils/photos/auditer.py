@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import mesures, controles, coherence
 
 BASE = "https://ocsjpojdddmltluzmmwv.supabase.co/rest/v1"
-ORDRE = ["fleur", "feuille", "fruit", "port", "ecorce"]
+ORDRE = ["fleur", "feuille", "fruit", "racine", "port", "ecorce"]
 
 def lire_table(nom, colonnes, cle):
     lignes, offset = [], 0
@@ -69,30 +69,44 @@ def tuiles_affichees(images, plantes):
     out.sort(key=lambda t: (t["slug"], ORDRE.index(t["organe"])))
     return out
 
-def telecharger(urls, dossier, fils=6, delai=0.25):
+# Wikimedia refuse les rafales et rend alors une erreur : deux fils et une demi
+# seconde d'attente, contre six fils chez Pl@ntNet qui les accepte. Trois
+# tentatives dans les deux cas, un refus passager ne devant pas se lire ensuite
+# comme une image illisible.
+CADENCES = {"upload.wikimedia.org": (2, 0.5)}
+
+def telecharger(urls, dossier):
     os.makedirs(dossier, exist_ok=True)
-    q = queue.Queue()
+    par_hote = collections.defaultdict(list)
     for u in urls:
-        q.put(u)
-    def travailler():
-        while True:
-            try:
-                u = q.get_nowait()
-            except queue.Empty:
-                return
-            c = os.path.join(dossier, u.rsplit("/", 1)[-1] + ".jpg")
-            if not (os.path.exists(c) and os.path.getsize(c) > 1000):
+        par_hote[u.split("/")[2]].append(u)
+    for hote, lot in par_hote.items():
+        fils, delai = CADENCES.get(hote, (6, 0.25))
+        q = queue.Queue()
+        for u in lot:
+            q.put(u)
+        def travailler():
+            while True:
                 try:
-                    r = urllib.request.Request(u, headers={"User-Agent": "mon-jardin/audit"})
-                    with urllib.request.urlopen(r, timeout=30) as f, open(c, "wb") as g:
-                        g.write(f.read())
-                except Exception:
-                    pass
-                time.sleep(delai)
-            q.task_done()
-    t = [threading.Thread(target=travailler) for _ in range(fils)]
-    [x.start() for x in t]
-    [x.join() for x in t]
+                    u = q.get_nowait()
+                except queue.Empty:
+                    return
+                c = os.path.join(dossier, u.rsplit("/", 1)[-1] + ".jpg")
+                if not (os.path.exists(c) and os.path.getsize(c) > 1000):
+                    for essai in range(3):
+                        try:
+                            r = urllib.request.Request(u, headers={"User-Agent":
+                                "mon-jardin/audit (https://techthisapp.github.io/mon-jardin)"})
+                            with urllib.request.urlopen(r, timeout=45) as f, open(c, "wb") as g:
+                                g.write(f.read())
+                            break
+                        except Exception:
+                            time.sleep(1.5)
+                    time.sleep(delai)
+                q.task_done()
+        t = [threading.Thread(target=travailler) for _ in range(fils)]
+        [x.start() for x in t]
+        [x.join() for x in t]
 
 def main():
     a = argparse.ArgumentParser()
@@ -116,8 +130,9 @@ def main():
             mes[u] = mesures.mesurer(c)
 
     ports = {t["slug"]: t["port"] for t in tuiles}
+    cats = {t["slug"]: t["categorie"] for t in tuiles}
     coh = coherence.controler_lot(tuiles)
-    inc = coherence.organe_compatible(tuiles, ports)
+    inc = coherence.organe_compatible(tuiles, ports, cats)
     releve, compte = [], collections.Counter()
     for t in tuiles:
         m = mes.get(t["grande"])

@@ -6,7 +6,7 @@
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
          fermerFiche, ongletIdentite, net, CATALOGUE } from "./commun.mjs";
 
-const ORDRE = ["FLEUR", "FEUILLE", "FRUIT", "PORT", "ÉCORCE"];
+const ORDRE = ["FLEUR", "FEUILLE", "FRUIT", "RACINE", "PORT", "ÉCORCE"];
 
 export default async function essai(navigateur) {
   const j = journal("Photographies de la fiche");
@@ -18,8 +18,8 @@ export default async function essai(navigateur) {
   await ongletIdentite(pg);
   await pg.waitForTimeout(500);
   const org = await pg.locator(".ph-i span").allInnerTexts();
-  j.controle("les cinq organes sont là, dans l'ordre",
-    org.join(" ") === ORDRE.join(" "), org.join(" "));
+  j.controle("les cinq organes du pommier sont là, dans l'ordre",
+    org.join(" ") === ORDRE.filter(o => o !== "RACINE").join(" "), org.join(" "));
   /* La section vit dans l'onglet de l'identité, en tête : c'est de la même
      nature, ce que la plante est, et non ce qu'il y a à en faire. */
   const place = await pg.evaluate(() => {
@@ -190,6 +190,12 @@ export default async function essai(navigateur) {
     /auteur non renseigné \(CC0\)/.test(cw), cw);
   j.controle("aucune licence unique n'est annoncée pour tout le lot",
     !/sous licence/.test(cw), cw);
+  /* La racine a rejoint les organes le 7 août : un légume-racine n'a d'image
+     utile que d'elle, et elle se range après le fruit, les deux étant l'organe
+     récolté. */
+  const orgW = await pg.locator(".ph-i span").allInnerTexts();
+  j.controle("la racine paraît, après le fruit et avant le port",
+    orgW.join(" ") === "FLEUR FEUILLE FRUIT RACINE", orgW.join(" "));
   const pw = await pg.locator(".ph-i img").first().getAttribute("src");
   await pg.locator('.ph-i[data-photo="0"]').click();
   await pg.waitForTimeout(400);

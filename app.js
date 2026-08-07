@@ -4841,9 +4841,12 @@ function majEau(p) {
    identique tiennent lieu d'homogénéité, puisque les photographes changent
    d'une image à l'autre. Une tuile manque quand la source ne couvre pas
    l'organe, la bande raccourcit, aucune case vide. */
-const PH_ORDRE = ["fleur", "feuille", "fruit", "port", "ecorce"];
+/* L'ordre d'affichage de la bande. La racine vient après le fruit : chez un
+   légume-racine, c'est l'organe récolté et le seul que le jardinier
+   reconnaisse, la fleur et le fruit du porte-graine ne lui disant rien. */
+const PH_ORDRE = ["fleur", "feuille", "fruit", "racine", "port", "ecorce"];
 const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
-                 port: "port", ecorce: "écorce" };
+                 racine: "racine", port: "port", ecorce: "écorce" };
 const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
 
