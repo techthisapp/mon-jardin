@@ -7,8 +7,21 @@
    depuis une réserve hors écran : les contrôles portent surtout sur ce
    déplacement, seul endroit où un champ pourrait perdre son écouteur ou une
    ouverture suivante effacer le panneau. */
-import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
-         fermerFiche, net } from "./commun.mjs";
+import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirMonJardin,
+         ouvrirFiche, fermerFiche, net, CATALOGUE } from "./commun.mjs";
+
+/* Le jardin figé porte tout le catalogue et aucun espace : cette suite lui en
+   donne deux et n'y met qu'une partie des plantes, seul moyen de contrôler à la
+   fois le compte des tuiles et l'écart entre le jardin et le catalogue. */
+const PLANTES = JSON.parse(CATALOGUE).plants;
+const AU_JARDIN = PLANTES.slice(0, 20).map(p => p.id);
+const ESPACES = [{ id: "e1", name: "Potager", color: "#7BA05B" },
+                 { id: "e2", name: "Verger" }];
+const PLACEMENTS = [
+  { plant_id: PLANTES[0].id, espace_id: "e1", quantity: 3, notes: "rang du fond" },
+  { plant_id: PLANTES[1].id, espace_id: "e1" },
+  { plant_id: PLANTES[2].id, espace_id: "e2", quantity: 1 },
+];
 
 const ouAilleurs = pg => pg.evaluate(() => {
   const r = document.getElementById("reserve-reglages");
@@ -21,7 +34,8 @@ const ouAilleurs = pg => pg.evaluate(() => {
 
 export default async function essai(navigateur) {
   const j = journal("Navigation et réglages");
-  const { ctx, pg, erreurs } = await ouvrirContexte(navigateur);
+  const { ctx, pg, erreurs } = await ouvrirContexte(navigateur,
+    { jardin: AU_JARDIN, espaces: ESPACES, placements: PLACEMENTS });
 
   j.section("trois destinations, dont les plantes au centre");
   const barre = await pg.locator(".barre-basse .onglet").evaluateAll(
@@ -47,15 +61,66 @@ export default async function essai(navigateur) {
     debord.marge > debord.hauteurBarre + debord.haut,
     `${debord.marge} de marge pour ${(debord.hauteurBarre + debord.haut).toFixed(1)}`);
 
-  j.section("le bouton rond mène aux plantes");
-  await ouvrirListeDesPlantes(pg);
-  j.controle("l'écran des plantes est affiché",
+  j.section("le bouton rond mène au jardin");
+  await ouvrirMonJardin(pg);
+  j.controle("l'écran est affiché",
     await pg.locator("#ec-selection:not([hidden])").count() === 1);
   j.controle("le rond est le seul onglet marqué",
     await pg.locator('.onglet[aria-selected="true"]').count() === 1
     && await pg.locator('.onglet-rond[aria-selected="true"]').count() === 1);
-  j.controle("il ouvre sur le jardin et non sur le catalogue entier",
-    await pg.locator("#filtreJardin").getAttribute("aria-pressed") === "true");
+  j.controle("il ouvre sur mon jardin et non sur les plantes",
+    await pg.locator('.onglet-j[aria-selected="true"]').getAttribute("data-panneau") === "jardin"
+    && await pg.locator("#pan-jardin:not([hidden])").count() === 1
+    && await pg.locator("#pan-plantes[hidden]").count() === 1);
+
+  j.section("le premier niveau pose une tuile par espace");
+  const tuiles = await pg.locator(".tuile-espace").evaluateAll(l => l.map(b => [
+    b.querySelector(".tuile-nom").textContent, b.querySelector(".tuile-nb").textContent]));
+  j.controle("chaque espace a la sienne, plus celle des non placées",
+    JSON.stringify(tuiles.map(t => t[0])) === '["Potager","Verger","Non placées"]',
+    JSON.stringify(tuiles));
+  j.controle("la tuile porte un nombre de plantes",
+    tuiles.every(t => /^\d+$/.test(t[1])), JSON.stringify(tuiles.map(t => t[1])));
+  j.controle("le compte est celui des plantes rattachées",
+    JSON.stringify(tuiles.map(t => t[1])) === '["2","1","17"]', JSON.stringify(tuiles));
+
+  j.section("la tuile ouvre le détail de son espace");
+  const nomTuile = "Potager";
+  await pg.locator(".tuile-espace", { hasText: nomTuile }).first().dispatchEvent("click");
+  await pg.waitForTimeout(300);
+  j.controle("le premier niveau a cédé la place",
+    await pg.locator("#niveauEspaces[hidden]").count() === 1
+    && await pg.locator("#detailEspace:not([hidden])").count() === 1);
+  j.controle("le détail porte le nom de l'espace",
+    net(await pg.locator(".titre-detail").innerText()) === nomTuile,
+    net(await pg.locator(".titre-detail").innerText()));
+  j.controle("chaque plante porte sa quantité et sa note",
+    await pg.locator("#detailEspace .ligne-espace").count() > 0
+    && await pg.locator("#detailEspace .ligne-espace .qte").count()
+       === await pg.locator("#detailEspace .ligne-espace").count()
+    && await pg.locator("#detailEspace .ligne-espace .notes").count()
+       === await pg.locator("#detailEspace .ligne-espace").count());
+  await pg.locator("#retourEspace").dispatchEvent("click");
+  await pg.waitForTimeout(250);
+  j.controle("le retour ramène aux tuiles",
+    await pg.locator("#niveauEspaces:not([hidden])").count() === 1
+    && await pg.locator("#detailEspace[hidden]").count() === 1);
+
+  j.section("l'onglet des plantes ouvre sur celles du jardin");
+  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  j.controle("la portée retenue est mes plantes",
+    await pg.locator("#porteeJardin").getAttribute("aria-pressed") === "true");
+  const auJardin = await pg.locator(".item-bloc").count();
+  const coches = await pg.locator('.item[aria-pressed="true"]').count();
+  j.controle("toutes les rangées affichées sont cochées",
+    auJardin === 20 && coches === 20, `${coches} cochées sur ${auJardin}`);
+  await pg.locator('.segment[data-portee="tout"]').dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  const tout = await pg.locator(".item-bloc").count();
+  j.controle("le catalogue entier en offre davantage, et c'est de là qu'on ajoute",
+    tout > auJardin, `${tout} au catalogue pour ${auJardin} au jardin`);
+
   await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
 
@@ -72,8 +137,10 @@ export default async function essai(navigateur) {
   // Les titres de panneau sont mis en capitales par la feuille de style.
   const titres = (await pg.locator("#feuille-corps .titre-panneau").allInnerTexts())
     .map(t => net(t).toLowerCase());
-  j.controle("elle porte le jardin et les espaces",
-    titres.join(" ") === "jardin espaces", titres.join(" "));
+  /* Les espaces ont quitté cette feuille pour l'onglet Mon jardin : elle ne
+     porte plus que le jardin actif, son climat et sa commune. */
+  j.controle("elle ne porte plus que le jardin, les espaces sont ailleurs",
+    titres.join(" ") === "jardin", titres.join(" "));
   j.controle("le sélecteur de jardin a gardé sa valeur",
     await pg.locator("#feuille-corps #selJardin option").count() > 0
     && await pg.locator("#feuille-corps #selJardin").inputValue() !== "");

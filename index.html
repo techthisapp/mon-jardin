@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=fe2118e38a">
+<link rel="stylesheet" href="./styles.css?v=fd39741184">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="3afe52080b">
+<meta name="version-appli" content="b3041310ba">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -30,7 +30,7 @@
     <div class="tete-haut">
       <div class="tete-textes">
         <h1><button class="titre-jardin" id="btnJardin" type="button"
-                    aria-label="Le jardin : climat, commune et espaces"><span
+                    aria-label="Le jardin : climat et commune"><span
                     id="titreJardin">Mon jardin</span></button></h1>
         <div class="tete-ligne">
           <button class="date-jour" id="dateJour" type="button"
@@ -143,12 +143,42 @@
   <section id="ec-selection" hidden>
     <p class="vide" id="videSelection" hidden>Connectez-vous pour enregistrer votre sélection. Le bouton du compte est en haut à droite de l'écran.</p>
 
+    <!-- Deux onglets de même rang : le jardin tel qu'il est découpé, et le
+         choix de ce qu'on cultive. Le premier ouvre au premier niveau sur une
+         tuile par espace, le second sur les plantes du jardin. -->
+    <div class="onglets-jardin" role="tablist" aria-label="Mon jardin et mes plantes">
+      <button class="onglet-j" role="tab" id="ong-jardin" data-panneau="jardin"
+              aria-selected="true" aria-controls="pan-jardin">Mon jardin</button>
+      <button class="onglet-j" role="tab" id="ong-plantes" data-panneau="plantes"
+              aria-selected="false" aria-controls="pan-plantes">Mes plantes</button>
+    </div>
+
+    <div id="pan-jardin" role="tabpanel" aria-labelledby="ong-jardin">
+      <div id="niveauEspaces">
+        <div class="tuiles-espaces" id="tuilesEspaces"></div>
+        <form class="ajout-espace" id="form-espace">
+          <label class="etiq-filtre" for="nomEspace">Nouvel espace</label>
+          <input id="nomEspace" type="text" maxlength="40" placeholder="Potager, verger, terrasse">
+          <button class="lien" type="submit">Ajouter</button>
+        </form>
+        <p class="aide-espaces">Découpez le jardin pour filtrer le calendrier. Une plante peut appartenir à plusieurs espaces.</p>
+      </div>
+      <div id="detailEspace" hidden></div>
+    </div>
+
+    <div id="pan-plantes" role="tabpanel" aria-labelledby="ong-plantes" hidden>
     <div class="filtres">
       <div class="ligne-rech">
         <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
         <div class="segments" role="group" aria-label="Regroupement">
           <button class="segment" data-tri="categorie" aria-pressed="true">Par catégorie</button>
           <button class="segment" data-tri="alpha" aria-pressed="false">A à Z</button>
+        </div>
+      </div>
+      <div class="ligne-portee">
+        <div class="segments" role="group" aria-label="Étendue du catalogue">
+          <button class="segment" id="porteeJardin" data-portee="jardin" aria-pressed="true">Au jardin</button>
+          <button class="segment" data-portee="tout" aria-pressed="false">Tout le catalogue</button>
         </div>
       </div>
       <div class="ligne-bilan">
@@ -174,6 +204,7 @@
     <p class="legende-clim" id="legendeClim" hidden></p>
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
+    </div>
   </section>
 </main>
 
@@ -239,29 +270,17 @@
         <p class="aide-reglage">La commune donne la météo du lieu, l'arrosage réel et la pluie tombée. Un code postal couvre souvent plusieurs communes.</p>
       </section>
 
-      <section class="panneau">
-        <h2 class="titre-panneau">Espaces</h2>
-        <p class="aide-reglage">Découpez le jardin pour filtrer le calendrier. Une plante peut appartenir à plusieurs espaces.</p>
-        <form class="ligne-reglage" id="form-espace">
-          <label class="etiq-reglage" for="nomEspace">Nouvel espace</label>
-          <input id="nomEspace" type="text" maxlength="40" placeholder="Potager, verger, terrasse">
-          <button class="lien" type="submit">Ajouter</button>
-        </form>
-        <div id="listeEspaces"></div>
-      </section>
-
-
   </div>
 </div>
 
-<script type="module" src="./app.js?v=921a88c97d"></script>
+<script type="module" src="./app.js?v=1979063068"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
     <span>En ce moment</span>
   </button>
   <button class="onglet onglet-rond" role="tab" aria-selected="false" data-ecran="selection"
-          aria-label="Mes plantes" title="Mes plantes">
+          aria-label="Mon jardin" title="Mon jardin">
     <!-- La marque de l'application, une tige à deux feuilles, reprise du fichier
          d'icône : le bouton dit les plantes et l'application d'un même dessin. -->
     <svg viewBox="0 0 24 24" aria-hidden="true"><g

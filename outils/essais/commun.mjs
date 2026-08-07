@@ -71,7 +71,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
-    session = true, cache = null, versionSite = null,
+    session = true, cache = null, versionSite = null, espaces = null, placements = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -86,6 +86,11 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + `window.__GLOSSAIRE__ = ${glossaire};`
     + `window.__PHOTOS__ = ${photos};`
     + (jardin ? `window.__JARDIN__ = ${JSON.stringify(jardin)};` : "")
+    /* Le jardin figé n'a pas d'espace : une suite qui contrôle le découpage en
+       demande, sans quoi les autres verraient paraître des filtres d'espace
+       qu'elles ne mesurent pas. */
+    + (espaces ? `window.__ESPACES__ = ${JSON.stringify(espaces)};` : "")
+    + (placements ? `window.__PLACEMENTS__ = ${JSON.stringify(placements)};` : "")
     + (session ? "" : "window.__SANS_SESSION__ = 1;")
     // La clé est celle d'app.js : un cache posé ici imite une installation ancienne.
     + (cache ? `try { localStorage.setItem("monjardin.catalogue.v6", ${JSON.stringify(cache)}); } catch (e) {}` : "")
@@ -144,11 +149,22 @@ export function journal(titre) {
 export const net = s => String(s || "").replace(/\s+/g, " ").trim();
 export const nombre = s => Number(String(s).replace(",", ".").replace(/[^0-9.-]/g, ""));
 
-/* Les rangées de plantes sont une destination de plein droit : le bouton rond
-   au milieu de la barre du bas y mène. */
+/* Le bouton rond au milieu de la barre du bas mène au jardin, qui ouvre sur ses
+   espaces. Les suites qui parcourent le référentiel veulent le catalogue
+   entier : elles passent donc à l'onglet des plantes et en élargissent la
+   portée, ce que ce raccourci fait pour elles. */
 export async function ouvrirListeDesPlantes(pg) {
   await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
-  await pg.waitForTimeout(900);
+  await pg.waitForTimeout(500);
+  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
+  await pg.locator('.segment[data-portee="tout"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
+}
+
+/* Le même écran, laissé sur son premier onglet : les espaces du jardin. */
+export async function ouvrirMonJardin(pg) {
+  await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
 }
 
 export async function ouvrirFiche(pg, nom) {

@@ -113,6 +113,12 @@ let session = null;
 let tri = "categorie";
 let jardinSeul = true;   // le jardin de la personne prime sur le catalogue
 let climatSeul = false;  // Mes plantes, restreint aux plantes adaptées au climat du jardin
+/* L'écran du bouton rond porte deux onglets. Le premier montre le jardin tel
+   qu'il est découpé, une tuile par espace puis le détail d'un espace. Le second
+   montre les plantes, d'abord celles du jardin, le catalogue entier ensuite. */
+let panneauJardin = "jardin";  // jardin ou plantes
+let espaceOuvert = null;       // null au premier niveau, sinon l'espace lu, "0" pour les non placées
+let porteeSel = "jardin";      // jardin ou tout
 /* La période retenue sur le calendrier, en quinzaines de 1 à 24. Un mois en
    occupe deux, une quinzaine une seule : la même borne sert aux deux échelles,
    et le filtre s'affine sans code séparé. */
@@ -922,7 +928,7 @@ function chipsEspaces(conteneur, ligne, apres) {
   if (!espaces.length) return;
   const valeurs = [{ id: null, nom: "Tous" }]
     .concat(espaces.map(z => ({ id: z.id, nom: z.name, couleur: z.color })))
-    .concat([{ id: "0", nom: "Non classées" }]);
+    .concat([{ id: "0", nom: "Non placées" }]);
   valeurs.forEach(v => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "chip";
@@ -958,17 +964,56 @@ function afficher(ecran) {
   onglets.forEach(x => x.setAttribute("aria-selected", String(x.dataset.ecran === ecran)));
   window.scrollTo(0, 0);
   if (ecran === "planning") placerMarqueur();
+  if (ecran === "selection") { espaceOuvert = null; rendreEspaces(); }
 }
 
 onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
+
+/* Les deux onglets de l'écran du bouton rond. Revenir sur cet écran repart du
+   premier niveau : un détail d'espace laissé ouvert n'a pas de sens une fois
+   l'écran quitté, et le retour arrière n'aurait plus de repère. */
+function afficherPanneau(nom) {
+  panneauJardin = nom;
+  $("pan-jardin").hidden = nom !== "jardin";
+  $("pan-plantes").hidden = nom !== "plantes";
+  document.querySelectorAll(".onglet-j").forEach(b =>
+    b.setAttribute("aria-selected", String(b.dataset.panneau === nom)));
+  window.scrollTo(0, 0);
+  if (nom === "jardin") rendreEspaces();
+}
+
+document.querySelectorAll(".onglet-j").forEach(b =>
+  b.addEventListener("click", () => afficherPanneau(b.dataset.panneau)));
+
+/* Sans compte il n'y a ni jardin ni espace : le premier onglet n'a rien à
+   montrer et la restriction au jardin viderait la liste. L'écran se réduit
+   alors au catalogue entier, qui reste consultable. */
+function majAccesJardin(connecte) {
+  document.querySelector(".onglets-jardin").hidden = !connecte;
+  if (!connecte) {
+    porteeSel = "tout";
+    document.querySelectorAll(".segment[data-portee]").forEach(x =>
+      x.setAttribute("aria-pressed", String(x.dataset.portee === "tout")));
+    afficherPanneau("plantes");
+  }
+}
 /* Le titre ouvre le jardin quand il y en a un. Sans compte, il annonce la
    connexion et ouvre la feuille qui la porte : c'est la seule chose à faire. */
 sur("btnJardin", "click", () => ouvrirVue(session ? "jardin" : "compte"));
 sur("btnConfig", "click", () => ouvrirVue("compte"));
 
-document.querySelectorAll(".segment").forEach(s => s.addEventListener("click", () => {
+document.querySelectorAll(".segment[data-tri]").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
-  document.querySelectorAll(".segment").forEach(x => x.setAttribute("aria-pressed", String(x === s)));
+  document.querySelectorAll(".segment[data-tri]").forEach(x => x.setAttribute("aria-pressed", String(x === s)));
+  rendreSelection();
+}));
+
+/* L'onglet des plantes ouvre sur le jardin. Le catalogue entier est à un appui,
+   et c'est de là qu'on ajoute une plante à son jardin. */
+document.querySelectorAll(".segment[data-portee]").forEach(s => s.addEventListener("click", () => {
+  porteeSel = s.dataset.portee;
+  document.querySelectorAll(".segment[data-portee]").forEach(x =>
+    x.setAttribute("aria-pressed", String(x === s)));
   rendreSelection();
 }));
 
@@ -977,7 +1022,8 @@ document.querySelectorAll(".segment").forEach(s => s.addEventListener("click", (
 function filtrerSel() {
   const q = $("rech").value.trim().toLowerCase();
   return plantes.filter(p =>
-    etatTypo[p.typo] && etatCat[p.cat]
+    (porteeSel === "tout" || sel.has(p.id))
+    && etatTypo[p.typo] && etatCat[p.cat]
     && (!climatSeul || (adapt[p.id] || {}).level === "adapte")
     && (!q || p.nom.toLowerCase().includes(q)
            || p.latin.toLowerCase().includes(q)
@@ -1086,8 +1132,11 @@ function majRangee(plantId) {
   return true;
 }
 
+/* Décocher une plante alors que la liste ne montre que le jardin la fait sortir
+   du lot : sa rangée ne peut pas être remplacée, elle doit disparaître. Le
+   rendu partiel ne vaut donc que pour le catalogue entier. */
 function rendreApresBascule(plantId) {
-  if (!majRangee(plantId)) { rendreTout(); return; }
+  if (porteeSel === "jardin" || !majRangee(plantId)) { rendreTout(); return; }
   rendreMaintenant();
   rendrePlanning();
   rendreEspaces();
@@ -1579,7 +1628,7 @@ function rendreMaintenant() {
   const sections = [];
   if (vueMoment === "espace") {
     const tous = espaces.map(z => ({ cle: z.id, nom: z.name }))
-      .concat([{ cle: "0", nom: "Non classées" }]);
+      .concat([{ cle: "0", nom: "Non placées" }]);
     const groupes = espaceChoisi === null ? tous : tous.filter(g => g.cle === espaceChoisi);
     groupes.forEach(g => {
       const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : espacesDe(p.id).indexOf(g.cle) !== -1;
@@ -2844,7 +2893,7 @@ function poserBloc(id) {
 function vueJardin() {
   const g = jardinActif();
   return { titre: g && g.name ? g.name : "Mon jardin",
-           sous: "Climat, commune et espaces", corps: "",
+           sous: "Climat et commune", corps: "",
            brancher: () => poserBloc("bloc-jardin") };
 }
 
@@ -4264,6 +4313,7 @@ db.auth.onAuthStateChange((_e, s) => {
   $("zone-connexion").hidden = connecte;
   $("panneau-compte").hidden = !connecte;
   $("videSelection").hidden = connecte;
+  majAccesJardin(connecte);
   if (connecte) { $("aide-code").hidden = true; $("code").value = ""; $("codeReprise").hidden = true; }
   $("deconnexion").hidden = !connecte;
   $("utilisateur").textContent = connecte ? s.user.email : "";
@@ -4378,7 +4428,7 @@ function majJardinUI() {
      action qui vaille, et le chevron ouvre la feuille du compte. */
   $("titreJardin").textContent = g && g.name ? g.name : (connecte ? "Mon jardin" : "Se connecter");
   $("btnJardin").setAttribute("aria-label", connecte
-    ? "Le jardin : climat, commune et espaces" : "Se connecter");
+    ? "Le jardin : climat et commune" : "Se connecter");
   /* Le climat du jardin ne paraît plus que lorsqu'il manque : une marque ne
      signale que l'exception, et sa mention quotidienne n'apprenait rien. Il
      reste lisible et modifiable sur l'écran du jardin. */
@@ -4413,48 +4463,105 @@ function demiEnTexte(d) {
     + Math.abs(d) + (Math.abs(d) > 1 ? " quinzaines" : " quinzaine");
 }
 
+/* Les plantes du jardin rattachées à un espace, ou celles qui ne le sont à
+   aucun quand la clé vaut "0". Rangées par nom, comme partout ailleurs. */
+function plantesDeLEspace(cle) {
+  return [...sel]
+    .filter(id => cle === "0" ? !espacesDe(id).length : espacesDe(id).includes(cle))
+    .map(id => plantes.find(p => p.id === id)).filter(Boolean)
+    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+}
+
+/* Deux niveaux dans le même panneau. Le premier pose une tuile par espace, plus
+   celle des plantes non placées, qui existe toujours : sans elle, une plante
+   ajoutée au jardin et rattachée à rien ne paraîtrait nulle part ici. Le second
+   ouvre un espace et montre ses plantes avec leur quantité et leur note. */
 function rendreEspaces() {
-  const z = $("listeEspaces");
-  if (!z) return;
+  const tuiles = $("tuilesEspaces");
+  const detail = $("detailEspace");
+  if (!tuiles || !detail) return;
+  const niveau = $("niveauEspaces");
+  const dansUnEspace = espaceOuvert !== null
+    && (espaceOuvert === "0" || espaces.some(z => z.id === espaceOuvert));
+  if (!dansUnEspace) espaceOuvert = null;
+  niveau.hidden = dansUnEspace;
+  detail.hidden = !dansUnEspace;
+  if (dansUnEspace) rendreDetailEspace(detail);
+  else rendreTuilesEspaces(tuiles);
+}
+
+function rendreTuilesEspaces(z) {
   z.innerHTML = "";
+  const cases = espaces.map(zo => ({ cle: zo.id, nom: zo.name, couleur: zo.color }))
+    .concat([{ cle: "0", nom: "Non placées", sansCouleur: true }]);
+  cases.forEach(v => {
+    const n = plantesDeLEspace(v.cle).length;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "tuile-espace" + (v.cle === "0" ? " tuile-hors" : "");
+    b.dataset.espace = v.cle;
+    b.innerHTML = (v.couleur ? `<i class="pastille" style="background:${v.couleur}"></i>` : "")
+      + `<span class="tuile-nom">${esc(v.nom)}</span>`
+      + `<span class="tuile-nb">${n}</span>`
+      + `<span class="tuile-unite">${n > 1 ? "plantes" : "plante"}</span>`;
+    b.addEventListener("click", () => { espaceOuvert = v.cle; rendreEspaces(); });
+    z.appendChild(b);
+  });
   if (!espaces.length) {
-    z.innerHTML = '<p class="vide">Aucun espace. Ajoutez-en un pour découper ce jardin.</p>';
-    return;
+    const p = document.createElement("p");
+    p.className = "vide";
+    p.textContent = "Aucun espace. Ajoutez-en un pour découper ce jardin.";
+    z.appendChild(p);
   }
-  espaces.forEach(zo => {
-    const membres = [...sel].filter(id => espacesDe(id).includes(zo.id))
-      .map(id => plantes.find(p => p.id === id)).filter(Boolean)
-      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-    const d = document.createElement("div");
-    d.className = "carte-espace";
-    d.innerHTML = `<div class="tete-espace"><b>${esc(zo.name)}</b><span class="nb">${membres.length}</span>`
-      + `<button class="lien" data-act="renommer">Renommer</button>`
-      + `<button class="lien" data-act="supprimer">Supprimer</button></div>`;
-    const corps = document.createElement("div");
-    corps.className = "corps-espace";
-    membres.forEach(p => {
-      const r = (aff.get(p.id) || []).find(x => x.espace_id === zo.id) || {};
-      const l = document.createElement("div");
-      l.className = "ligne-espace";
-      l.innerHTML = `<button type="button" class="nom-espace">`
-        + vignettePlanche(p, "v-pl-s") + `${esc(p.nom)}</button>`
-        + `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
-        + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`;
-      l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
+}
+
+function rendreDetailEspace(z) {
+  const zo = espaces.find(x => x.id === espaceOuvert) || null;
+  const nom = zo ? zo.name : "Non placées";
+  const membres = plantesDeLEspace(espaceOuvert);
+  z.innerHTML = "";
+
+  const tete = document.createElement("div");
+  tete.className = "tete-detail";
+  tete.innerHTML = `<button class="retour-espace" id="retourEspace" type="button" aria-label="Revenir aux espaces">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>`
+    + `<b class="titre-detail">${esc(nom)}</b><span class="nb">${membres.length}</span>`
+    + (zo ? `<button class="lien" data-act="renommer">Renommer</button>`
+          + `<button class="lien" data-act="supprimer">Supprimer</button>` : "");
+  tete.querySelector("#retourEspace").addEventListener("click",
+    () => { espaceOuvert = null; rendreEspaces(); });
+  if (zo) {
+    tete.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
+    tete.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
+  }
+  z.appendChild(tete);
+
+  const corps = document.createElement("div");
+  corps.className = "corps-espace";
+  membres.forEach(p => {
+    const r = zo ? ((aff.get(p.id) || []).find(x => x.espace_id === zo.id) || {}) : null;
+    const l = document.createElement("div");
+    l.className = "ligne-espace";
+    l.innerHTML = `<button type="button" class="nom-espace">`
+      + vignettePlanche(p, "v-pl-s") + `${esc(p.nom)}</button>`
+      + (r ? `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
+           + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`
+           : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
+    l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
+    if (r) {
       const enr = () => majAffectation(p.id, zo.id,
         l.querySelector(".qte").value, l.querySelector(".notes").value);
       l.querySelector(".qte").addEventListener("change", enr);
       l.querySelector(".notes").addEventListener("change", enr);
-      corps.appendChild(l);
-    });
-    if (!membres.length) {
-      corps.innerHTML = '<p class="vide">Aucune plante rattachée. Le bouton rond au milieu de la barre du bas ouvre vos plantes.</p>';
     }
-    d.appendChild(corps);
-    d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
-    d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
-    z.appendChild(d);
+    corps.appendChild(l);
   });
+  if (!membres.length) {
+    corps.innerHTML = zo
+      ? '<p class="vide">Aucune plante rattachée. Les espaces se cochent sous chaque plante, onglet Mes plantes.</p>'
+      : '<p class="vide">Toutes vos plantes sont placées dans un espace.</p>';
+  }
+  z.appendChild(corps);
   poserPlanches(z);
 }
 

@@ -2415,3 +2415,61 @@ select:focus{
 @media (max-width:359px){
   .legende-clim{flex-wrap:wrap;justify-content:flex-start;gap:5px 11px}
 }
+
+/* ---------- Écran du jardin : deux onglets, tuiles puis détail ---------- */
+
+/* Deux onglets de même rang, sur le modèle de ceux de la fiche : un filet sous
+   la ligne, l'onglet actif seul souligné. */
+.onglets-jardin{
+  display:flex;gap:20px;border-bottom:1px solid var(--filet);
+  margin:0 0 12px;
+}
+.onglet-j{
+  border:0;background:none;padding:9px 0 10px;font-family:inherit;font-size:15px;
+  color:var(--encre-doux);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.onglet-j[aria-selected="true"]{color:var(--encre);font-weight:600;border-bottom-color:var(--encre)}
+.onglet-j:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+
+/* Une tuile par espace. Le nombre porte le regard, le nom le nomme : c'est
+   l'information qu'on vient chercher au premier coup d'oeil. */
+.tuiles-espaces{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;
+}
+.tuile-espace{
+  display:grid;grid-template-areas:"pastille nom" "nb nb" "unite unite";
+  grid-template-columns:auto 1fr;align-content:start;gap:2px 6px;
+  text-align:left;padding:12px 13px 13px;min-height:96px;
+  border:1px solid #E3E0D9;border-radius:12px;background:#fff;cursor:pointer;
+  font-family:inherit;color:var(--encre);
+}
+.tuile-espace:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+.tuile-espace .pastille{grid-area:pastille;align-self:center;width:9px;height:9px;border-radius:50%}
+.tuile-nom{grid-area:nom;font-size:14px;font-weight:600;line-height:1.25}
+.tuile-nb{grid-area:nb;font-size:27px;font-weight:600;line-height:1.1;margin-top:6px}
+.tuile-unite{grid-area:unite;font-size:12px;color:var(--encre-doux)}
+.tuile-hors{background:#F7F5F0;border-style:dashed}
+.tuiles-espaces .vide{grid-column:1/-1;margin:0}
+
+/* Ajout d'un espace, sous les tuiles : le geste est rare et n'a pas à occuper
+   le haut de l'écran. */
+.ajout-espace{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px}
+.ajout-espace .etiq-filtre{flex:0 0 auto}
+.aide-espaces{font-size:12.5px;color:var(--encre-doux);line-height:1.5;margin:8px 0 0}
+
+/* Détail d'un espace : la flèche de retour ouvre la ligne, comme dans les
+   feuilles, puis le nom et le nombre. */
+.tete-detail{display:flex;align-items:center;gap:9px;margin-bottom:6px}
+.retour-espace{
+  display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;
+  border:1px solid var(--filet);border-radius:50%;background:#fff;cursor:pointer;color:var(--encre);
+}
+.retour-espace svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.titre-detail{font-size:16px}
+.tete-detail .lien{font-size:12px}
+.tete-detail .lien:first-of-type{margin-left:auto}
+.hors-espace{font-size:12px;color:var(--encre-doux)}
+
+.ligne-portee{margin-bottom:10px}
+.ligne-portee .segments{width:fit-content}
