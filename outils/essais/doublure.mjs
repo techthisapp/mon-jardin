@@ -27,6 +27,7 @@ const TABLES = {
   vigilance: (window.__VIGILANCE__ || []),
   glossaire: (window.__GLOSSAIRE__ || []),
   plant_images: (window.__PHOTOS__ || []),
+  avis_photo: (window.__AVIS__ || []),
 };
 function requete(table) {
   let lignes = (TABLES[table] || []).slice();
@@ -39,13 +40,25 @@ function requete(table) {
     upsert(v) {
       window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table, op: "upsert", v }]);
       const t = TABLES[table] = TABLES[table] || [];
-      const i = t.findIndex(l => l.garden_id === v.garden_id && l.jour === v.jour);
-      if (i >= 0) t[i] = v; else t.push(v);
+      /* Deux clés d'unicité selon la table : le jour pour un relevé, la
+         photographie pour un avis, l'auteur étant toujours le même ici. */
+      const i = table === "avis_photo"
+        ? t.findIndex(l => l.image_id === v.image_id)
+        : t.findIndex(l => l.garden_id === v.garden_id && l.jour === v.jour);
+      if (i >= 0) t[i] = { ...t[i], ...v }; else t.push(v);
       return Promise.resolve({ data: [v], error: null });
     },
     delete() {
       window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table, op: "delete" }]);
-      return { eq() { return this; }, then(res) { return Promise.resolve({ data: [], error: null }).then(res); } };
+      const t = TABLES[table] || [];
+      return {
+        eq(col, v) {
+          const i = t.findIndex(l => String(l[col]) === String(v));
+          if (i >= 0) t.splice(i, 1);
+          return this;
+        },
+        then(res) { return Promise.resolve({ data: [], error: null }).then(res); },
+      };
     },
     order() { return api; },
     limit() { return api; },

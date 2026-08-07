@@ -216,6 +216,83 @@ export default async function essai(navigateur) {
     await pg.locator("#fPhotos:not([hidden])").count() === 0);
   j.controle("aucun titre ni cadre vide", await pg.locator(".ph-rail").count() === 0);
 
+  await fermerFiche(pg);
+
+  /* Le jugement des photographies. Trois verdicts par personne : seul « à
+     supprimer » change ce qui est affiché, il masque l'image pour cette
+     personne et la suivante prend la place. */
+  j.section("juger une photographie depuis le plein écran");
+  await ouvrirFiche(pg, "Pommier");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(500);
+  await pg.locator('.ph-i[data-photo="0"]').click();
+  await pg.waitForTimeout(350);
+  const avis = await pg.locator(".ph-avis .av-b").allInnerTexts();
+  j.controle("les trois verdicts sont offerts",
+    avis.join(" ") === "À supprimer Moyenne Bonne", avis.join(" "));
+  j.controle("aucun n'est retenu au départ",
+    await pg.locator('.ph-avis [aria-pressed="true"]').count() === 0);
+
+  await pg.locator('[data-avis="bonne"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  j.controle("le verdict posé est marqué",
+    await pg.locator('[data-avis="bonne"]').getAttribute("aria-pressed") === "true"
+    && await pg.locator('.ph-avis [aria-pressed="true"]').count() === 1);
+  j.controle("le plein écran reste ouvert, la bande ne bouge pas",
+    await pg.locator("#photoPlein:not([hidden])").count() === 1);
+  const ecrit = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "avis_photo").map(e => [e.op, e.v && e.v.avis]));
+  j.controle("l'avis est écrit en base",
+    JSON.stringify(ecrit) === JSON.stringify([["upsert", "bonne"]]), JSON.stringify(ecrit));
+
+  const avantOrg = await pg.locator(".ph-i span").allInnerTexts();
+  const src1 = await pg.locator(".ph-i img").first().getAttribute("src");
+  await pg.locator('[data-avis="supprimer"]').dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  j.controle("le retrait ferme le plein écran",
+    await pg.locator("#photoPlein[hidden]").count() === 1);
+  const apresOrg = await pg.locator(".ph-i span").allInnerTexts();
+  j.controle("la bande garde ses organes, la suivante ayant pris la place",
+    apresOrg.join(" ") === avantOrg.join(" "), apresOrg.join(" "));
+  const src2 = await pg.locator(".ph-i img").first().getAttribute("src");
+  j.controle("la tuile fleur montre bien une autre image", src2 !== src1, src2.slice(-24));
+  j.controle("l'annulation est offerte",
+    await pg.locator(".etat-action").count() === 1
+    && net(await pg.locator(".etat-action").innerText()) === "Annuler");
+
+  await pg.locator(".etat-action").dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  const src3 = await pg.locator(".ph-i img").first().getAttribute("src");
+  j.controle("l'annulation remet la photographie", src3 !== src2, src3.slice(-24));
+  await fermerFiche(pg);
+
+  /* Une image écartée à la relecture n'est pas la même chose qu'une image
+     qu'on masque : la première ne revient jamais, la seconde se remet. */
+  j.section("la liste des photographies écartées");
+  await ouvrirFiche(pg, "Pommier");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(400);
+  await pg.locator('.ph-i[data-photo="1"]').click();
+  await pg.waitForTimeout(300);
+  await pg.locator('[data-avis="supprimer"]').dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  await fermerFiche(pg);
+  await pg.locator("#btnConfig").dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  await pg.locator("#voirEcartees").dispatchEvent("click");
+  await pg.waitForTimeout(700);
+  j.controle("la feuille porte le titre attendu",
+    net(await pg.locator("#feuille-titre").innerText()) === "Photographies écartées",
+    net(await pg.locator("#feuille-titre").innerText()));
+  j.controle("la photographie écartée y figure, nommée par sa plante et son organe",
+    await pg.locator(".ligne-ecartee").count() === 1
+    && /Pommier/.test(await pg.locator(".ligne-ecartee .ec-nom").innerText()),
+    net(await pg.locator("#listeEcartees").innerText()).slice(0, 60));
+  await pg.locator(".ligne-ecartee button").dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  j.controle("la remise vide la liste",
+    await pg.locator(".ligne-ecartee").count() === 0);
+
   await ctx.close();
   return j.fin(erreurs.concat(err2));
 }

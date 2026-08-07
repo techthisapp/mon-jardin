@@ -39,6 +39,23 @@ let espaces = [];
 let aff = new Map();
 let adapt = {};
 let espaceChoisi = null;
+/* Les avis de la personne sur les photographies, chargés une fois au
+   démarrage : masquer une image ne demande pas d'aller le redemander à chaque
+   fiche. Clé l'identifiant de la ligne d'image, valeur supprimer, moyenne ou
+   bonne. La file garde ce qui n'a pas pu partir, le jardin n'ayant pas toujours
+   de réseau. */
+let avisPhoto = new Map();
+const FILE_AVIS = "monjardin.avis";
+
+/* L'ordre d'affichage de la bande. La racine vient après le fruit : chez un
+   légume-racine, c'est l'organe récolté et le seul que le jardinier
+   reconnaisse, la fleur et le fruit du porte-graine ne lui disant rien. */
+const PH_ORDRE = ["fleur", "feuille", "fruit", "racine", "port", "ecorce"];
+const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
+                 racine: "racine", port: "port", ecorce: "écorce" };
+const nomPlante = id => (plantes.find(p => p.id === id) || {}).nom;
+const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
+let photosVues = [];              // la bande à l'affiche, pour le plein écran
 let sourdines = new Map();
 let voirSourdines = false;
 let vueMoment = (() => {
@@ -480,11 +497,23 @@ function marquerTermes(txt) {
   });
 }
 
-function info(msg, erreur = false) {
+/* Le bandeau d'état. L'action facultative sert au geste qu'on peut regretter :
+   elle paraît à côté du message et s'efface avec lui. */
+let minuteurEtat = null;
+
+function info(msg, erreur = false, action = null) {
   const e = $("etat");
-  if (!msg) { e.hidden = true; return; }
+  if (minuteurEtat) { clearTimeout(minuteurEtat); minuteurEtat = null; }
+  if (!msg) { e.hidden = true; e.textContent = ""; return; }
   e.textContent = msg;
   e.className = "etat" + (erreur ? " erreur" : "");
+  if (action) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "etat-action"; b.textContent = action.libelle;
+    b.addEventListener("click", () => { info(""); action.faire(); });
+    e.appendChild(b);
+    minuteurEtat = setTimeout(() => info(""), 12000);
+  }
   e.hidden = false;
 }
 
@@ -775,9 +804,13 @@ async function listerJardins() {
 async function chargerJardin() {
   if (!session) {
     jardins = []; jardinId = null; espaces = []; aff = new Map(); adapt = {};
-    sel = new Set(); espaceChoisi = null;
+    sel = new Set(); espaceChoisi = null; avisPhoto = new Map(); photosPlante.clear();
     majCompte(); majJardinUI(); construireChips(); rendreTout(); return;
   }
+  /* Les avis de la personne masquent des photographies : ils sont chargés avant
+     que la première fiche puisse s'ouvrir, et le cache des bandes est vidé. */
+  photosPlante.clear();
+  await chargerAvisPhoto();
   if (!await listerJardins()) return;
   if (!jardins.length) {
     const { error } = await db.rpc("ensure_garden");
@@ -2901,12 +2934,57 @@ function vueCompte() {
   return { titre: "Compte", corps: "", brancher: () => poserBloc("bloc-compte") };
 }
 
+/* Ce que la personne a écarté de ses fiches, et de quoi le remettre. Masquer du
+   contenu sans offrir de revenir en arrière ferait d'une erreur de doigt une
+   décision définitive. */
+function vuePhotosEcartees() {
+  return { titre: "Photographies écartées", corps: '<div id="listeEcartees"></div>',
+           brancher: rendreEcartees };
+}
+
+async function rendreEcartees() {
+  const z = $("listeEcartees");
+  if (!z) return;
+  const ids = [...avisPhoto].filter(([, a]) => a === "supprimer").map(([i]) => i);
+  if (!ids.length) {
+    z.innerHTML = '<p class="vide">Vous n\'avez écarté aucune photographie.</p>';
+    return;
+  }
+  z.innerHTML = '<p class="vide">Chargement.</p>';
+  let lot = [];
+  try {
+    const { data } = await db.from("plant_images")
+      .select("id,plant_id,organe,url,auteur").in("id", ids);
+    lot = data || [];
+  } catch (e) {
+    z.innerHTML = '<p class="vide">Liste indisponible sans réseau.</p>'; return;
+  }
+  lot.sort((a, b) => (nomPlante(a.plant_id) || "").localeCompare(nomPlante(b.plant_id) || "", "fr"));
+  z.innerHTML = "";
+  lot.forEach(x => {
+    const l = document.createElement("div");
+    l.className = "ligne-ecartee";
+    l.innerHTML = `<img src="${esc(x.url)}" alt="" loading="lazy">`
+      + `<span class="ec-nom">${esc(nomPlante(x.plant_id) || "plante retirée")}`
+      + `<small>${esc(PH_NOM[x.organe] || x.organe)}</small></span>`
+      + `<button class="lien" type="button">Remettre</button>`;
+    l.querySelector("button").addEventListener("click", async () => {
+      await retirerAvisPhoto(x.id);
+      rendreEcartees();
+      rafraichirPhotos();
+    });
+    z.appendChild(l);
+  });
+}
+
+
 function ouvrirVue(vue, enRetour) {
   fermerGlose();
   rangerBlocs();
   const rendus = { jour: vueJour, temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance,
-                   jardin: vueJardin, compte: vueCompte };
+                   jardin: vueJardin, compte: vueCompte,
+                   photosEcartees: vuePhotosEcartees };
   const f = (rendus[vue] || vueLieu)();
   if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
   vueCourante = { vue, titre: f.titre };
@@ -4306,6 +4384,7 @@ sur("form-connexion", "submit", async e => {
 });
 
 sur("deconnexion", "click", () => db.auth.signOut());
+sur("voirEcartees", "click", () => ouvrirVue("photosEcartees"));
 
 db.auth.onAuthStateChange((_e, s) => {
   session = s;
@@ -4841,14 +4920,68 @@ function majEau(p) {
    identique tiennent lieu d'homogénéité, puisque les photographes changent
    d'une image à l'autre. Une tuile manque quand la source ne couvre pas
    l'organe, la bande raccourcit, aucune case vide. */
-/* L'ordre d'affichage de la bande. La racine vient après le fruit : chez un
-   légume-racine, c'est l'organe récolté et le seul que le jardinier
-   reconnaisse, la fleur et le fruit du porte-graine ne lui disant rien. */
-const PH_ORDRE = ["fleur", "feuille", "fruit", "racine", "port", "ecorce"];
-const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
-                 racine: "racine", port: "port", ecorce: "écorce" };
-const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
-let photosVues = [];              // la bande à l'affiche, pour le plein écran
+
+function lireFileAvis() {
+  try { return JSON.parse(localStorage.getItem(FILE_AVIS) || "[]"); }
+  catch (e) { return []; }
+}
+
+function ecrireFileAvis(f) {
+  try { localStorage.setItem(FILE_AVIS, JSON.stringify(f)); } catch (e) { /* sans effet */ }
+}
+
+async function chargerAvisPhoto() {
+  avisPhoto = new Map();
+  if (!session) return;
+  try {
+    const { data } = await db.from("avis_photo").select("image_id,avis");
+    (data || []).forEach(r => avisPhoto.set(r.image_id, r.avis));
+  } catch (e) { /* sans réseau les avis locaux suffisent */ }
+  lireFileAvis().forEach(r => avisPhoto.set(r.image_id, r.avis));
+  viderFileAvis();
+}
+
+/* La file part en une seule fois, dans l'ordre où les avis ont été émis. Ce qui
+   échoue reste dans la file et repartira au prochain démarrage. */
+async function viderFileAvis() {
+  const f = lireFileAvis();
+  if (!f.length || !session) return;
+  const reste = [];
+  for (const r of f) {
+    try {
+      const { error } = await db.from("avis_photo")
+        .upsert({ image_id: r.image_id, avis: r.avis }, { onConflict: "image_id,auteur" });
+      if (error) reste.push(r);
+    } catch (e) { reste.push(r); }
+  }
+  ecrireFileAvis(reste);
+}
+
+/* Un avis est d'abord local, ensuite écrit. L'inverse ferait attendre la
+   personne sur un réseau qu'elle n'a pas toujours. */
+async function poserAvisPhoto(image_id, avis) {
+  avisPhoto.set(image_id, avis);
+  photosPlante.clear();
+  if (!session) return;
+  try {
+    const { error } = await db.from("avis_photo")
+      .upsert({ image_id, avis }, { onConflict: "image_id,auteur" });
+    if (error) throw error;
+  } catch (e) {
+    const f = lireFileAvis().filter(r => r.image_id !== image_id);
+    f.push({ image_id, avis });
+    ecrireFileAvis(f);
+  }
+}
+
+async function retirerAvisPhoto(image_id) {
+  avisPhoto.delete(image_id);
+  photosPlante.clear();
+  if (!session) return;
+  try { await db.from("avis_photo").delete().eq("image_id", image_id); }
+  catch (e) { /* la ligne repartira au prochain démarrage */ }
+  ecrireFileAvis(lireFileAvis().filter(r => r.image_id !== image_id));
+}
 
 /* La bande demande la petite taille, le plein écran la moyenne. Les deux
    existent chez le fonds, rien n'est fabriqué ici.
@@ -4891,9 +5024,12 @@ async function chargerPhotos(id) {
     const { data } = await db.from("plant_images").select("*").eq("plant_id", id);
     lot = data || [];
   } catch (e) { /* sans réseau la section reste absente */ }
-  // Le plus petit rang retenu de chaque organe, dans l'ordre d'affichage.
+  /* Le plus petit rang retenu de chaque organe, dans l'ordre d'affichage. Une
+     photographie que la personne a jugée à supprimer est masquée pour elle
+     seule : la suivante prend la place, exactement comme si elle avait été
+     écartée pour tout le monde. */
   const par = {};
-  lot.filter(x => x.retenue !== false).forEach(x => {
+  lot.filter(x => x.retenue !== false && avisPhoto.get(x.id) !== "supprimer").forEach(x => {
     if (!par[x.organe] || x.rang < par[x.organe].rang) par[x.organe] = x;
   });
   const suite = PH_ORDRE.map(o => par[o]).filter(Boolean);
@@ -4943,12 +5079,66 @@ function ouvrirPhoto(i) {
     + `<p class="ph-bas"><b>${esc(x.auteur || "auteur non renseigné")}</b><br>`
     + `${esc(fonds)}, sous licence ${esc(x.licence || "CC BY-SA")}`
     + (x.source ? `. <a href="${esc(x.source)}" target="_blank" rel="noopener">Voir la source</a>` : "")
-    + `</p><p class="ph-pts">`
+    + `</p>` + boutonsAvis(x)
+    + `<p class="ph-pts">`
     + photosVues.map((_, k) => `<i class="${k === i ? "ici" : ""}"></i>`).join("") + `</p>`;
   z.hidden = false;
   document.body.classList.add("fige");
   sur("fermerPhoto", "click", fermerPhoto);
+  brancherAvis(x);
   z.addEventListener("click", e => { if (e.target === z) fermerPhoto(); }, { once: true });
+}
+
+/* Le jugement se pose ici, au plein écran, là où l'on regarde la photographie
+   en grand. La bande ne porte aucun bouton : y ajouter une pastille sur chaque
+   tuile encombrerait l'écran le plus regardé de la fiche pour un geste rare.
+
+   Un seul des trois verdicts change ce qui est affiché. Les deux autres sont
+   une note de qualité, qui vaut caution pour l'un et demande de remplacement
+   pour l'autre. */
+const AVIS_NOM = { supprimer: "À supprimer", moyenne: "Moyenne", bonne: "Bonne" };
+
+function boutonsAvis(x) {
+  if (!session || !x.id) return "";
+  const mien = avisPhoto.get(x.id) || "";
+  return `<div class="ph-avis" role="group" aria-label="Juger cette photographie">`
+    + Object.keys(AVIS_NOM).map(a =>
+        `<button type="button" class="av-b av-${a}" data-avis="${a}"`
+        + ` aria-pressed="${a === mien}">${esc(AVIS_NOM[a])}</button>`).join("")
+    + `</div>`;
+}
+
+function brancherAvis(x) {
+  const z = $("photoPlein");
+  if (!z) return;
+  z.querySelectorAll("[data-avis]").forEach(b => b.addEventListener("click", async e => {
+    e.stopPropagation();
+    const a = b.dataset.avis;
+    const ancien = avisPhoto.get(x.id) || "";
+    if (a === ancien) { await retirerAvisPhoto(x.id); }
+    else { await poserAvisPhoto(x.id, a); }
+    if (avisPhoto.get(x.id) === "supprimer") {
+      fermerPhoto();
+      rafraichirPhotos();
+      info("Photographie écartée de votre fiche.", false, {
+        libelle: "Annuler", faire: async () => {
+          await retirerAvisPhoto(x.id);
+          rafraichirPhotos();
+        } });
+      return;
+    }
+    z.querySelectorAll("[data-avis]").forEach(o =>
+      o.setAttribute("aria-pressed", String(o.dataset.avis === (avisPhoto.get(x.id) || ""))));
+  }));
+}
+
+/* La bande de la fiche ouverte se refait, la fiche pouvant être fermée entre
+   temps. */
+function rafraichirPhotos() {
+  const z = $("fPhotos");
+  if (!z || !z.dataset.plante) return;
+  const p = plantes.find(x => String(x.id) === z.dataset.plante);
+  if (p) poserPhotos(p);
 }
 
 function fermerPhoto() {

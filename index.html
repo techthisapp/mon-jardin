@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=fd39741184">
+<link rel="stylesheet" href="./styles.css?v=9c02cc71cf">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="7fa031799c">
+<meta name="version-appli" content="07b143b097">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -238,6 +238,10 @@
           <button class="lien" id="genererReprise" type="button">Générer un code de reprise</button>
         </div>
         <p class="aide-reglage" id="codeReprise" hidden></p>
+        <div class="ligne-reglage">
+          <span class="etiq-reglage">Photographies</span>
+          <button class="lien" id="voirEcartees" type="button">Celles que vous avez écartées</button>
+        </div>
         <p class="aide-reglage" id="tete-total"></p>
       </section>
       <p class="version-appli" id="versionAppli"></p>
@@ -273,7 +277,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=589e1e88fb"></script>
+<script type="module" src="./app.js?v=b13fda2237"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
