@@ -2654,3 +2654,15 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
   font-family:inherit;font-size:13px;font-weight:700;
   letter-spacing:0;text-transform:none;color:var(--f-ink);
 }
+
+/* ---------- Parcours du plein écran au doigt ----------
+
+   La photographie qui sort de l'écran est coupée par le cadre, elle ne déborde
+   pas sur le fond. Le geste horizontal est réservé à la bande : le navigateur
+   ne doit pas y voir un retour en arrière ni un défilement de page. */
+.ph-plein{overflow:hidden;touch-action:none;overscroll-behavior:contain}
+.ph-plein img{will-change:transform}
+/* Les repères de position se lisent : celui de la photographie regardée est
+   plein et un peu plus large, les autres restent en creux. */
+.ph-pts i{transition:width .18s ease, border-radius .18s ease, background-color .18s ease}
+.ph-pts i.ici{width:15px;border-radius:3px}

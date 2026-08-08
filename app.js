@@ -56,6 +56,7 @@ const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
 const nomPlante = id => (plantes.find(p => p.id === id) || {}).nom;
 const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
+let photoIndex = 0;               // rang de celle qu'on regarde en grand
 let sourdines = new Map();
 let voirSourdines = false;
 /* Les plantes dont la rangée montre le choix complet des espaces. Au repos la
@@ -5165,6 +5166,7 @@ function poserPhotos(p) {
 function ouvrirPhoto(i) {
   const x = photosVues[i];
   if (!x) return;
+  photoIndex = i;
   const z = $("photoPlein");
   const fonds = x.fonds === "commons" ? "Wikimedia Commons" : "Pl@ntNet";
   z.innerHTML = `<button type="button" class="ph-fx" id="fermerPhoto" aria-label="Fermer">`
@@ -5181,8 +5183,153 @@ function ouvrirPhoto(i) {
   document.body.classList.add("fige");
   sur("fermerPhoto", "click", fermerPhoto);
   brancherAvis(x);
-  z.addEventListener("click", e => { if (e.target === z) fermerPhoto(); }, { once: true });
 }
+
+/* Le fond referme, sauf au sortir d'un glissement : le doigt qui a fini sa
+   course sur le fond ne voulait pas fermer. L'écouteur est posé une fois pour
+   toutes, le contenu du plein écran étant réécrit à chaque photographie. */
+sur("photoPlein", "click", e => {
+  if (e.target !== e.currentTarget || e.currentTarget.dataset.glisse) return;
+  fermerPhoto();
+});
+
+/* Le plein écran se parcourt au doigt, une photographie à la fois.
+
+   L'axe est verrouillé au premier mouvement franc et ne se relâche plus :
+   l'horizontale change d'image, la verticale referme, et une diagonale ne fait
+   jamais les deux. Tant qu'aucun des deux axes ne dépasse l'autre d'un tiers,
+   rien ne bouge : un geste hésitant ne déclenche rien plutôt que de trancher au
+   hasard. Un geste parti à l'horizontale qui s'incurve ensuite reste horizontal,
+   le verrou tenant jusqu'au relâchement du doigt. */
+const PH_COURSE = 10;      // course minimale avant de trancher l'axe, en points
+const PH_DOMINANCE = 1.3;  // rapport exigé entre les deux axes pour trancher
+const PH_VITESSE = 0.5;    // points par milliseconde, seuil du geste vif
+const PH_RESIST = 0.32;    // ce qui reste de la course au delà de la dernière
+const PH_FERMER = 96;      // course verticale qui referme, comme pour la feuille
+
+function brancherGlissementPhoto() {
+  const z = $("photoPlein");
+  if (!z) return;
+  let x0 = 0, y0 = 0, xs = 0, ys = 0, ts = 0;
+  let dx = 0, dy = 0, vx = 0, vy = 0, axe = null, suit = false;
+  const img = () => z.querySelector("img");
+  const horsBande = k => k < 0 || k >= photosVues.length;
+
+  const poser = () => {
+    const e = img();
+    if (!e) return;
+    if (axe === "x") e.style.transform = `translateX(${dx.toFixed(1)}px)`;
+    else {
+      e.style.transform = `translateY(${dy.toFixed(1)}px)`;
+      z.style.opacity = String(Math.max(0.15, 1 - Math.abs(dy) / 420));
+    }
+  };
+  const rendre = () => {
+    const e = img();
+    z.style.removeProperty("opacity");
+    if (!e) return;
+    e.style.transition = "transform .22s cubic-bezier(.22,.61,.36,1)";
+    e.style.transform = "";
+    setTimeout(() => e.style.removeProperty("transition"), 240);
+  };
+
+  z.addEventListener("touchstart", e => {
+    /* Un geste né sur une commande lui appartient : les trois verdicts et la
+       croix ne doivent pas faire glisser la bande sous le doigt. */
+    suit = !z.hidden && e.touches.length === 1 && !e.target.closest("button, a");
+    if (!suit) return;
+    const t = e.touches[0];
+    x0 = xs = t.clientX; y0 = ys = t.clientY; ts = e.timeStamp;
+    dx = dy = vx = vy = 0; axe = null;
+    const i = img();
+    if (i) i.style.transition = "none";
+  }, { passive: true });
+
+  z.addEventListener("touchmove", e => {
+    if (!suit || e.touches.length !== 1) return;
+    const t = e.touches[0], ex = t.clientX - x0, ey = t.clientY - y0;
+    if (!axe) {
+      const ax = Math.abs(ex), ay = Math.abs(ey);
+      if (Math.max(ax, ay) < PH_COURSE) return;
+      if (ax > ay * PH_DOMINANCE) axe = "x";
+      else if (ay > ax * PH_DOMINANCE) axe = "y";
+      else return;
+    }
+    const dt = e.timeStamp - ts;
+    if (dt > 0) {
+      vx = (t.clientX - xs) / dt; vy = (t.clientY - ys) / dt;
+      xs = t.clientX; ys = t.clientY; ts = e.timeStamp;
+    }
+    /* À la première et à la dernière photographie, la course résiste au lieu de
+       céder : la bande dit qu'elle est finie sans rien faire de brutal. */
+    if (axe === "x") dx = horsBande(photoIndex - Math.sign(ex)) ? ex * PH_RESIST : ex;
+    else dy = ey;
+    e.preventDefault();
+    poser();
+  }, { passive: false });
+
+  const fini = () => {
+    if (!suit || !axe) { suit = false; axe = null; return; }
+    const axeFini = axe;
+    suit = false; axe = null;
+    if (axeFini === "x") {
+      const k = photoIndex - Math.sign(dx);
+      const assez = Math.abs(dx) > z.clientWidth / 5 || Math.abs(vx) > PH_VITESSE;
+      if (assez && !horsBande(k)) { marquerGlisse(z); allerPhoto(k, Math.sign(dx)); return; }
+      rendre();
+      return;
+    }
+    if (Math.abs(dy) > PH_FERMER || Math.abs(vy) > PH_VITESSE) {
+      marquerGlisse(z);
+      z.style.removeProperty("opacity");
+      fermerPhoto();
+      return;
+    }
+    rendre();
+  };
+  z.addEventListener("touchend", fini);
+  z.addEventListener("touchcancel", fini);
+}
+
+// Un glissement ne doit pas valoir pour un appui sur le fond.
+function marquerGlisse(z) {
+  z.dataset.glisse = "1";
+  setTimeout(() => { delete z.dataset.glisse; }, 320);
+}
+
+/* La photographie sortante achève la course du doigt, la suivante entre du côté
+   d'où elle vient : le mouvement ne s'interrompt pas au milieu. */
+function allerPhoto(k, sens) {
+  const z = $("photoPlein");
+  if (!z || k < 0 || k >= photosVues.length) return;
+  const large = z.clientWidth;
+  const sortante = z.querySelector("img");
+  if (sortante) {
+    sortante.style.transition = "transform .16s ease-out, opacity .16s ease-out";
+    sortante.style.transform = `translateX(${sens * large}px)`;
+    sortante.style.opacity = "0";
+  }
+  setTimeout(() => {
+    ouvrirPhoto(k);
+    const e = z.querySelector("img");
+    if (!e) return;
+    e.style.transition = "none";
+    e.style.transform = `translateX(${-sens * large}px)`;
+    e.style.opacity = "0";
+    requestAnimationFrame(() => {
+      e.style.transition = "transform .2s cubic-bezier(.22,.61,.36,1), opacity .2s";
+      e.style.transform = "";
+      e.style.opacity = "";
+      setTimeout(() => {
+        e.style.removeProperty("transition");
+        e.style.removeProperty("transform");
+        e.style.removeProperty("opacity");
+      }, 220);
+    });
+  }, sortante ? 160 : 0);
+}
+
+brancherGlissementPhoto();
 
 /* Le jugement se pose ici, au plein écran, là où l'on regarde la photographie
    en grand. La bande ne porte aucun bouton : y ajouter une pastille sur chaque
@@ -5240,6 +5387,8 @@ function fermerPhoto() {
   const z = $("photoPlein");
   if (!z || z.hidden) return;
   z.hidden = true;
+  // Un geste interrompu peut avoir laissé le fond à demi effacé.
+  z.style.removeProperty("opacity");
   z.innerHTML = "";
   if ($("feuille").hidden) document.body.classList.remove("fige");
 }
@@ -5405,6 +5554,15 @@ sur("fermerFeuille", "click", sortirFeuille);
 sur("retourFeuille", "click", retourFeuille);
 // La touche d'échappement referme d'abord la définition, ensuite la feuille.
 document.addEventListener("keydown", e => {
+  /* Le plein écran se parcourt aussi aux flèches : le geste tactile ne doit pas
+     être le seul chemin d'une photographie à l'autre. */
+  const plein = $("photoPlein");
+  if (plein && !plein.hidden) {
+    if (e.key === "Escape") { fermerPhoto(); return; }
+    if (e.key === "ArrowLeft") { allerPhoto(photoIndex - 1, 1); return; }
+    if (e.key === "ArrowRight") { allerPhoto(photoIndex + 1, -1); return; }
+    return;
+  }
   if (e.key !== "Escape") return;
   if (gloseOuverte) { fermerGlose(); return; }
   sortirFeuille();

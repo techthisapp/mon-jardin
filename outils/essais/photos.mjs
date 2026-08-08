@@ -8,6 +8,28 @@ import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
 
 const ORDRE = ["FLEUR", "FEUILLE", "FRUIT", "RACINE", "PORT", "ÉCORCE"];
 
+/* Un glissement du doigt, dispatché à la main : le contexte d'essai n'est pas
+   tactile, et c'est le seul moyen d'éprouver le verrouillage d'axe. */
+async function glisser(pg, cible, dx, dy, pas = 12) {
+  await pg.evaluate(([sel, dx, dy, pas]) => {
+    const e = document.querySelector(sel);
+    const r = e.getBoundingClientRect();
+    const x0 = Math.round(r.left + r.width / 2), y0 = Math.round(r.top + r.height / 2);
+    const pt = (x, y) => new Touch({ identifier: 1, target: e, clientX: x, clientY: y });
+    const jeter = (nom, x, y) => e.dispatchEvent(new TouchEvent(nom, {
+      bubbles: true, cancelable: true,
+      touches: nom === "touchend" ? [] : [pt(x, y)],
+      changedTouches: [pt(x, y)],
+    }));
+    jeter("touchstart", x0, y0);
+    for (let k = 1; k <= pas; k++) jeter("touchmove", x0 + dx * k / pas, y0 + dy * k / pas);
+    jeter("touchend", x0 + dx, y0 + dy);
+  }, [cible, dx, dy, pas]);
+  await pg.waitForTimeout(520);
+}
+
+const organeVu = pg => pg.locator(".ph-org").innerText().then(net).catch(() => "fermé");
+
 /* L'attribution ne tient plus quatre lignes sous la bande : elle est passée
    sous un mot, et se lit en l'ouvrant comme une définition du glossaire. */
 async function lireCredits(pg) {
@@ -354,6 +376,72 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(600);
   j.controle("la remise vide la liste",
     await pg.locator(".ligne-ecartee").count() === 0);
+
+  /* Le plein écran se parcourt au doigt. L'axe est verrouillé au premier
+     mouvement franc : l'horizontale change d'image, la verticale referme, et
+     une diagonale sans dominance ne fait ni l'un ni l'autre. */
+  await fermerFiche(pg);
+  await ouvrirFiche(pg, "Pommier");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(600);
+
+  j.section("le plein écran se parcourt au doigt");
+  await pg.locator('.ph-i[data-photo="1"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  j.controle("il s'ouvre sur l'organe touché",
+    await organeVu(pg) === "FEUILLE", await organeVu(pg));
+  await glisser(pg, ".ph-plein img", -220, 0);
+  j.controle("un glissement vers la gauche donne la suivante",
+    await organeVu(pg) === "FRUIT", await organeVu(pg));
+  await glisser(pg, ".ph-plein img", 220, 0);
+  j.controle("un glissement vers la droite ramène la précédente",
+    await organeVu(pg) === "FEUILLE", await organeVu(pg));
+  const repere = await pg.evaluate(() => {
+    const t = [...document.querySelectorAll(".ph-pts i")];
+    return { total: t.length, ici: t.findIndex(e => e.classList.contains("ici")) };
+  });
+  j.controle("le repère suit la photographie regardée",
+    repere.total === 5 && repere.ici === 1, JSON.stringify(repere));
+
+  j.section("l'axe du geste est verrouillé, la diagonale ne tranche pas");
+  await glisser(pg, ".ph-plein img", -200, -200);
+  j.controle("une diagonale à quarante-cinq degrés ne change rien",
+    await organeVu(pg) === "FEUILLE", await organeVu(pg));
+  j.controle("et ne referme pas",
+    await pg.locator("#photoPlein:not([hidden])").count() === 1);
+  /* Une course franchement horizontale qui s'incurve reste horizontale : le
+     verrou tient jusqu'au relâchement du doigt. */
+  await glisser(pg, ".ph-plein img", -220, -140);
+  j.controle("une horizontale qui s'incurve reste horizontale",
+    await organeVu(pg) === "FRUIT", await organeVu(pg));
+
+  j.section("les bords de la bande et les commandes");
+  await pg.keyboard.press("ArrowLeft");
+  await pg.waitForTimeout(500);
+  await pg.keyboard.press("ArrowLeft");
+  await pg.waitForTimeout(500);
+  j.controle("les flèches du clavier parcourent aussi la bande",
+    await organeVu(pg) === "FLEUR", await organeVu(pg));
+  await glisser(pg, ".ph-plein img", 240, 0);
+  j.controle("à la première, le glissement vers la droite ne sort pas de la bande",
+    await organeVu(pg) === "FLEUR", await organeVu(pg));
+  j.controle("l'image est revenue à sa place",
+    await pg.evaluate(() => {
+      const t = getComputedStyle(document.querySelector(".ph-plein img")).transform;
+      return t === "none" || /matrix\(1, 0, 0, 1, 0, 0\)/.test(t);
+    }));
+  /* Un geste né sur un verdict lui appartient : juger ne doit pas faire défiler
+     la bande sous le doigt. */
+  await glisser(pg, ".av-b", -220, 0);
+  j.controle("un geste parti d'un bouton ne fait pas glisser",
+    await organeVu(pg) === "FLEUR", await organeVu(pg));
+
+  j.section("le geste vertical referme");
+  await glisser(pg, ".ph-plein img", 0, 200);
+  j.controle("le plein écran s'est refermé",
+    await pg.locator("#photoPlein[hidden]").count() === 1);
+  j.controle("la fiche est restée ouverte",
+    await pg.locator("#feuille:not([hidden])").count() === 1);
 
   await ctx.close();
   return j.fin(erreurs.concat(err2));
