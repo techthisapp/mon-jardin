@@ -18,7 +18,7 @@ const TABLES = {
   garden_plant_espaces: (window.__PLACEMENTS__ || []).map(p =>
     ({ garden_id: "g1", plant_id: p.plant_id, espace_id: p.espace_id,
        quantity: p.quantity ?? null, notes: p.notes ?? null })),
-  sourdines: [],
+  sourdines: (window.__SOURDINES__ || []),
   saison_vegetation: FX.saison || [],
   releves_eau: (window.__RELEVES__ || []),
   stations_meteo: [{ num: "21425001", nom: "MONTBARD_SAPC", lat: 47.6167, lon: 4.3333,

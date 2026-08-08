@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=9c02cc71cf">
+<link rel="stylesheet" href="./styles.css?v=38e4208c3f">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="07b143b097">
+<meta name="version-appli" content="cce17cda02">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -170,26 +170,30 @@
     <div class="filtres">
       <div class="ligne-rech">
         <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
-        <div class="segments" role="group" aria-label="Regroupement">
-          <button class="segment" data-tri="categorie" aria-pressed="true">Par catégorie</button>
-          <button class="segment" data-tri="alpha" aria-pressed="false">A à Z</button>
-        </div>
       </div>
+      <!-- La portée porte son propre compte : le dénominateur change avec elle,
+           ce qui évite d'annoncer le catalogue entier alors qu'on ne regarde
+           que le jardin. Le reste des filtres se replie. -->
       <div class="ligne-portee">
-        <div class="segments" role="group" aria-label="Étendue du catalogue">
-          <button class="segment" id="porteeJardin" data-portee="jardin" aria-pressed="true">Au jardin</button>
-          <button class="segment" data-portee="tout" aria-pressed="false">Tout le catalogue</button>
+        <div class="segments seg-portee" role="group" aria-label="Étendue du catalogue">
+          <button class="segment" id="porteeJardin" data-portee="jardin" aria-pressed="true">Au jardin<span class="nb-portee" id="nbAuJardin"></span></button>
+          <button class="segment" data-portee="tout" aria-pressed="false">Tout le catalogue<span class="nb-portee" id="nbCatalogue"></span></button>
         </div>
-      </div>
-      <div class="ligne-bilan">
-        <button class="mini" id="basculeFiltresS" type="button" aria-expanded="false" aria-controls="corpsFiltresS">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltresS" hidden></span></button>
-        <button class="chip chip-clim" id="filtreClimat" aria-pressed="false" type="button" hidden>Adaptées à mon climat</button>
-        <span class="bilan" id="bilanSel"></span>
-        <span class="bilan fort" id="compte"></span>
-        <button class="lien" id="vider" type="button">Tout décocher</button>
+        <button class="mini" id="basculeFiltresS" type="button" aria-label="Filtres"
+                aria-expanded="false" aria-controls="corpsFiltresS">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg><span class="lib-mini">Filtres</span><span class="nb" id="nbFiltresS" hidden></span></button>
+        <span class="bilan" id="bilanSel" hidden></span>
       </div>
       <div id="corpsFiltresS" hidden>
+        <!-- Le regroupement est une préférence d'affichage, rangée comme celle
+             de l'écran du moment, sous la même étiquette. -->
+        <div class="ligne-filtre">
+          <span class="etiq-filtre">Grouper</span>
+          <div class="segments" role="group" aria-label="Regroupement">
+            <button class="segment" data-tri="categorie" aria-pressed="true">Par catégorie</button>
+            <button class="segment" data-tri="alpha" aria-pressed="false">A à Z</button>
+          </div>
+        </div>
         <div class="ligne-filtre">
           <span class="etiq-filtre">Type</span>
           <div class="jeu-chips" id="chipsTypo"></div>
@@ -198,10 +202,20 @@
           <span class="etiq-filtre">Catégorie</span>
           <div class="jeu-chips" id="chipsCat"></div>
         </div>
+        <div class="ligne-filtre" id="ligneClimS" hidden>
+          <span class="etiq-filtre">Climat</span>
+          <div class="jeu-chips">
+            <button class="chip chip-clim" id="filtreClimat" aria-pressed="false" type="button" hidden>Adaptées à mon climat</button>
+            <p class="legende-clim" id="legendeClim" hidden></p>
+          </div>
+        </div>
+        <div class="ligne-bilan">
+          <span class="bilan fort" id="compte"></span>
+          <button class="lien" id="vider" type="button">Tout décocher</button>
+        </div>
       </div>
     </div>
 
-    <p class="legende-clim" id="legendeClim" hidden></p>
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
     </div>
@@ -277,7 +291,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=b13fda2237"></script>
+<script type="module" src="./app.js?v=3fa5a42050"></script>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

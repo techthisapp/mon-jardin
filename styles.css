@@ -962,11 +962,10 @@ body.fige{overflow:hidden}
   vertical-align:middle;
 }
 .bascule-sourdine{margin-left:auto;font-size:12px}
-.chip-sourdine{border-style:dashed}
 
 /* ---------- Picto oeil barré dans les commandes de masquage ---------- */
-.bascule-sourdine,.chip-sourdine{display:inline-flex;align-items:center;gap:6px}
-.bascule-sourdine svg,.chip-sourdine svg{
+.bascule-sourdine{display:inline-flex;align-items:center;gap:6px}
+.bascule-sourdine svg{
   width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;flex:none;
 }
 .tiroir .opt span{display:block;text-align:center;line-height:1.25}
@@ -2503,3 +2502,130 @@ select:focus{
 .ligne-ecartee img{width:46px;height:46px;object-fit:cover;border-radius:8px;flex:0 0 46px}
 .ec-nom{flex:1;font-size:13.5px;display:flex;flex-direction:column;gap:1px}
 .ec-nom small{font-size:11.5px;color:var(--encre-doux)}
+
+/* ---------- Écran des plantes : ce qui reste visible ----------
+
+   Le haut de l'écran occupait cinq cent vingt-huit points sur neuf cent
+   quarante avant la première plante, soit cinquante-six pour cent, et quatre
+   rangées tenaient dessous. La recherche et la portée restent, le reste des
+   filtres se replie sous le bouton qui les nomme. */
+
+/* Deux niveaux de navigation se suivaient à cinquante-six points, tous deux
+   en boutons alignés. Les onglets gardent le trait souligné, la portée prend
+   le rail creusé du bandeau segmenté : deux formes que rien ne confond. */
+.ligne-portee{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:0;
+}
+/* Le regroupement a rejoint le panneau replié : la recherche occupe seule la
+   première ligne, à toutes les largeurs. */
+.ligne-rech{margin-bottom:10px}
+#corpsFiltresS .segments{width:fit-content}
+.ligne-portee .segments.seg-portee{
+  flex:1 1 auto;width:auto;min-width:0;
+  border:0;border-radius:9px;background:rgba(22,36,30,.06);padding:2px;gap:2px;
+}
+.seg-portee .segment{
+  flex:1 1 0;min-width:0;border-radius:7px;padding:7px 9px;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.seg-portee .segment+.segment{border-left:0}
+.seg-portee .segment[aria-pressed="true"]{
+  background:#fff;color:var(--encre);
+  box-shadow:0 1px 2px rgba(22,36,30,.14), 0 0 0 .5px rgba(22,36,30,.05);
+}
+.nb-portee{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:400;
+  opacity:.62;letter-spacing:0;
+}
+.ligne-portee .mini{flex:0 0 auto}
+/* Sous quatre cent vingt points, le mot Filtres fait passer le bouton à la
+   ligne. Le pictogramme reste, l'étiquette part dans le nom accessible. */
+@media (max-width:419px){
+  .ligne-portee .mini .lib-mini{display:none}
+  .ligne-portee .mini{padding:6px 9px}
+}
+.ligne-portee .bilan{flex:0 0 auto;margin-left:auto}
+.ligne-portee .bilan[hidden]{display:none}
+
+/* Le bilan et le décochage général ont rejoint le panneau replié : l'un se lit
+   une fois, l'autre vide le jardin. */
+#corpsFiltresS{
+  display:flex;flex-direction:column;gap:2px;
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--filet-clair);
+}
+#corpsFiltresS .ligne-bilan{margin-top:5px}
+#corpsFiltresS .legende-clim{
+  flex-basis:100%;margin:4px 0 0;padding:0;border-bottom:0;
+}
+#ligneClimS .jeu-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+
+/* ---------- Bord gauche de la liste ----------
+   Cent vingt-cinq plantes sur trois cent quinze n'ont pas de planche. Leur
+   boîte reste réservée, en aplat neutre, pour que les noms démarrent tous à la
+   même abscisse. */
+.v-planche.v-vide{
+  -webkit-mask-image:none;mask-image:none;
+  background:rgba(22,36,30,.05);border-radius:8px;opacity:1;
+}
+.item[aria-pressed="true"] .v-planche.v-vide{background:rgba(22,36,30,.05)}
+
+/* ---------- Un seul signal de retenue ----------
+   En portée jardin, toutes les rangées sont cochées : la teinte verte ne
+   distinguait rien et peignait la liste entière. Le rond porte seul le signal
+   là, la teinte reprend son office au catalogue entier, où elle sépare ce que
+   l'on cultive de ce que l'on découvre. */
+#listes[data-portee="jardin"] .item[aria-pressed="true"]{
+  background:#fff;font-weight:400;
+}
+#listes[data-portee="jardin"] .item[aria-pressed="true"] .v-planche{
+  background:var(--encre);opacity:.78;
+}
+#listes[data-portee="jardin"] .item[aria-pressed="true"] .v-planche.v-vide{
+  background:rgba(22,36,30,.05);opacity:1;
+}
+
+/* ---------- Espaces d'une rangée ----------
+   Trois espaces posaient trois pastilles sur une ligne propre sous chaque
+   rangée, quatre-vingt-quatre pastilles pour vingt-huit plantes, dont une seule
+   enfoncée par rangée, et vingt-quatre points ajoutés aux cinquante-deux de la
+   rangée. Huit espaces en auraient posé huit, sur deux ou trois lignes. Le lieu
+   occupé passe sous le nom, à la place du sous-titre, sans rien allonger. */
+.nom-item{display:flex;flex-direction:column;gap:1px;justify-content:center}
+.nom-l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.3}
+.sous-item{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;min-width:0}
+.item .cat-mini{display:inline-block}
+.lieu-item{
+  font:500 11px/1.25 "IBM Plex Sans",sans-serif;color:var(--encre-doux);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;
+  border-bottom:1px dashed rgba(22,36,30,.20);padding-bottom:1px;
+}
+.lieu-vide{color:var(--terre);border-bottom-color:rgba(76,140,63,.45)}
+
+/* Le choix complet ne se déplie que sur la rangée touchée. */
+.espaces-item{gap:8px;padding:2px 0 4px 42px}
+.mini-chip{
+  position:relative;font:500 11.5px/1 "IBM Plex Sans",sans-serif;
+  min-height:32px;padding:0 11px;display:inline-flex;align-items:center;
+}
+/* La cible tactile atteint quarante-quatre points sans que la pastille grossisse. */
+.mini-chip::after{content:"";position:absolute;left:0;right:0;top:-6px;bottom:-6px}
+.chip-replier{background:var(--encre);color:#EFEFE8}
+
+/* Le rappel des tâches masquées vient au pied de l'onglet du moment de la
+   fiche, seul endroit où le masquage d'une plante se lit et se lève. */
+.f-pan-moment .bascule-sourdine{margin:12px 0 0;font-size:12.5px;padding:7px 13px}
+
+/* ---------- Compteurs de groupe ----------
+   Le type et la catégorie portent la même écriture, au même bord. */
+.groupe-titre .nb,
+.groupe-type .nb{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;
+  font-size:11.5px;font-weight:400;color:var(--encre-doux);
+}
+
+/* ---------- Dégagement du bas ----------
+   La barre flottante fait cinquante-quatre points, posée à douze du bord, et le
+   dégradé qui la porte en couvre soixante-dix-huit : la dernière rangée passait
+   dessous. */
+main{--marge-b:calc(128px + env(safe-area-inset-bottom))}

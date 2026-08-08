@@ -58,6 +58,10 @@ const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent p
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
 let sourdines = new Map();
 let voirSourdines = false;
+/* Les plantes dont la rangée montre le choix complet des espaces. Au repos la
+   rangée n'affiche que les espaces occupés : répéter tous les espaces sous
+   chacune des trois cent quinze rangées ajoutait une ligne à chacune. */
+let choixEspace = new Set();
 let vueMoment = (() => {
   try { return localStorage.getItem("monjardin.vue") || "tache"; } catch (e) { return "tache"; }
 })();
@@ -887,6 +891,14 @@ function majCompte() {
   const n = sel.size;
   const t = n ? (n > 1 ? `${n} plantes retenues` : "1 plante retenue") : "aucune plante retenue";
   $("compte").textContent = t;
+  majComptesPortee();
+}
+
+/* Chaque moitié du segment porte le nombre qu'elle ouvre. */
+function majComptesPortee() {
+  const j = $("nbAuJardin"), c = $("nbCatalogue");
+  if (j) j.textContent = String(sel.size);
+  if (c) c.textContent = String(plantes.length);
 }
 
 /* ================== Filtres ================== */
@@ -1072,43 +1084,74 @@ function carteItem(p) {
   b.setAttribute("aria-pressed", String(sel.has(p.id)));
   const ad = adapt[p.id];
   const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
+  const lieu = lieuHTML(p);
+  /* La boîte de vignette est réservée même sans planche : cent vingt-cinq
+     plantes sur trois cent quinze n'en ont pas, et leur nom démarrait alors à
+     une autre abscisse, ce qui hachait le bord gauche de la liste. */
   b.innerHTML = `<span class="rond">${CHECK}</span>`
-    + (aPlanche(p) ? `<span class="v-planche" data-pl="${esc(p.slug)}" aria-hidden="true"></span>` : "")
-    + `<span class="nom-item">${esc(p.nom)}${sousTitre}</span>`
+    + (aPlanche(p)
+        ? `<span class="v-planche" data-pl="${esc(p.slug)}" aria-hidden="true"></span>`
+        : `<span class="v-planche v-vide" aria-hidden="true"></span>`)
+    + `<span class="nom-item"><span class="nom-l">${esc(p.nom)}</span>`
+    + (sousTitre || lieu ? `<span class="sous-item">${sousTitre}${lieu}</span>` : "")
+    + `</span>`
     + (ad ? jaugeClim(ad.level, ad.note) : "")
     + `<span class="voir-fiche" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`;
-  // Le rond coche, le nom ouvre la fiche : deux gestes sur la même rangée.
+  /* Trois gestes sur la même rangée : le rond coche, le lieu ouvre le choix des
+     espaces, le reste ouvre la fiche. */
   b.addEventListener("click", ev => {
     if (ev.target.closest(".rond")) { basculer(p.id); return; }
+    if (ev.target.closest(".lieu-item")) { basculerChoixEspace(p.id); return; }
     ouvrirFeuille(p);
   });
   bloc.appendChild(b);
-  const muettes = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|")).length;
-  if (sel.has(p.id) && muettes) {
-    const r = document.createElement("div");
-    r.className = "zones-item";
-    const c = document.createElement("button");
-    c.type = "button"; c.className = "mini-chip chip-sourdine";
-    c.innerHTML = OEIL_BARRE + `<span>${muettes} tâche${muettes > 1 ? "s" : ""} masquée${muettes > 1 ? "s" : ""}, réafficher</span>`;
-    c.addEventListener("click", () => leverToutesSourdines(p));
-    r.appendChild(c);
-    bloc.appendChild(r);
-  }
-  if (sel.has(p.id) && espaces.length) {
-    const r = document.createElement("div");
-    r.className = "espaces-item";
-    const prises = espacesDe(p.id);
-    espaces.forEach(z => {
-      const c = document.createElement("button");
-      c.type = "button"; c.className = "mini-chip";
-      c.setAttribute("aria-pressed", String(prises.includes(z.id)));
-      c.textContent = z.name;
-      c.addEventListener("click", () => basculerEspace(p.id, z.id));
-      r.appendChild(c);
-    });
-    bloc.appendChild(r);
-  }
+  /* La mise en sourdine est une notion de calendrier : son rappel a rejoint
+     l'onglet du moment de la fiche, où l'on voit ce qui est masqué. */
+  if (choixEspace.has(p.id) && sel.has(p.id) && espaces.length) bloc.appendChild(choixEspaces(p));
   return bloc;
+}
+
+/* La rangée nomme les espaces occupés, sous le nom de la plante, là où le sous
+   titre trouve sa place sans allonger la rangée. Répéter les huit espaces d'un
+   jardin sous chacune des rangées ajoutait une ligne à toutes. */
+function lieuHTML(p) {
+  if (!sel.has(p.id) || !espaces.length || choixEspace.has(p.id)) return "";
+  const prises = espacesDe(p.id);
+  const noms = espaces.filter(z => prises.includes(z.id)).map(z => z.name);
+  return noms.length
+    ? `<span class="lieu-item">${esc(noms.join(", "))}</span>`
+    : `<span class="lieu-item lieu-vide">Placer</span>`;
+}
+
+function basculerChoixEspace(plantId) {
+  const ouvert = choixEspace.has(plantId);
+  const autres = [...choixEspace].filter(id => id !== plantId);
+  choixEspace.clear();
+  if (!ouvert) choixEspace.add(plantId);
+  autres.forEach(majRangee);
+  majRangee(plantId);
+}
+
+/* Le choix complet ne se déplie que sur la rangée touchée, et se referme de
+   lui-même dès qu'on ouvre celui d'une autre plante. */
+function choixEspaces(p) {
+  const r = document.createElement("div");
+  r.className = "espaces-item";
+  const prises = espacesDe(p.id);
+  espaces.forEach(z => {
+    const c = document.createElement("button");
+    c.type = "button"; c.className = "mini-chip";
+    c.setAttribute("aria-pressed", String(prises.includes(z.id)));
+    c.textContent = z.name;
+    c.addEventListener("click", () => basculerEspace(p.id, z.id));
+    r.appendChild(c);
+  });
+  const f = document.createElement("button");
+  f.type = "button"; f.className = "mini-chip chip-replier";
+  f.textContent = "Terminé";
+  f.addEventListener("click", () => basculerChoixEspace(p.id));
+  r.appendChild(f);
+  return r;
 }
 
 async function basculerEspace(plantId, espaceId) {
@@ -1138,6 +1181,10 @@ function majLegendeClim() {
     b.hidden = !c;
     b.setAttribute("aria-pressed", String(climatSeul));
   }
+  /* Le filtre et sa légende ont rejoint le panneau replié : la ligne entière
+     disparaît quand le jardin ne déclare pas de climat. */
+  const l = $("ligneClimS");
+  if (l) l.hidden = !c;
   if (!c) { e.hidden = true; return; }
   e.hidden = false;
   /* Le climat est déjà nommé dans l'entête : la légende n'a pas à le répéter et
@@ -1179,8 +1226,17 @@ function rendreSelection() {
   majLegendeClim();
   const zone = $("listes");
   zone.innerHTML = "";
+  /* La teinte de rangée ne dit rien là où toutes les plantes sont retenues :
+     en portée jardin, le rond porte seul le signal. */
+  zone.dataset.portee = porteeSel;
   const lot = filtrerSel();
-  $("bilanSel").textContent = `${lot.length} sur ${plantes.length} affichées`;
+  /* Le dénominateur suit la portée. Annoncer « sur 315 » alors que l'on ne
+     regarde que le jardin ne se raccordait à rien de visible. */
+  const total = porteeSel === "jardin" ? sel.size : plantes.length;
+  const bs = $("bilanSel");
+  bs.hidden = lot.length === total;
+  bs.textContent = `${lot.length} sur ${total} affichées`;
+  majComptesPortee();
 
   if (!lot.length) { $("videSel").hidden = false; return; }
   $("videSel").hidden = true;
@@ -2332,6 +2388,13 @@ function ficheMoment(p) {
     h.push("</div>");
   }
   if (!actives.length) h.push('<p class="f-vide">Rien à faire sur cette plante en ce moment.</p>');
+  /* Ce qui a été masqué depuis le calendrier se rappelle ici, sur l'onglet qui
+     dit ce qu'il y a à faire. Le rappel occupait une ligne sous la rangée du
+     catalogue, où la mise en sourdine n'a pas d'objet. */
+  const muettes = [...sourdines.keys()].filter(c => c.startsWith(p.id + "|")).length;
+  if (muettes) h.push(`<button type="button" class="bascule-sourdine" data-lever="${esc(p.id)}">`
+    + OEIL_BARRE + `<span>${muettes} tâche${muettes > 1 ? "s" : ""} masquée`
+    + `${muettes > 1 ? "s" : ""}, réafficher</span></button>`);
   return h.join("");
 }
 
@@ -5358,6 +5421,18 @@ async function leverToutesSourdines(p) {
   const { error } = await db.from("sourdines").delete().eq("garden_id", jardinId).eq("plant_id", p.id);
   if (error) info("Réaffichage refusé : " + error.message, true);
 }
+
+/* Le rappel des tâches masquées vit dans un panneau que le calcul de l'eau
+   réécrit : la délégation lui survit, un écouteur posé sur le bouton non. */
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-lever]");
+  if (!b) return;
+  const p = plantes.find(x => x.id === b.dataset.lever);
+  if (!p) return;
+  await leverToutesSourdines(p);
+  const m = document.querySelector("#feuille-corps .f-pan-moment");
+  if (m) m.innerHTML = ficheMoment(p);
+});
 
 /* ================== Glissement latéral ================== */
 

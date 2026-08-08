@@ -22,6 +22,10 @@ const PLACEMENTS = [
   { plant_id: PLANTES[1].id, espace_id: "e1" },
   { plant_id: PLANTES[2].id, espace_id: "e2", quantity: 1 },
 ];
+/* Une tâche masquée sur la première plante : son rappel a quitté la rangée du
+   catalogue pour l'onglet du moment de la fiche. */
+const SOURDINES = [{ garden_id: "g1", plant_id: PLANTES[0].id, phase: "taille",
+                     portee: "toujours", annee: null }];
 
 const ouAilleurs = pg => pg.evaluate(() => {
   const r = document.getElementById("reserve-reglages");
@@ -35,7 +39,8 @@ const ouAilleurs = pg => pg.evaluate(() => {
 export default async function essai(navigateur) {
   const j = journal("Navigation et réglages");
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur,
-    { jardin: AU_JARDIN, espaces: ESPACES, placements: PLACEMENTS });
+    { jardin: AU_JARDIN, espaces: ESPACES, placements: PLACEMENTS,
+      sourdines: SOURDINES });
 
   j.section("trois destinations, dont les plantes au centre");
   const barre = await pg.locator(".barre-basse .onglet").evaluateAll(
@@ -115,11 +120,150 @@ export default async function essai(navigateur) {
   const coches = await pg.locator('.item[aria-pressed="true"]').count();
   j.controle("toutes les rangées affichées sont cochées",
     auJardin === 20 && coches === 20, `${coches} cochées sur ${auJardin}`);
-  await pg.locator('.segment[data-portee="tout"]').dispatchEvent("click");
+  /* Le haut de l'écran occupait cinquante-six pour cent de la hauteur avant la
+     première plante. Ce qui reste déplié se compte ici. */
+  j.section("le haut de l'écran laisse la place à la liste");
+  const haut = await pg.evaluate(() => {
+    const f = document.querySelector("#pan-plantes .filtres").getBoundingClientRect();
+    const r = document.querySelector("#listes .item-bloc").getBoundingClientRect();
+    return {
+      filtres: Math.round(f.height),
+      lignes: [...document.querySelectorAll("#pan-plantes .filtres > *")]
+        .filter(e => !e.hidden).length,
+      avant: Math.round(r.top),
+      ecran: window.innerHeight,
+      rangee: Math.round(r.height),
+    };
+  });
+  j.controle("deux lignes de contrôle restent visibles, le reste est replié",
+    haut.lignes === 2, `${haut.lignes} lignes, ${haut.filtres} px de carte`);
+  j.controle("le chrome tient sous la moitié de l'écran",
+    haut.avant < haut.ecran / 2,
+    `${haut.avant} px avant la première plante sur ${haut.ecran}`);
+  j.controle("le décochage général est rangé sous les filtres",
+    await pg.locator("#corpsFiltresS #vider").count() === 1
+    && await pg.locator("#corpsFiltresS #compte").count() === 1);
+
+  j.section("chaque portée porte son propre compte");
+  const comptes = await pg.evaluate(() => ({
+    jardin: (document.getElementById("nbAuJardin") || {}).textContent,
+    tout: (document.getElementById("nbCatalogue") || {}).textContent,
+    bilan: document.getElementById("bilanSel").hidden,
+  }));
+  j.controle("le segment annonce le jardin et le catalogue",
+    comptes.jardin === String(auJardin) && Number(comptes.tout) > auJardin,
+    `${comptes.jardin} au jardin, ${comptes.tout} au catalogue`);
+  j.controle("le bilan se tait tant que rien n'est écarté", comptes.bilan);
+  await pg.fill("#rech", "zzz");
+  await pg.waitForTimeout(300);
+  const filtre = await pg.evaluate(() => ({
+    cache: document.getElementById("bilanSel").hidden,
+    texte: document.getElementById("bilanSel").textContent,
+  }));
+  j.controle("il paraît dès qu'un filtre écarte, et compte sur la portée",
+    !filtre.cache && / sur 20 affichées$/.test(filtre.texte), filtre.texte);
+  await pg.fill("#rech", "");
+  await pg.waitForTimeout(300);
+
+  /* Toutes les rangées sont cochées en portée jardin : la teinte verte n'y
+     distingue rien et peignait la liste entière. Le rond porte seul le signal,
+     la teinte reprend son office au catalogue entier. */
+  j.section("un seul signal de retenue selon la portée");
+  const teintes = await pg.evaluate(() => {
+    const fond = () => getComputedStyle(document.querySelector(
+      '#listes .item[aria-pressed="true"]')).backgroundColor;
+    const auJardin = fond();
+    document.querySelector('.segment[data-portee="tout"]').click();
+    return { auJardin };
+  });
   await pg.waitForTimeout(500);
+  const teinteTout = await pg.evaluate(() => getComputedStyle(
+    document.querySelector('#listes .item[aria-pressed="true"]')).backgroundColor);
+  j.controle("au jardin, la rangée retenue n'est pas teintée",
+    teintes.auJardin === "rgb(255, 255, 255)", teintes.auJardin);
+  j.controle("au catalogue entier, elle l'est",
+    teinteTout !== teintes.auJardin, teinteTout);
+
   const tout = await pg.locator(".item-bloc").count();
   j.controle("le catalogue entier en offre davantage, et c'est de là qu'on ajoute",
     tout > auJardin, `${tout} au catalogue pour ${auJardin} au jardin`);
+
+  /* Deux espaces posaient deux pastilles sous chacune des rangées du jardin.
+     Le lieu occupé passe sous le nom, le choix complet ne se déplie que sur la
+     rangée touchée. */
+  j.section("la rangée ne nomme que les espaces occupés");
+  await pg.locator("#porteeJardin").dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  const lieux = await pg.evaluate(() => {
+    const blocs = [...document.querySelectorAll("#listes .item-bloc")];
+    return {
+      rangees: blocs.length,
+      lieux: blocs.map(b => (b.querySelector(".lieu-item") || {}).textContent || "")
+        .filter(Boolean),
+      places: blocs.filter(b => b.querySelector(".lieu-item:not(.lieu-vide)")).length,
+      pastilles: document.querySelectorAll("#listes .mini-chip").length,
+      hauteur: Math.round(blocs[0].getBoundingClientRect().height),
+      hauteurRangee: Math.round(blocs[0].querySelector(".item").getBoundingClientRect().height),
+    };
+  });
+  j.controle("chaque rangée du jardin porte son lieu, une seule fois",
+    lieux.lieux.length === lieux.rangees, `${lieux.lieux.length} sur ${lieux.rangees}`);
+  j.controle("trois plantes sont placées, les autres restent à placer",
+    lieux.places === 3, `${lieux.places} placées`);
+  j.controle("aucune pastille n'est posée au repos",
+    lieux.pastilles === 0, `${lieux.pastilles} pastilles`);
+  j.controle("le lieu n'allonge pas la rangée",
+    lieux.hauteur === lieux.hauteurRangee,
+    `${lieux.hauteur} px de bloc pour ${lieux.hauteurRangee} px de rangée`);
+
+  j.section("le lieu déplie le choix des espaces");
+  await pg.locator("#listes .item-bloc .lieu-item").first().dispatchEvent("click");
+  await pg.waitForTimeout(300);
+  const deplie = await pg.evaluate(() => {
+    const b = document.querySelector("#listes .espaces-item").parentElement;
+    const puces = [...b.querySelectorAll(".mini-chip")];
+    return {
+      ouvertes: document.querySelectorAll("#listes .espaces-item").length,
+      noms: puces.map(e => e.textContent),
+      cible: Math.round(puces[0].getBoundingClientRect().height
+        - 2 * parseFloat(getComputedStyle(puces[0], "::after").top)),
+      lieu: b.querySelectorAll(".lieu-item").length,
+    };
+  });
+  j.controle("une seule rangée s'ouvre", deplie.ouvertes === 1, deplie.ouvertes);
+  j.controle("elle offre tous les espaces et de quoi refermer",
+    JSON.stringify(deplie.noms) === JSON.stringify(["Potager", "Verger", "Terminé"]),
+    deplie.noms.join(" "));
+  j.controle("le lieu cède la place au choix", deplie.lieu === 0);
+  j.controle("la cible tactile atteint quarante-quatre points",
+    deplie.cible >= 44, `${deplie.cible} points`);
+  await pg.locator("#listes .chip-replier").first().dispatchEvent("click");
+  await pg.waitForTimeout(300);
+  j.controle("le bouton referme et rend le lieu",
+    await pg.locator("#listes .espaces-item").count() === 0
+    && await pg.locator("#listes .lieu-item").count() > 0);
+
+  /* La mise en sourdine est une notion de calendrier : son rappel a quitté la
+     rangée du catalogue pour l'onglet du moment de la fiche, où l'on regarde
+     ce qu'il y a à faire sur la plante. */
+  j.section("la sourdine a quitté le catalogue pour la fiche");
+  j.controle("aucune rangée ne porte de rappel de tâche masquée",
+    await pg.locator("#listes .chip-sourdine, #listes .zones-item").count() === 0);
+  const nomMuet = PLANTES[0].name;
+  await ouvrirFiche(pg, nomMuet);
+  const rappel = await pg.evaluate(() => {
+    const b = document.querySelector(".f-pan-moment .bascule-sourdine");
+    return b ? { texte: b.textContent.replace(/\s+/g, " ").trim(),
+                 visible: !b.closest("[hidden]") } : null;
+  });
+  j.controle("la fiche de la plante masquée le rappelle",
+    rappel && rappel.visible && /1 tâche masquée, réafficher$/.test(rappel.texte),
+    rappel && rappel.texte);
+  await pg.locator(".f-pan-moment .bascule-sourdine").dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  j.controle("le rappel lève la sourdine et disparaît",
+    await pg.locator(".f-pan-moment .bascule-sourdine").count() === 0);
+  await fermerFiche(pg);
 
   await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
   await pg.waitForTimeout(400);

@@ -22,14 +22,26 @@ export default async function essai(navigateur) {
 
   j.section("la vignette suit l'existence de la planche");
   j.controle("le thym porte une vignette",
-    await rangee(pg, "Thym").locator(".v-planche").count() === 1);
-  j.controle("l'hortensia n'en porte pas, aucun fonds ne le couvre",
-    await rangee(pg, "Hortensia").locator(".v-planche").count() === 0);
+    await rangee(pg, "Thym").locator(".v-planche:not(.v-vide)").count() === 1);
+  j.controle("l'hortensia n'a pas de planche, aucun fonds ne le couvre",
+    await rangee(pg, "Hortensia").locator(".v-planche:not(.v-vide)").count() === 0);
+  /* Cent vingt-cinq plantes sur trois cent quinze n'ont pas de planche : sans
+     boîte réservée, leur nom démarrait à une autre abscisse que celui de leurs
+     voisines et le bord gauche de la liste se hachait. */
+  j.controle("sa boîte reste réservée, vide",
+    await rangee(pg, "Hortensia").locator(".v-planche.v-vide").count() === 1);
   const large = await pg.evaluate(() => {
     const e = document.querySelector('.item-bloc .v-planche');
     return e ? Math.round(e.getBoundingClientRect().width) : 0;
   });
   j.controle("elle occupe trente-quatre pixels", large === 34, large);
+  const bords = await pg.evaluate(() => {
+    const x = [...document.querySelectorAll(".item-bloc .nom-item")]
+      .slice(0, 24).map(e => Math.round(e.getBoundingClientRect().left));
+    return [...new Set(x)];
+  });
+  j.controle("tous les noms démarrent à la même abscisse",
+    bords.length === 1, bords.join(" "));
 
   j.section("le masque n'est posé qu'à l'approche de la rangée");
   const pose = await pg.evaluate(() => {
@@ -128,26 +140,33 @@ export default async function essai(navigateur) {
   j.controle("deux teintes au plus, le vert et son repli",
     crans && crans.teintes.length <= 2, crans && crans.teintes.join(" "));
 
-  j.section("la légende tient sur une ligne, en tête du tableau");
+  /* La légende explique la jauge une fois. Elle a rejoint le panneau replié,
+     auprès du filtre qui nomme le même climat, et rend ses quarante et un
+     points au haut de l'écran. */
+  j.section("la légende tient sur une ligne, auprès du filtre de climat");
   const leg = await pg.evaluate(() => {
+    document.getElementById("basculeFiltresS").click();
     const e = document.getElementById("legendeClim");
     if (!e || e.hidden) return null;
     const st = getComputedStyle(e);
-    return {
+    const r = {
       tient: e.scrollWidth <= e.clientWidth + 1,
       haut: Math.round(e.getBoundingClientRect().height),
       cadre: st.borderTopWidth !== "0px" || st.boxShadow !== "none",
-      avantListe: Boolean(e.compareDocumentPosition(document.getElementById("listes")) & 4),
-      apresFiltres: Boolean(document.querySelector(".filtres")
-        .compareDocumentPosition(e) & 4),
+      dansFiltres: Boolean(document.querySelector("#pan-plantes .filtres").contains(e)),
+      dansReplie: Boolean(document.getElementById("corpsFiltresS").contains(e)),
+      avecClimat: Boolean(document.getElementById("ligneClimS").contains(e)
+        && document.getElementById("ligneClimS").contains(document.getElementById("filtreClimat"))),
       titre: e.querySelectorAll(".leg-titre").length,
       etiquette: e.getAttribute("aria-label") || "",
     };
+    document.getElementById("basculeFiltresS").click();
+    return r;
   });
   j.controle("elle ne déborde pas", leg && leg.tient, leg && leg.haut + " px de haut");
   j.controle("elle n'a plus de cadre", leg && !leg.cadre);
-  j.controle("elle est posée après le filtre et avant la liste",
-    leg && leg.apresFiltres && leg.avantListe);
+  j.controle("elle est rangée dans le panneau replié, avec le filtre de climat",
+    leg && leg.dansFiltres && leg.dansReplie && leg.avecClimat);
   j.controle("le climat n'est plus répété à l'écran, il reste pour la lecture assistée",
     leg && leg.titre === 0 && /^Adaptation au climat /.test(leg.etiquette), leg && leg.etiquette);
 

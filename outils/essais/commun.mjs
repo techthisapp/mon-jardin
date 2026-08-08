@@ -72,7 +72,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
     session = true, cache = null, versionSite = null, espaces = null, placements = null,
-    avis = null,
+    avis = null, sourdines = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -93,6 +93,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + (espaces ? `window.__ESPACES__ = ${JSON.stringify(espaces)};` : "")
     + (placements ? `window.__PLACEMENTS__ = ${JSON.stringify(placements)};` : "")
     + (avis ? `window.__AVIS__ = ${JSON.stringify(avis)};` : "")
+    + (sourdines ? `window.__SOURDINES__ = ${JSON.stringify(sourdines)};` : "")
     + (session ? "" : "window.__SANS_SESSION__ = 1;")
     // La clé est celle d'app.js : un cache posé ici imite une installation ancienne.
     + (cache ? `try { localStorage.setItem("monjardin.catalogue.v6", ${JSON.stringify(cache)}); } catch (e) {}` : "")
