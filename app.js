@@ -510,6 +510,7 @@ function marquerTermes(txt) {
 /* Le bandeau d'état. L'action facultative sert au geste qu'on peut regretter :
    elle paraît à côté du message et s'efface avec lui. */
 let minuteurEtat = null;
+let minuteurMot = null;   // le mot posé dans le plein écran des photographies
 
 function info(msg, erreur = false, action = null) {
   const e = $("etat");
@@ -522,8 +523,11 @@ function info(msg, erreur = false, action = null) {
     b.type = "button"; b.className = "etat-action"; b.textContent = action.libelle;
     b.addEventListener("click", () => { info(""); action.faire(); });
     e.appendChild(b);
-    minuteurEtat = setTimeout(() => info(""), 12000);
   }
+  /* Le bandeau s'efface toujours de lui-même : il ne portait de minuteur que
+     lorsqu'il offrait une action, et les autres messages restaient à l'écran
+     jusqu'au suivant. Une erreur tient plus longtemps qu'une nouvelle. */
+  minuteurEtat = setTimeout(() => info(""), action ? 12000 : erreur ? 10000 : 5000);
   e.hidden = false;
 }
 
@@ -5446,25 +5450,42 @@ function brancherAvis(x) {
     const ancien = avisPhoto.get(x.id) || "";
     if (a === ancien) { await retirerAvisPhoto(x.id); }
     else { await poserAvisPhoto(x.id, a); }
-    if (avisPhoto.get(x.id) === "supprimer") {
-      fermerPhoto();
-      rafraichirPhotos();
-      info("Photographie écartée de votre fiche.", false, {
-        libelle: "Annuler", faire: async () => {
-          await retirerAvisPhoto(x.id);
-          rafraichirPhotos();
-        } });
-      return;
-    }
-    await rejugerPhoto(x.id, photoRang);
+    const annuler = avisPhoto.get(x.id) === "supprimer" ? {
+      libelle: "Annuler", faire: async () => {
+        const rang = photoRang, org = x.organe;
+        await retirerAvisPhoto(x.id);
+        await rejugerPhoto(x.id, rang, org);
+      } } : null;
+    await rejugerPhoto(x.id, photoRang, x.organe, annuler);
   }));
 }
 
-/* Un avis change l'ordre : la photographie regardée peut monter ou descendre
-   dans la réserve de son organe. On la suit à sa nouvelle place plutôt que de
-   rester sur une position qui désigne maintenant une autre image, et on dit le
-   déplacement, seule preuve visible que l'avis a porté. */
-async function rejugerPhoto(image_id, avant) {
+/* Le mot qui suit un avis se pose dans l'écran noir, non dans le bandeau de la
+   page, qui est derrière et qu'on ne voit pas. Il s'efface de lui-même. */
+function motPhoto(texte, action) {
+  const z = $("photoPlein");
+  if (!z || z.hidden) { info(texte, false, action); return; }
+  if (minuteurMot) { clearTimeout(minuteurMot); minuteurMot = null; }
+  z.querySelectorAll(".ph-mot").forEach(e => e.remove());
+  const m = document.createElement("p");
+  m.className = "ph-mot";
+  m.setAttribute("role", "status");
+  m.textContent = texte;
+  if (action) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "pm-action"; b.textContent = action.libelle;
+    b.addEventListener("click", e => { e.stopPropagation(); m.remove(); action.faire(); });
+    m.appendChild(b);
+  }
+  z.appendChild(m);
+  minuteurMot = setTimeout(() => m.remove(), action ? 12000 : 4500);
+}
+
+/* Un avis change l'ordre : la photographie regardée peut monter, descendre, ou
+   quitter la série. On reste dans l'organe et on suit ce qui prend sa place,
+   plutôt que de renvoyer à la fiche. L'écran ne se referme que si l'organe n'a
+   plus rien à montrer. */
+async function rejugerPhoto(image_id, avant, organe, action) {
   const z = $("fPhotos");
   const p = z && z.dataset.plante
     ? plantes.find(y => String(y.id) === z.dataset.plante) : null;
@@ -5472,19 +5493,26 @@ async function rejugerPhoto(image_id, avant) {
   poserPhotos(p);
   const groupes = await chargerPhotos(p.id);
   photosVues = groupes;
-  for (let i = 0; i < groupes.length; i++) {
-    const r = groupes[i].findIndex(y => y.id === image_id);
-    if (r === -1) continue;
-    ouvrirPhoto(i, r);
-    if (r !== avant) {
-      info(r === 0 ? "Passée en tête pour cet organe."
-        : r > avant ? `Descendue au rang ${r + 1} sur ${groupes[i].length}.`
-        : `Remontée au rang ${r + 1} sur ${groupes[i].length}.`);
-    }
+  const i = groupes.findIndex(g => g.length && g[0].organe === organe);
+  if (i === -1) {
+    fermerPhoto();
+    info("Plus aucune photographie pour cet organe.", false, action);
     return;
   }
-  fermerPhoto();
-  info("Retirée de cet organe, la suivante prend la place.");
+  const g = groupes[i];
+  const r = g.findIndex(y => y.id === image_id);
+  if (r === -1) {
+    ouvrirPhoto(i, Math.min(avant, g.length - 1));
+    motPhoto(`Écartée. ${g.length} photographie${g.length > 1 ? "s" : ""} `
+      + `pour cet organe.`, action);
+    return;
+  }
+  ouvrirPhoto(i, r);
+  if (r !== avant) {
+    motPhoto(r === 0 ? "Passée en tête pour cet organe."
+      : r > avant ? `Descendue au rang ${r + 1} sur ${g.length}.`
+      : `Remontée au rang ${r + 1} sur ${g.length}.`, action);
+  } else if (action) motPhoto("Écartée de votre fiche.", action);
 }
 
 /* La bande de la fiche ouverte se refait, la fiche pouvant être fermée entre

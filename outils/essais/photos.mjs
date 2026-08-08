@@ -331,21 +331,34 @@ export default async function essai(navigateur) {
 
   const avantOrg = await pg.locator(".ph-i span").allInnerTexts();
   const src1 = await pg.locator(".ph-i img").first().getAttribute("src");
+  const vue1 = await pg.locator(".ph-grande").getAttribute("src");
   await pg.locator('[data-avis="supprimer"]').dispatchEvent("click");
-  await pg.waitForTimeout(600);
-  j.controle("le retrait ferme le plein écran",
-    await pg.locator("#photoPlein[hidden]").count() === 1);
+  await pg.waitForTimeout(700);
+  /* Écarter une photographie ne renvoie plus à la fiche : la suivante de
+     l'organe prend la place, sous les yeux. */
+  j.controle("le retrait ne ferme pas le plein écran",
+    await pg.locator("#photoPlein:not([hidden])").count() === 1);
+  j.controle("l'organe regardé n'a pas changé",
+    await organeVu(pg) === "FLEUR", await organeVu(pg));
+  j.controle("une autre photographie a pris la place",
+    await pg.locator(".ph-grande").getAttribute("src") !== vue1);
   const apresOrg = await pg.locator(".ph-i span").allInnerTexts();
   j.controle("la bande garde ses organes, la suivante ayant pris la place",
     apresOrg.join(" ") === avantOrg.join(" "), apresOrg.join(" "));
   const src2 = await pg.locator(".ph-i img").first().getAttribute("src");
   j.controle("la tuile fleur montre bien une autre image", src2 !== src1, src2.slice(-24));
+  /* Le mot se pose dans l'écran noir, non dans le bandeau de la page, qui est
+     derrière et qu'on ne verrait pas. */
+  j.controle("le mot est posé dans le plein écran",
+    await pg.locator("#photoPlein .ph-mot").count() === 1
+    && await pg.locator("#etat:not([hidden])").count() === 0,
+    net(await pg.locator(".ph-mot").innerText().catch(() => "")));
   j.controle("l'annulation est offerte",
-    await pg.locator(".etat-action").count() === 1
-    && net(await pg.locator(".etat-action").innerText()) === "Annuler");
+    await pg.locator(".ph-mot .pm-action").count() === 1
+    && net(await pg.locator(".pm-action").innerText()) === "Annuler");
 
-  await pg.locator(".etat-action").dispatchEvent("click");
-  await pg.waitForTimeout(600);
+  await pg.locator(".pm-action").dispatchEvent("click");
+  await pg.waitForTimeout(700);
   const src3 = await pg.locator(".ph-i img").first().getAttribute("src");
   j.controle("l'annulation remet la photographie", src3 !== src2, src3.slice(-24));
   await fermerFiche(pg);
@@ -522,9 +535,9 @@ export default async function essai(navigateur) {
     (await pg.locator(".ph-i span").allInnerTexts()).join(" ")
       === ORDRE.filter(o => o !== "RACINE").join(" "),
     (await pg.locator(".ph-i span").allInnerTexts()).join(" "));
-  j.controle("le déplacement est dit",
-    /rang 2 sur 2|dernier/.test(await pg.locator("#etat").innerText().catch(() => "")),
-    await pg.locator("#etat").innerText().catch(() => ""));
+  j.controle("le déplacement est dit dans l'écran noir",
+    /rang 2 sur 2/.test(await pg.locator(".ph-mot").innerText().catch(() => "")),
+    net(await pg.locator(".ph-mot").innerText().catch(() => "")));
   /* Deux bonnes valent quatre, elles ne rattrapent pas les trois perdus : il en
      faut deux pour repasser devant, ce qui est le rapport voulu. */
   await pg.locator('.ph-plein [data-avis="bonne"]').dispatchEvent("click");
@@ -565,7 +578,7 @@ export default async function essai(navigateur) {
     return { tuile: t ? t.querySelector("img").src : null,
              plein: !document.getElementById("photoPlein").hidden };
   });
-  j.controle("le plein écran se referme sur la troisième demande", !portApres.plein);
+  j.controle("le plein écran reste ouvert sur la suivante", portApres.plein);
   j.controle("la tuile du port reste, avec la suivante",
     portApres.tuile && portApres.tuile !== portAvant,
     `${(portAvant || "").slice(-24)} devient ${(portApres.tuile || "").slice(-24)}`);
@@ -576,6 +589,14 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(600);
   await pg.locator('.ph-i[data-photo="0"]').dispatchEvent("click");
   await pg.waitForTimeout(500);
+
+  /* Les trois verdicts respirent sous l'auteur et la licence : deux points les
+     en séparaient. */
+  j.section("les verdicts respirent sous le crédit");
+  const ecart = await pg.evaluate(() => Math.round(
+    document.querySelector(".ph-avis").getBoundingClientRect().top
+    - document.querySelector(".ph-bas").getBoundingClientRect().bottom));
+  j.controle("au moins douze points au dessus des boutons", ecart >= 12, `${ecart} px`);
 
   /* Au premier rang il n'y a rien au dessus : tirer vers le bas ne peut vouloir
      dire que fermer. C'est ce qui laisse les trois gestes tenir sur deux axes. */

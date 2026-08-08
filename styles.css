@@ -2477,7 +2477,7 @@ select:focus{
 
 /* Trois verdicts sous l'image, au plein écran. Le retrait est marqué en creux,
    les deux autres en plein : un seul des trois change ce qui est affiché. */
-.ph-avis{display:flex;gap:8px;justify-content:center;margin:2px 0 6px;flex-wrap:wrap}
+.ph-avis{display:flex;gap:8px;justify-content:center;margin:16px 0 4px;flex-wrap:wrap}
 .av-b{
   font:400 13px/1.2 "IBM Plex Sans",sans-serif;padding:8px 14px;cursor:pointer;
   border:1px solid rgba(255,255,255,.35);border-radius:999px;
@@ -2705,3 +2705,26 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
 
 /* L'image cède la place à la série quand la colonne est trop haute. */
 .ph-grande{flex:0 1 auto;min-height:0}
+
+/* ---------- Le mot qui suit un avis, dans le plein écran ----------
+
+   Il se posait dans le bandeau de la page, derrière l'écran noir, où on ne le
+   voyait pas et d'où il ne partait plus. Il se pose ici, au dessus de la série,
+   et s'efface de lui-même. */
+.ph-mot{
+  position:absolute;left:16px;right:16px;
+  bottom:calc(18px + env(safe-area-inset-bottom));
+  margin:0;padding:10px 14px;border-radius:12px;
+  display:flex;align-items:center;gap:12px;justify-content:center;
+  background:rgba(239,239,232,.94);color:#16241E;
+  font:500 13px/1.35 "IBM Plex Sans",sans-serif;text-align:center;
+  box-shadow:0 8px 24px rgba(6,10,8,.45);
+  animation:mot-entre .18s ease-out;
+}
+@keyframes mot-entre{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.pm-action{
+  flex:0 0 auto;border:0;background:none;padding:2px;cursor:pointer;color:var(--terre);
+  font:600 13px/1.2 "IBM Plex Sans",sans-serif;
+  text-decoration:underline;text-underline-offset:3px;
+}
+@media (prefers-reduced-motion:reduce){ .ph-mot{animation:none} }
