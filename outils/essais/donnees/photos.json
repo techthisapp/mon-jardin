@@ -15,7 +15,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -33,7 +34,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -51,7 +53,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -69,7 +72,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -87,7 +91,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -105,7 +110,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -123,7 +129,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -141,7 +148,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -159,7 +167,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "abd6f230-03ca-49df-8d0c-9e0a9abe0192",
@@ -177,7 +186,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "b36881e1-9ed1-486e-a263-e74dac373d62",
@@ -195,7 +205,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "b36881e1-9ed1-486e-a263-e74dac373d62",
@@ -213,7 +224,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "b36881e1-9ed1-486e-a263-e74dac373d62",
@@ -231,7 +243,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "b36881e1-9ed1-486e-a263-e74dac373d62",
@@ -249,7 +262,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "b36881e1-9ed1-486e-a263-e74dac373d62",
@@ -263,11 +277,15 @@
   "note": 0.8,
   "retenue": true,
   "id": "img-15",
-  "n_supprimer": 0,
+  "n_supprimer": 2,
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": -12,
+  "avis_ailleurs": {
+   "supprimer": 2
+  }
  },
  {
   "plant_id": "b36881e1-9ed1-486e-a263-e74dac373d62",
@@ -285,7 +303,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -303,7 +322,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -321,7 +341,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -339,7 +360,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -357,7 +379,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -375,7 +398,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -393,7 +417,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -411,7 +436,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -429,7 +455,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -447,7 +474,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": "relecture",
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "cdb548f4-27ea-48e9-9295-828604896b33",
@@ -465,7 +493,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
@@ -483,7 +512,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
@@ -501,7 +531,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
@@ -519,7 +550,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "plant_id": "c5a46696-751f-4594-a336-743ed687ac77",
@@ -537,7 +569,8 @@
   "n_moyenne": 0,
   "n_bonne": 0,
   "retrait_motif": null,
-  "verrou": false
+  "verrou": false,
+  "score": 0
  },
  {
   "licence": "CC BY-SA",
@@ -555,7 +588,8 @@
   "auteur": "ecorce sans objet",
   "retenue": false,
   "retrait_motif": "relecture",
-  "id": "img-31"
+  "id": "img-31",
+  "score": 0
  },
  {
   "licence": "CC BY-SA 4.0",
@@ -573,7 +607,8 @@
   "auteur": "repli du contrôle",
   "retenue": false,
   "retrait_motif": "relecture",
-  "id": "img-32"
+  "id": "img-32",
+  "score": 0
  },
  {
   "licence": "CC BY-SA 4.0",
@@ -591,6 +626,7 @@
   "auteur": "retiré par avis",
   "retenue": false,
   "retrait_motif": "avis",
-  "id": "img-33"
+  "id": "img-33",
+  "score": 0
  }
 ]

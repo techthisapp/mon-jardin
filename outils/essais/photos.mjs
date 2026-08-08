@@ -479,6 +479,78 @@ export default async function essai(navigateur) {
     await organeVu(pg) === "FEUILLE" && await compte(pg) === "1 sur 2",
     `${await organeVu(pg)} ${await compte(pg)}`);
 
+  /* Le rang est la place de naissance, donnée par les mesures. Le score porte
+     le jugement des personnes et commande l'ordre : une bonne remonte de deux,
+     une moyenne descend de trois, une demande de retrait descend de six. */
+  j.section("un avis déplace la photographie dans la réserve");
+  await pg.locator('.ph-plein [data-avis="moyenne"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
+  const apresMoyenne = await pg.evaluate(() => ({
+    place: document.querySelector(".ph-nb").textContent,
+    auteur: document.querySelector(".ph-bas b").textContent,
+    marque: document.querySelector('[data-avis="moyenne"]').getAttribute("aria-pressed"),
+    bande: [...document.querySelectorAll(".ph-i img")].map(e => e.src.slice(-12)),
+  }));
+  j.controle("moyenne fait descendre la photographie regardée",
+    apresMoyenne.place === "2 sur 2", apresMoyenne.place);
+  j.controle("on la suit à sa nouvelle place, l'avis reste marqué",
+    apresMoyenne.marque === "true" && apresMoyenne.auteur === "serafina.pal",
+    `${apresMoyenne.auteur} ${apresMoyenne.marque}`);
+  j.controle("le déplacement est dit",
+    /rang 2 sur 2|dernier/.test(await pg.locator("#etat").innerText().catch(() => "")),
+    await pg.locator("#etat").innerText().catch(() => ""));
+  /* Deux bonnes valent quatre, elles ne rattrapent pas les trois perdus : il en
+     faut deux pour repasser devant, ce qui est le rapport voulu. */
+  await pg.locator('.ph-plein [data-avis="bonne"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
+  j.controle("bonne la fait remonter en tête",
+    await compte(pg) === "1 sur 2", await compte(pg));
+  const marques = await pg.evaluate(() => [...document.querySelectorAll("[data-avis]")]
+    .filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.avis));
+  j.controle("un seul avis à la fois, le dernier posé",
+    JSON.stringify(marques) === '["bonne"]', JSON.stringify(marques));
+  await pg.locator('.ph-plein [data-avis="bonne"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
+  j.controle("le même avis à nouveau le retire",
+    await pg.evaluate(() => [...document.querySelectorAll("[data-avis]")]
+      .every(b => b.getAttribute("aria-pressed") === "false")));
+
+  /* Trois demandes de retrait écartent l'image pour tout le monde, et non pour
+     le seul votant : la suivante prend la place et la tuile ne disparaît pas. */
+  j.section("la troisième demande de retrait écarte pour tout le monde");
+  await fermerFiche(pg);
+  await ouvrirFiche(pg, "Basilic");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(600);
+  const portAvant = await pg.evaluate(() => {
+    const t = [...document.querySelectorAll(".ph-i")]
+      .find(e => e.querySelector("span").textContent === "port");
+    return t ? t.querySelector("img").src : null;
+  });
+  await pg.locator('.ph-i', { hasText: "PORT" }).first().dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  j.controle("le port du basilic porte déjà deux demandes venues d'ailleurs",
+    await organeVu(pg) === "PORT", await organeVu(pg));
+  await pg.locator('.ph-plein [data-avis="supprimer"]').dispatchEvent("click");
+  await pg.waitForTimeout(800);
+  const portApres = await pg.evaluate(() => {
+    const t = [...document.querySelectorAll(".ph-i")]
+      .find(e => e.querySelector("span").textContent === "port");
+    return { tuile: t ? t.querySelector("img").src : null,
+             plein: !document.getElementById("photoPlein").hidden };
+  });
+  j.controle("le plein écran se referme sur la troisième demande", !portApres.plein);
+  j.controle("la tuile du port reste, avec la suivante",
+    portApres.tuile && portApres.tuile !== portAvant,
+    `${(portAvant || "").slice(-24)} devient ${(portApres.tuile || "").slice(-24)}`);
+
+  await fermerFiche(pg);
+  await ouvrirFiche(pg, "Pommier");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(600);
+  await pg.locator('.ph-i[data-photo="0"]').dispatchEvent("click");
+  await pg.waitForTimeout(500);
+
   /* Au premier rang il n'y a rien au dessus : tirer vers le bas ne peut vouloir
      dire que fermer. C'est ce qui laisse les trois gestes tenir sur deux axes. */
   j.section("au premier rang, le geste vers le bas referme");

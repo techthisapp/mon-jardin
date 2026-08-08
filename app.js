@@ -5095,14 +5095,23 @@ const organeAttendu = (p, organe) => {
 };
 
 async function chargerPhotos(id) {
+  /* La promesse est mise en cache, non son résultat : deux appels rapprochés,
+     celui de la bande et celui du plein écran après un avis, ne doivent pas
+     lancer deux requêtes. */
   if (photosPlante.has(id)) return photosPlante.get(id);
+  const promesse = photosDe(id);
+  photosPlante.set(id, promesse);
+  return promesse;
+}
+
+async function photosDe(id) {
   let lot = [];
   try {
     /* Les colonnes nommées plutôt que l'étoile : la réserve compte jusqu'à six
        images par organe, et les compteurs d'avis, la note de sélection et le
        verrou ne servent jamais à l'affichage. */
     const { data } = await db.from("plant_images")
-      .select("id,organe,rang,url,auteur,licence,fonds,source,retenue,retrait_motif")
+      .select("id,organe,rang,score,url,auteur,licence,fonds,source,retenue,retrait_motif")
       .eq("plant_id", id);
     lot = data || [];
   } catch (e) { /* sans réseau la section reste absente */ }
@@ -5124,14 +5133,15 @@ async function chargerPhotos(id) {
     if (!c) return;
     (c[x.organe] = c[x.organe] || []).push(x);
   });
-  const rang = (a, b) => a.rang - b.rang;
-  /* Un groupe par organe, trié par rang. La bande montre le premier, le plein
-     écran parcourt les autres : la réserve cesse d'être invisible. */
+  /* L'ordre d'affichage suit le jugement des personnes avant la place de
+     naissance : le score d'abord, le rang pour départager. Une bonne remonte de
+     deux, une moyenne descend de trois, une demande de retrait descend de six,
+     et chaque avis pèse le poids de son auteur. */
+  const ordre = (a, b) => (b.score || 0) - (a.score || 0) || a.rang - b.rang;
   const suite = PH_ORDRE
-    .map(o => (par[o] || []).length ? par[o].sort(rang)
-      : organeAttendu(p, o) && (repli[o] || []).length ? repli[o].sort(rang) : null)
+    .map(o => (par[o] || []).length ? par[o].sort(ordre)
+      : organeAttendu(p, o) && (repli[o] || []).length ? repli[o].sort(ordre) : null)
     .filter(Boolean);
-  photosPlante.set(id, suite);
   return suite;
 }
 
@@ -5426,9 +5436,35 @@ function brancherAvis(x) {
         } });
       return;
     }
-    z.querySelectorAll("[data-avis]").forEach(o =>
-      o.setAttribute("aria-pressed", String(o.dataset.avis === (avisPhoto.get(x.id) || ""))));
+    await rejugerPhoto(x.id, photoRang);
   }));
+}
+
+/* Un avis change l'ordre : la photographie regardée peut monter ou descendre
+   dans la réserve de son organe. On la suit à sa nouvelle place plutôt que de
+   rester sur une position qui désigne maintenant une autre image, et on dit le
+   déplacement, seule preuve visible que l'avis a porté. */
+async function rejugerPhoto(image_id, avant) {
+  const z = $("fPhotos");
+  const p = z && z.dataset.plante
+    ? plantes.find(y => String(y.id) === z.dataset.plante) : null;
+  if (!p) return;
+  poserPhotos(p);
+  const groupes = await chargerPhotos(p.id);
+  photosVues = groupes;
+  for (let i = 0; i < groupes.length; i++) {
+    const r = groupes[i].findIndex(y => y.id === image_id);
+    if (r === -1) continue;
+    ouvrirPhoto(i, r);
+    if (r !== avant) {
+      info(r === 0 ? "Passée en tête pour cet organe."
+        : r > avant ? `Descendue au rang ${r + 1} sur ${groupes[i].length}.`
+        : `Remontée au rang ${r + 1} sur ${groupes[i].length}.`);
+    }
+    return;
+  }
+  fermerPhoto();
+  info("Retirée de cet organe, la suivante prend la place.");
 }
 
 /* La bande de la fiche ouverte se refait, la fiche pouvant être fermée entre

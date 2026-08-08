@@ -29,6 +29,29 @@ const TABLES = {
   plant_images: (window.__PHOTOS__ || []),
   avis_photo: (window.__AVIS__ || []),
 };
+/* La base recalcule les compteurs, le score et le retrait à chaque avis, par un
+   déclencheur. La doublure en fait autant, sans quoi rien de ce que l'avis
+   commande ne serait contrôlable : le poids est de un, l'utilisateur figé
+   n'étant pas mainteneur. */
+const SEUIL_RETRAIT = 3;
+function recalculerAvis(image_id) {
+  const avis = (TABLES.avis_photo || []).filter(a => a.image_id === image_id);
+  const i = (TABLES.plant_images || []).find(x => x.id === image_id);
+  if (!i) return;
+  /* Les avis des autres comptes, que la doublure ne fait pas vivre, sont posés
+     à même la ligne : c'est le seul moyen d'éprouver un seuil qui demande trois
+     personnes avec un seul utilisateur figé. */
+  const autres = i.avis_ailleurs || {};
+  const n = a => avis.filter(x => x.avis === a).length + (autres[a] || 0);
+  const s = n("supprimer"), m = n("moyenne"), b = n("bonne");
+  i.n_supprimer = s; i.n_moyenne = m; i.n_bonne = b;
+  i.score = 2 * b - 3 * m - 6 * s;
+  if (i.retrait_motif === "relecture" || i.verrou) return;
+  const net = s - b;
+  i.retenue = !(net >= SEUIL_RETRAIT);
+  i.retrait_motif = net >= SEUIL_RETRAIT ? "avis" : null;
+}
+
 function requete(table) {
   let lignes = (TABLES[table] || []).slice();
   const api = {
@@ -46,6 +69,7 @@ function requete(table) {
         ? t.findIndex(l => l.image_id === v.image_id)
         : t.findIndex(l => l.garden_id === v.garden_id && l.jour === v.jour);
       if (i >= 0) t[i] = { ...t[i], ...v }; else t.push(v);
+      if (table === "avis_photo") recalculerAvis(v.image_id);
       return Promise.resolve({ data: [v], error: null });
     },
     delete() {
@@ -54,7 +78,9 @@ function requete(table) {
       return {
         eq(col, v) {
           const i = t.findIndex(l => String(l[col]) === String(v));
+          const parti = i >= 0 ? t[i] : null;
           if (i >= 0) t.splice(i, 1);
+          if (table === "avis_photo" && parti) recalculerAvis(parti.image_id);
           return this;
         },
         then(res) { return Promise.resolve({ data: [], error: null }).then(res); },
