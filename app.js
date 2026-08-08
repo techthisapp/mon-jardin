@@ -5069,16 +5069,28 @@ function creditPhotos(lot) {
   const licences = [...new Set(lot.map(x => x.licence || "CC BY-SA"))];
   if (licences.length === 1) {
     const auteurs = [...new Set(lot.map(x => x.auteur).filter(Boolean))];
-    return `${esc(fonds)}, sous licence ${esc(licences[0])}`
-      + (auteurs.length ? ` : ${esc(enumerer(auteurs, auteurs.length))}` : "") + ".";
+    return `${fonds}, sous licence ${licences[0]}`
+      + (auteurs.length ? ` : ${enumerer(auteurs, auteurs.length)}` : "") + ".";
   }
   const paires = [];
   lot.forEach(x => {
     const t = `${x.auteur || "auteur non renseigné"} (${x.licence || "CC BY-SA"})`;
     if (paires.indexOf(t) === -1) paires.push(t);
   });
-  return `${esc(fonds)} : ${esc(enumerer(paires, paires.length))}.`;
+  return `${fonds} : ${enumerer(paires, paires.length)}.`;
 }
+
+/* L'écorce n'a pas d'objet chez une plante qui n'est pas ligneuse, le fruit pas
+   davantage chez un légume-feuille, une racine ou un bulbe. Quatre-vingts des
+   mille cinquante-huit organes du catalogue sont dans ce cas : leur tuile vide
+   est leur état juste, et rien ne doit venir la remplir. */
+const PORTS_LIGNEUX = ["arbre", "arbuste", "liane", "sous_arbrisseau"];
+const CATEGORIES_SANS_FRUIT = ["Feuilles", "Racines", "Bulbes"];
+const organeAttendu = (p, organe) => {
+  if (organe === "ecorce") return PORTS_LIGNEUX.indexOf(p.port) !== -1;
+  if (organe === "fruit") return CATEGORIES_SANS_FRUIT.indexOf(p.cat) === -1;
+  return true;
+};
 
 async function chargerPhotos(id) {
   if (photosPlante.has(id)) return photosPlante.get(id);
@@ -5090,12 +5102,24 @@ async function chargerPhotos(id) {
   /* Le plus petit rang retenu de chaque organe, dans l'ordre d'affichage. Une
      photographie que la personne a jugée à supprimer est masquée pour elle
      seule : la suivante prend la place, exactement comme si elle avait été
-     écartée pour tout le monde. */
-  const par = {};
-  lot.filter(x => x.retenue !== false && avisPhoto.get(x.id) !== "supprimer").forEach(x => {
-    if (!par[x.organe] || x.rang < par[x.organe].rang) par[x.organe] = x;
+     écartée pour tout le monde.
+
+     Un organe attendu ne reste pas vide pour autant. Quand plus rien n'est
+     retenu, la plus haute des images que le contrôle automatique avait écartées
+     reprend la place : le contrôle est une suspicion, l'avis d'une personne est
+     un verdict, et une image retirée par avis n'est jamais reprise. */
+  const p = plantes.find(x => x.id === id) || {};
+  const par = {}, repli = {};
+  lot.forEach(x => {
+    if (avisPhoto.get(x.id) === "supprimer") return;
+    const c = x.retenue !== false ? par
+      : x.retrait_motif === "relecture" ? repli : null;
+    if (!c) return;
+    if (!c[x.organe] || x.rang < c[x.organe].rang) c[x.organe] = x;
   });
-  const suite = PH_ORDRE.map(o => par[o]).filter(Boolean);
+  const suite = PH_ORDRE
+    .map(o => par[o] || (organeAttendu(p, o) ? repli[o] : null))
+    .filter(Boolean);
   photosPlante.set(id, suite);
   return suite;
 }
@@ -5109,18 +5133,26 @@ function poserPhotos(p) {
     if (!zz || zz.dataset.plante !== String(p.id)) return;
     if (!lot.length) { zz.hidden = true; return; }
     photosVues = lot;
-    zz.innerHTML = `<h3 class="f-sect">Photographies</h3><div class="ph-rail">`
+    /* L'attribution et la portée de la photographie tenaient quatre lignes sous
+       la bande, lues une fois et relues jamais. Elles passent sous un mot, que
+       l'on ouvre comme une définition du glossaire. La licence reste satisfaite :
+       la mention est à un appui, et le plein écran nomme l'auteur de chaque
+       image avec sa licence et le lien vers la source.
+
+       Une photographie de terrain porte le nom que l'observateur a donné à la
+       plante, au rang de la fiche. Rien ne distingue à l'oeil deux variétés
+       d'hortensia : la fiche le dit plutôt que de laisser croire au portrait de
+       la variété cultivée. C'est le principe de la provenance, la mention dit ce
+       que la source établit. */
+    const note = creditPhotos(lot) + " La photographie documente "
+      + (p.latin && p.latin.indexOf(" ") === -1 ? "le genre" : "l'espèce")
+      + ", une variété de jardin peut en différer.";
+    zz.innerHTML = `<h3>Photographies</h3><div class="ph-rail">`
       + lot.map((x, i) => `<button type="button" class="ph-i" data-photo="${i}">`
           + `<img src="${esc(x.url)}" alt="" loading="lazy" decoding="async">`
           + `<span>${esc(PH_NOM[x.organe] || x.organe)}</span></button>`).join("")
-      + `</div><p class="ph-credit">${creditPhotos(lot)}`
-      /* Une photographie de terrain porte le nom que l'observateur a donné à la
-         plante, au rang de la fiche. Rien ne distingue à l'oeil deux variétés
-         d'hortensia : la fiche le dit plutôt que de laisser croire au portrait
-         de la variété cultivée. C'est le principe de la provenance, la mention
-         dit ce que la source établit. */
-      + `<br>La photographie documente ${esc(p.latin && p.latin.indexOf(" ") === -1
-          ? "le genre" : "l'espèce")}, une variété de jardin peut en différer.</p>`;
+      + `</div><p class="ph-credit"><button type="button" class="terme ph-credits"`
+      + ` data-titre="Crédits" data-note="${esc(note)}">Crédits</button></p>`;
     zz.hidden = false;
     zz.querySelectorAll("[data-photo]").forEach(b =>
       b.addEventListener("click", () => ouvrirPhoto(Number(b.dataset.photo))));
@@ -5331,12 +5363,17 @@ function sortirFeuille() {
 function ouvrirGlose(bouton) {
   fermerGlose();
   const corps = $("feuille-corps");
-  const def = defGloss.get(bouton.dataset.terme);
+  /* Deux emplois du même volet : un terme du glossaire, dont la définition vient
+     du référentiel, et une note portée par le bouton lui-même, ce dont se sert
+     l'attribution des photographies. */
+  const terme = bouton.dataset.terme;
+  const titre = terme || bouton.dataset.titre || "";
+  const def = terme ? defGloss.get(terme) : bouton.dataset.note;
   if (!corps || !def) return;
   const g = document.createElement("div");
   g.className = "glose";
   g.setAttribute("role", "note");
-  g.innerHTML = `<b>${esc(bouton.dataset.terme)}</b><p>${esc(def)}</p>`;
+  g.innerHTML = `<b>${esc(titre)}</b><p>${esc(def)}</p>`;
   corps.appendChild(g);
   const rb = bouton.getBoundingClientRect(), rc = corps.getBoundingClientRect();
   const x = rb.left - rc.left + corps.scrollLeft;

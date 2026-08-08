@@ -2629,3 +2629,28 @@ select:focus{
    dégradé qui la porte en couvre soixante-dix-huit : la dernière rangée passait
    dessous. */
 main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
+
+/* ---------- Bande de photographies de la fiche ----------
+
+   Le titre portait la capitale condensée des cartes, quand ses voisins du même
+   onglet portent la casse normale des blocs, et sa marge basse négative le
+   collait aux tuiles. Il prend la forme de ses voisins et respire. */
+.f-photos h3{
+  font-family:inherit;font-size:13px;font-weight:700;
+  letter-spacing:0;text-transform:none;margin:0 0 10px;
+}
+.f-photos{margin:0 0 16px}
+
+/* L'attribution et la portée de la photographie tenaient quatre lignes sous la
+   bande. Elles passent sous un mot, ouvert comme une définition du glossaire. */
+.ph-credit{margin-top:10px}
+.ph-credits{font-size:12px;font-weight:500}
+
+/* Les entêtes de carte portaient la capitale condensée, les titres de bloc la
+   casse normale : deux registres pour un même rang de titre, dans le même
+   onglet. Le cadre de la carte suffit à la distinguer, son titre rejoint celui
+   des blocs. */
+.f-carte-tete h3{
+  font-family:inherit;font-size:13px;font-weight:700;
+  letter-spacing:0;text-transform:none;color:var(--f-ink);
+}

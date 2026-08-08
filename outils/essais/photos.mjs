@@ -8,6 +8,17 @@ import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
 
 const ORDRE = ["FLEUR", "FEUILLE", "FRUIT", "RACINE", "PORT", "ÉCORCE"];
 
+/* L'attribution ne tient plus quatre lignes sous la bande : elle est passée
+   sous un mot, et se lit en l'ouvrant comme une définition du glossaire. */
+async function lireCredits(pg) {
+  await pg.locator(".ph-credits").click();
+  await pg.waitForTimeout(250);
+  const t = net(await pg.locator(".glose").innerText());
+  await pg.keyboard.press("Escape");
+  await pg.waitForTimeout(150);
+  return t;
+}
+
 export default async function essai(navigateur) {
   const j = journal("Photographies de la fiche");
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur);
@@ -58,8 +69,39 @@ export default async function essai(navigateur) {
       const r = e.getBoundingClientRect();
       return Math.abs(r.width - r.height) < 1;
     }));
-  const credit = net(await pg.locator(".ph-credit").innerText());
-  j.controle("le fonds et la licence sont nommés sous la bande",
+  /* Le titre de la bande portait la capitale condensée des cartes quand ses
+     voisins du même onglet portent la casse normale des blocs, et sa marge
+     basse négative le collait aux tuiles. */
+  j.section("le titre suit celui de ses voisins et respire");
+  const titre = await pg.evaluate(() => {
+    const h = document.querySelector("#fPhotos h3");
+    const b = document.querySelector('.f-pan[data-pan="identite"] .f-bloc h3');
+    const c = document.querySelector('.f-pan[data-pan="identite"] .f-carte-tete h3');
+    const forme = e => { const s = getComputedStyle(e);
+      return [s.fontFamily, s.fontSize, s.fontWeight, s.textTransform, s.letterSpacing].join("|"); };
+    return { texte: h.textContent, meme: forme(h) === forme(b),
+             memeCarte: !c || forme(h) === forme(c), forme: forme(h),
+             ecart: Math.round(document.querySelector(".ph-rail").getBoundingClientRect().top
+                             - h.getBoundingClientRect().bottom) };
+  });
+  j.controle("il porte la même forme que les titres de bloc",
+    titre.meme, titre.forme);
+  j.controle("l'entête de carte porte la même", titre.memeCarte);
+  j.controle("il ne colle plus aux tuiles", titre.ecart >= 8, `${titre.ecart} px`);
+
+  /* L'attribution tenait quatre lignes sous la bande. Elle passe sous un mot. */
+  j.section("l'attribution tient sous un mot");
+  const pied = await pg.evaluate(() => {
+    const c = document.querySelector(".ph-credit");
+    return { texte: c.textContent.trim(), haut: Math.round(c.getBoundingClientRect().height),
+             lignes: c.querySelectorAll("br").length };
+  });
+  j.controle("le pied de bande ne porte qu'un mot",
+    pied.texte === "Crédits" && !pied.lignes, pied.texte);
+  j.controle("il tient sur une ligne", pied.haut <= 24, `${pied.haut} px de haut`);
+
+  const credit = await lireCredits(pg);
+  j.controle("le fonds et la licence sont nommés dans l'infobulle",
     /Pl@ntNet/.test(credit) && /CC BY-SA/.test(credit), credit);
   j.controle("chaque auteur est nommé",
     ["Lit Cu", "serafina.pal", "Lin Ferber", "KP Laer", "David Grant"]
@@ -93,9 +135,7 @@ export default async function essai(navigateur) {
   j.controle("le fruit est toujours montré",
     org3.indexOf("FRUIT") !== -1, org3.join(" "));
   j.controle("c'est l'auteur du second rang qui est crédité",
-    (await pg.locator(".ph-credit").innerText()).indexOf("écartée") === -1
-    && (await pg.locator(".ph-credit").innerText()).indexOf("Lin Ferber") !== -1,
-    net(await pg.locator(".ph-credit").innerText()));
+    (await lireCredits(pg)).indexOf("Lin Ferber") !== -1, await lireCredits(pg));
 
   j.section("le plein écran porte l'organe, l'auteur et la source");
   await pg.locator('.ph-i[data-photo="0"]').click();
@@ -182,7 +222,7 @@ export default async function essai(navigateur) {
   await ouvrirFiche(pg, "Framboise");
   await ongletIdentite(pg);
   await pg.waitForTimeout(500);
-  const cw = net(await pg.locator(".ph-credit").innerText());
+  const cw = await lireCredits(pg);
   j.controle("le fonds est nommé", /Wikimedia Commons/.test(cw), cw);
   j.controle("chaque auteur porte sa licence",
     /Ivar Leidus \(CC BY-SA 4\.0\)/.test(cw) && /Kristian Peters \(CC BY-SA 3\.0\)/.test(cw), cw);
@@ -195,7 +235,29 @@ export default async function essai(navigateur) {
      récolté. */
   const orgW = await pg.locator(".ph-i span").allInnerTexts();
   j.controle("la racine paraît, après le fruit et avant le port",
-    orgW.join(" ") === "FLEUR FEUILLE FRUIT RACINE", orgW.join(" "));
+    orgW.join(" ") === "FLEUR FEUILLE FRUIT RACINE ÉCORCE", orgW.join(" "));
+
+  /* Un organe attendu ne reste pas vide. Le contrôle automatique est une
+     suspicion, l'avis d'une personne est un verdict : à défaut d'image retenue,
+     la première que le contrôle avait écartée reprend la place, jamais celle
+     qu'un avis a retirée. Et l'écorce n'a pas d'objet chez une plante qui n'est
+     pas ligneuse, sa tuile reste vide. */
+  j.section("un organe attendu ne reste pas vide");
+  j.controle("l'écorce écartée au contrôle reprend la place chez la framboise",
+    orgW.indexOf("ÉCORCE") !== -1 && cw.indexOf("repli du contrôle") !== -1, cw);
+  j.controle("le port retiré par avis n'est pas repris",
+    orgW.indexOf("PORT") === -1 && cw.indexOf("retiré par avis") === -1, cw);
+  await fermerFiche(pg);
+  await ouvrirFiche(pg, "Basilic");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(500);
+  const orgB = await pg.locator(".ph-i span").allInnerTexts();
+  j.controle("l'écorce n'a pas d'objet chez le basilic, sa tuile reste vide",
+    orgB.indexOf("ÉCORCE") === -1, orgB.join(" "));
+  await fermerFiche(pg);
+  await ouvrirFiche(pg, "Framboise");
+  await ongletIdentite(pg);
+  await pg.waitForTimeout(500);
   const pw = await pg.locator(".ph-i img").first().getAttribute("src");
   await pg.locator('.ph-i[data-photo="0"]').click();
   await pg.waitForTimeout(400);
