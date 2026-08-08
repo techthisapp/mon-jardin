@@ -1576,7 +1576,7 @@ body.fige{overflow:hidden}
   padding:24px 16px calc(24px + env(safe-area-inset-bottom));
 }
 .ph-plein[hidden]{display:none}
-.ph-plein img{width:100%;max-height:66vh;object-fit:contain;border-radius:12px;display:block}
+.ph-grande{width:100%;max-height:66vh;object-fit:contain;border-radius:12px;display:block}
 .ph-org{
   font-family:"IBM Plex Sans Condensed",sans-serif;
   font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
@@ -2661,7 +2661,7 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
    pas sur le fond. Le geste horizontal est réservé à la bande : le navigateur
    ne doit pas y voir un retour en arrière ni un défilement de page. */
 .ph-plein{overflow:hidden;touch-action:none;overscroll-behavior:contain}
-.ph-plein img{will-change:transform}
+.ph-grande{will-change:transform}
 /* Les repères de position se lisent : celui de la photographie regardée est
    plein et un peu plus large, les autres restent en creux. */
 .ph-pts i{transition:width .18s ease, border-radius .18s ease, background-color .18s ease}
@@ -2677,9 +2677,31 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
   font:400 11.5px/1 "IBM Plex Mono",monospace;letter-spacing:0;
   color:rgba(239,239,232,.55);text-transform:none;
 }
-.ph-pts-v{
-  position:absolute;right:4px;top:50%;transform:translateY(-50%);
-  flex-direction:column;margin:0;gap:6px;
-  filter:drop-shadow(0 0 2px rgba(12,18,15,.75));
+/* La série de l'organe, en vignettes touchables sous les verdicts. Elle dit
+   d'un coup d'oeil combien il y en a, laquelle on regarde et lesquelles on a
+   déjà jugées, et se parcourt à l'appui autant qu'au glissement. */
+.ph-serie{
+  display:flex;gap:7px;justify-content:center;flex-wrap:nowrap;
+  overflow-x:auto;scrollbar-width:none;margin:12px 0 2px;padding:3px 2px;
 }
-.ph-pts-v i.ici{width:6px;height:15px;border-radius:3px}
+.ph-serie::-webkit-scrollbar{display:none}
+.ps-i{
+  position:relative;flex:0 0 auto;width:46px;height:46px;padding:0;cursor:pointer;
+  border:0;background:none;border-radius:9px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(239,239,232,.22);opacity:.55;
+  transition:opacity .16s ease, box-shadow .16s ease;
+}
+.ps-i img{width:100%;height:100%;object-fit:cover;display:block}
+.ps-i[aria-current="true"]{opacity:1;box-shadow:0 0 0 2px #EFEFE8}
+.ps-i:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
+/* Une pastille dit que la photographie porte déjà mon avis, et lequel. */
+.ps-i.ps-bonne::after,.ps-i.ps-moyenne::after,.ps-i.ps-supprimer::after{
+  content:"";position:absolute;right:3px;bottom:3px;width:8px;height:8px;
+  border-radius:50%;box-shadow:0 0 0 1.5px rgba(12,18,15,.7);
+}
+.ps-i.ps-bonne::after{background:#8FBF6E}
+.ps-i.ps-moyenne::after{background:#E0C874}
+.ps-i.ps-supprimer::after{background:#E3A99E}
+
+/* L'image cède la place à la série quand la colonne est trop haute. */
+.ph-grande{flex:0 1 auto;min-height:0}

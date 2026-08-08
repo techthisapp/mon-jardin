@@ -58,6 +58,10 @@ const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent p
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
 let photoIndex = 0;               // organe regardé en grand
 let photoRang = 0;                // position dans la réserve de cet organe
+/* Un seul des trois verdicts change ce qui est affiché. Les deux autres sont une
+   note de qualité, qui vaut caution pour l'un et demande de remplacement pour
+   l'autre. */
+const AVIS_NOM = { supprimer: "À supprimer", moyenne: "Moyenne", bonne: "Bonne" };
 let sourdines = new Map();
 let voirSourdines = false;
 /* Les plantes dont la rangée montre le choix complet des espaces. Au repos la
@@ -5203,20 +5207,37 @@ function ouvrirPhoto(i, r) {
     + (groupe.length > 1
         ? `<span class="ph-nb">${photoRang + 1} sur ${groupe.length}</span>` : "")
     + `</p>`
-    + `<img src="${esc(photoGrande(x))}" alt="${esc(PH_NOM[x.organe] || x.organe)}">`
+    + `<img class="ph-grande" src="${esc(photoGrande(x))}" alt="${esc(PH_NOM[x.organe] || x.organe)}">`
     + `<p class="ph-bas"><b>${esc(x.auteur || "auteur non renseigné")}</b><br>`
     + `${esc(fonds)}, sous licence ${esc(x.licence || "CC BY-SA")}`
     + (x.source ? `. <a href="${esc(x.source)}" target="_blank" rel="noopener">Voir la source</a>` : "")
     + `</p>` + boutonsAvis(x)
-    + `<p class="ph-pts">`
-    + photosVues.map((_, k) => `<i class="${k === i ? "ici" : ""}"></i>`).join("") + `</p>`
+    /* La série de l'organe, en vignettes : on parcourt les autres fleurs d'un
+       appui, sans avoir à deviner qu'un glissement vertical existe, et on juge
+       celle qu'on regarde. Une pastille marque celles déjà jugées. */
     + (groupe.length > 1
-        ? `<p class="ph-pts ph-pts-v">` + groupe.map((_, k) =>
-            `<i class="${k === photoRang ? "ici" : ""}"></i>`).join("") + `</p>` : "");
+        ? `<div class="ph-serie" role="group" aria-label="Photographies de `
+          + `${esc(PH_NOM[x.organe] || x.organe)}">`
+          + groupe.map((y, k) => {
+              const mien = avisPhoto.get(y.id) || "";
+              return `<button type="button" class="ps-i${mien ? " ps-" + mien : ""}"`
+                + ` data-rang="${k}" aria-current="${k === photoRang}"`
+                + ` aria-label="Photographie ${k + 1} sur ${groupe.length}`
+                + `${mien ? ", jugée " + esc(AVIS_NOM[mien].toLowerCase()) : ""}">`
+                + `<img src="${esc(y.url)}" alt="" loading="lazy" decoding="async"></button>`;
+            }).join("")
+          + `</div>` : "")
+    + `<p class="ph-pts">`
+    + photosVues.map((_, k) => `<i class="${k === i ? "ici" : ""}"></i>`).join("") + `</p>`;
   z.hidden = false;
   document.body.classList.add("fige");
   sur("fermerPhoto", "click", fermerPhoto);
   brancherAvis(x);
+  z.querySelectorAll("[data-rang]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    const k = Number(b.dataset.rang);
+    if (k !== photoRang) allerRang(k, k > photoRang ? -1 : 1);
+  }));
 }
 
 const groupeVu = () => photosVues[photoIndex] || [];
@@ -5251,7 +5272,7 @@ function brancherGlissementPhoto() {
   if (!z) return;
   let x0 = 0, y0 = 0, xs = 0, ys = 0, ts = 0;
   let dx = 0, dy = 0, vx = 0, vy = 0, axe = null, suit = false;
-  const img = () => z.querySelector("img");
+  const img = () => z.querySelector(".ph-grande");
   const horsBande = k => k < 0 || k >= photosVues.length;
   // Tirer vers le bas au premier rang ne parcourt rien : c'est le geste de
   // fermeture, il ne rencontre donc pas de butée.
@@ -5358,7 +5379,7 @@ function glisserVers(rendu, sens, axe) {
   if (!z) return;
   const course = axe === "x" ? z.clientWidth : z.clientHeight;
   const nom = axe === "x" ? "translateX" : "translateY";
-  const sortante = z.querySelector("img");
+  const sortante = z.querySelector(".ph-grande");
   if (sortante) {
     sortante.style.transition = "transform .16s ease-out, opacity .16s ease-out";
     sortante.style.transform = `${nom}(${sens * course}px)`;
@@ -5366,7 +5387,7 @@ function glisserVers(rendu, sens, axe) {
   }
   setTimeout(() => {
     rendu();
-    const e = z.querySelector("img");
+    const e = z.querySelector(".ph-grande");
     if (!e) return;
     e.style.transition = "none";
     e.style.transform = `${nom}(${-sens * course}px)`;
@@ -5405,7 +5426,6 @@ brancherGlissementPhoto();
    Un seul des trois verdicts change ce qui est affiché. Les deux autres sont
    une note de qualité, qui vaut caution pour l'un et demande de remplacement
    pour l'autre. */
-const AVIS_NOM = { supprimer: "À supprimer", moyenne: "Moyenne", bonne: "Bonne" };
 
 function boutonsAvis(x) {
   if (!session || !x.id) return "";

@@ -173,8 +173,8 @@ export default async function essai(navigateur) {
     await pg.locator(".ph-bas a").count() === 1,
     await pg.locator(".ph-bas a").getAttribute("href").catch(() => "absent"));
   j.controle("un repère par photo, celui de la première marqué",
-    await pg.locator(".ph-pts:not(.ph-pts-v) i").count() === (await pg.locator(".ph-i").count())
-    && await pg.locator(".ph-pts:not(.ph-pts-v) i.ici").count() === 1);
+    await pg.locator(".ph-pts i").count() === (await pg.locator(".ph-i").count())
+    && await pg.locator(".ph-pts i.ici").count() === 1);
   await pg.locator("#fermerPhoto").click();
   await pg.waitForTimeout(400);
   j.controle("la croix referme la photo sans fermer la fiche",
@@ -188,7 +188,7 @@ export default async function essai(navigateur) {
   const petite = await pg.locator(".ph-i img").nth(iPort).getAttribute("src");
   await pg.locator(`.ph-i[data-photo="${iPort}"]`).click();
   await pg.waitForTimeout(500);
-  const grande = await pg.locator(".ph-plein img").getAttribute("src");
+  const grande = await pg.locator(".ph-grande").getAttribute("src");
   j.controle("la tuile demande la vignette", /\/image\/s\//.test(petite), petite);
   j.controle("le plein écran demande la taille moyenne", /\/image\/m\//.test(grande), grande);
   j.controle("aucun fichier n'est fabriqué, seule la taille change",
@@ -283,7 +283,7 @@ export default async function essai(navigateur) {
   const pw = await pg.locator(".ph-i img").first().getAttribute("src");
   await pg.locator('.ph-i[data-photo="0"]').click();
   await pg.waitForTimeout(400);
-  const gw = await pg.locator(".ph-plein img").getAttribute("src");
+  const gw = await pg.locator(".ph-grande").getAttribute("src");
   j.controle("la tuile demande deux cent cinquante points", /\/250px-/.test(pw), pw);
   j.controle("le plein écran demande cinq cents points, taille servie par le fonds",
     /\/500px-/.test(gw) && gw === pw.replace("/250px-", "/500px-"), gw);
@@ -390,28 +390,28 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(400);
   j.controle("il s'ouvre sur l'organe touché",
     await organeVu(pg) === "FEUILLE", await organeVu(pg));
-  await glisser(pg, ".ph-plein img", -220, 0);
+  await glisser(pg, ".ph-grande", -220, 0);
   j.controle("un glissement vers la gauche donne la suivante",
     await organeVu(pg) === "FRUIT", await organeVu(pg));
-  await glisser(pg, ".ph-plein img", 220, 0);
+  await glisser(pg, ".ph-grande", 220, 0);
   j.controle("un glissement vers la droite ramène la précédente",
     await organeVu(pg) === "FEUILLE", await organeVu(pg));
   const repere = await pg.evaluate(() => {
-    const t = [...document.querySelectorAll(".ph-pts:not(.ph-pts-v) i")];
+    const t = [...document.querySelectorAll(".ph-pts i")];
     return { total: t.length, ici: t.findIndex(e => e.classList.contains("ici")) };
   });
   j.controle("le repère suit la photographie regardée",
     repere.total === 5 && repere.ici === 1, JSON.stringify(repere));
 
   j.section("l'axe du geste est verrouillé, la diagonale ne tranche pas");
-  await glisser(pg, ".ph-plein img", -200, -200);
+  await glisser(pg, ".ph-grande", -200, -200);
   j.controle("une diagonale à quarante-cinq degrés ne change rien",
     await organeVu(pg) === "FEUILLE", await organeVu(pg));
   j.controle("et ne referme pas",
     await pg.locator("#photoPlein:not([hidden])").count() === 1);
   /* Une course franchement horizontale qui s'incurve reste horizontale : le
      verrou tient jusqu'au relâchement du doigt. */
-  await glisser(pg, ".ph-plein img", -220, -140);
+  await glisser(pg, ".ph-grande", -220, -140);
   j.controle("une horizontale qui s'incurve reste horizontale",
     await organeVu(pg) === "FRUIT", await organeVu(pg));
 
@@ -422,12 +422,12 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(500);
   j.controle("les flèches du clavier parcourent aussi la bande",
     await organeVu(pg) === "FLEUR", await organeVu(pg));
-  await glisser(pg, ".ph-plein img", 240, 0);
+  await glisser(pg, ".ph-grande", 240, 0);
   j.controle("à la première, le glissement vers la droite ne sort pas de la bande",
     await organeVu(pg) === "FLEUR", await organeVu(pg));
   j.controle("l'image est revenue à sa place",
     await pg.evaluate(() => {
-      const t = getComputedStyle(document.querySelector(".ph-plein img")).transform;
+      const t = getComputedStyle(document.querySelector(".ph-grande")).transform;
       return t === "none" || /matrix\(1, 0, 0, 1, 0, 0\)/.test(t);
     }));
   /* Un geste né sur un verdict lui appartient : juger ne doit pas faire défiler
@@ -444,22 +444,42 @@ export default async function essai(navigateur) {
   j.controle("le compte dit qu'il y a autre chose à voir",
     await compte(pg) === "1 sur 2", await compte(pg));
   const premier = await auteur(pg);
-  await glisser(pg, ".ph-plein img", 0, -260);
+  await glisser(pg, ".ph-grande", 0, -260);
   j.controle("un glissement vers le haut donne le rang suivant",
     await compte(pg) === "2 sur 2" && await auteur(pg) !== premier,
     `${await compte(pg)} ${await auteur(pg)}`);
   j.controle("l'organe n'a pas changé", await organeVu(pg) === "FLEUR", await organeVu(pg));
-  j.controle("le repère vertical suit",
-    await pg.locator(".ph-pts-v i").count() === 2
-    && await pg.locator(".ph-pts-v i.ici").count() === 1);
-  await glisser(pg, ".ph-plein img", 0, -260);
+  j.controle("la série marque celle qu'on regarde",
+    await pg.locator(".ps-i").count() === 2
+    && await pg.locator('.ps-i[aria-current="true"]').count() === 1
+    && await pg.locator('.ps-i[aria-current="true"]').getAttribute("data-rang") === "1");
+  await glisser(pg, ".ph-grande", 0, -260);
   j.controle("au dernier rang, le haut ne sort pas de la réserve",
     await compte(pg) === "2 sur 2", await compte(pg));
-  await glisser(pg, ".ph-plein img", 0, 260);
+  await glisser(pg, ".ph-grande", 0, 260);
   j.controle("un glissement vers le bas ramène le rang précédent",
     await compte(pg) === "1 sur 2" && await auteur(pg) === premier,
     `${await compte(pg)} ${await auteur(pg)}`);
   j.controle("il n'a pas refermé", await pg.locator("#photoPlein:not([hidden])").count() === 1);
+
+  /* Le glissement ne se devine pas. La série de vignettes, sous les verdicts,
+     dit combien il y en a et se parcourt à l'appui. */
+  j.section("la série se parcourt aussi à l'appui");
+  await pg.locator('.ps-i[data-rang="0"]').dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  j.controle("un appui sur une vignette ouvre sa photographie",
+    await compte(pg) === "1 sur 2" && await auteur(pg) === premier,
+    `${await compte(pg)} ${await auteur(pg)}`);
+  j.controle("l'organe n'a pas bougé", await organeVu(pg) === "FLEUR", await organeVu(pg));
+  await pg.locator('.ps-i[data-rang="1"]').dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  j.controle("l'appui sur la seconde y mène",
+    await compte(pg) === "2 sur 2", await compte(pg));
+  j.controle("la vignette de celle qu'on regarde est marquée, une seule",
+    await pg.locator('.ps-i[aria-current="true"]').count() === 1
+    && await pg.locator('.ps-i[aria-current="true"]').getAttribute("data-rang") === "1");
+  await pg.locator('.ps-i[data-rang="0"]').dispatchEvent("click");
+  await pg.waitForTimeout(600);
 
   j.section("les flèches parcourent aussi la réserve");
   await pg.keyboard.press("ArrowDown");
@@ -474,7 +494,7 @@ export default async function essai(navigateur) {
      position d'un organe à l'autre, elle n'y voudrait rien dire. */
   await pg.keyboard.press("ArrowDown");
   await pg.waitForTimeout(500);
-  await glisser(pg, ".ph-plein img", -220, 0);
+  await glisser(pg, ".ph-grande", -220, 0);
   j.controle("changer d'organe rouvre au premier rang",
     await organeVu(pg) === "FEUILLE" && await compte(pg) === "1 sur 2",
     `${await organeVu(pg)} ${await compte(pg)}`);
@@ -496,6 +516,12 @@ export default async function essai(navigateur) {
   j.controle("on la suit à sa nouvelle place, l'avis reste marqué",
     apresMoyenne.marque === "true" && apresMoyenne.auteur === "serafina.pal",
     `${apresMoyenne.auteur} ${apresMoyenne.marque}`);
+  /* La notation classe à l'intérieur d'un organe. L'ordre des organes entre eux
+     ne bouge jamais : il est celui de PH_ORDRE, quoi qu'en disent les avis. */
+  j.controle("l'ordre des organes n'a pas bougé",
+    (await pg.locator(".ph-i span").allInnerTexts()).join(" ")
+      === ORDRE.filter(o => o !== "RACINE").join(" "),
+    (await pg.locator(".ph-i span").allInnerTexts()).join(" "));
   j.controle("le déplacement est dit",
     /rang 2 sur 2|dernier/.test(await pg.locator("#etat").innerText().catch(() => "")),
     await pg.locator("#etat").innerText().catch(() => ""));
@@ -554,7 +580,7 @@ export default async function essai(navigateur) {
   /* Au premier rang il n'y a rien au dessus : tirer vers le bas ne peut vouloir
      dire que fermer. C'est ce qui laisse les trois gestes tenir sur deux axes. */
   j.section("au premier rang, le geste vers le bas referme");
-  await glisser(pg, ".ph-plein img", 0, 260);
+  await glisser(pg, ".ph-grande", 0, 260);
   j.controle("le plein écran s'est refermé",
     await pg.locator("#photoPlein[hidden]").count() === 1);
   j.controle("la fiche est restée ouverte",
