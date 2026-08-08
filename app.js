@@ -5097,7 +5097,12 @@ async function chargerPhotos(id) {
   if (photosPlante.has(id)) return photosPlante.get(id);
   let lot = [];
   try {
-    const { data } = await db.from("plant_images").select("*").eq("plant_id", id);
+    /* Les colonnes nommées plutôt que l'étoile : la réserve compte jusqu'à six
+       images par organe, et les compteurs d'avis, la note de sélection et le
+       verrou ne servent jamais à l'affichage. */
+    const { data } = await db.from("plant_images")
+      .select("id,organe,rang,url,auteur,licence,fonds,source,retenue,retrait_motif")
+      .eq("plant_id", id);
     lot = data || [];
   } catch (e) { /* sans réseau la section reste absente */ }
   /* Le plus petit rang retenu de chaque organe, dans l'ordre d'affichage. Une
