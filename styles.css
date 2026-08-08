@@ -2666,3 +2666,20 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
    plein et un peu plus large, les autres restent en creux. */
 .ph-pts i{transition:width .18s ease, border-radius .18s ease, background-color .18s ease}
 .ph-pts i.ici{width:15px;border-radius:3px}
+
+/* ---------- Réserve d'un organe, au plein écran ----------
+
+   L'horizontale parcourt les organes, la verticale la réserve de l'organe
+   regardé. Rien ne le dirait sans le compte porté à côté du nom de l'organe et
+   la colonne de repères au bord droit. */
+.ph-org{display:flex;align-items:baseline;gap:10px}
+.ph-nb{
+  font:400 11.5px/1 "IBM Plex Mono",monospace;letter-spacing:0;
+  color:rgba(239,239,232,.55);text-transform:none;
+}
+.ph-pts-v{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  flex-direction:column;margin:0;gap:6px;
+  filter:drop-shadow(0 0 2px rgba(12,18,15,.75));
+}
+.ph-pts-v i.ici{width:6px;height:15px;border-radius:3px}

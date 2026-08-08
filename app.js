@@ -56,7 +56,8 @@ const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
 const nomPlante = id => (plantes.find(p => p.id === id) || {}).nom;
 const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
-let photoIndex = 0;               // rang de celle qu'on regarde en grand
+let photoIndex = 0;               // organe regardé en grand
+let photoRang = 0;                // position dans la réserve de cet organe
 let sourdines = new Map();
 let voirSourdines = false;
 /* Les plantes dont la rangée montre le choix complet des espaces. Au repos la
@@ -5121,10 +5122,14 @@ async function chargerPhotos(id) {
     const c = x.retenue !== false ? par
       : x.retrait_motif === "relecture" ? repli : null;
     if (!c) return;
-    if (!c[x.organe] || x.rang < c[x.organe].rang) c[x.organe] = x;
+    (c[x.organe] = c[x.organe] || []).push(x);
   });
+  const rang = (a, b) => a.rang - b.rang;
+  /* Un groupe par organe, trié par rang. La bande montre le premier, le plein
+     écran parcourt les autres : la réserve cesse d'être invisible. */
   const suite = PH_ORDRE
-    .map(o => par[o] || (organeAttendu(p, o) ? repli[o] : null))
+    .map(o => (par[o] || []).length ? par[o].sort(rang)
+      : organeAttendu(p, o) && (repli[o] || []).length ? repli[o].sort(rang) : null)
     .filter(Boolean);
   photosPlante.set(id, suite);
   return suite;
@@ -5139,6 +5144,7 @@ function poserPhotos(p) {
     if (!zz || zz.dataset.plante !== String(p.id)) return;
     if (!lot.length) { zz.hidden = true; return; }
     photosVues = lot;
+    const tete = lot.map(g => g[0]);
     /* L'attribution et la portée de la photographie tenaient quatre lignes sous
        la bande, lues une fois et relues jamais. Elles passent sous un mot, que
        l'on ouvre comme une définition du glossaire. La licence reste satisfaite :
@@ -5150,11 +5156,11 @@ function poserPhotos(p) {
        d'hortensia : la fiche le dit plutôt que de laisser croire au portrait de
        la variété cultivée. C'est le principe de la provenance, la mention dit ce
        que la source établit. */
-    const note = creditPhotos(lot) + " La photographie documente "
+    const note = creditPhotos(tete) + " La photographie documente "
       + (p.latin && p.latin.indexOf(" ") === -1 ? "le genre" : "l'espèce")
       + ", une variété de jardin peut en différer.";
     zz.innerHTML = `<h3>Photographies</h3><div class="ph-rail">`
-      + lot.map((x, i) => `<button type="button" class="ph-i" data-photo="${i}">`
+      + tete.map((x, i) => `<button type="button" class="ph-i" data-photo="${i}">`
           + `<img src="${esc(x.url)}" alt="" loading="lazy" decoding="async">`
           + `<span>${esc(PH_NOM[x.organe] || x.organe)}</span></button>`).join("")
       + `</div><p class="ph-credit"><button type="button" class="terme ph-credits"`
@@ -5168,27 +5174,42 @@ function poserPhotos(p) {
 /* Le plein écran nomme l'organe, l'auteur et la licence, et renvoie à la
    source. L'attribution est une obligation de la licence, elle est portée aux
    deux endroits, sous la bande et ici. */
-function ouvrirPhoto(i) {
-  const x = photosVues[i];
-  if (!x) return;
+/* Deux axes. L'horizontale parcourt les organes, la verticale la réserve de
+   l'organe regardé : six images par organe dorment en base, elles n'étaient
+   visibles qu'après un avis, elles se parcourent maintenant. */
+function ouvrirPhoto(i, r) {
+  const groupe = photosVues[i];
+  if (!groupe || !groupe.length) return;
   photoIndex = i;
+  photoRang = Math.max(0, Math.min(r || 0, groupe.length - 1));
+  const x = groupe[photoRang];
   const z = $("photoPlein");
   const fonds = x.fonds === "commons" ? "Wikimedia Commons" : "Pl@ntNet";
   z.innerHTML = `<button type="button" class="ph-fx" id="fermerPhoto" aria-label="Fermer">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`
-    + `<p class="ph-org">${esc(PH_NOM[x.organe] || x.organe)}</p>`
+    + `<p class="ph-org"><span class="ph-org-n">${esc(PH_NOM[x.organe] || x.organe)}</span>`
+    /* Le compte dit qu'il y a autre chose à voir : sans lui, personne ne
+       devinerait que la verticale porte quelque chose. */
+    + (groupe.length > 1
+        ? `<span class="ph-nb">${photoRang + 1} sur ${groupe.length}</span>` : "")
+    + `</p>`
     + `<img src="${esc(photoGrande(x))}" alt="${esc(PH_NOM[x.organe] || x.organe)}">`
     + `<p class="ph-bas"><b>${esc(x.auteur || "auteur non renseigné")}</b><br>`
     + `${esc(fonds)}, sous licence ${esc(x.licence || "CC BY-SA")}`
     + (x.source ? `. <a href="${esc(x.source)}" target="_blank" rel="noopener">Voir la source</a>` : "")
     + `</p>` + boutonsAvis(x)
     + `<p class="ph-pts">`
-    + photosVues.map((_, k) => `<i class="${k === i ? "ici" : ""}"></i>`).join("") + `</p>`;
+    + photosVues.map((_, k) => `<i class="${k === i ? "ici" : ""}"></i>`).join("") + `</p>`
+    + (groupe.length > 1
+        ? `<p class="ph-pts ph-pts-v">` + groupe.map((_, k) =>
+            `<i class="${k === photoRang ? "ici" : ""}"></i>`).join("") + `</p>` : "");
   z.hidden = false;
   document.body.classList.add("fige");
   sur("fermerPhoto", "click", fermerPhoto);
   brancherAvis(x);
 }
+
+const groupeVu = () => photosVues[photoIndex] || [];
 
 /* Le fond referme, sauf au sortir d'un glissement : le doigt qui a fini sa
    course sur le fond ne voulait pas fermer. L'écouteur est posé une fois pour
@@ -5198,14 +5219,17 @@ sur("photoPlein", "click", e => {
   fermerPhoto();
 });
 
-/* Le plein écran se parcourt au doigt, une photographie à la fois.
+/* Le plein écran se parcourt au doigt, sur deux axes.
 
-   L'axe est verrouillé au premier mouvement franc et ne se relâche plus :
-   l'horizontale change d'image, la verticale referme, et une diagonale ne fait
-   jamais les deux. Tant qu'aucun des deux axes ne dépasse l'autre d'un tiers,
-   rien ne bouge : un geste hésitant ne déclenche rien plutôt que de trancher au
-   hasard. Un geste parti à l'horizontale qui s'incurve ensuite reste horizontal,
-   le verrou tenant jusqu'au relâchement du doigt. */
+   L'horizontale passe d'un organe à l'autre. La verticale parcourt la réserve
+   de l'organe regardé, jusqu'à six images, et referme quand on tire vers le bas
+   depuis la première : au premier rang il n'y a rien au dessus, un tirage vers
+   le bas ne peut donc vouloir dire que fermer.
+
+   L'axe est verrouillé au premier mouvement franc et ne se relâche plus : une
+   horizontale qui s'incurve reste horizontale. Tant qu'aucun des deux axes ne
+   dépasse l'autre d'un tiers, rien ne bouge, un geste hésitant ne déclenchant
+   rien plutôt que de trancher au hasard. */
 const PH_COURSE = 10;      // course minimale avant de trancher l'axe, en points
 const PH_DOMINANCE = 1.3;  // rapport exigé entre les deux axes pour trancher
 const PH_VITESSE = 0.5;    // points par milliseconde, seuil du geste vif
@@ -5219,6 +5243,9 @@ function brancherGlissementPhoto() {
   let dx = 0, dy = 0, vx = 0, vy = 0, axe = null, suit = false;
   const img = () => z.querySelector("img");
   const horsBande = k => k < 0 || k >= photosVues.length;
+  // Tirer vers le bas au premier rang ne parcourt rien : c'est le geste de
+  // fermeture, il ne rencontre donc pas de butée.
+  const horsReserve = k => k < 0 ? photoRang > 0 : k >= groupeVu().length;
 
   const poser = () => {
     const e = img();
@@ -5226,7 +5253,10 @@ function brancherGlissementPhoto() {
     if (axe === "x") e.style.transform = `translateX(${dx.toFixed(1)}px)`;
     else {
       e.style.transform = `translateY(${dy.toFixed(1)}px)`;
-      z.style.opacity = String(Math.max(0.15, 1 - Math.abs(dy) / 420));
+      // Le fond ne s'efface que si le geste referme, non s'il change de rang.
+      if (dy > 0 && photoRang === 0) {
+        z.style.opacity = String(Math.max(0.15, 1 - dy / 420));
+      } else z.style.removeProperty("opacity");
     }
   };
   const rendre = () => {
@@ -5265,10 +5295,10 @@ function brancherGlissementPhoto() {
       vx = (t.clientX - xs) / dt; vy = (t.clientY - ys) / dt;
       xs = t.clientX; ys = t.clientY; ts = e.timeStamp;
     }
-    /* À la première et à la dernière photographie, la course résiste au lieu de
-       céder : la bande dit qu'elle est finie sans rien faire de brutal. */
+    /* Aux deux bouts, la course résiste au lieu de céder : la bande dit qu'elle
+       est finie sans rien faire de brutal. */
     if (axe === "x") dx = horsBande(photoIndex - Math.sign(ex)) ? ex * PH_RESIST : ex;
-    else dy = ey;
+    else dy = horsReserve(photoRang - Math.sign(ey)) ? ey * PH_RESIST : ey;
     e.preventDefault();
     poser();
   }, { passive: false });
@@ -5284,10 +5314,19 @@ function brancherGlissementPhoto() {
       rendre();
       return;
     }
-    if (Math.abs(dy) > PH_FERMER || Math.abs(vy) > PH_VITESSE) {
+    const assez = Math.abs(dy) > z.clientHeight / 6 || Math.abs(vy) > PH_VITESSE;
+    const k = photoRang - Math.sign(dy);
+    // Vers le bas depuis le premier rang : c'est une fermeture.
+    if (assez && dy > 0 && photoRang === 0) {
+      if (Math.abs(dy) > PH_FERMER || Math.abs(vy) > PH_VITESSE) {
+        marquerGlisse(z);
+        z.style.removeProperty("opacity");
+        fermerPhoto();
+        return;
+      }
+    } else if (assez && !horsReserve(k)) {
       marquerGlisse(z);
-      z.style.removeProperty("opacity");
-      fermerPhoto();
+      allerRang(k, Math.sign(dy));
       return;
     }
     rendre();
@@ -5304,22 +5343,23 @@ function marquerGlisse(z) {
 
 /* La photographie sortante achève la course du doigt, la suivante entre du côté
    d'où elle vient : le mouvement ne s'interrompt pas au milieu. */
-function allerPhoto(k, sens) {
+function glisserVers(rendu, sens, axe) {
   const z = $("photoPlein");
-  if (!z || k < 0 || k >= photosVues.length) return;
-  const large = z.clientWidth;
+  if (!z) return;
+  const course = axe === "x" ? z.clientWidth : z.clientHeight;
+  const nom = axe === "x" ? "translateX" : "translateY";
   const sortante = z.querySelector("img");
   if (sortante) {
     sortante.style.transition = "transform .16s ease-out, opacity .16s ease-out";
-    sortante.style.transform = `translateX(${sens * large}px)`;
+    sortante.style.transform = `${nom}(${sens * course}px)`;
     sortante.style.opacity = "0";
   }
   setTimeout(() => {
-    ouvrirPhoto(k);
+    rendu();
     const e = z.querySelector("img");
     if (!e) return;
     e.style.transition = "none";
-    e.style.transform = `translateX(${-sens * large}px)`;
+    e.style.transform = `${nom}(${-sens * course}px)`;
     e.style.opacity = "0";
     requestAnimationFrame(() => {
       e.style.transition = "transform .2s cubic-bezier(.22,.61,.36,1), opacity .2s";
@@ -5332,6 +5372,18 @@ function allerPhoto(k, sens) {
       }, 220);
     });
   }, sortante ? 160 : 0);
+}
+
+// Changer d'organe rouvre au premier rang de sa réserve.
+function allerPhoto(k, sens) {
+  if (k < 0 || k >= photosVues.length) return;
+  glisserVers(() => ouvrirPhoto(k, 0), sens, "x");
+}
+
+// Changer de rang garde l'organe.
+function allerRang(k, sens) {
+  if (k < 0 || k >= groupeVu().length) return;
+  glisserVers(() => ouvrirPhoto(photoIndex, k), sens, "y");
 }
 
 brancherGlissementPhoto();
@@ -5566,6 +5618,8 @@ document.addEventListener("keydown", e => {
     if (e.key === "Escape") { fermerPhoto(); return; }
     if (e.key === "ArrowLeft") { allerPhoto(photoIndex - 1, 1); return; }
     if (e.key === "ArrowRight") { allerPhoto(photoIndex + 1, -1); return; }
+    if (e.key === "ArrowUp") { allerRang(photoRang - 1, 1); return; }
+    if (e.key === "ArrowDown") { allerRang(photoRang + 1, -1); return; }
     return;
   }
   if (e.key !== "Escape") return;
