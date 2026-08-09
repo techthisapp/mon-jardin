@@ -2556,6 +2556,74 @@ select:focus{
   background:#FDF0DC;border:1px solid #E0B978;color:#8A5A12;
 }
 
+/* ---------- Journal du lieu ---------- */
+
+/* Même carte repliable que les zones, posée en dernier : on vient d'abord voir
+   ce qui pousse, ensuite ce qui s'est passé. */
+.journal-lieu{
+  border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:14px;
+  overflow:hidden;
+}
+.journal-lieu>summary{
+  display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;
+  background:#F5F3EE;list-style:none;
+}
+.journal-lieu>summary::-webkit-details-marker{display:none}
+.journal-lieu>summary::after{
+  content:"";width:8px;height:8px;margin-left:4px;flex:0 0 8px;
+  border-right:1.6px solid var(--encre-doux);border-bottom:1.6px solid var(--encre-doux);
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
+}
+.journal-lieu[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.corps-journal{padding:8px 11px 12px}
+.ouvrir-saisie{font-size:12.5px}
+
+.entree-carnet{padding:9px 0;border-top:1px solid var(--filet-clair)}
+.ec-haut{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.ec-jour{font-size:12.5px;font-weight:600}
+.ec-geste{
+  font-size:11.5px;padding:1px 8px;border-radius:999px;
+  background:#EDF1E7;border:1px solid #CFD9C4;color:#3C5A2E;
+}
+.ec-qtte{font-size:12px;color:var(--encre-doux)}
+.ec-plante{font-size:12.5px}
+.ec-lieu{font-size:11.5px;color:var(--encre-doux)}
+.ec-haut .ec-oter{font-size:12px;margin-left:auto}
+.ec-texte{margin:5px 0 0;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.ec-photos{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.ec-vign{
+  display:block;padding:0;border:1px solid #E3E0D9;border-radius:8px;
+  background:#F5F3EE;overflow:hidden;cursor:zoom-in;line-height:0;
+}
+.ec-vign img{width:64px;height:64px;object-fit:cover;display:block}
+.ec-vign.ec-grande{flex:1 1 100%;cursor:zoom-out}
+.ec-vign.ec-grande img{width:100%;height:auto;max-height:70vh;object-fit:contain}
+
+/* Saisie d'une entrée : quatre listes sur un rang qui se replie, le texte en
+   pleine largeur, les photographies et les boutons en pied. */
+.form-entree{
+  display:flex;flex-direction:column;gap:8px;padding:2px 0 10px;
+  border-bottom:1px solid var(--filet-clair);
+}
+.fe-ligne{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.fe-pied{margin-top:2px}
+.form-entree input,.form-entree select,.form-entree textarea{
+  font:400 12.5px/1.35 "IBM Plex Sans",sans-serif;padding:5px 7px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.form-entree .ec-texte-c{width:100%;resize:vertical;font-size:13px}
+.form-entree .ec-jour-c{flex:0 0 auto}
+.form-entree .ec-plantes,.form-entree .ec-lieu{max-width:150px}
+.form-entree .ec-qte{width:96px}
+.ec-fichiers-l{
+  display:inline-flex;align-items:center;font-size:12.5px;cursor:pointer;
+  padding:5px 10px;border:1px dashed #C9C4B8;border-radius:8px;color:var(--encre-doux);
+}
+.ec-fichiers{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.fe-pied .ec-annuler{margin-left:auto;font-size:12.5px}
+.fe-pied .ec-valider{font-size:12.5px;font-weight:600}
+.fe-pied .ec-valider[disabled]{opacity:.5}
+
 .ligne-portee{margin-bottom:10px}
 .ligne-portee .segments{width:fit-content}
 

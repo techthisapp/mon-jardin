@@ -31,6 +31,38 @@ const TABLES = {
   glossaire: (window.__GLOSSAIRE__ || []),
   plant_images: (window.__PHOTOS__ || []),
   avis_photo: (window.__AVIS__ || []),
+  observations: (window.__CARNET__ || []),
+  observation_photos: (window.__PHOTOS_CARNET__ || []),
+};
+
+/* Le compartiment privé des photographies du jardinier, tenu en mémoire : les
+   essais contrôlent ce qui est déposé, son chemin et son poids, sans réseau et
+   sans adresse signée à obtenir. */
+const PIXEL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1"
+  + "HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=";
+window.__STOCKAGE__ = window.__STOCKAGE__ || {};
+const stockage = {
+  from() {
+    return {
+      async upload(chemin, blob, o) {
+        window.__STOCKAGE__[chemin] = { poids: (blob && blob.size) || 0,
+                                        type: (o || {}).contentType || "" };
+        window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table: "stockage", op: "upload", v: chemin }]);
+        return { data: { path: chemin }, error: null };
+      },
+      async remove(chemins) {
+        [].concat(chemins).forEach(c => { delete window.__STOCKAGE__[c]; });
+        window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table: "stockage", op: "remove", v: chemins }]);
+        return { data: [], error: null };
+      },
+      async createSignedUrls(chemins) {
+        return { data: [].concat(chemins).map(p => ({ path: p, signedUrl: PIXEL })), error: null };
+      },
+      async createSignedUrl(chemin) {
+        return { data: { path: chemin, signedUrl: PIXEL }, error: null };
+      },
+    };
+  },
 };
 /* La base recalcule les compteurs, le score et le retrait à chaque avis, par un
    déclencheur. La doublure en fait autant, sans quoi rien de ce que l'avis
@@ -112,6 +144,7 @@ function requete(table) {
 }
 export const createClient = () => ({
   from: requete,
+  storage: stockage,
   auth: {
     getSession: async () => ({ data: { session: window.__SANS_SESSION__ ? null
       : { user: { id: "u1", email: "jerome@exemple.fr" } } } }),

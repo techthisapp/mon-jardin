@@ -55,6 +55,14 @@ const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
                  racine: "racine", port: "port", ecorce: "écorce" };
 const nomPlante = id => (plantes.find(p => p.id === id) || {}).nom;
 const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
+/* Le journal du jardin. Les entrées sont chargées avec le reste du jardin,
+   leurs photographies vivent dans un compartiment privé et ne s'atteignent que
+   par une adresse signée, demandée au moment de l'affichage. */
+let carnet = [];
+const photosCarnet = new Map();
+const urlsPhoto = new Map();
+let carnetOuvert = false;
+let saisieCarnet = null;
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
 let photoIndex = 0;               // organe regardé en grand
 let photoRang = 0;                // position dans la réserve de cet organe
@@ -819,6 +827,7 @@ async function chargerJardin() {
   if (!session) {
     jardins = []; jardinId = null; espaces = []; aff = new Map(); adapt = {};
     sel = new Set(); espaceChoisi = null; avisPhoto = new Map(); photosPlante.clear();
+    carnet = []; photosCarnet.clear(); urlsPhoto.clear(); saisieCarnet = null;
     majCompte(); majJardinUI(); construireChips(); rendreTout(); return;
   }
   /* Les avis de la personne masquent des photographies : ils sont chargés avant
@@ -847,6 +856,7 @@ async function chargerContenuJardin() {
     avecReprise(() => db.from("sourdines").select("*").eq("garden_id", jardinId)),
     cle ? avecReprise(() => db.from("plant_climates").select("plant_id,level,note").eq("climate_key", cle))
         : Promise.resolve({ data: [] }),
+    chargerCarnet(),
   ]);
   adapt = {};
   (rc.data || []).forEach(r => adapt[r.plant_id] = r);
@@ -4690,6 +4700,11 @@ function plantesDuNoeud(cle) {
 
 // Les zones dépliées, retenues d'un rendu à l'autre.
 const zonesOuvertes = new Set();
+const GESTE_NOM = { semis: "Semis", plantation: "Plantation", taille: "Taille",
+                    recolte: "Récolte", traitement: "Traitement", floraison: "Floraison",
+                    maladie: "Maladie", note: "Note" };
+const UNITES = ["kg", "g", "pièces", "bottes", "litres"];
+const PHOTOS_PAR_ENTREE = 6;
 const SUPPORT_NOM = { pleine_terre: "Pleine terre", contenant: "Contenant",
                       serre: "Serre", balcon: "Balcon" };
 const EXPO_NOM = { soleil: "Soleil", soleil_mi_ombre: "Soleil et mi-ombre",
@@ -4735,7 +4750,9 @@ function rendreTuilesEspaces(z) {
       + `<span class="tuile-nb">${n}</span>`
       + `<span class="tuile-unite">${n > 1 ? "plantes" : "plante"}`
       + (nz ? `, ${nz} ${nz > 1 ? "zones" : "zone"}` : "") + `</span>`;
-    b.addEventListener("click", () => { espaceOuvert = v.cle; rendreEspaces(); });
+    b.addEventListener("click", () => {
+      espaceOuvert = v.cle; saisieCarnet = null; rendreEspaces();
+    });
     z.appendChild(b);
   });
   if (!racines().length) {
@@ -4766,7 +4783,9 @@ function rendreDetailEspace(z) {
   z.appendChild(corpsDuLieu(zo.id));
   zones.forEach(x => z.appendChild(sectionZone(x)));
   z.appendChild(formulaireZone(zo));
+  z.appendChild(sectionCarnet(zo));
   poserPlanches(z);
+  poserPhotosCarnet(z);
 }
 
 function teteDuLieu(zo, nom, compte) {
@@ -4778,7 +4797,7 @@ function teteDuLieu(zo, nom, compte) {
     + (zo ? `<button class="lien" data-act="renommer">Renommer</button>`
           + `<button class="lien" data-act="supprimer">Supprimer</button>` : "");
   tete.querySelector("#retourEspace").addEventListener("click",
-    () => { espaceOuvert = null; rendreEspaces(); });
+    () => { espaceOuvert = null; saisieCarnet = null; rendreEspaces(); });
   if (zo) {
     tete.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
     tete.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
@@ -4858,6 +4877,7 @@ function ligneDuLieu(p, cle) {
     + (r ? choixZoneHTML(cle) : "") + `</div>`
     + (r ? `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
          + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`
+         + `<button type="button" class="lien noter-lieu">Noter</button>`
          + `<button type="button" class="lien retirer-lieu">Retirer</button>`
          : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
   l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
@@ -4868,6 +4888,15 @@ function ligneDuLieu(p, cle) {
     l.querySelector(".notes").addEventListener("change", enr);
     const sz = l.querySelector(".sel-zone");
     if (sz) sz.addEventListener("change", () => deplacer(p.id, cle, sz.value));
+    /* Noter ouvre le journal du lieu, le formulaire déjà rempli de la plante :
+       c'est le chemin le plus court entre voir une plante et écrire dessus. */
+    l.querySelector(".noter-lieu").addEventListener("click", () => {
+      saisieCarnet = { espace_id: cle, plant_id: p.id };
+      carnetOuvert = true;
+      rendreEspaces();
+      const f = $("formEntree");
+      if (f) f.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
     l.querySelector(".retirer-lieu").addEventListener("click", async () => {
       if (!await retirerDe(p.id, cle)) return;
       construireChips(); rendreTout();
@@ -5008,6 +5037,261 @@ async function ajouterAuLieu(plantId, cle) {
   }
   if (!await placerSur(plantId, cle)) return;
   construireChips(); rendreTout();
+}
+
+/* ================== Journal du jardin ==================
+   Une entrée datée porte sur un lieu, sur une plante, ou sur les deux : un
+   apport de compost concerne la zone et non une plante en particulier. Le
+   journal d'un espace réunit ses entrées et celles de ses zones. */
+
+function entreesDuLieu(id) {
+  const sous = [id].concat(zonesDe(id).map(z => z.id));
+  return carnet.filter(e => sous.includes(e.espace_id));
+}
+
+function jourEnClair(iso) {
+  if (!iso) return "";
+  const [a, m, j] = iso.split("-").map(Number);
+  const cette = new Date().getFullYear();
+  return Number(j) + " " + (MOIS_PLEIN[m - 1] || "") + (a === cette ? "" : " " + a);
+}
+
+function jourDuJour() { return new Date().toISOString().slice(0, 10); }
+
+function cleCourte() {
+  return crypto.randomUUID ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+}
+
+async function chargerCarnet() {
+  const { data } = await avecReprise(() => db.from("observations")
+    .select("*").eq("garden_id", jardinId).order("jour", { ascending: false }).limit(500));
+  carnet = (data || []).slice().sort((a, b) =>
+    String(b.jour).localeCompare(String(a.jour))
+    || String(b.created_at || "").localeCompare(String(a.created_at || "")));
+  photosCarnet.clear();
+  if (!carnet.length) return;
+  const { data: ph } = await avecReprise(() => db.from("observation_photos")
+    .select("*").in("observation_id", carnet.map(e => e.id)));
+  (ph || []).slice().sort((a, b) => a.position - b.position).forEach(p => {
+    if (!photosCarnet.has(p.observation_id)) photosCarnet.set(p.observation_id, []);
+    photosCarnet.get(p.observation_id).push(p);
+  });
+}
+
+function sectionCarnet(zo) {
+  const d = document.createElement("details");
+  d.className = "journal-lieu";
+  d.id = "journalLieu";
+  d.open = carnetOuvert;
+  const lot = entreesDuLieu(zo.id);
+  const s = document.createElement("summary");
+  s.innerHTML = `<b class="zone-nom">Journal</b><span class="nb">${lot.length}</span>`
+    + `<span class="zone-mesure">${lot.length ? "dernière le " + esc(jourEnClair(lot[0].jour)) : ""}</span>`;
+  d.appendChild(s);
+  d.addEventListener("toggle", () => { carnetOuvert = d.open; });
+  const corps = document.createElement("div");
+  corps.className = "corps-zone corps-journal";
+  if (saisieCarnet) corps.appendChild(formulaireEntree(zo));
+  else {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lien ouvrir-saisie";
+    b.textContent = "Ajouter une note";
+    b.addEventListener("click", () => {
+      saisieCarnet = { espace_id: zo.id, plant_id: "" };
+      rendreEspaces();
+    });
+    corps.appendChild(b);
+  }
+  lot.forEach(e => corps.appendChild(ligneEntree(e)));
+  if (!lot.length && !saisieCarnet) {
+    const p = document.createElement("p");
+    p.className = "vide";
+    p.textContent = "Rien de noté ici pour l'instant.";
+    corps.appendChild(p);
+  }
+  d.appendChild(corps);
+  return d;
+}
+
+function ligneEntree(e) {
+  const l = document.createElement("div");
+  l.className = "entree-carnet";
+  l.dataset.entree = e.id;
+  const p = e.plant_id ? plantes.find(x => x.id === e.plant_id) : null;
+  const lieu = noeud(e.espace_id);
+  const ph = photosCarnet.get(e.id) || [];
+  const quantite = e.quantite
+    ? ` <span class="ec-qtte">${esc(nombreFr(Number(e.quantite)))}${e.unite ? " " + esc(e.unite) : ""}</span>` : "";
+  l.innerHTML = `<div class="ec-haut"><span class="ec-jour">${esc(jourEnClair(e.jour))}</span>`
+    + (e.geste ? `<span class="ec-geste">${esc(GESTE_NOM[e.geste] || e.geste)}</span>` : "")
+    + quantite
+    + (p ? `<span class="ec-plante">${esc(p.nom)}</span>` : "")
+    // Le nom du lieu n'est écrit que pour une zone : dans le journal de
+    // l'espace, le répéter à chaque ligne n'apprendrait rien.
+    + (lieu && lieu.parent_id ? `<span class="ec-lieu">${esc(lieu.name)}</span>` : "")
+    + `<button type="button" class="lien ec-oter">Supprimer</button></div>`
+    + (e.texte ? `<p class="ec-texte">${esc(e.texte)}</p>` : "")
+    + (ph.length ? `<div class="ec-photos">` + ph.map(x =>
+        `<button type="button" class="ec-vign"><img data-chemin="${esc(x.chemin)}" alt=""`
+        + `${x.largeur ? ` width="${x.largeur}" height="${x.hauteur}"` : ""}></button>`).join("")
+      + `</div>` : "");
+  l.querySelector(".ec-oter").addEventListener("click", () => supprimerEntree(e));
+  l.querySelectorAll(".ec-vign").forEach(b =>
+    b.addEventListener("click", () => b.classList.toggle("ec-grande")));
+  return l;
+}
+
+function formulaireEntree(zo) {
+  const f = document.createElement("form");
+  f.className = "form-entree";
+  f.id = "formEntree";
+  const lieux = [{ id: zo.id, nom: zo.name }]
+    .concat(zonesDe(zo.id).map(z => ({ id: z.id, nom: z.name })));
+  const choisi = lieux.some(x => x.id === saisieCarnet.espace_id) ? saisieCarnet.espace_id : zo.id;
+  f.innerHTML = `<div class="fe-ligne">`
+    + `<input class="ec-jour-c" type="date" value="${jourDuJour()}" aria-label="Jour">`
+    + `<select class="ec-lieu" aria-label="Lieu">` + lieux.map(x =>
+        `<option value="${x.id}"${x.id === choisi ? " selected" : ""}>${esc(x.nom)}</option>`).join("")
+    + `</select><select class="ec-plantes" aria-label="Plante"></select>`
+    + `<select class="ec-geste" aria-label="Geste"><option value="">Sans geste</option>`
+    + Object.keys(GESTE_NOM).map(k => `<option value="${k}">${esc(GESTE_NOM[k])}</option>`).join("")
+    + `</select></div>`
+    + `<div class="fe-ligne fe-recolte" hidden>`
+    + `<input class="ec-qte" type="number" min="0" step="0.1" inputmode="decimal" placeholder="quantité" aria-label="Quantité récoltée">`
+    + `<select class="ec-unite" aria-label="Unité">`
+    + UNITES.map(u => `<option value="${u}">${esc(u)}</option>`).join("") + `</select></div>`
+    + `<textarea class="ec-texte-c" rows="2" maxlength="2000" placeholder="Ce que vous avez vu ou fait"></textarea>`
+    + `<div class="fe-ligne fe-pied">`
+    + `<label class="ec-fichiers-l"><input class="ec-fichiers" type="file" accept="image/*" multiple>`
+    + `<span class="ec-fichiers-t">Photographies</span></label>`
+    + `<button type="button" class="lien ec-annuler">Annuler</button>`
+    + `<button type="submit" class="lien ec-valider">Enregistrer</button></div>`;
+
+  const selLieu = f.querySelector(".ec-lieu");
+  const selPlante = f.querySelector(".ec-plantes");
+  const remplirPlantes = () => {
+    const lot = plantesDuNoeud(selLieu.value);
+    selPlante.innerHTML = `<option value="">Sans plante</option>`
+      + lot.map(p => `<option value="${p.id}"${p.id === saisieCarnet.plant_id ? " selected" : ""}>`
+        + `${esc(p.nom)}</option>`).join("");
+  };
+  remplirPlantes();
+  selLieu.addEventListener("change", () => { saisieCarnet.plant_id = ""; remplirPlantes(); });
+  selPlante.addEventListener("change", () => { saisieCarnet.plant_id = selPlante.value; });
+  const selGeste = f.querySelector(".ec-geste");
+  const recolte = f.querySelector(".fe-recolte");
+  selGeste.addEventListener("change", () => { recolte.hidden = selGeste.value !== "recolte"; });
+  const fichiers = f.querySelector(".ec-fichiers");
+  fichiers.addEventListener("change", () => {
+    const n = (fichiers.files || []).length;
+    f.querySelector(".ec-fichiers-t").textContent = n
+      ? n + (n > 1 ? " photographies" : " photographie") : "Photographies";
+  });
+  f.querySelector(".ec-annuler").addEventListener("click", () => {
+    saisieCarnet = null; rendreEspaces();
+  });
+  f.addEventListener("submit", ev => { ev.preventDefault(); enregistrerEntree(f); });
+  return f;
+}
+
+async function enregistrerEntree(f) {
+  if (!session || !jardinId) { info("Connectez-vous pour tenir le journal."); return; }
+  const geste = f.querySelector(".ec-geste").value || null;
+  const texte = f.querySelector(".ec-texte-c").value.trim() || null;
+  const lot = [...(f.querySelector(".ec-fichiers").files || [])].slice(0, PHOTOS_PAR_ENTREE);
+  if (!geste && !texte && !lot.length) {
+    info("Une entrée demande au moins un geste, un mot ou une photographie."); return;
+  }
+  const q = f.querySelector(".ec-qte").value.trim();
+  const quantite = geste === "recolte" && q !== "" ? Number(q.replace(",", ".")) : null;
+  const bouton = f.querySelector(".ec-valider");
+  bouton.disabled = true;
+  const { data, error } = await db.from("observations").insert({
+    garden_id: jardinId,
+    espace_id: f.querySelector(".ec-lieu").value,
+    plant_id: f.querySelector(".ec-plantes").value || null,
+    jour: f.querySelector(".ec-jour-c").value || jourDuJour(),
+    geste, texte, quantite,
+    unite: quantite ? f.querySelector(".ec-unite").value : null,
+  }).select().single();
+  if (error) {
+    bouton.disabled = false;
+    info("Entrée non enregistrée : " + error.message, true);
+    return;
+  }
+  const posees = lot.length ? await deposerPhotos(data.id, lot) : 0;
+  saisieCarnet = null;
+  await chargerCarnet();
+  info(posees ? `Entrée enregistrée, ${posees} ${posees > 1 ? "photographies" : "photographie"}.`
+    : "Entrée enregistrée.");
+  rendreEspaces();
+}
+
+/* L'appareil d'un téléphone rend des fichiers de plusieurs mégaoctets. Ils sont
+   réduits avant l'envoi : mille six cents pixels sur le grand côté suffisent au
+   plein écran, et pèsent environ trois cents kilo-octets. */
+async function reduireImage(fichier, cote = 1600, qualite = 0.82) {
+  const image = await createImageBitmap(fichier);
+  const r = Math.min(1, cote / Math.max(image.width, image.height));
+  const largeur = Math.max(1, Math.round(image.width * r));
+  const hauteur = Math.max(1, Math.round(image.height * r));
+  const toile = document.createElement("canvas");
+  toile.width = largeur; toile.height = hauteur;
+  toile.getContext("2d").drawImage(image, 0, 0, largeur, hauteur);
+  image.close && image.close();
+  const blob = await new Promise(res => toile.toBlob(res, "image/jpeg", qualite));
+  if (!blob) throw new Error("image non convertie");
+  return { blob, largeur, hauteur };
+}
+
+async function deposerPhotos(entree, fichiers) {
+  const lignes = [];
+  for (let i = 0; i < fichiers.length; i++) {
+    let image;
+    try { image = await reduireImage(fichiers[i]); }
+    catch { info("Image illisible : " + fichiers[i].name, true); continue; }
+    const chemin = `${jardinId}/${entree}/${i + 1}-${cleCourte()}.jpg`;
+    const { error } = await db.storage.from("jardin")
+      .upload(chemin, image.blob, { contentType: "image/jpeg" });
+    if (error) { info("Photographie non envoyée : " + error.message, true); continue; }
+    lignes.push({ observation_id: entree, chemin, largeur: image.largeur,
+                  hauteur: image.hauteur, poids: image.blob.size, position: i + 1 });
+  }
+  if (lignes.length) {
+    const { error } = await db.from("observation_photos").insert(lignes);
+    if (error) { info("Photographies non rattachées : " + error.message, true); return 0; }
+  }
+  return lignes.length;
+}
+
+/* Le compartiment est privé : chaque vignette demande une adresse signée, une
+   seule fois par chemin et par heure. */
+async function poserPhotosCarnet(racine) {
+  const cibles = [...racine.querySelectorAll("img[data-chemin]")].filter(i => !i.getAttribute("src"));
+  if (!cibles.length) return;
+  const manquants = [...new Set(cibles.map(i => i.dataset.chemin))].filter(c => !urlsPhoto.has(c));
+  if (manquants.length) {
+    const { data } = await db.storage.from("jardin").createSignedUrls(manquants, 3600);
+    (data || []).forEach(x => { if (x.signedUrl) urlsPhoto.set(x.path, x.signedUrl); });
+  }
+  cibles.forEach(i => {
+    const u = urlsPhoto.get(i.dataset.chemin);
+    if (u) i.setAttribute("src", u);
+  });
+}
+
+async function supprimerEntree(e) {
+  if (!confirm("Supprimer cette entrée du journal ?")) return;
+  const ph = photosCarnet.get(e.id) || [];
+  if (ph.length) await db.storage.from("jardin").remove(ph.map(x => x.chemin));
+  const { error } = await db.from("observations").delete().eq("id", e.id);
+  if (error) { info("Suppression refusée : " + error.message, true); return; }
+  carnet = carnet.filter(x => x.id !== e.id);
+  photosCarnet.delete(e.id);
+  ph.forEach(x => urlsPhoto.delete(x.chemin));
+  info("");
+  rendreEspaces();
 }
 
 function formulaireZone(zo) {
