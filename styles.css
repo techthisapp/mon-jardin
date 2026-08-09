@@ -2556,6 +2556,42 @@ select:focus{
   background:#FDF0DC;border:1px solid #E0B978;color:#8A5A12;
 }
 
+/* ---------- Rotation des cultures ---------- */
+
+/* Une ligne par famille déjà passée sur la planche, ses années, et le délai de
+   retour quand il n'est pas tenu. Le panneau ne paraît que là où quelque chose
+   a poussé. */
+.rotation-lieu{
+  margin:8px 0 2px;padding:8px 10px;
+  border:1px solid #E3E0D9;border-radius:8px;background:#FBFAF7;
+}
+.rotation-lieu.rotation-tue{padding:4px 0;border:0;background:none}
+.ro-titre{display:block;font-size:12px;margin-bottom:5px}
+.ro-l{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:0 0 3px;font-size:12.5px}
+.ro-f{font-weight:500}
+.ro-a{
+  font-size:11.5px;padding:1px 7px;border-radius:999px;
+  background:#EFEDE7;border:1px solid #E0DCD3;color:var(--encre-doux);
+}
+.ro-saisi{display:inline-flex;align-items:center;gap:3px;padding-right:3px}
+.ro-oter{
+  border:0;background:none;cursor:pointer;color:var(--encre-doux);
+  font:400 13px/1 "IBM Plex Sans",sans-serif;padding:2px 4px;
+}
+.ro-etat{font-size:11.5px;color:var(--encre-doux);margin-left:auto}
+.ro-attendre{
+  padding:1px 8px;border-radius:999px;
+  background:#FDF0DC;border:1px solid #E0B978;color:#8A5A12;margin-left:auto;
+}
+.ro-ajout{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
+.ro-ajout select,.ro-ajout input{
+  font:400 12px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.ro-ajout .ro-annee{width:76px}
+.ro-ajout .lien{font-size:12px}
+.ro-ajout .ro-taire{margin-left:auto;color:var(--encre-doux)}
+
 /* ---------- Journal du lieu ---------- */
 
 /* Même carte repliable que les zones, posée en dernier : on vient d'abord voir

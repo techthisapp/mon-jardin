@@ -52,6 +52,7 @@ const SUITES = [
   ["reglages", () => import("./reglages.mjs")],
   ["espaces", () => import("./espaces.mjs")],
   ["journal", () => import("./journal.mjs")],
+  ["rotation", () => import("./rotation.mjs")],
   ["feuille", () => import("./feuille.mjs")],
   ["calendrier", () => import("./calendrier.mjs")],
   ["planches", () => import("./planches.mjs")],

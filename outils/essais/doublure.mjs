@@ -17,7 +17,7 @@ const TABLES = {
     ({ id: e.id, garden_id: "g1", name: e.name, position: e.position ?? i, color: e.color || null,
        parent_id: e.parent_id || null, surface_m2: e.surface_m2 ?? null,
        support: e.support || null, exposition: e.exposition || null,
-       sol_texture: e.sol_texture || null })),
+       sol_texture: e.sol_texture || null, rotation_muette: e.rotation_muette || false })),
   garden_plant_espaces: (window.__PLACEMENTS__ || []).map(p =>
     ({ garden_id: "g1", plant_id: p.plant_id, espace_id: p.espace_id,
        quantity: p.quantity ?? null, notes: p.notes ?? null })),
@@ -33,6 +33,7 @@ const TABLES = {
   avis_photo: (window.__AVIS__ || []),
   observations: (window.__CARNET__ || []),
   observation_photos: (window.__PHOTOS_CARNET__ || []),
+  cultures: (window.__CULTURES__ || []),
 };
 
 /* Le compartiment privé des photographies du jardinier, tenu en mémoire : les
@@ -92,6 +93,23 @@ function recalculerAvis(image_id) {
    retenues. Sans cela une modification portant sur une clé à trois colonnes
    toucherait la première ligne venue. */
 let fauxNumero = 0;
+
+/* La base tient la trace des cultures par un déclencheur au placement, et n'y
+   fait entrer que les plantes conduites en annuelle ou en bisannuelle. La
+   doublure en fait autant, sans quoi la rotation ne serait pas contrôlable. */
+function tracerCulture(l) {
+  const p = (FX.plants || []).find(x => x.id === l.plant_id);
+  if (!p || !p.family) return;
+  if (!["annuelle", "bisannuelle"].includes(p.conduite || p.life_cycle || "")) return;
+  const annee = new Date().getFullYear();
+  const t = TABLES.cultures = TABLES.cultures || [];
+  if (t.some(c => c.espace_id === l.espace_id && c.plant_id === l.plant_id
+    && c.famille === p.family && c.annee === annee)) return;
+  t.push({ id: "cu-" + (++fauxNumero), garden_id: l.garden_id || "g1",
+           espace_id: l.espace_id, plant_id: l.plant_id, famille: p.family,
+           annee, saisi: false });
+}
+
 function requete(table) {
   const filtres = [];
   let op = null;
@@ -104,11 +122,13 @@ function requete(table) {
     if (op.kind === "insert") {
       const neuves = [].concat(op.v).map(l => ({ ...l, id: l.id || "faux-" + (++fauxNumero) }));
       neuves.forEach(l => t.push(l));
+      if (table === "garden_plant_espaces") neuves.forEach(tracerCulture);
       return { data: neuves, error: null };
     }
     if (op.kind === "update") {
       const touchees = t.filter(passe);
       touchees.forEach(l => Object.assign(l, op.v));
+      if (table === "garden_plant_espaces" && "espace_id" in op.v) touchees.forEach(tracerCulture);
       return { data: touchees, error: null };
     }
     if (op.kind === "delete") {

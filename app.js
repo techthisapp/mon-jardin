@@ -63,6 +63,9 @@ const photosCarnet = new Map();
 const urlsPhoto = new Map();
 let carnetOuvert = false;
 let saisieCarnet = null;
+/* Ce qui a poussé où, tenu sans saisie par un déclencheur au placement. Seules
+   les plantes conduites en annuelle ou en bisannuelle y entrent. */
+let cultures = [];
 let photosVues = [];              // la bande à l'affiche, pour le plein écran
 let photoIndex = 0;               // organe regardé en grand
 let photoRang = 0;                // position dans la réserve de cet organe
@@ -686,7 +689,7 @@ function poserPlanches(racine) {
 const COL_LEGERES = "id,slug,name,category,typology,phases,spacing,spacing_cm,row_cm,depth,companions,"
   + "latin,family,habit,exposure,water_need,nectar,pollen,frost_min_c,height_min_cm,"
   + "height_max_cm,flower_colors,floraison_pic_q,floraison_pic_note,nom_article,propagation,"
-  + "nom_accepte";
+  + "nom_accepte,life_cycle,conduite";
 const COL_LONGUES = "id,attributes,guide,guide_periode,advice";
 /* Signature de la forme des lignes gardées en cache. La clé de fraîcheur ne
    porte que le nombre de plantes et la date de la base : ajouter une colonne à
@@ -748,6 +751,10 @@ async function lireCatalogue() {
     hmin: p.height_min_cm, hmax: p.height_max_cm,
     couleurs: p.flower_colors || [], pic: p.floraison_pic_q, picNote: p.floraison_pic_note || "",
     article: p.nom_article || "", propagation: p.propagation || "",
+    /* La rotation ne concerne que ce qui se replante : la tomate est
+       botaniquement vivace mais conduite en annuelle, et c'est la conduite qui
+       tranche, ici comme dans le déclencheur qui tient la trace. */
+    annuelle: ["annuelle", "bisannuelle"].includes(p.conduite || p.life_cycle || ""),
   })).sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
   apresCatalogue();
 
@@ -828,6 +835,7 @@ async function chargerJardin() {
     jardins = []; jardinId = null; espaces = []; aff = new Map(); adapt = {};
     sel = new Set(); espaceChoisi = null; avisPhoto = new Map(); photosPlante.clear();
     carnet = []; photosCarnet.clear(); urlsPhoto.clear(); saisieCarnet = null;
+    cultures = [];
     majCompte(); majJardinUI(); construireChips(); rendreTout(); return;
   }
   /* Les avis de la personne masquent des photographies : ils sont chargés avant
@@ -857,6 +865,7 @@ async function chargerContenuJardin() {
     cle ? avecReprise(() => db.from("plant_climates").select("plant_id,level,note").eq("climate_key", cle))
         : Promise.resolve({ data: [] }),
     chargerCarnet(),
+    chargerCultures(),
   ]);
   adapt = {};
   (rc.data || []).forEach(r => adapt[r.plant_id] = r);
@@ -1191,9 +1200,14 @@ async function retirerDe(plantId, lieux) {
 /* Une plante ne peut pas occuper à la fois un espace et l'une de ses zones,
    elle y compterait deux fois. Deux zones du même espace restent possibles, un
    même légume pouvant tenir deux planches. */
-async function placerSur(plantId, lieu) {
+async function placerSur(plantId, lieu, avertir = false) {
   const liste = aff.get(plantId) || [];
   if (liste.some(r => r.espace_id === lieu)) return true;
+  if (avertir) {
+    const p = plantes.find(x => x.id === plantId);
+    const m = p ? alerteRotation(p, lieu) : "";
+    if (m && !confirm(`${m} Placer ${p.nom} ici quand même ?`)) return false;
+  }
   const souche = racineDe(lieu);
   const sortants = liste
     .filter(r => racineDe(r.espace_id) === souche && (lieu === souche || r.espace_id === souche))
@@ -1204,12 +1218,14 @@ async function placerSur(plantId, lieu) {
   if (error) { info("Espace non enregistré : " + error.message, true); return false; }
   aff.set(plantId, (aff.get(plantId) || [])
     .concat([{ plant_id: plantId, espace_id: lieu, quantity: null, notes: null }]));
+  // La trace de culture est écrite en base par un déclencheur : elle se relit.
+  await chargerCultures();
   return true;
 }
 
 async function deplacer(plantId, de, vers) {
   if (de === vers || !session || !jardinId) return;
-  if (!await placerSur(plantId, vers)) return;
+  if (!await placerSur(plantId, vers, true)) return;
   await retirerDe(plantId, de);
   construireChips(); rendreTout();
 }
@@ -1220,7 +1236,8 @@ async function basculerEspace(plantId, espaceId) {
   if (!session || !jardinId) return;
   const dedans = (aff.get(plantId) || [])
     .filter(r => racineDe(r.espace_id) === espaceId).map(r => r.espace_id);
-  const ok = dedans.length ? await retirerDe(plantId, dedans) : await placerSur(plantId, espaceId);
+  const ok = dedans.length ? await retirerDe(plantId, dedans)
+    : await placerSur(plantId, espaceId, true);
   if (ok) { construireChips(); rendreTout(); }
 }
 
@@ -4772,6 +4789,8 @@ function rendreDetailEspace(z) {
   if (!zo) { z.appendChild(corpsDuLieu("0")); poserPlanches(z); return; }
 
   z.appendChild(attributsDuLieu(zo));
+  const rot = panneauRotation(zo);
+  if (rot) z.appendChild(rot);
   z.appendChild(ajoutAuLieu(zo.id));
   const zones = zonesDe(zo.id);
   if (zones.length) {
@@ -4823,6 +4842,8 @@ function sectionZone(x) {
   const corps = document.createElement("div");
   corps.className = "corps-zone";
   corps.appendChild(attributsDuLieu(x));
+  const rot = panneauRotation(x);
+  if (rot) corps.appendChild(rot);
   corps.appendChild(ajoutAuLieu(x.id));
   corps.appendChild(corpsDuLieu(x.id));
   const pied = document.createElement("div");
@@ -5035,8 +5056,127 @@ async function ajouterAuLieu(plantId, cle) {
     sel.add(plantId);
     majCompte();
   }
-  if (!await placerSur(plantId, cle)) return;
+  if (!await placerSur(plantId, cle, true)) return;
   construireChips(); rendreTout();
+}
+
+/* ================== Rotation des cultures ==================
+   Le délai de retour d'une famille sur la même planche, en années. Les familles
+   absentes n'ont pas de règle établie : leur passage est noté, sans alerte. */
+const RETOUR_FAMILLE = { Brassicaceae: 4, Amaryllidaceae: 4, Solanaceae: 4,
+                         Apiaceae: 3, Cucurbitaceae: 3, Fabaceae: 3, Amaranthaceae: 3,
+                         Asteraceae: 2, Poaceae: 2, Polygonaceae: 2 };
+const FAMILLE_FR = { Brassicaceae: "Brassicacées", Amaryllidaceae: "Amaryllidacées",
+                     Solanaceae: "Solanacées", Apiaceae: "Apiacées",
+                     Cucurbitaceae: "Cucurbitacées", Fabaceae: "Fabacées",
+                     Amaranthaceae: "Amaranthacées", Asteraceae: "Astéracées",
+                     Poaceae: "Poacées", Polygonaceae: "Polygonacées" };
+
+function nomFamille(f) { return FAMILLE_FR[f] || f; }
+
+function listeEtAnnees(a) {
+  return a.length < 2 ? String(a[0] || "")
+    : a.slice(0, -1).join(", ") + " et " + a[a.length - 1];
+}
+
+async function chargerCultures() {
+  const { data } = await avecReprise(() => db.from("cultures")
+    .select("*").eq("garden_id", jardinId));
+  cultures = data || [];
+}
+
+function rotationDuLieu(cle) {
+  const par = new Map();
+  cultures.filter(c => c.espace_id === cle).forEach(c => {
+    if (!par.has(c.famille)) par.set(c.famille, []);
+    par.get(c.famille).push(c);
+  });
+  const cette = new Date().getFullYear();
+  return [...par.entries()].map(([famille, lignes]) => {
+    const annees = [...new Set(lignes.map(l => l.annee))].sort();
+    const delai = RETOUR_FAMILLE[famille] || 0;
+    const libre = delai ? Math.max(...annees) + delai : 0;
+    return { famille, lignes, annees, delai, libre, attendre: libre > cette };
+  }).sort((a, b) => nomFamille(a.famille).localeCompare(nomFamille(b.famille), "fr"));
+}
+
+/* L'avertissement au moment où il sert : juste avant de poser la plante. Il
+   n'arrête rien, il rappelle ce que la planche a déjà porté. */
+function alerteRotation(p, cle) {
+  const lieu = noeud(cle);
+  if (!lieu || lieu.rotation_muette || !p.annuelle) return "";
+  const delai = RETOUR_FAMILLE[p.famille];
+  if (!delai) return "";
+  const annees = [...new Set(cultures
+    .filter(c => c.espace_id === cle && c.famille === p.famille).map(c => c.annee))].sort();
+  if (!annees.length) return "";
+  const libre = Math.max(...annees) + delai;
+  if (new Date().getFullYear() >= libre) return "";
+  return `Des ${nomFamille(p.famille).toLowerCase()} ont poussé ici en `
+    + `${listeEtAnnees(annees)}. Attendre ${libre}.`;
+}
+
+function panneauRotation(zo) {
+  const lot = rotationDuLieu(zo.id);
+  if (!lot.length) return null;
+  const d = document.createElement("div");
+  d.className = "rotation-lieu";
+  if (zo.rotation_muette) {
+    d.classList.add("rotation-tue");
+    d.innerHTML = `<button type="button" class="lien ro-rendre">Rotation masquée, réafficher</button>`;
+    d.querySelector(".ro-rendre").addEventListener("click",
+      () => majLieu(zo, { rotation_muette: false }));
+    return d;
+  }
+  const familles = Object.keys(RETOUR_FAMILLE)
+    .sort((a, b) => nomFamille(a).localeCompare(nomFamille(b), "fr"));
+  d.innerHTML = `<b class="ro-titre">Rotation</b>`
+    + lot.map(x => `<p class="ro-l" data-famille="${esc(x.famille)}">`
+      + `<span class="ro-f">${esc(nomFamille(x.famille))}</span>`
+      + x.annees.map(a => {
+          const m = x.lignes.find(l => l.annee === a && l.saisi);
+          return m ? `<span class="ro-a ro-saisi">${a}`
+            + `<button type="button" class="ro-oter" data-ligne="${esc(m.id)}"`
+            + ` aria-label="Retirer ${a}">×</button></span>`
+            : `<span class="ro-a">${a}</span>`;
+        }).join("")
+      + (x.attendre ? `<span class="ro-etat ro-attendre">pas avant ${x.libre}</span>`
+        : x.delai ? `<span class="ro-etat">libre</span>`
+        : `<span class="ro-etat">sans règle de retour</span>`)
+      + `</p>`).join("")
+    + `<form class="ro-ajout"><select class="ro-famille" aria-label="Famille cultivée">`
+    + familles.map(f => `<option value="${f}">${esc(nomFamille(f))}</option>`).join("")
+    + `</select><input class="ro-annee" type="number" min="2000" max="2100" `
+    + `value="${new Date().getFullYear() - 1}" aria-label="Année">`
+    + `<button class="lien" type="submit">Ajouter</button>`
+    + `<button type="button" class="lien ro-taire">Ne plus afficher</button></form>`;
+  d.querySelectorAll(".ro-oter").forEach(b =>
+    b.addEventListener("click", () => retirerCulture(b.dataset.ligne)));
+  d.querySelector(".ro-taire").addEventListener("click",
+    () => majLieu(zo, { rotation_muette: true }));
+  d.querySelector(".ro-ajout").addEventListener("submit", ev => {
+    ev.preventDefault();
+    ajouterCulture(zo, d.querySelector(".ro-famille").value,
+      Number(d.querySelector(".ro-annee").value));
+  });
+  return d;
+}
+
+async function ajouterCulture(zo, famille, annee) {
+  if (!session || !jardinId || !famille || !annee) return;
+  const { error } = await db.from("cultures").insert({
+    garden_id: jardinId, espace_id: zo.id, plant_id: null, famille, annee, saisi: true });
+  if (error) { info("Année non ajoutée : " + error.message, true); return; }
+  await chargerCultures();
+  info("");
+  rendreEspaces();
+}
+
+async function retirerCulture(id) {
+  const { error } = await db.from("cultures").delete().eq("id", id);
+  if (error) { info("Suppression refusée : " + error.message, true); return; }
+  cultures = cultures.filter(c => c.id !== id);
+  rendreEspaces();
 }
 
 /* ================== Journal du jardin ==================
