@@ -62,21 +62,22 @@ export default async function essai(navigateur) {
     return pan.firstElementChild === s;
   });
   j.controle("elle ouvre l'onglet de l'identité", place === true);
-  /* Ce que la plante apporte est un caractère et non un geste : « Au jardin »
-     suit la bande, avant la taille à maturité et le bloc Identité. */
-  j.controle("l'onglet enchaîne Au jardin puis Identité",
+  /* Ce que la plante apporte est un caractère et non un geste : « Intérêt »
+     suit la bande, avant la taille à maturité et le bloc Identité. Le nom
+     « Au jardin » est passé à l'onglet qui porte ce que le jardinier a saisi. */
+  j.controle("l'onglet enchaîne Intérêt puis Identité",
     JSON.stringify(await pg.evaluate(() =>
       [...document.querySelectorAll('.f-pan[data-pan="identite"] .f-bloc h3')]
-        .map(h => h.textContent))) === JSON.stringify(["Au jardin", "Identité"]),
+        .map(h => h.textContent))) === JSON.stringify(["Intérêt", "Identité"]),
     JSON.stringify(await pg.evaluate(() =>
       [...document.querySelectorAll('.f-pan[data-pan="identite"] .f-bloc h3')]
         .map(h => h.textContent))));
-  j.controle("Au jardin précède la taille à maturité",
+  j.controle("Intérêt précède la taille à maturité",
     await pg.evaluate(() => {
       const pan = document.querySelector('.f-pan[data-pan="identite"]');
       const enfants = [...pan.children];
       const jardin = enfants.findIndex(e => e.querySelector("h3")
-        && e.querySelector("h3").textContent === "Au jardin");
+        && e.querySelector("h3").textContent === "Intérêt");
       const taille = enfants.findIndex(e => e.classList.contains("f-carte"));
       return jardin === 1 && taille === 2;
     }));

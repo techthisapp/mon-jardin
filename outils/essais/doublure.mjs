@@ -20,7 +20,7 @@ const TABLES = {
        sol_texture: e.sol_texture || null, rotation_muette: e.rotation_muette || false })),
   garden_plant_espaces: (window.__PLACEMENTS__ || []).map(p =>
     ({ garden_id: "g1", plant_id: p.plant_id, espace_id: p.espace_id,
-       quantity: p.quantity ?? null, notes: p.notes ?? null })),
+       quantity: p.quantity ?? null })),
   sourdines: (window.__SOURDINES__ || []),
   saison_vegetation: FX.saison || [],
   releves_eau: (window.__RELEVES__ || []),

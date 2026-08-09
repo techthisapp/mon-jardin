@@ -4,7 +4,8 @@
    lieu choisi, la règle qui refuse une entrée vide, et le passage des
    photographies par le compartiment privé, où rien ne s'atteint sans adresse
    signée. */
-import { ouvrirContexte, journal, net, CATALOGUE } from "./commun.mjs";
+import { ouvrirContexte, journal, ouvrirListeDesPlantes,
+         fermerFiche, ongletIdentite, net, CATALOGUE } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
 const par = n => PLANTES.find(p => p.name === n);
@@ -55,6 +56,15 @@ async function ouvrirEspace(pg) {
   await pg.waitForTimeout(500);
   await pg.locator('.tuile-espace[data-espace="e1"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
+}
+
+/* La fiche s'ouvre depuis la liste des plantes et non depuis le calendrier :
+   celui-ci ne montre par défaut que le jardin, et l'essai a besoin d'une fiche
+   de catalogue. */
+async function ouvrirDepuisLaListe(pg, nom) {
+  await pg.locator(`.item-bloc:has(.nom-l:text-is("${nom}")) .item`).first()
+    .dispatchEvent("click");
+  await pg.waitForTimeout(800);
 }
 
 async function deplierJournal(pg) {
@@ -235,6 +245,83 @@ export default async function essai(navigateur) {
     Object.values(window.__STOCKAGE__ || {}).map(v => v.poids)[0] || 0);
   j.controle("le fichier envoyé pèse moins de trois cents kilo-octets",
     poids > 0 && poids < 300000, poids + " octets");
+
+  j.section("le quatrième onglet de la fiche");
+  await ouvrirListeDesPlantes(pg);
+  await ouvrirDepuisLaListe(pg, "Tomate");
+  const onglets = await pg.locator("#feuille-corps .f-onglets button")
+    .evaluateAll(l => l.map(b => b.dataset.pan));
+  j.controle("une plante du jardin en porte quatre",
+    JSON.stringify(onglets) === JSON.stringify(["moment", "annee", "identite", "jardin"]),
+    onglets.join(" "));
+  await ongletIdentite(pg);
+  const blocs = await pg.locator("#feuille-corps .f-pan-identite .f-bloc h3")
+    .evaluateAll(l => l.map(h => h.textContent));
+  j.controle("le bloc botanique s'appelle désormais Intérêt",
+    blocs.includes("Intérêt") && !blocs.includes("Au jardin"), blocs.join(" | "));
+  await fermerFiche(pg);
+  await ouvrirDepuisLaListe(pg, "Figuier");
+  j.controle("une plante hors jardin n'en porte que trois",
+    await pg.locator("#feuille-corps .f-onglets button").count() === 3);
+  await fermerFiche(pg);
+
+  j.section("ce que l'onglet montre de la plante");
+  await ouvrirDepuisLaListe(pg, "Tomate");
+  await pg.locator('#feuille-corps .f-onglets button[data-pan="jardin"]').dispatchEvent("click");
+  await pg.waitForTimeout(350);
+  const lieu = await pg.locator("#feuille-corps .fj-lieu").first().evaluate(e =>
+    [e.querySelector(".fj-nom").textContent,
+     (e.querySelector(".fj-zone") || {}).textContent || "",
+     e.querySelector(".qte").value].join(" "));
+  j.controle("le placement nomme l'espace, la zone et la quantité",
+    net(lieu) === "Potager Carré du fond 6", net(lieu));
+  const entrees = await pg.locator("#feuille-corps .f-journal-plante .entree-carnet")
+    .evaluateAll(l => l.map(e => e.dataset.entree));
+  j.controle("le journal ne garde que les entrées de cette plante",
+    JSON.stringify(entrees) === JSON.stringify(["o2"]), entrees.join(" "));
+  const dits = await pg.locator("#feuille-corps .entree-carnet .ec-lieu")
+    .evaluateAll(l => l.map(e => e.textContent));
+  j.controle("elles nomment l'espace et la zone, non la plante",
+    JSON.stringify(dits) === JSON.stringify(["Potager", "Carré du fond"])
+    && await pg.locator("#feuille-corps .entree-carnet .ec-plante").count() === 0,
+    dits.join(" | "));
+
+  j.section("la saisie en miroir");
+  await pg.locator("#feuille-corps .f-journal-plante .ouvrir-saisie").click();
+  await pg.waitForTimeout(300);
+  j.controle("la plante n'est plus à choisir, elle est connue",
+    await pg.locator("#feuille-corps #formEntree .ec-plantes").count() === 0);
+  const ou = await pg.locator("#feuille-corps #formEntree .ec-lieu option")
+    .evaluateAll(l => l.map(o => o.textContent));
+  j.controle("le lieu se choisit parmi ceux qu'elle occupe",
+    JSON.stringify(ou) === JSON.stringify(["Potager, Carré du fond"]), ou.join(" | "));
+  await pg.locator("#feuille-corps #formEntree .ec-geste").selectOption("taille");
+  await pg.locator("#feuille-corps #formEntree .ec-texte-c").fill("Gourmands ôtés.");
+  await pg.locator("#feuille-corps #formEntree .ec-valider").click();
+  await pg.waitForTimeout(800);
+  j.controle("l'entrée rejoint le journal de la plante",
+    await pg.locator("#feuille-corps .f-journal-plante .entree-carnet").count() === 2);
+  const ecrite = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "observations" && e.op === "insert").pop());
+  j.controle("elle porte la plante et son lieu",
+    !!ecrite && ecrite.v.plant_id && ecrite.v.espace_id === "z1" && ecrite.v.geste === "taille",
+    JSON.stringify(ecrite && ecrite.v));
+
+  j.section("placer et retirer depuis la fiche");
+  await pg.locator("#feuille-corps .fj-ou").selectOption("e1");
+  await pg.locator("#feuille-corps .fj-placer").click();
+  await pg.waitForTimeout(700);
+  j.controle("le nouveau lieu paraît, et l'ancien a cédé la place",
+    await pg.locator("#feuille-corps .fj-lieu").count() === 1
+    && await pg.locator('#feuille-corps .fj-lieu[data-lieu="e1"]').count() === 1,
+    String(await pg.locator("#feuille-corps .fj-lieu").count()));
+  await pg.locator("#feuille-corps .fj-lieu .fj-oter").click();
+  await pg.waitForTimeout(700);
+  j.controle("le retrait laisse la plante au jardin, sans lieu",
+    await pg.locator("#feuille-corps .fj-lieu").count() === 0
+    && net(await pg.locator("#feuille-corps .f-lieux .f-vide").textContent())
+       === "Pas encore placée dans un espace.");
+  await fermerFiche(pg);
 
   await ctx.close();
   return j.fin(erreurs);

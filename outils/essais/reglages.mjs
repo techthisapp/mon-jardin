@@ -18,7 +18,7 @@ const AU_JARDIN = PLANTES.slice(0, 20).map(p => p.id);
 const ESPACES = [{ id: "e1", name: "Potager", color: "#7BA05B" },
                  { id: "e2", name: "Verger" }];
 const PLACEMENTS = [
-  { plant_id: PLANTES[0].id, espace_id: "e1", quantity: 3, notes: "rang du fond" },
+  { plant_id: PLANTES[0].id, espace_id: "e1", quantity: 3 },
   { plant_id: PLANTES[1].id, espace_id: "e1" },
   { plant_id: PLANTES[2].id, espace_id: "e2", quantity: 1 },
 ];
@@ -99,12 +99,13 @@ export default async function essai(navigateur) {
   j.controle("le détail porte le nom de l'espace",
     net(await pg.locator(".titre-detail").innerText()) === nomTuile,
     net(await pg.locator(".titre-detail").innerText()));
-  j.controle("chaque plante porte sa quantité et sa note",
+  /* La note du placement a été reprise par le journal daté : seule la quantité
+     reste sur la ligne. */
+  j.controle("chaque plante porte sa quantité, et plus de champ de note",
     await pg.locator("#detailEspace .ligne-espace").count() > 0
     && await pg.locator("#detailEspace .ligne-espace .qte").count()
        === await pg.locator("#detailEspace .ligne-espace").count()
-    && await pg.locator("#detailEspace .ligne-espace .notes").count()
-       === await pg.locator("#detailEspace .ligne-espace").count());
+    && await pg.locator("#detailEspace .ligne-espace .notes").count() === 0);
   await pg.locator("#retourEspace").dispatchEvent("click");
   await pg.waitForTimeout(250);
   j.controle("le retour ramène aux tuiles",
