@@ -50,6 +50,7 @@ const SUITES = [
   ["blocs", () => import("./blocs.mjs")],
   ["taille", () => import("./taille.mjs")],
   ["reglages", () => import("./reglages.mjs")],
+  ["espaces", () => import("./espaces.mjs")],
   ["feuille", () => import("./feuille.mjs")],
   ["calendrier", () => import("./calendrier.mjs")],
   ["planches", () => import("./planches.mjs")],

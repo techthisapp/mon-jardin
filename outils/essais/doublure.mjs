@@ -14,7 +14,10 @@ const TABLES = {
   garden_plants: (window.__JARDIN__ || FX.plants.map(p => p.id))
     .map(id => ({ garden_id: "g1", plant_id: id })),
   espaces: (window.__ESPACES__ || []).map((e, i) =>
-    ({ id: e.id, garden_id: "g1", name: e.name, position: i, color: e.color || null })),
+    ({ id: e.id, garden_id: "g1", name: e.name, position: e.position ?? i, color: e.color || null,
+       parent_id: e.parent_id || null, surface_m2: e.surface_m2 ?? null,
+       support: e.support || null, exposition: e.exposition || null,
+       sol_texture: e.sol_texture || null })),
   garden_plant_espaces: (window.__PLACEMENTS__ || []).map(p =>
     ({ garden_id: "g1", plant_id: p.plant_id, espace_id: p.espace_id,
        quantity: p.quantity ?? null, notes: p.notes ?? null })),
@@ -52,44 +55,58 @@ function recalculerAvis(image_id) {
   i.retrait_motif = net >= SEUIL_RETRAIT ? "avis" : null;
 }
 
+/* Les filtres arrivent après le verbe dans la chaîne du client réel : une
+   écriture est donc mise de côté et jouée à l'attente, sur les seules lignes
+   retenues. Sans cela une modification portant sur une clé à trois colonnes
+   toucherait la première ligne venue. */
+let fauxNumero = 0;
 function requete(table) {
-  let lignes = (TABLES[table] || []).slice();
+  const filtres = [];
+  let op = null;
+  const passe = l => filtres.every(f => f(l));
+  const lues = () => (TABLES[table] || []).filter(passe);
+  function executer() {
+    const t = TABLES[table] = TABLES[table] || [];
+    if (!op) return { data: lues(), error: null };
+    window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table, op: op.kind, v: op.v }]);
+    if (op.kind === "insert") {
+      const neuves = [].concat(op.v).map(l => ({ ...l, id: l.id || "faux-" + (++fauxNumero) }));
+      neuves.forEach(l => t.push(l));
+      return { data: neuves, error: null };
+    }
+    if (op.kind === "update") {
+      const touchees = t.filter(passe);
+      touchees.forEach(l => Object.assign(l, op.v));
+      return { data: touchees, error: null };
+    }
+    if (op.kind === "delete") {
+      const partis = t.filter(passe);
+      TABLES[table] = t.filter(l => !passe(l));
+      if (table === "avis_photo") partis.forEach(l => recalculerAvis(l.image_id));
+      return { data: partis, error: null };
+    }
+    /* Deux clés d'unicité selon la table : le jour pour un relevé, la
+       photographie pour un avis, l'auteur étant toujours le même ici. */
+    const i = table === "avis_photo"
+      ? t.findIndex(l => l.image_id === op.v.image_id)
+      : t.findIndex(l => l.garden_id === op.v.garden_id && l.jour === op.v.jour);
+    if (i >= 0) t[i] = { ...t[i], ...op.v }; else t.push(op.v);
+    if (table === "avis_photo") recalculerAvis(op.v.image_id);
+    return { data: [op.v], error: null };
+  }
   const api = {
     select() { return api; },
-    eq(col, v) { lignes = lignes.filter(l => String(l[col]) === String(v)); return api; },
-    in(col, vs) { lignes = lignes.filter(l => vs.map(String).includes(String(l[col]))); return api; },
-    gte(col, v) { lignes = lignes.filter(l => String(l[col]) >= String(v)); return api; },
-    update(v) { Object.assign(TABLES[table][0] || {}, v); window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table, op: "update", v }]); return api; },
-    upsert(v) {
-      window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table, op: "upsert", v }]);
-      const t = TABLES[table] = TABLES[table] || [];
-      /* Deux clés d'unicité selon la table : le jour pour un relevé, la
-         photographie pour un avis, l'auteur étant toujours le même ici. */
-      const i = table === "avis_photo"
-        ? t.findIndex(l => l.image_id === v.image_id)
-        : t.findIndex(l => l.garden_id === v.garden_id && l.jour === v.jour);
-      if (i >= 0) t[i] = { ...t[i], ...v }; else t.push(v);
-      if (table === "avis_photo") recalculerAvis(v.image_id);
-      return Promise.resolve({ data: [v], error: null });
-    },
-    delete() {
-      window.__ECRITS__ = (window.__ECRITS__ || []).concat([{ table, op: "delete" }]);
-      const t = TABLES[table] || [];
-      return {
-        eq(col, v) {
-          const i = t.findIndex(l => String(l[col]) === String(v));
-          const parti = i >= 0 ? t[i] : null;
-          if (i >= 0) t.splice(i, 1);
-          if (table === "avis_photo" && parti) recalculerAvis(parti.image_id);
-          return this;
-        },
-        then(res) { return Promise.resolve({ data: [], error: null }).then(res); },
-      };
-    },
+    eq(col, v) { filtres.push(l => String(l[col]) === String(v)); return api; },
+    in(col, vs) { const s = vs.map(String); filtres.push(l => s.includes(String(l[col]))); return api; },
+    gte(col, v) { filtres.push(l => String(l[col]) >= String(v)); return api; },
+    insert(v) { op = { kind: "insert", v }; return api; },
+    update(v) { op = { kind: "update", v }; return api; },
+    upsert(v) { op = { kind: "upsert", v }; return api; },
+    delete() { op = { kind: "delete" }; return api; },
     order() { return api; },
     limit() { return api; },
-    single() { return Promise.resolve({ data: lignes[0] || null, error: null }); },
-    then(res) { return Promise.resolve({ data: lignes, error: null }).then(res); },
+    single() { const r = executer(); return Promise.resolve({ data: r.data[0] || null, error: r.error }); },
+    then(res) { return Promise.resolve(executer()).then(res); },
   };
   return api;
 }

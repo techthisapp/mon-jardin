@@ -978,11 +978,12 @@ function construireChips() {
 // Filtre d'espace : sélection unique, avec une valeur pour les plantes non classées.
 function chipsEspaces(conteneur, ligne, apres) {
   if (!conteneur || !ligne) return;
-  ligne.hidden = !espaces.length;
+  const lieux = racines();
+  ligne.hidden = !lieux.length;
   conteneur.innerHTML = "";
-  if (!espaces.length) return;
+  if (!lieux.length) return;
   const valeurs = [{ id: null, nom: "Tous" }]
-    .concat(espaces.map(z => ({ id: z.id, nom: z.name, couleur: z.color })))
+    .concat(lieux.map(z => ({ id: z.id, nom: z.name, couleur: z.color })))
     .concat([{ id: "0", nom: "Non placées" }]);
   valeurs.forEach(v => {
     const b = document.createElement("button");
@@ -990,7 +991,7 @@ function chipsEspaces(conteneur, ligne, apres) {
     b.setAttribute("aria-pressed", String(espaceChoisi === v.id));
     const n = v.id === null ? sel.size
       : v.id === "0" ? [...sel].filter(id => !espacesDe(id).length).length
-      : [...sel].filter(id => espacesDe(id).includes(v.id)).length;
+      : [...sel].filter(id => racinesDe(id).includes(v.id)).length;
     b.innerHTML = (v.couleur ? `<i class="pastille" style="background:${v.couleur}"></i>` : "")
       + esc(v.nom) + `<span class="nb">${n}</span>`;
     b.addEventListener("click", () => {
@@ -1117,7 +1118,7 @@ function carteItem(p) {
   bloc.appendChild(b);
   /* La mise en sourdine est une notion de calendrier : son rappel a rejoint
      l'onglet du moment de la fiche, où l'on voit ce qui est masqué. */
-  if (choixEspace.has(p.id) && sel.has(p.id) && espaces.length) bloc.appendChild(choixEspaces(p));
+  if (choixEspace.has(p.id) && sel.has(p.id) && racines().length) bloc.appendChild(choixEspaces(p));
   return bloc;
 }
 
@@ -1125,9 +1126,9 @@ function carteItem(p) {
    titre trouve sa place sans allonger la rangée. Répéter les huit espaces d'un
    jardin sous chacune des rangées ajoutait une ligne à toutes. */
 function lieuHTML(p) {
-  if (!sel.has(p.id) || !espaces.length || choixEspace.has(p.id)) return "";
-  const prises = espacesDe(p.id);
-  const noms = espaces.filter(z => prises.includes(z.id)).map(z => z.name);
+  if (!sel.has(p.id) || !racines().length || choixEspace.has(p.id)) return "";
+  const prises = racinesDe(p.id);
+  const noms = racines().filter(z => prises.includes(z.id)).map(z => z.name);
   return noms.length
     ? `<span class="lieu-item">${esc(noms.join(", "))}</span>`
     : `<span class="lieu-item lieu-vide">Placer</span>`;
@@ -1147,8 +1148,8 @@ function basculerChoixEspace(plantId) {
 function choixEspaces(p) {
   const r = document.createElement("div");
   r.className = "espaces-item";
-  const prises = espacesDe(p.id);
-  espaces.forEach(z => {
+  const prises = racinesDe(p.id);
+  racines().forEach(z => {
     const c = document.createElement("button");
     c.type = "button"; c.className = "mini-chip";
     c.setAttribute("aria-pressed", String(prises.includes(z.id)));
@@ -1164,19 +1165,53 @@ function choixEspaces(p) {
   return r;
 }
 
+/* Trois gestes partagent les mêmes règles de placement : la pastille de la
+   rangée, le choix de zone dans un espace, et l'ajout depuis le catalogue. */
+async function retirerDe(plantId, lieux) {
+  const liste = aff.get(plantId) || [];
+  const ids = [].concat(lieux).filter(id => liste.some(r => r.espace_id === id));
+  if (!ids.length) return true;
+  const { error } = await db.from("garden_plant_espaces").delete()
+    .eq("garden_id", jardinId).eq("plant_id", plantId).in("espace_id", ids);
+  if (error) { info("Placement non retiré : " + error.message, true); return false; }
+  aff.set(plantId, liste.filter(r => !ids.includes(r.espace_id)));
+  return true;
+}
+
+/* Une plante ne peut pas occuper à la fois un espace et l'une de ses zones,
+   elle y compterait deux fois. Deux zones du même espace restent possibles, un
+   même légume pouvant tenir deux planches. */
+async function placerSur(plantId, lieu) {
+  const liste = aff.get(plantId) || [];
+  if (liste.some(r => r.espace_id === lieu)) return true;
+  const souche = racineDe(lieu);
+  const sortants = liste
+    .filter(r => racineDe(r.espace_id) === souche && (lieu === souche || r.espace_id === souche))
+    .map(r => r.espace_id);
+  if (sortants.length && !await retirerDe(plantId, sortants)) return false;
+  const { error } = await db.from("garden_plant_espaces")
+    .insert({ garden_id: jardinId, plant_id: plantId, espace_id: lieu });
+  if (error) { info("Espace non enregistré : " + error.message, true); return false; }
+  aff.set(plantId, (aff.get(plantId) || [])
+    .concat([{ plant_id: plantId, espace_id: lieu, quantity: null, notes: null }]));
+  return true;
+}
+
+async function deplacer(plantId, de, vers) {
+  if (de === vers || !session || !jardinId) return;
+  if (!await placerSur(plantId, vers)) return;
+  await retirerDe(plantId, de);
+  construireChips(); rendreTout();
+}
+
+/* La rangée de l'onglet Mes plantes porte les espaces et jamais les zones :
+   décocher un espace retire aussi ce qui est placé dans ses zones. */
 async function basculerEspace(plantId, espaceId) {
   if (!session || !jardinId) return;
-  const liste = aff.get(plantId) || [];
-  const present = liste.some(r => r.espace_id === espaceId);
-  const req = present
-    ? db.from("garden_plant_espaces").delete()
-        .eq("garden_id", jardinId).eq("plant_id", plantId).eq("espace_id", espaceId)
-    : db.from("garden_plant_espaces").insert({ garden_id: jardinId, plant_id: plantId, espace_id: espaceId });
-  const { error } = await req;
-  if (error) { info("Espace non enregistré : " + error.message, true); return; }
-  if (present) aff.set(plantId, liste.filter(r => r.espace_id !== espaceId));
-  else aff.set(plantId, liste.concat([{ plant_id: plantId, espace_id: espaceId, quantity: null, notes: null }]));
-  construireChips(); rendreTout();
+  const dedans = (aff.get(plantId) || [])
+    .filter(r => racineDe(r.espace_id) === espaceId).map(r => r.espace_id);
+  const ok = dedans.length ? await retirerDe(plantId, dedans) : await placerSur(plantId, espaceId);
+  if (ok) { construireChips(); rendreTout(); }
 }
 
 function majLegendeClim() {
@@ -1396,9 +1431,29 @@ function jaugeClim(niveau, titre) {
 
 function espacesDe(id) { return (aff.get(id) || []).map(r => r.espace_id); }
 
+/* Une zone est un espace portant un parent, et la table n'en connaît que deux
+   niveaux. Partout où l'application comptait, filtrait ou groupait par espace,
+   elle raisonne sur la racine : une plante placée dans une zone appartient à
+   l'espace qui la contient. */
+function racines() { return espaces.filter(z => !z.parent_id); }
+function zonesDe(id) { return espaces.filter(z => z.parent_id === id); }
+function noeud(id) { return espaces.find(z => z.id === id) || null; }
+function racineDe(id) { const z = noeud(id); return z ? (z.parent_id || z.id) : id; }
+function racinesDe(id) { return [...new Set(espacesDe(id).map(racineDe))]; }
+
+/* Un attribut non renseigné sur une zone est celui de son espace. La chaîne
+   s'arrête là : le jardin ne porte que la texture du sol. */
+function attribut(z, cle) {
+  if (!z) return null;
+  if (z[cle] !== null && z[cle] !== undefined && z[cle] !== "") return z[cle];
+  const p = z.parent_id ? noeud(z.parent_id) : null;
+  if (p && p[cle] !== null && p[cle] !== undefined && p[cle] !== "") return p[cle];
+  return cle === "sol_texture" ? ((jardinActif() || {}).sol_texture || null) : null;
+}
+
 function passeEspace(p) {
   if (espaceChoisi === null) return true;
-  const z = espacesDe(p.id);
+  const z = racinesDe(p.id);
   return espaceChoisi === "0" ? z.length === 0 : z.includes(espaceChoisi);
 }
 
@@ -1726,11 +1781,11 @@ function rendreMaintenant() {
 
   const sections = [];
   if (vueMoment === "espace") {
-    const tous = espaces.map(z => ({ cle: z.id, nom: z.name }))
+    const tous = racines().map(z => ({ cle: z.id, nom: z.name }))
       .concat([{ cle: "0", nom: "Non placées" }]);
     const groupes = espaceChoisi === null ? tous : tous.filter(g => g.cle === espaceChoisi);
     groupes.forEach(g => {
-      const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : espacesDe(p.id).indexOf(g.cle) !== -1;
+      const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : racinesDe(p.id).indexOf(g.cle) !== -1;
       const lot = paires.filter(x => dedans(x.p));
       if (!lot.length) return;
       const ids = [...new Set(lot.map(x => x.p.id))];
@@ -4615,14 +4670,36 @@ function demiEnTexte(d) {
     + Math.abs(d) + (Math.abs(d) > 1 ? " quinzaines" : " quinzaine");
 }
 
-/* Les plantes du jardin rattachées à un espace, ou celles qui ne le sont à
-   aucun quand la clé vaut "0". Rangées par nom, comme partout ailleurs. */
-function plantesDeLEspace(cle) {
-  return [...sel]
-    .filter(id => cle === "0" ? !espacesDe(id).length : espacesDe(id).includes(cle))
-    .map(id => plantes.find(p => p.id === id)).filter(Boolean)
+/* Les plantes du jardin rattachées à un espace ou à l'une de ses zones, ou
+   celles qui ne le sont à aucun quand la clé vaut "0". Rangées par nom, comme
+   partout ailleurs. */
+function parNom(ids) {
+  return ids.map(id => plantes.find(p => p.id === id)).filter(Boolean)
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 }
+
+function plantesDeLEspace(cle) {
+  return parNom([...sel]
+    .filter(id => cle === "0" ? !espacesDe(id).length : racinesDe(id).includes(cle)));
+}
+
+// Les plantes placées sur ce lieu précis, sans descendre dans ses zones.
+function plantesDuNoeud(cle) {
+  return parNom([...sel].filter(id => espacesDe(id).includes(cle)));
+}
+
+// Les zones dépliées, retenues d'un rendu à l'autre.
+const zonesOuvertes = new Set();
+const SUPPORT_NOM = { pleine_terre: "Pleine terre", contenant: "Contenant",
+                      serre: "Serre", balcon: "Balcon" };
+const EXPO_NOM = { soleil: "Soleil", soleil_mi_ombre: "Soleil et mi-ombre",
+                   mi_ombre: "Mi-ombre", mi_ombre_ombre: "Mi-ombre et ombre", ombre: "Ombre" };
+/* Ce qu'un lieu offre est un point sur cinq crans, ce qu'une plante demande
+   est une plage : soleil et mi-ombre accepte tout ce qui va de l'un à
+   l'autre. La confrontation n'a lieu que lorsque le lieu est renseigné. */
+const EXPO_RANG = { soleil: 0, soleil_mi_ombre: 1, mi_ombre: 2, mi_ombre_ombre: 3, ombre: 4 };
+const EXPO_PLAGE = { soleil: [0, 0], soleil_mi_ombre: [0, 2], mi_ombre: [2, 2],
+                     mi_ombre_ombre: [2, 4], ombre: [4, 4] };
 
 /* Deux niveaux dans le même panneau. Le premier pose une tuile par espace, plus
    celle des plantes non placées, qui existe toujours : sans elle, une plante
@@ -4634,7 +4711,7 @@ function rendreEspaces() {
   if (!tuiles || !detail) return;
   const niveau = $("niveauEspaces");
   const dansUnEspace = espaceOuvert !== null
-    && (espaceOuvert === "0" || espaces.some(z => z.id === espaceOuvert));
+    && (espaceOuvert === "0" || racines().some(z => z.id === espaceOuvert));
   if (!dansUnEspace) espaceOuvert = null;
   niveau.hidden = dansUnEspace;
   detail.hidden = !dansUnEspace;
@@ -4644,10 +4721,11 @@ function rendreEspaces() {
 
 function rendreTuilesEspaces(z) {
   z.innerHTML = "";
-  const cases = espaces.map(zo => ({ cle: zo.id, nom: zo.name, couleur: zo.color }))
+  const cases = racines().map(zo => ({ cle: zo.id, nom: zo.name, couleur: zo.color }))
     .concat([{ cle: "0", nom: "Non placées", sansCouleur: true }]);
   cases.forEach(v => {
     const n = plantesDeLEspace(v.cle).length;
+    const nz = v.cle === "0" ? 0 : zonesDe(v.cle).length;
     const b = document.createElement("button");
     b.type = "button";
     b.className = "tuile-espace" + (v.cle === "0" ? " tuile-hors" : "");
@@ -4655,11 +4733,12 @@ function rendreTuilesEspaces(z) {
     b.innerHTML = (v.couleur ? `<i class="pastille" style="background:${v.couleur}"></i>` : "")
       + `<span class="tuile-nom">${esc(v.nom)}</span>`
       + `<span class="tuile-nb">${n}</span>`
-      + `<span class="tuile-unite">${n > 1 ? "plantes" : "plante"}</span>`;
+      + `<span class="tuile-unite">${n > 1 ? "plantes" : "plante"}`
+      + (nz ? `, ${nz} ${nz > 1 ? "zones" : "zone"}` : "") + `</span>`;
     b.addEventListener("click", () => { espaceOuvert = v.cle; rendreEspaces(); });
     z.appendChild(b);
   });
-  if (!espaces.length) {
+  if (!racines().length) {
     const p = document.createElement("p");
     p.className = "vide";
     p.textContent = "Aucun espace. Ajoutez-en un pour découper ce jardin.";
@@ -4668,16 +4747,34 @@ function rendreTuilesEspaces(z) {
 }
 
 function rendreDetailEspace(z) {
-  const zo = espaces.find(x => x.id === espaceOuvert) || null;
+  const zo = racines().find(x => x.id === espaceOuvert) || null;
   const nom = zo ? zo.name : "Non placées";
   const membres = plantesDeLEspace(espaceOuvert);
   z.innerHTML = "";
+  z.appendChild(teteDuLieu(zo, nom, membres.length));
+  if (!zo) { z.appendChild(corpsDuLieu("0")); poserPlanches(z); return; }
 
+  z.appendChild(attributsDuLieu(zo));
+  z.appendChild(ajoutAuLieu(zo.id));
+  const zones = zonesDe(zo.id);
+  if (zones.length) {
+    const t = document.createElement("div");
+    t.className = "tete-section-zone";
+    t.innerHTML = `<b>Sans zone</b><span class="nb">${plantesDuNoeud(zo.id).length}</span>`;
+    z.appendChild(t);
+  }
+  z.appendChild(corpsDuLieu(zo.id));
+  zones.forEach(x => z.appendChild(sectionZone(x)));
+  z.appendChild(formulaireZone(zo));
+  poserPlanches(z);
+}
+
+function teteDuLieu(zo, nom, compte) {
   const tete = document.createElement("div");
   tete.className = "tete-detail";
   tete.innerHTML = `<button class="retour-espace" id="retourEspace" type="button" aria-label="Revenir aux espaces">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>`
-    + `<b class="titre-detail">${esc(nom)}</b><span class="nb">${membres.length}</span>`
+    + `<b class="titre-detail">${esc(nom)}</b><span class="nb">${compte}</span>`
     + (zo ? `<button class="lien" data-act="renommer">Renommer</button>`
           + `<button class="lien" data-act="supprimer">Supprimer</button>` : "");
   tete.querySelector("#retourEspace").addEventListener("click",
@@ -4686,35 +4783,249 @@ function rendreDetailEspace(z) {
     tete.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
     tete.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
   }
-  z.appendChild(tete);
+  return tete;
+}
 
+/* Une zone se déplie sous son espace, sans troisième niveau de navigation :
+   son entête suffit à savoir ce qu'elle porte, son corps répète celui d'un
+   espace. */
+function sectionZone(x) {
+  const d = document.createElement("details");
+  d.className = "zone-espace";
+  d.dataset.zone = x.id;
+  d.open = zonesOuvertes.has(x.id);
+  const n = plantesDuNoeud(x.id).length;
+  const s = document.createElement("summary");
+  s.innerHTML = `<b class="zone-nom">${esc(x.name)}</b><span class="nb">${n}</span>`
+    + `<span class="zone-mesure">${esc(mesureDuLieu(x))}</span>`;
+  d.appendChild(s);
+  d.addEventListener("toggle", () =>
+    d.open ? zonesOuvertes.add(x.id) : zonesOuvertes.delete(x.id));
+  const corps = document.createElement("div");
+  corps.className = "corps-zone";
+  corps.appendChild(attributsDuLieu(x));
+  corps.appendChild(ajoutAuLieu(x.id));
+  corps.appendChild(corpsDuLieu(x.id));
+  const pied = document.createElement("div");
+  pied.className = "pied-zone";
+  pied.innerHTML = `<button class="lien" data-act="renommer">Renommer</button>`
+    + `<button class="lien" data-act="supprimer">Supprimer</button>`;
+  pied.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(x));
+  pied.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(x));
+  corps.appendChild(pied);
+  d.appendChild(corps);
+  return d;
+}
+
+function corpsDuLieu(cle) {
   const corps = document.createElement("div");
   corps.className = "corps-espace";
-  membres.forEach(p => {
-    const r = zo ? ((aff.get(p.id) || []).find(x => x.espace_id === zo.id) || {}) : null;
-    const l = document.createElement("div");
-    l.className = "ligne-espace";
-    l.innerHTML = `<button type="button" class="nom-espace">`
-      + vignettePlanche(p, "v-pl-s") + `${esc(p.nom)}</button>`
-      + (r ? `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
-           + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`
-           : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
-    l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
-    if (r) {
-      const enr = () => majAffectation(p.id, zo.id,
-        l.querySelector(".qte").value, l.querySelector(".notes").value);
-      l.querySelector(".qte").addEventListener("change", enr);
-      l.querySelector(".notes").addEventListener("change", enr);
-    }
-    corps.appendChild(l);
-  });
+  const membres = cle === "0" ? plantesDeLEspace("0") : plantesDuNoeud(cle);
+  membres.forEach(p => corps.appendChild(ligneDuLieu(p, cle)));
   if (!membres.length) {
-    corps.innerHTML = zo
-      ? '<p class="vide">Aucune plante rattachée. Les espaces se cochent sous chaque plante, onglet Mes plantes.</p>'
-      : '<p class="vide">Toutes vos plantes sont placées dans un espace.</p>';
+    corps.innerHTML = cle === "0"
+      ? '<p class="vide">Toutes vos plantes sont placées dans un espace.</p>'
+      : '<p class="vide">Aucune plante ici. Cherchez-la dans le catalogue, au-dessus.</p>';
   }
-  z.appendChild(corps);
-  poserPlanches(z);
+  return corps;
+}
+
+/* L'exposition du lieu, confrontée à ce que la plante demande. Rien n'est dit
+   quand elles s'accordent, ni quand le lieu ne déclare pas la sienne. */
+function ecartExposition(p, cle) {
+  const lieu = noeud(cle);
+  const e = lieu ? attribut(lieu, "exposition") : null;
+  const plage = EXPO_PLAGE[p.expo];
+  if (!e || !plage) return "";
+  const r = EXPO_RANG[e];
+  if (r >= plage[0] && r <= plage[1]) return "";
+  return `${p.nom} demande ${(EXPO_NOM[p.expo] || "").toLowerCase()}, `
+    + `ce lieu en offre ${r < plage[0] ? "plus" : "moins"}.`;
+}
+
+function ligneDuLieu(p, cle) {
+  const r = cle === "0" ? null : ((aff.get(p.id) || []).find(x => x.espace_id === cle) || {});
+  const gene = r ? ecartExposition(p, cle) : "";
+  const l = document.createElement("div");
+  l.className = "ligne-espace";
+  l.dataset.plante = p.id;
+  /* Deux rangs plutôt qu'un seul qui se replie au hasard : le nom et le lieu
+     en haut, ce qui s'y mesure en dessous. */
+  l.innerHTML = `<div class="haut-ligne"><button type="button" class="nom-espace">`
+    + vignettePlanche(p, "v-pl-s") + `${esc(p.nom)}</button>`
+    + (gene ? `<span class="mal-expose" title="${esc(gene)}">`
+      + `${esc((EXPO_NOM[attribut(noeud(cle), "exposition")] || "").toLowerCase())} ici</span>` : "")
+    + (r ? choixZoneHTML(cle) : "") + `</div>`
+    + (r ? `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
+         + `<input class="notes" type="text" maxlength="200" placeholder="note" value="${esc(r.notes ?? "")}">`
+         + `<button type="button" class="lien retirer-lieu">Retirer</button>`
+         : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
+  l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
+  if (r) {
+    const enr = () => majAffectation(p.id, cle,
+      l.querySelector(".qte").value, l.querySelector(".notes").value);
+    l.querySelector(".qte").addEventListener("change", enr);
+    l.querySelector(".notes").addEventListener("change", enr);
+    const sz = l.querySelector(".sel-zone");
+    if (sz) sz.addEventListener("change", () => deplacer(p.id, cle, sz.value));
+    l.querySelector(".retirer-lieu").addEventListener("click", async () => {
+      if (!await retirerDe(p.id, cle)) return;
+      construireChips(); rendreTout();
+    });
+  }
+  return l;
+}
+
+/* La zone se change sur la ligne de la plante, là où l'on voit déjà sa
+   quantité : c'est le seul endroit où les zones de l'espace sont sous les
+   yeux. La liste ne paraît pas tant qu'aucune zone n'existe. */
+function choixZoneHTML(cle) {
+  const souche = racineDe(cle);
+  const zones = zonesDe(souche);
+  if (!zones.length) return "";
+  const opts = [{ id: souche, nom: "Sans zone" }]
+    .concat(zones.map(x => ({ id: x.id, nom: x.name })))
+    .map(o => `<option value="${o.id}"${o.id === cle ? " selected" : ""}>${esc(o.nom)}</option>`)
+    .join("");
+  return `<select class="sel-zone" aria-label="Zone">${opts}</select>`;
+}
+
+/* Un attribut non renseigné sur une zone est celui de son espace, et la
+   texture du sol d'un espace est celle du jardin : l'option vide le dit
+   plutôt que de laisser croire à une absence. */
+function libelleHerite(zo, cle, noms) {
+  const p = zo.parent_id ? noeud(zo.parent_id) : null;
+  const v = p ? attribut(p, cle)
+    : (cle === "sol_texture" ? ((jardinActif() || {}).sol_texture || null) : null);
+  return v ? `comme ${p ? "l'espace" : "le jardin"}, ${(noms[v] || v).toLowerCase()}` : "non précisé";
+}
+
+function selectAttribut(zo, cle, noms, etiquette) {
+  const val = zo[cle] || "";
+  const opts = [`<option value=""${val ? "" : " selected"}>${esc(libelleHerite(zo, cle, noms))}</option>`]
+    .concat(Object.keys(noms).map(k =>
+      `<option value="${k}"${k === val ? " selected" : ""}>${esc(noms[k])}</option>`)).join("");
+  return `<select class="att" data-att="${cle}" aria-label="${esc(etiquette)}">${opts}</select>`;
+}
+
+function attributsDuLieu(zo) {
+  const d = document.createElement("div");
+  d.className = "attributs-lieu";
+  d.innerHTML = `<label class="att-l"><span class="att-e">Surface</span>`
+    + `<input class="att att-surface" type="number" min="0" step="0.5" inputmode="decimal"`
+    + ` value="${zo.surface_m2 ?? ""}" aria-label="Surface en mètres carrés"><span class="att-u">m²</span></label>`
+    + selectAttribut(zo, "support", SUPPORT_NOM, "Support")
+    + selectAttribut(zo, "exposition", EXPO_NOM, "Exposition")
+    + selectAttribut(zo, "sol_texture", SOL_LIBELLE, "Sol")
+    // La mesure d'une zone est déjà dans son entête : la répéter sous ses
+    // réglages ferait lire deux fois la même ligne.
+    + (zo.parent_id ? "" : `<span class="att-mesure">${esc(mesureDuLieu(zo))}</span>`);
+  d.querySelectorAll("select.att").forEach(s =>
+    s.addEventListener("change", () => majLieu(zo, { [s.dataset.att]: s.value || null })));
+  const su = d.querySelector(".att-surface");
+  su.addEventListener("change", () => {
+    const v = su.value.trim() === "" ? null : Number(su.value.replace(",", "."));
+    majLieu(zo, { surface_m2: v && v > 0 ? v : null });
+  });
+  return d;
+}
+
+/* La surface transforme le besoin du catalogue, exprimé en litres par jour et
+   par mètre carré, en litres à porter. Les plantes sans calcul ne comptent
+   pas, comme partout ailleurs. La surface ne s'hérite pas : elle s'additionne.
+*/
+function litresDuJour(zo) {
+  const s = Number(zo.surface_m2 || 0);
+  if (!s) return null;
+  const ids = (zo.parent_id ? plantesDuNoeud(zo.id) : plantesDeLEspace(zo.id)).map(p => p.id);
+  const vals = (eauJour || []).filter(r => ids.includes(r.plant_id))
+    .map(r => Number(r.litres_jour_m2)).filter(v => v > 0);
+  if (!vals.length) return null;
+  return s * vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function mesureDuLieu(zo) {
+  const bouts = [];
+  if (zo.surface_m2) bouts.push(nombreFr(Number(zo.surface_m2)) + " m²");
+  const l = litresDuJour(zo);
+  if (l) bouts.push(nombreFr(l) + " L par jour");
+  if (!zo.parent_id) {
+    const somme = zonesDe(zo.id).reduce((a, x) => a + Number(x.surface_m2 || 0), 0);
+    if (somme) bouts.push(nombreFr(somme) + " m² en zones");
+  }
+  return bouts.join(", ");
+}
+
+async function majLieu(zo, champs) {
+  const { error } = await db.from("espaces").update(champs).eq("id", zo.id);
+  if (error) { info("Enregistrement refusé : " + error.message, true); return; }
+  Object.assign(zo, champs);
+  info("");
+  rendreEspaces();
+}
+
+/* Chercher au catalogue depuis le lieu fait les deux gestes d'un coup : la
+   plante entre au jardin si elle n'y est pas, et elle se place ici. */
+function ajoutAuLieu(cle) {
+  const d = document.createElement("div");
+  d.className = "ajout-plante";
+  d.innerHTML = `<input class="rech-lieu" type="search" placeholder="Ajouter une plante"`
+    + ` aria-label="Chercher une plante au catalogue"><div class="props-lieu" hidden></div>`;
+  const ch = d.querySelector(".rech-lieu");
+  const liste = d.querySelector(".props-lieu");
+  ch.addEventListener("input", () => {
+    const q = ch.value.trim().toLowerCase();
+    liste.innerHTML = "";
+    liste.hidden = q.length < 2;
+    if (q.length < 2) return;
+    const deja = plantesDuNoeud(cle).map(p => p.id);
+    const lot = plantes.filter(p => !deja.includes(p.id)
+      && (p.nom.toLowerCase().includes(q) || p.latin.toLowerCase().includes(q))).slice(0, 8);
+    if (!lot.length) { liste.innerHTML = '<p class="vide">Aucune plante de ce nom.</p>'; return; }
+    lot.forEach(p => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "prop-lieu"; b.dataset.plante = p.id;
+      b.innerHTML = vignettePlanche(p, "v-pl-s") + `<span class="prop-nom">${esc(p.nom)}</span>`
+        + (sel.has(p.id) ? "" : `<span class="prop-neuf">entre au jardin</span>`);
+      b.addEventListener("click", () => {
+        ch.value = ""; liste.hidden = true; liste.innerHTML = "";
+        ajouterAuLieu(p.id, cle);
+      });
+      liste.appendChild(b);
+    });
+    poserPlanches(liste);
+  });
+  return d;
+}
+
+async function ajouterAuLieu(plantId, cle) {
+  if (!session || !jardinId) { info("Connectez-vous pour enregistrer votre jardin."); return; }
+  if (!sel.has(plantId)) {
+    const { error } = await db.from("garden_plants").insert({ garden_id: jardinId, plant_id: plantId });
+    if (error) { info("Plante non ajoutée : " + error.message, true); return; }
+    sel.add(plantId);
+    majCompte();
+  }
+  if (!await placerSur(plantId, cle)) return;
+  construireChips(); rendreTout();
+}
+
+function formulaireZone(zo) {
+  const f = document.createElement("form");
+  f.className = "ajout-espace ajout-zone";
+  f.id = "form-zone";
+  f.innerHTML = `<label class="etiq-filtre" for="nomZone">Nouvelle zone</label>`
+    + `<input id="nomZone" type="text" maxlength="40" placeholder="Carré du fond, serre, bordure">`
+    + `<button class="lien" type="submit">Ajouter</button>`;
+  f.addEventListener("submit", e => {
+    e.preventDefault();
+    const c = f.querySelector("#nomZone");
+    const n = c.value.trim();
+    if (!n) return;
+    c.value = "";
+    creerEspace(n, zo.id);
+  });
+  return f;
 }
 
 async function majAffectation(plantId, espaceId, qte, notes) {
@@ -4728,16 +5039,19 @@ async function majAffectation(plantId, espaceId, qte, notes) {
   info("");
 }
 
-async function creerEspace(nom) {
+async function creerEspace(nom, parent = null) {
+  const freres = parent ? zonesDe(parent) : racines();
   const { data, error } = await db.from("espaces")
-    .insert({ garden_id: jardinId, name: nom, position: espaces.length }).select().single();
-  if (error) { info("Espace non créé : " + error.message, true); return; }
+    .insert({ garden_id: jardinId, name: nom, position: freres.length, parent_id: parent })
+    .select().single();
+  if (error) { info((parent ? "Zone non créée : " : "Espace non créé : ") + error.message, true); return; }
   espaces.push(data);
+  if (parent) zonesOuvertes.add(data.id);
   construireChips(); majJardinUI(); rendreTout();
 }
 
 async function renommerEspace(zo) {
-  const nom = prompt("Nouveau nom de l'espace", zo.name);
+  const nom = prompt(zo.parent_id ? "Nouveau nom de la zone" : "Nouveau nom de l'espace", zo.name);
   if (!nom || nom.trim() === "" || nom.trim() === zo.name) return;
   const { error } = await db.from("espaces").update({ name: nom.trim() }).eq("id", zo.id);
   if (error) { info("Renommage refusé : " + error.message, true); return; }
@@ -4746,12 +5060,28 @@ async function renommerEspace(zo) {
 }
 
 async function supprimerEspace(zo) {
-  if (!confirm(`Supprimer l'espace ${zo.name} ? Les plantes restent dans le jardin, elles deviennent non classées.`)) return;
+  const filles = zonesDe(zo.id);
+  const texte = zo.parent_id
+    ? `Supprimer la zone ${zo.name} ? Ses plantes restent dans l'espace.`
+    : `Supprimer l'espace ${zo.name} ?`
+      + (filles.length ? ` Ses ${filles.length > 1 ? "zones partent" : "zone part"} avec lui.` : "")
+      + ` Les plantes restent dans le jardin, elles deviennent non placées.`;
+  if (!confirm(texte)) return;
+  /* Une zone qui disparaît rend ses plantes à son espace : les laisser partir
+     avec elle les sortirait du jardin sans que rien ne le dise. */
+  if (zo.parent_id) {
+    for (const p of plantesDuNoeud(zo.id)) {
+      if (!await placerSur(p.id, zo.parent_id)) return;
+    }
+  }
   const { error } = await db.from("espaces").delete().eq("id", zo.id);
   if (error) { info("Suppression refusée : " + error.message, true); return; }
-  espaces = espaces.filter(x => x.id !== zo.id);
-  aff.forEach((v, k) => aff.set(k, v.filter(r => r.espace_id !== zo.id)));
-  if (espaceChoisi === zo.id) espaceChoisi = null;
+  const partis = [zo.id].concat(filles.map(x => x.id));
+  espaces = espaces.filter(x => !partis.includes(x.id));
+  aff.forEach((v, k) => aff.set(k, v.filter(r => !partis.includes(r.espace_id))));
+  partis.forEach(id => zonesOuvertes.delete(id));
+  if (partis.includes(espaceChoisi)) espaceChoisi = null;
+  if (partis.includes(espaceOuvert)) espaceOuvert = null;
   construireChips(); majJardinUI(); rendreTout();
 }
 

@@ -2470,6 +2470,92 @@ select:focus{
 .tete-detail .lien:first-of-type{margin-left:auto}
 .hors-espace{font-size:12px;color:var(--encre-doux)}
 
+/* ---------- Attributs d'un lieu, zones d'un espace ---------- */
+
+/* Quatre réglages sur une ligne qui se replie, suivis de ce qu'ils
+   produisent : la surface et les litres du jour. */
+.attributs-lieu{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;
+  padding:8px 0 10px;border-bottom:1px solid var(--filet-clair);
+}
+.att-l{display:inline-flex;align-items:center;gap:5px}
+.att-e{font-size:12px;color:var(--encre-doux)}
+.att-u{font-size:12px;color:var(--encre-doux)}
+.att{
+  font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:5px 7px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+  max-width:180px;
+}
+.att-surface{width:76px}
+.att-mesure{font-size:12px;color:var(--encre-doux);margin-left:auto}
+
+/* Recherche au catalogue depuis le lieu : le champ tient la largeur, les
+   propositions se posent dessous et disparaissent au choix. */
+.ajout-plante{margin:10px 0 4px}
+.rech-lieu{
+  width:100%;font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:8px 10px;
+  border:1px solid #D5D2CB;border-radius:8px;background:#fff;color:var(--encre);
+}
+.props-lieu{
+  display:flex;flex-direction:column;margin-top:6px;
+  border:1px solid #E3E0D9;border-radius:8px;background:#fff;overflow:hidden;
+}
+.prop-lieu{
+  display:flex;align-items:center;gap:8px;padding:8px 10px;text-align:left;
+  border:0;border-top:1px solid var(--filet-clair);background:#fff;cursor:pointer;
+  font:400 13px/1.3 "IBM Plex Sans",sans-serif;color:var(--encre);
+}
+.prop-lieu:first-child{border-top:0}
+.prop-nom{flex:1}
+.prop-neuf{font-size:11.5px;color:var(--encre-doux)}
+.props-lieu .vide{margin:0;padding:8px 10px;font-size:12.5px}
+
+/* Les plantes posées sur l'espace lui-même, avant ses zones. */
+.tete-section-zone{
+  display:flex;align-items:center;gap:8px;margin:12px 0 0;
+  font-size:13px;font-weight:600;
+}
+.tete-section-zone .nb{font-size:11px}
+
+/* Une zone se déplie sous son espace. Le repère triangulaire natif est
+   remplacé par un chevron qui pivote, comme ailleurs dans l'application. */
+.zone-espace{
+  border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;
+  overflow:hidden;
+}
+.zone-espace>summary{
+  display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;
+  background:#F5F3EE;list-style:none;
+}
+.zone-espace>summary::-webkit-details-marker{display:none}
+.zone-espace>summary::after{
+  content:"";width:8px;height:8px;margin-left:4px;flex:0 0 8px;
+  border-right:1.6px solid var(--encre-doux);border-bottom:1.6px solid var(--encre-doux);
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
+}
+.zone-espace[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.zone-nom{font-size:13.5px}
+.zone-mesure{font-size:11.5px;color:var(--encre-doux);margin-left:auto}
+.corps-zone{padding:2px 11px 10px}
+.pied-zone{display:flex;gap:12px;margin-top:8px}
+.pied-zone .lien{font-size:12px}
+.haut-ligne{display:flex;align-items:center;gap:8px;flex:1 1 100%}
+.haut-ligne .nom-espace{flex:1 1 auto;min-width:0}
+.ligne-espace .sel-zone{
+  flex:0 0 auto;max-width:132px;
+  font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.ligne-espace .retirer-lieu{font-size:12px;margin-left:auto}
+.ajout-zone{margin-top:14px}
+
+/* La plante demande une exposition, le lieu en offre une autre : seul l'écart
+   se signale, dans l'encre des avertissements de culture. */
+.mal-expose{
+  font-size:11.5px;padding:1px 8px;border-radius:999px;
+  background:#FDF0DC;border:1px solid #E0B978;color:#8A5A12;
+}
+
 .ligne-portee{margin-bottom:10px}
 .ligne-portee .segments{width:fit-content}
 
