@@ -5304,7 +5304,7 @@ function tuileDuLieu(p, cle) {
     + `<span class="tp-nom">${esc(p.nom)}</span>`
     + `<span class="tp-haut">`
     + (r && r.quantity != null ? `<i class="tp-q">${r.quantity}</i>` : "")
-    + (m ? `<i class="tp-m" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
+    + (m ? `<i class="tp-moment" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
     + `</span>`;
   t.addEventListener("click", () => ouvrirFeuille(p));
   return t;

@@ -605,7 +605,9 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
   .etiq-filtre{width:100%;padding-top:0;padding-bottom:2px}
   .ligne-filtre{flex-direction:column;gap:4px}
   .nom-plante small{display:none}
-  .liste{grid-template-columns:1fr}
+  /* `1fr` vaut `minmax(auto,1fr)` : une rangée plus large que l'écran étirait
+     la piste au lieu d'être rognée, et toute la liste débordait avec elle. */
+  .liste{grid-template-columns:minmax(0,1fr)}
   .mois-case{font-size:0;padding:14px 0}
   .mois-case::after{content:attr(data-court);font-size:11px}
   .coin-entete{display:flex;align-items:center}
@@ -638,7 +640,11 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .bande-mois.bande-courante{z-index:0;border:0;background:rgba(76,140,63,.06)}
 
 /* ---------- Zones, jardins et climat ---------- */
-.item-bloc{display:flex;flex-direction:column;gap:4px}
+/* La rangée ne peut pas passer devant sa piste : une plante posée dans plusieurs
+   espaces nomme ses lieux sous son nom, et cette ligne, laissée à sa largeur
+   naturelle, emportait la liste entière hors de l'écran. Bornée ici, elle se
+   rogne sur ses points de suspension. */
+.item-bloc{display:flex;flex-direction:column;gap:4px;min-width:0}
 .espaces-item{display:flex;flex-wrap:wrap;gap:4px;padding:0 0 2px 30px}
 .mini-chip{
   font:500 11.5px/1 "IBM Plex Sans",sans-serif;padding:4px 8px;border-radius:999px;
@@ -1618,7 +1624,7 @@ body.fige{overflow:hidden}
    où elle se lisait. */
 /* Les quatre mesures du moment, en damier : elles se lisent d'un coup d'oeil
    et n'entrent pas en concurrence avec le grand chiffre du bandeau. */
-.tp-mes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.tp-mes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .tp-m{background:var(--papier);border-radius:12px;padding:9px 12px 10px}
 .tp-m span{
   display:block;margin-bottom:2px;
@@ -2587,7 +2593,7 @@ select:focus{
 .chev-l svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
 
-.mosaique-lieu{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mosaique-lieu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tuile-plante{
   display:block;position:relative;padding:0;border:1px solid #E3E0D9;
   border-radius:var(--rayon);background:#fff;overflow:hidden;cursor:pointer;
@@ -2602,7 +2608,13 @@ select:focus{
   font-style:normal;font-size:11.5px;font-weight:600;background:rgba(255,255,255,.92);
   border-radius:999px;padding:2px 8px;
 }
-.tp-m{font-style:normal;font-size:11px;color:#fff;border-radius:999px;padding:2px 8px;margin-left:auto}
+/* La pastille du moment porte un nom qui lui est propre : `tp-m` était déjà pris
+   par les mesures de la feuille du temps, et la règle la plus tardive gagnait,
+   posant les quatre mesures en gélules calées à droite de leur colonne. */
+.tp-moment{
+  font-style:normal;font-size:11px;color:#fff;border-radius:999px;padding:2px 8px;
+  margin-left:auto;
+}
 
 /* Les gestes d'une plante ne paraissent qu'en mode Modifier les plantes. */
 .outils-ligne{
