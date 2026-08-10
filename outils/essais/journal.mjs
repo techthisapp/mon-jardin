@@ -270,10 +270,15 @@ export default async function essai(navigateur) {
   await ouvrirDepuisLaListe(pg, "Tomate");
   await pg.locator('#feuille-corps .f-onglets button[data-pan="jardin"]').dispatchEvent("click");
   await pg.waitForTimeout(350);
-  const lieu = await pg.locator("#feuille-corps .fj-lieu").first().evaluate(e =>
-    [e.querySelector(".fj-nom").textContent,
-     (e.querySelector(".fj-zone") || {}).textContent || "",
-     e.querySelector(".qte").value].join(" "));
+  /* La zone se nomme par la liste qui permet d'en changer, quand l'espace en
+     porte, et par un simple libellé sinon. */
+  const lieu = await pg.locator("#feuille-corps .fj-lieu").first().evaluate(e => {
+    const z = e.querySelector(".sel-zone");
+    return [e.querySelector(".fj-nom").textContent,
+      z ? z.options[z.selectedIndex].textContent
+        : ((e.querySelector(".fj-zone") || {}).textContent || ""),
+      e.querySelector(".qte").value].join(" ");
+  });
   j.controle("le placement nomme l'espace, la zone et la quantité",
     net(lieu) === "Potager Carré du fond 6", net(lieu));
   const entrees = await pg.locator("#feuille-corps .f-journal-plante .entree-carnet")
@@ -308,11 +313,13 @@ export default async function essai(navigateur) {
     !!ecrite && ecrite.v.plant_id && ecrite.v.espace_id === "z1" && ecrite.v.geste === "taille",
     JSON.stringify(ecrite && ecrite.v));
 
-  j.section("placer et retirer depuis la fiche");
-  await pg.locator("#feuille-corps .fj-ou").selectOption("e1");
-  await pg.locator("#feuille-corps .fj-placer").click();
-  await pg.waitForTimeout(700);
-  j.controle("le nouveau lieu paraît, et l'ancien a cédé la place",
+  j.section("déplacer et retirer depuis la fiche");
+  /* Le déplacement entre zones se fait sur la ligne du lieu occupé, Sans zone
+     comprise : l'ajout n'offre plus l'espace dont une zone est déjà prise, le
+     poser là aurait retiré la zone sans le dire. */
+  await pg.locator("#feuille-corps .fj-lieu .sel-zone").selectOption("e1");
+  await pg.waitForTimeout(800);
+  j.controle("Sans zone ramène la plante à l'espace, et à ce seul lieu",
     await pg.locator("#feuille-corps .fj-lieu").count() === 1
     && await pg.locator('#feuille-corps .fj-lieu[data-lieu="e1"]').count() === 1,
     String(await pg.locator("#feuille-corps .fj-lieu").count()));
@@ -322,6 +329,11 @@ export default async function essai(navigateur) {
     await pg.locator("#feuille-corps .fj-lieu").count() === 0
     && net(await pg.locator("#feuille-corps .f-lieux .f-vide").textContent())
        === "Pas encore placée dans un espace.");
+  const aPlacer = await pg.locator("#feuille-corps .fj-ou option")
+    .evaluateAll(l => l.map(o => o.textContent));
+  j.controle("sans lieu, l'ajout offre de nouveau le jardin entier",
+    JSON.stringify(aPlacer) === JSON.stringify(["Potager", "Potager, Carré du fond"]),
+    aPlacer.join(" | "));
   await fermerFiche(pg);
 
   /* Noter est un geste et non une destination : le bouton se pose au-dessus de

@@ -5,7 +5,7 @@
    la rangée. Ils portent aussi sur la règle de placement, une plante ne
    pouvant occuper à la fois un espace et l'une de ses zones. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirMenuEspace,
-         entrerEnEdition, net, CATALOGUE, PHOTOS } from "./commun.mjs";
+         entrerEnEdition, fermerFiche, net, CATALOGUE, PHOTOS } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
 const par = n => PLANTES.find(p => p.name === n);
@@ -350,6 +350,69 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(400);
   j.controle("le retour à la liste se fait du même geste",
     await pg.locator("#detailEspace .rangs-lieu").count() > 0);
+
+  /* Découper un espace, c'est ranger : les zones nommées se lisent d'abord, et
+     ce qui n'est pas encore rangé vient à la fin. */
+  j.section("les plantes sans zone se lisent après les zones");
+  const ordre = await pg.evaluate(() => [...document.querySelectorAll(
+    "#detailEspace > details.zone-espace, #detailEspace > .tete-section-zone")]
+    .map(n => n.classList.contains("tete-section-zone") ? "sans zone" : n.dataset.zone));
+  j.controle("la tête Sans zone ferme la marche",
+    ordre.length > 1 && ordre[ordre.length - 1] === "sans zone", ordre.join(" | "));
+  j.controle("le corps sans zone la suit",
+    await pg.evaluate(() => {
+      const t = document.querySelector("#detailEspace > .tete-section-zone");
+      return !!t && t.nextElementSibling.classList.contains("corps-espace");
+    }));
+
+  /* Le nombre de pieds bouge souvent, un semis complété ou un plant perdu : il
+     se corrige là où il se lit, sans passer par le mode d'édition. */
+  j.section("le nombre de pieds se corrige sur la rangée");
+  const champ = sansZone(pg, COURGETTE.id).locator("input.qte-l");
+  j.controle("la rangée porte un champ, hors mode d'édition",
+    await champ.count() === 1
+    && await pg.locator("#detailEspace .ligne-editee").count() === 0);
+  await champ.fill("7");
+  await champ.dispatchEvent("change");
+  await pg.waitForTimeout(400);
+  const ecritQte = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "garden_plant_espaces" && e.op === "update").pop());
+  j.controle("la saisie s'enregistre", !!ecritQte && ecritQte.v.quantity === 7,
+    JSON.stringify(ecritQte && ecritQte.v));
+
+  /* Ouvrir une plante depuis un lieu, c'est vouloir agir sur son placement :
+     la fiche s'ouvre donc sur Au jardin, où la zone se change. */
+  j.section("depuis un lieu, la fiche s'ouvre sur son placement");
+  await sansZone(pg, COURGETTE.id).locator(".nom-espace").click();
+  await pg.waitForTimeout(700);
+  j.controle("l'onglet Au jardin est celui d'ouverture",
+    await pg.locator('.f-onglets button[data-pan="jardin"][aria-selected="true"]').count() === 1
+    && await pg.locator(".f-pan-jardin:not([hidden])").count() === 1);
+  const zonesOffertes = await pg.locator(".fj-lieu .sel-zone option")
+    .evaluateAll(l => l.map(o => o.textContent));
+  j.controle("le lieu occupé offre ses zones, Sans zone comprise",
+    JSON.stringify(zonesOffertes) === JSON.stringify(["Sans zone", "Serre"]),
+    zonesOffertes.join(" | "));
+  await pg.locator(".fj-lieu .sel-zone").selectOption("z2");
+  await pg.waitForTimeout(800);
+  j.controle("la zone retenue devient celle de la ligne",
+    await pg.locator(".fj-lieu .sel-zone").inputValue() === "z2");
+  await fermerFiche(pg);
+  await deplier(pg, "z2");
+  j.controle("la courgette a rejoint la serre",
+    await dansZone(pg, "z2", COURGETTE.id).count() === 1
+    && await sansZone(pg, COURGETTE.id).count() === 0);
+  j.controle("elle n'est placée qu'à un seul endroit",
+    await partout(pg, COURGETTE.id).count() === 1);
+
+  /* Depuis la liste des plantes, en revanche, on vient lire ce qu'il y a à
+     faire : l'onglet d'ouverture ne change pas. */
+  await ouvrirListeDesPlantes(pg);
+  await pg.locator(`.item-bloc[data-plante="${COURGETTE.id}"] .nom-item`).click();
+  await pg.waitForTimeout(700);
+  j.controle("depuis la liste des plantes, la fiche s'ouvre toujours sur le moment",
+    await pg.locator('.f-onglets button[data-pan="moment"][aria-selected="true"]').count() === 1);
+  await fermerFiche(pg);
 
   await ctx.close();
   return j.fin(erreurs);

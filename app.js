@@ -2703,13 +2703,15 @@ function blocInteret(p) {
   ]);
 }
 
-function ficheHTML(p) {
+function ficheHTML(p, voulu) {
   const ad = adapt[p.id];
   const tox = p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite);
   /* La fiche s'ouvre sur ce qu'on est venu y chercher. Pour une plante du
      jardin, ce qu'il y a à faire cette quinzaine. Pour une plante du catalogue
-     qu'on découvre, ce qu'elle est. */
-  const ouvre = sel.has(p.id) ? "moment" : "identite";
+     qu'on découvre, ce qu'elle est. Ouverte depuis un espace ou une zone, elle
+     s'ouvre sur son placement : on regardait déjà où les choses sont. */
+  const defaut = sel.has(p.id) ? "moment" : "identite";
+  const ouvre = voulu === "jardin" && !sel.has(p.id) ? defaut : (voulu || defaut);
   return `<div class="fiche-v2">
     <div class="f-entete">${motifFiche(p)}
       <div class="f-chips"><span class="f-chip">${esc(p.typo || p.cat)}</span>
@@ -2737,7 +2739,8 @@ function ficheHTML(p) {
       ouvre === "identite" ? "" : " hidden"}>${
       `<section class="f-photos" id="fPhotos" data-plante="${esc(p.id)}" hidden></section>`
       }${blocInteret(p)}${ficheTaille(p)}${blocIdentite(p)}</div>
-    ${sel.has(p.id) ? '<div class="f-pan f-pan-jardin" role="tabpanel" data-pan="jardin" hidden></div>' : ""}
+    ${sel.has(p.id) ? `<div class="f-pan f-pan-jardin" role="tabpanel" data-pan="jardin"${
+      ouvre === "jardin" ? "" : " hidden"}></div>` : ""}
   </div>`;
 }
 
@@ -5169,7 +5172,11 @@ function rendreDetailEspace(z) {
   z.appendChild(banniereDuLieu(zo, membres.length));
   if (menuEspace) z.appendChild(menuDuLieu(zo));
   z.appendChild(ligneDuMoment(zo.id));
+  /* Les zones nommées viennent d'abord, le reste ensuite : découper un espace,
+     c'est ranger, et ce qui n'est pas encore rangé se lit à la fin. Le
+     formulaire d'ajout suit, il pose justement une plante hors zone. */
   const zones = zonesDe(zo.id);
+  zones.forEach(x => z.appendChild(sectionZone(x)));
   if (zones.length) {
     const t = document.createElement("div");
     t.className = "tete-section-zone";
@@ -5177,7 +5184,6 @@ function rendreDetailEspace(z) {
     z.appendChild(t);
   }
   z.appendChild(corpsDuLieu(zo.id));
-  zones.forEach(x => z.appendChild(sectionZone(x)));
   z.appendChild(ajoutAuLieu(zo.id));
   z.appendChild(formulaireZone(zo));
   z.appendChild(sectionCarnet(zo));
@@ -5306,7 +5312,7 @@ function tuileDuLieu(p, cle) {
     + (r && r.quantity != null ? `<i class="tp-q">${r.quantity}</i>` : "")
     + (m ? `<i class="tp-moment" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
     + `</span>`;
-  t.addEventListener("click", () => ouvrirFeuille(p));
+  t.addEventListener("click", () => ouvrirFeuille(p, "jardin"));
   return t;
 }
 
@@ -5323,10 +5329,17 @@ function ligneDuLieu(p, cle) {
     + (sous ? `<span class="ne-s${gene ? " mal-expose" : ""}">${esc(sous)}</span>` : "")
     + `</span></button>`
     + (r ? (m ? `<span class="lp-m" style="background:${m.couleur}">${esc(m.nom)}</span>` : "")
-         + `<span class="qte-l">${r.quantity == null ? "" : r.quantity}</span>`
+         /* Le nombre de pieds se corrige là où il se lit. Il n'attend plus le
+            mode d'édition : c'est la valeur qui bouge le plus souvent, un semis
+            complété ou un plant perdu, et elle tenait déjà cette place. */
+         + `<input class="qte-l" type="number" min="0" max="32000" step="1"`
+         + ` value="${r.quantity == null ? "" : r.quantity}" placeholder="qté"`
+         + ` aria-label="Nombre de pieds de ${esc(p.nom)}">`
          + `<span class="chev-l" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`
          : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
-  l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
+  l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p, "jardin"));
+  const q = l.querySelector("input.qte-l");
+  if (q) q.addEventListener("change", ev => majAffectation(p.id, cle, ev.target.value));
   if (r && modeEdition) l.appendChild(outilsDeLaLigne(p, cle, r));
   return l;
 }
@@ -5334,13 +5347,10 @@ function ligneDuLieu(p, cle) {
 function outilsDeLaLigne(p, cle, r) {
   const o = document.createElement("div");
   o.className = "outils-ligne";
-  o.innerHTML = `<label class="ol-q"><span>Quantité</span>`
-    + `<input class="qte" type="number" min="0" max="32000" value="${r.quantity ?? ""}"></label>`
-    + choixZoneHTML(cle)
+  // La quantité se saisit désormais sur la rangée elle-même, à toute heure.
+  o.innerHTML = choixZoneHTML(cle)
     + `<button type="button" class="lien noter-lieu">Noter</button>`
     + `<button type="button" class="lien retirer-lieu">Retirer</button>`;
-  o.querySelector(".qte").addEventListener("change", ev =>
-    majAffectation(p.id, cle, ev.target.value));
   const sz = o.querySelector(".sel-zone");
   if (sz) sz.addEventListener("change", () => deplacer(p.id, cle, sz.value));
   /* Noter ouvre le journal du lieu, le formulaire déjà rempli de la plante :
@@ -5947,13 +5957,23 @@ function carteLieuxDeLaPlante(p) {
     const d = document.createElement("div");
     d.className = "fj-lieu";
     d.dataset.lieu = n.id;
+    /* La zone se change ici, sur la ligne du lieu occupé, Sans zone comprise :
+       il fallait jusque-là retirer la plante puis la reposer ailleurs, ou
+       passer par le mode d'édition de l'espace. La liste ne paraît pas tant que
+       l'espace n'a aucune zone. */
+    const zones = choixZoneHTML(n.id);
     d.innerHTML = `<span class="fj-nom">${esc(souche ? souche.name : n.name)}</span>`
-      + (n.parent_id ? `<span class="fj-zone">${esc(n.name)}</span>` : "")
+      + (zones || (n.parent_id ? `<span class="fj-zone">${esc(n.name)}</span>` : ""))
       + `<input class="qte" type="number" min="0" max="32000" placeholder="qté"`
       + ` value="${r.quantity ?? ""}" aria-label="Quantité">`
       + `<button type="button" class="lien fj-oter">Retirer</button>`;
     d.querySelector(".qte").addEventListener("change", ev =>
       majAffectation(p.id, n.id, ev.target.value));
+    const sz = d.querySelector(".sel-zone");
+    if (sz) sz.addEventListener("change", async () => {
+      await deplacer(p.id, n.id, sz.value);
+      rendrePanJardin(p);
+    });
     d.querySelector(".fj-oter").addEventListener("click", async () => {
       if (!await retirerDe(p.id, n.id)) return;
       construireChips(); rendreTout(); rendrePanJardin(p);
@@ -5966,7 +5986,13 @@ function carteLieuxDeLaPlante(p) {
     v.textContent = "Pas encore placée dans un espace.";
     corps.appendChild(v);
   }
-  const libres = lieuxDuJardin().filter(x => !pris.includes(x.id));
+  /* Un espace dont une zone est déjà occupée ne s'ajoute pas : la règle veut
+     qu'une plante ne tienne pas à la fois l'espace et sa zone, et le poser ici
+     aurait retiré la zone sans le dire. C'est le choix de zone de la ligne qui
+     fait ce déplacement, Sans zone comprise. */
+  const parZone = new Set(pris.map(id => noeud(id))
+    .filter(n => n && n.parent_id).map(n => n.parent_id));
+  const libres = lieuxDuJardin().filter(x => !pris.includes(x.id) && !parZone.has(x.id));
   if (libres.length) {
     const a = document.createElement("div");
     a.className = "fj-ajout";
@@ -6890,13 +6916,13 @@ function fermerPhoto() {
   if ($("feuille").hidden) document.body.classList.remove("fige");
 }
 
-function ouvrirFeuille(p) {
+function ouvrirFeuille(p, onglet) {
   fermerGlose();
   rangerBlocs();
   planteFeuille = p;
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
-  $("feuille-corps").innerHTML = ficheHTML(p);
+  $("feuille-corps").innerHTML = ficheHTML(p, onglet);
   brancherFiche(p);
   poserPhotos(p);
   chargerEau(p).then(() => majEau(p)).catch(() => {});

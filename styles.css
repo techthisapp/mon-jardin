@@ -2588,7 +2588,19 @@ select:focus{
 .im-r.im-masque{border-radius:0;background:var(--encre);opacity:.8}
 .im-r.im-vide{background:rgba(22,36,30,.05)}
 .lp-m{font-size:11px;color:#fff;border-radius:999px;padding:2px 8px}
-.qte-l{font-size:12.5px;color:var(--encre-doux);min-width:12px;text-align:right}
+/* Le nombre de pieds se corrige là où il se lit, sans mode d'édition. Le champ
+   garde l'apparence du texte qu'il remplaçait tant qu'on ne le touche pas, et
+   la hauteur de la rangée ne bouge pas. */
+.qte-l{
+  flex:0 0 auto;width:44px;min-height:30px;padding:4px 3px;
+  border:0;border-radius:7px;background:none;
+  font-family:inherit;font-size:12.5px;color:var(--encre-doux);text-align:right;
+  appearance:textfield;-moz-appearance:textfield;
+}
+.qte-l::-webkit-outer-spin-button,
+.qte-l::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qte-l::placeholder{color:rgba(22,36,30,.26)}
+.qte-l:focus{outline:0;background:#fff;box-shadow:0 0 0 2px var(--terre);color:var(--encre)}
 .chev-l{display:grid;place-items:center;width:16px;color:var(--filet)}
 .chev-l svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
@@ -2620,11 +2632,6 @@ select:focus{
 .outils-ligne{
   flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
   padding:8px 0 4px 54px;
-}
-.ol-q{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--encre-doux)}
-.outils-ligne .qte{
-  width:72px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
 }
 .outils-ligne .sel-zone{
   max-width:150px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
@@ -2775,6 +2782,11 @@ input.rech-lieu:focus{background:#fff;border-style:solid}
 .fj-corps .fj-lieu:first-child{border-top:0}
 .fj-nom{font-weight:500}
 .fj-zone{font-size:11.5px;color:var(--encre-doux)}
+/* La zone se change sur la ligne du lieu occupé, Sans zone comprise. */
+.fj-lieu .sel-zone{
+  max-width:150px;font:400 12px/1.3 "IBM Plex Sans",sans-serif;padding:3px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
 .fj-lieu .qte{
   flex:0 0 72px;margin-left:auto;
   font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;

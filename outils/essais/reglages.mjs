@@ -108,10 +108,13 @@ export default async function essai(navigateur) {
     && await pg.locator("#detailEspace .ligne-espace .notes").count() === 0
     && await pg.locator("#detailEspace .outils-ligne").count() === 0);
   await entrerEnEdition(pg);
+  /* La quantité a quitté ces gestes pour la rangée, où elle se lit : il ne
+     reste ici que ce qui touche au placement lui-même. */
   j.controle("les gestes paraissent en mode Modifier les plantes",
     await pg.locator("#detailEspace .outils-ligne").count()
       === await pg.locator("#detailEspace .ligne-espace").count()
-    && await pg.locator("#detailEspace .outils-ligne .qte").count() > 0);
+    && await pg.locator("#detailEspace .outils-ligne .retirer-lieu").count() > 0
+    && await pg.locator("#detailEspace .outils-ligne .qte").count() === 0);
   await pg.locator("#retourEspace").dispatchEvent("click");
   await pg.waitForTimeout(250);
   j.controle("le retour ramène aux tuiles",
