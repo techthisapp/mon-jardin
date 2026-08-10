@@ -5205,9 +5205,33 @@ function sectionZone(x) {
   d.open = zonesOuvertes.has(x.id);
   const n = plantesDuNoeud(x.id).length;
   const s = document.createElement("summary");
+  /* Renommer et supprimer touchent la zone elle-même : ils se tiennent auprès
+     de son nom, non au pied de ses plantes, où il fallait dérouler toute la
+     section pour les atteindre. Deux dessins plutôt que deux mots, la ligne
+     portant déjà le nom, le compte et la mesure. */
   s.innerHTML = `<b class="zone-nom">${esc(x.name)}</b><span class="nb">${n}</span>`
+    + `<span class="zone-actes">`
+    + `<button type="button" class="za-b" data-act="renommer" aria-label="Renommer ${esc(x.name)}">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5h15"/>`
+    + `<path d="M6 15.6l8.6-8.6 2.4 2.4-8.6 8.6H6z"/>`
+    + `<path d="M14.6 7 16.2 5.4a1.7 1.7 0 0 1 2.4 2.4L17 9.4"/></svg></button>`
+    + `<button type="button" class="za-b" data-act="supprimer" aria-label="Supprimer ${esc(x.name)}">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2"/>`
+    + `<path d="M6.5 7l1 12h9l1-12"/><path d="M10.5 10.5v6M13.5 10.5v6"/></svg></button>`
+    + `</span>`
     + `<span class="zone-mesure">${esc(mesureDuLieu(x))}</span>`;
   d.appendChild(s);
+  /* Un appui sur l'un des deux gestes ne doit pas déplier la section. Le
+     dépliage est le comportement d'activation du sommaire lui-même : il se
+     retire à la capture, avant que l'événement n'atteigne le bouton, et non
+     depuis le bouton où l'ordre de dispatch le laisse parfois passer. */
+  s.addEventListener("click", ev => {
+    const b = ev.target.closest(".za-b");
+    if (!b) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (b.dataset.act === "renommer") renommerEspace(x); else supprimerEspace(x);
+  }, true);
   d.addEventListener("toggle", () =>
     d.open ? zonesOuvertes.add(x.id) : zonesOuvertes.delete(x.id));
   const corps = document.createElement("div");
@@ -5215,13 +5239,6 @@ function sectionZone(x) {
   corps.appendChild(attributsDuLieu(x));
   corps.appendChild(ajoutAuLieu(x.id));
   corps.appendChild(corpsDuLieu(x.id));
-  const pied = document.createElement("div");
-  pied.className = "pied-zone";
-  pied.innerHTML = `<button class="lien" data-act="renommer">Renommer</button>`
-    + `<button class="lien" data-act="supprimer">Supprimer</button>`;
-  pied.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(x));
-  pied.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(x));
-  corps.appendChild(pied);
   d.appendChild(corps);
   return d;
 }

@@ -265,10 +265,29 @@ export default async function essai(navigateur) {
   const nonPlacees = net(await pg.locator('.tuile-espace[data-espace="0"] .tuile-nb').textContent());
   j.controle("la plante reste au jardin, sans lieu", nonPlacees === "1", nonPlacees);
 
-  j.section("supprimer une zone rend ses plantes à l'espace");
+  /* Renommer et supprimer touchent la zone elle-même : ils se tiennent auprès
+     de son nom et non au pied de ses plantes, où il fallait dérouler toute la
+     section pour les atteindre. */
+  j.section("les gestes de la zone se tiennent auprès de son nom");
   await ouvrirEspace(pg, "e1");
+  j.controle("le sommaire porte les deux gestes",
+    await zone(pg, "z1").locator('> summary .za-b').count() === 2);
+  j.controle("le pied de la zone ne les porte plus",
+    await pg.locator("#detailEspace .pied-zone").count() === 0);
+  /* La section garde son état d'un rendu à l'autre : la replier d'abord, pour
+     que l'appui sur un geste soit seul en cause. */
+  if (await zone(pg, "z1").evaluate(d => d.open)) {
+    await sommaireZone(pg, "z1").click();
+    await pg.waitForTimeout(250);
+  }
+  await zone(pg, "z1").locator('> summary [data-act="renommer"]').click();
+  await pg.waitForTimeout(300);
+  j.controle("l'appui sur un geste ne déplie pas la section",
+    !await zone(pg, "z1").evaluate(d => d.open));
+
+  j.section("supprimer une zone rend ses plantes à l'espace");
   await deplier(pg, "z1");
-  await zone(pg, "z1").locator('.pied-zone [data-act="supprimer"]').click();
+  await zone(pg, "z1").locator('> summary [data-act="supprimer"]').click();
   await pg.waitForTimeout(700);
   j.controle("la zone a disparu", await zone(pg, "z1").count() === 0);
   j.controle("le figuier est revenu sous Sans zone",

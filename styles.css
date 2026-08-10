@@ -2692,11 +2692,19 @@ input.rech-lieu:focus{background:#fff;border-style:solid}
 }
 .zone-espace[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
 .zone-nom{font-size:13.5px}
+/* Renommer et supprimer se tiennent auprès du nom de la zone. Deux dessins
+   plutôt que deux mots : la ligne porte déjà le nom, le compte et la mesure. */
+.zone-actes{display:inline-flex;gap:2px;margin-left:6px}
+.za-b{
+  border:0;background:none;cursor:pointer;padding:3px;line-height:0;
+  color:var(--encre-doux);border-radius:6px;
+}
+.za-b:active{background:rgba(22,36,30,.08)}
+.za-b svg{width:15px;height:15px;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .zone-mesure{font-size:11.5px;color:var(--encre-doux);margin-left:auto}
 .corps-zone{padding:2px 11px 10px}
 .corps-zone .rangs-lieu{border:0;border-radius:0}
-.pied-zone{display:flex;gap:12px;margin-top:8px}
-.pied-zone .lien{font-size:12px}
 .ajout-zone{margin-top:14px}
 
 /* La plante demande une exposition, le lieu en offre une autre : seul l'écart
