@@ -163,7 +163,16 @@ if (picto && ordre) {
   } else {
     const m = JSON.parse(readFileSync(chemin, "utf8"));
     const slugs = Object.keys(m);
-    const codes = [...new Set(Object.values(m).map(v => v[0]))].filter(c => !"mvkt".includes(c));
+    /* Les clés de fonds se lisent dans la table FONDS d'app.js : c'est elle qui
+       nomme l'ouvrage sous la fiche, et un code du manifeste qu'elle ignore
+       laisserait un crédit vide. */
+    const bloc = readFileSync(join(RACINE, "app.js"), "utf8")
+      .match(/const FONDS = \{([\s\S]*?)\n\};/);
+    const connus = new Set([...(bloc ? bloc[1] : "").matchAll(/^\s*([A-Za-z]+):/gm)].map(x => x[1]));
+    const finG = [...connus].filter(c => c.endsWith("g"));
+    if (finG.length) faute("planches", `clés de fonds finissant par g : ${finG.join(", ")}`);
+    const codes = [...new Set(Object.values(m).map(v => v.endsWith("g") ? v.slice(0, -1) : v))]
+      .filter(c => !connus.has(c));
     if (codes.length) faute("planches", `codes de fonds inconnus : ${codes.join(", ")}`);
     for (const d of ["liste", "fiche"]) {
       const manquants = slugs.filter(s => !existsSync(join(RACINE, "planches", d, s + ".webp")));

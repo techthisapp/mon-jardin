@@ -559,11 +559,49 @@ function info(msg, erreur = false, action = null) {
    site et mis en cache par l'agent de service. Son absence n'est pas une panne :
    aucune vignette n'apparaît, les rangées se referment. */
 let planches = {};
+/* Quatre ouvrages couvraient cent quatre-vingt-dix fiches. Les cent vingt-cinq
+   restantes, ornementales d'origine non européenne pour la plupart, ne sont
+   couvertes par aucun ouvrage unique : le fonds se nomme désormais par une clé
+   de plusieurs lettres, dont aucune ne se termine par un `g`, le `g` final
+   marquant la planche du genre. */
 const FONDS = {
-  m: "Masclef, Atlas des plantes de France, 1891",
-  v: "Vilmorin-Andrieux, Les plantes potagères, 1883",
   k: "Köhler, Medizinal-Pflanzen, 1887",
+  m: "Masclef, Atlas des plantes de France, 1891",
   t: "Thomé, Flora von Deutschland, 1885",
+  v: "Vilmorin-Andrieux, Les plantes potagères, 1883",
+  addis: "Addisonia",
+  afbee: "Afbeeldingen der fraaiste, meest uitheemsche boomen en heesters",
+  anbue: "Anales del Museo Nacional de Historia Natural de Buenos Aires",
+  antil: "Flore médicale des Antilles",
+  autre: "Wikimedia Commons, planche du domaine public",
+  batav: "Flora Batava",
+  beaut: "Beautiful Flowering Trees and Shrubs for British and Irish Gardens, 1903",
+  belgi: "La Belgique horticole",
+  besle: "Besler, Hortus Eystettensis, 1613",
+  blanc: "Blanco, Flora de Filipinas",
+  botgd: "The Botanic Garden, Maund, 1825",
+  bulbs: "Bulbs and tuberous-rooted plants, 1893",
+  canho: "The Canadian Horticulturist, 1893",
+  consp: "Flora Conspicua, 1826",
+  curtis: "Curtis's Botanical Magazine",
+  edwards: "Edwards's Botanical Register",
+  favo: "Favourite flowers of garden and greenhouse",
+  fragm: "Fragmenta botanica, figuris coloratis illustrata",
+  gand: "Annales de la Société royale d'agriculture et de botanique de Gand",
+  gramin: "Contribución al conocimiento de las Gramináceas argentinas",
+  grose: "Monographie du genre groseillier",
+  herna: "Hernández, Rerum medicarum Novae Hispaniae thesaurus, 1651",
+  indbo: "Illustrations of Indian Botany, 1840",
+  lindm: "Lindman, Bilder ur Nordens Flora",
+  millo: "Adolphe Millot, planches du Larousse",
+  natfl: "The Native Flowers and Ferns of the United States, 1879",
+  nypl: "New York Public Library, planche ancienne",
+  paxton: "Paxton's Magazine of Botany",
+  rosec: "The New Guide to Rose Culture, 1884",
+  serres: "Flore des serres et des jardins de l'Europe",
+  sieb: "Siebold et Zuccarini, Flora Japonica",
+  sturm: "Sturm, Deutschlands Flora in Abbildungen",
+  witte: "Witte, Flora, afbeeldingen",
 };
 const aPlanche = p => Boolean(planches[p.slug]);
 /* Vignette de planche, partout où une plante est nommée dans une liste. Elle
@@ -573,16 +611,18 @@ const aPlanche = p => Boolean(planches[p.slug]);
 const vignettePlanche = (p, classe) => aPlanche(p)
   ? `<span class="v-planche${classe ? " " + classe : ""}" data-pl="${esc(p.slug)}" aria-hidden="true"></span>`
   : "";
-/* La boîte reste réservée sans planche : cent vingt-cinq plantes sur trois cent
-   quinze n'en ont pas, et leur nom démarrait à une autre abscisse que celui de
-   leurs voisines. */
+/* La boîte reste réservée sans planche : six plantes sur trois cent quinze n'en
+   ont pas, et leur nom démarrait à une autre abscisse que celui de leurs
+   voisines. */
 const vignetteOuVide = (p, classe) => aPlanche(p) ? vignettePlanche(p, classe)
   : `<span class="v-planche v-vide${classe ? " " + classe : ""}" aria-hidden="true"></span>`;
 const plancheDuGenre = p => (planches[p.slug] || "").endsWith("g");
 const creditPlanche = p => {
   const c = planches[p.slug];
   if (!c) return "";
-  return FONDS[c[0]] + (c.endsWith("g") ? ", planche du genre" : "");
+  const genre = c.endsWith("g");
+  return (FONDS[genre ? c.slice(0, -1) : c] || FONDS.autre)
+    + (genre ? ", planche du genre" : "");
 };
 
 async function lirePlanches() {

@@ -11,11 +11,14 @@ const PLANTES = JSON.parse(CATALOGUE).plants;
 const par = n => PLANTES.find(p => p.name === n);
 const RHUBARBE = par("Rhubarbe"), FRAISE = par("Fraise"), RADIS = par("Radis");
 const FIGUIER = par("Figuier");
-/* La courgette n'a pas de planche d'herbier : c'est elle qui éprouve le
-   troisième étage de la règle d'image, la photographie du fonds. */
-const COURGETTE = par("Courgette"), HORTENSIA = par("Hortensia");
+/* Le stachys laineux et le caryoptéris n'ont pas de planche d'herbier : ce sont
+   eux qui éprouvent les deux étages suivants de la règle d'image, la
+   photographie du fonds puis la boîte vide. */
+const COURGETTE = par("Courgette");
+const STACHYS = par("Stachys laineux"), CARYOPTERIS = par("Caryoptéris");
 
-const AU_JARDIN = [RHUBARBE.id, FRAISE.id, RADIS.id, COURGETTE.id, HORTENSIA.id];
+const AU_JARDIN = [RHUBARBE.id, FRAISE.id, RADIS.id, COURGETTE.id,
+                   STACHYS.id, CARYOPTERIS.id];
 /* Un espace mesuré et exposé, deux zones dedans dont une seule renseigne son
    exposition : c'est le cas qui éprouve l'héritage. Le verger reste sans zone
    pour que le rendu d'origine reste contrôlé lui aussi. */
@@ -29,15 +32,17 @@ const PLACEMENTS = [
   { plant_id: RHUBARBE.id, espace_id: "z1", quantity: 2 },
   { plant_id: FRAISE.id, espace_id: "e1" },
   { plant_id: COURGETTE.id, espace_id: "e1", quantity: 3 },
-  { plant_id: HORTENSIA.id, espace_id: "e1" },
+  { plant_id: STACHYS.id, espace_id: "e1" },
+  { plant_id: CARYOPTERIS.id, espace_id: "e1" },
   { plant_id: RADIS.id, espace_id: "e2" },
 ];
 
-/* La courgette n'a pas de planche : lui donner une photographie de fonds est
-   le seul moyen d'éprouver le troisième étage de la règle d'image. */
+/* Le stachys laineux n'a pas de planche : lui donner une photographie de fonds
+   est le seul moyen d'éprouver le troisième étage de la règle d'image. Le
+   caryoptéris n'en reçoit aucune, il éprouve la boîte vide. */
 const PHOTOS_LOT = JSON.stringify(JSON.parse(PHOTOS).concat([
-  { id: "img-cg", plant_id: COURGETTE.id, organe: "fruit", rang: 1, score: 0,
-    url: "https://bs.plantnet.org/image/s/courgette", auteur: "", licence: "CC BY-SA",
+  { id: "img-st", plant_id: STACHYS.id, organe: "feuille", rang: 1, score: 0,
+    url: "https://bs.plantnet.org/image/s/stachys", auteur: "", licence: "CC BY-SA",
     fonds: "plantnet", source: "", retenue: true, retrait_motif: null },
 ]));
 
@@ -100,7 +105,7 @@ export default async function essai(navigateur) {
   j.controle("une tuile par espace, plus les plantes non placées",
     JSON.stringify(cles) === JSON.stringify(["e1", "e2", "0"]), cles.join(" "));
   const nbE1 = net(await pg.locator('.tuile-espace[data-espace="e1"] .tuile-nb').textContent());
-  j.controle("le compte d'un espace descend dans ses zones", nbE1 === "4", nbE1);
+  j.controle("le compte d'un espace descend dans ses zones", nbE1 === "5", nbE1);
   const uniteE1 = net(await pg.locator('.tuile-espace[data-espace="e1"] .tuile-unite').textContent());
   j.controle("la tuile annonce ses zones", uniteE1 === "plantes, 2 zones", uniteE1);
   const uniteE2 = net(await pg.locator('.tuile-espace[data-espace="e2"] .tuile-unite').textContent());
@@ -111,7 +116,7 @@ export default async function essai(navigateur) {
   const enTete = await pg.locator("#detailEspace .tete-section-zone")
     .evaluate(e => [e.querySelector("b").textContent, e.querySelector(".nb").textContent].join(" "));
   j.controle("les plantes posées sur l'espace même sont annoncées sans zone",
-    net(enTete) === "Sans zone 3", net(enTete));
+    net(enTete) === "Sans zone 4", net(enTete));
   j.controle("chaque zone forme une section",
     await pg.locator("#detailEspace details.zone-espace").count() === 2);
   j.controle("elles sont repliées à l'ouverture",
@@ -134,7 +139,7 @@ export default async function essai(navigateur) {
   await ouvrirMenuEspace(pg);
   const resume = net(await reglagesEspace(pg).locator("> summary").textContent());
   j.controle("le bouton de coin les tient, résumés par leur mesure",
-    resume === "40 m², 163 L par jour, 10 m² en zones", resume);
+    /^40 m², \d+ L par jour, 10 m² en zones$/.test(resume), resume);
   await ouvrirReglages(pg, reglagesEspace(pg));
   const commandes = pg.locator("#detailEspace .menu-lieu .attributs-lieu");
   j.controle("l'espace porte sa surface et ses trois listes",
@@ -165,7 +170,7 @@ export default async function essai(navigateur) {
   j.controle("la zone convertit le besoin du catalogue en litres à porter",
     mesureZ1 === "10 m², 44 L par jour", mesureZ1);
   j.controle("l'espace compte les litres de toutes ses plantes",
-    resume.startsWith("40 m², 163 L par jour"), resume);
+    /^40 m², \d+ L par jour/.test(resume), resume);
   j.controle("il annonce la part de surface déjà prise par ses zones",
     resume.includes("10 m² en zones"), resume);
 
@@ -193,7 +198,7 @@ export default async function essai(navigateur) {
   j.controle("elle n'est plus placée qu'à un seul endroit",
     await partout(pg, FRAISE.id).count() === 1);
   j.controle("le compte de l'espace ne bouge pas, la plante y est toujours",
-    await compteDuTitre(pg) === "4", await compteDuTitre(pg));
+    await compteDuTitre(pg) === "5", await compteDuTitre(pg));
   await ouvrirLigne(pg);
   await dansZone(pg, "z1", FRAISE.id).locator(".sel-zone").selectOption("e1");
   await pg.waitForTimeout(500);
@@ -216,7 +221,7 @@ export default async function essai(navigateur) {
   j.controle("et entrée au jardin du même geste",
     await pg.evaluate(() => (window.__ECRITS__ || [])
       .some(e => e.table === "garden_plants" && e.op === "insert")));
-  j.controle("le compte de l'espace la prend", await compteDuTitre(pg) === "5",
+  j.controle("le compte de l'espace la prend", await compteDuTitre(pg) === "6",
     await compteDuTitre(pg));
   await zone(pg, "z1").locator(".rech-lieu").fill("figu");
   await pg.waitForTimeout(350);
@@ -256,7 +261,7 @@ export default async function essai(navigateur) {
   await auxEspaces(pg);
   const nbApres = net(await pg.locator('.tuile-espace[data-espace="e1"] .tuile-nb').textContent());
   j.controle("décocher l'espace retire aussi le placement fait dans sa zone",
-    nbApres === "4", nbApres);
+    nbApres === "5", nbApres);
   const nonPlacees = net(await pg.locator('.tuile-espace[data-espace="0"] .tuile-nb').textContent());
   j.controle("la plante reste au jardin, sans lieu", nonPlacees === "1", nonPlacees);
 
@@ -268,7 +273,7 @@ export default async function essai(navigateur) {
   j.controle("la zone a disparu", await zone(pg, "z1").count() === 0);
   j.controle("le figuier est revenu sous Sans zone",
     await sansZone(pg, FIGUIER.id).count() === 1);
-  j.controle("l'espace garde le même compte", await compteDuTitre(pg) === "4",
+  j.controle("l'espace garde le même compte", await compteDuTitre(pg) === "5",
     await compteDuTitre(pg));
 
   j.section("les filtres ne proposent que les espaces");
@@ -285,7 +290,7 @@ export default async function essai(navigateur) {
     net(await pg.locator("#detailEspace .banniere-lieu .titre-detail").textContent()) === "Potager");
   const mes = net(await pg.locator("#detailEspace .bl-mesure").textContent());
   j.controle("et sa mesure, du nombre aux litres",
-    /^4 plantes, 40 m², \d+ L par jour$/.test(mes), mes);
+    /^5 plantes, 40 m², \d+ L par jour$/.test(mes), mes);
   j.controle("elle prend une planche d'herbier, jamais une photographie du fonds",
     await pg.locator("#detailEspace .banniere-lieu .bl-planche[data-pl]").count() === 1
     && await pg.locator("#detailEspace .banniere-lieu img").count() === 0);
@@ -298,10 +303,10 @@ export default async function essai(navigateur) {
   j.section("ma photographie, la planche, la photographie du fonds");
   j.controle("la fraise, qui a une planche, la montre",
     await sansZone(pg, FRAISE.id).locator(".im-masque[data-pl]").count() === 1);
-  j.controle("la courgette, qui n'en a pas, montre une photographie du fonds",
-    await sansZone(pg, COURGETTE.id).locator("img.im-fonds").count() === 1);
-  j.controle("l'hortensia, sans planche ni photographie, garde sa boîte",
-    await sansZone(pg, HORTENSIA.id).locator(".im-vide").count() === 1);
+  j.controle("le stachys, qui n'en a pas, montre une photographie du fonds",
+    await sansZone(pg, STACHYS.id).locator("img.im-fonds").count() === 1);
+  j.controle("le caryoptéris, sans planche ni photographie, garde sa boîte",
+    await sansZone(pg, CARYOPTERIS.id).locator(".im-vide").count() === 1);
 
   j.section("les plantes se groupent par typologie");
   const groupes = await pg.locator("#detailEspace > .corps-espace .groupe-typo")

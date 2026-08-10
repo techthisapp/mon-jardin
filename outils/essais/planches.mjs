@@ -16,20 +16,20 @@ export default async function essai(navigateur) {
     const r = await fetch("./planches.json");
     return r.ok ? Object.keys(await r.json()).length : 0;
   });
-  j.controle("il porte au moins cent quatre-vingts plantes", m >= 180, m);
+  j.controle("il porte au moins trois cents plantes", m >= 300, m);
 
   await ouvrirListeDesPlantes(pg);
 
   j.section("la vignette suit l'existence de la planche");
   j.controle("le thym porte une vignette",
     await rangee(pg, "Thym").locator(".v-planche:not(.v-vide)").count() === 1);
-  j.controle("l'hortensia n'a pas de planche, aucun fonds ne le couvre",
-    await rangee(pg, "Hortensia").locator(".v-planche:not(.v-vide)").count() === 0);
-  /* Cent vingt-cinq plantes sur trois cent quinze n'ont pas de planche : sans
-     boîte réservée, leur nom démarrait à une autre abscisse que celui de leurs
+  j.controle("le stachys laineux n'a pas de planche, aucun fonds ne le couvre",
+    await rangee(pg, "Stachys laineux").locator(".v-planche:not(.v-vide)").count() === 0);
+  /* Six plantes sur trois cent quinze n'ont pas de planche : sans boîte
+     réservée, leur nom démarrait à une autre abscisse que celui de leurs
      voisines et le bord gauche de la liste se hachait. */
   j.controle("sa boîte reste réservée, vide",
-    await rangee(pg, "Hortensia").locator(".v-planche.v-vide").count() === 1);
+    await rangee(pg, "Stachys laineux").locator(".v-planche.v-vide").count() === 1);
   const large = await pg.evaluate(() => {
     const e = document.querySelector('.item-bloc .v-planche');
     return e ? Math.round(e.getBoundingClientRect().width) : 0;
@@ -70,6 +70,15 @@ export default async function essai(navigateur) {
     !/planche du genre/.test(ident));
   await fermerFiche(pg);
 
+  j.section("le fonds se nomme au-delà des quatre lettres d'origine");
+  await ouvrirFiche(pg, "Hortensia");
+  await ongletIdentite(pg);
+  const hort = net(await pg.locator(".f-bloc", { hasText: "Identité" }).first().innerText());
+  j.controle("l'hortensia annonce son ouvrage en toutes lettres",
+    /Planche\s+Edwards's Botanical Register/.test(hort),
+    (hort.match(/Planche[^\n]{0,70}/) || [""])[0]);
+  await fermerFiche(pg);
+
   j.section("la planche du genre se signale");
   await ouvrirFiche(pg, "Rosier");
   await ongletIdentite(pg);
@@ -80,7 +89,7 @@ export default async function essai(navigateur) {
   await fermerFiche(pg);
 
   j.section("sans planche, l'entête garde son motif");
-  await ouvrirFiche(pg, "Hortensia");
+  await ouvrirFiche(pg, "Stachys laineux");
   j.controle("aucune planche", await pg.locator(".f-entete .f-planche").count() === 0);
   j.controle("le motif décoratif est là", await pg.locator(".f-entete .f-motif").count() === 1);
   const sans = net(await pg.locator(".f-pan-annee").innerText());
