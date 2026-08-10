@@ -20,7 +20,10 @@ porte un binôme latin, ce binôme doit s'accorder au genre de la fiche. C'est c
 contrôle qui avait démasqué une fleur de poireau sur la fiche carotte.
 
 Le troisième, l'oeil. Le programme n'écrit rien en base : il rend un fichier
-JSON, relu sur planche de contact avant chargement.
+JSON, relu sur planche de contact avant chargement. Ce que la relecture écarte
+est consigné dans commons-ecartes.json avec son motif, et n'est plus proposé :
+sans cette mémoire, une seconde passe remonte les mêmes graines sur papier
+millimétré et les mêmes étals de marché.
 
 Dépendances : opencv-python-headless, numpy.
 """
@@ -53,6 +56,14 @@ REJETS = re.compile(
     r"illustration|drawing|engraving|plate |lithograph|painting|"
     r"stamp|coin|logo|map |diagram|micrograph|microscop|"
     r"\.pdf$|\.svg$|\.tif$|\.tiff$|\.webm$|\.ogv$|\.gif$", re.I)
+
+# Les titres que la relecture a déjà écartés, avec leur motif. Sans cette
+# mémoire, une seconde passe repropose les mêmes graines sur papier millimétré
+# et les mêmes étals de marché : le classement les remonte, rien ne les retient.
+ECARTES = {}
+_f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "commons-ecartes.json")
+if os.path.exists(_f):
+    ECARTES = json.load(open(_f, encoding="utf-8"))
 
 verrou = threading.Lock()
 
@@ -185,7 +196,7 @@ def candidats(plante, organes):
             except Exception:
                 continue
             for t in lot:
-                if t in vus or REJETS.search(t):
+                if t in vus or t in ECARTES or REJETS.search(t):
                     continue
                 if not accord_de_genre(t, plante.get("genus")):
                     continue
@@ -200,7 +211,7 @@ def candidats(plante, organes):
         except Exception:
             lot = []
         for t in lot:
-            if t in vus or REJETS.search(t):
+            if t in vus or t in ECARTES or REJETS.search(t):
                 continue
             o = organe_de(os.path.splitext(t)[0])
             if o not in organes or not accord_de_genre(t, plante.get("genus")):

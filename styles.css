@@ -1573,6 +1573,11 @@ body.fige{overflow:hidden}
 .ph-bas{margin-top:14px;color:#C6D5CA;font-size:13px;line-height:1.5}
 .ph-bas b{color:#EFEFE8;font-weight:600}
 .ph-bas a{color:#EFEFE8}
+/* Le relevé du contrôle automatique, devant la personne qui juge. Il est
+   posé en retrait de l'attribution : c'est une suspicion, pas un fait. */
+.ph-controle{margin:10px 0 0;padding:7px 10px;border-left:2px solid #8A9A6B;
+  background:rgba(138,154,107,.14);color:#C6D5CA;font-size:12.5px;line-height:1.45;
+  border-radius:0 6px 6px 0}
 .ph-pts{display:flex;gap:6px;justify-content:center;margin-top:14px}
 .ph-pts i{width:6px;height:6px;border-radius:50%;background:rgba(239,239,232,.35)}
 .ph-pts i.ici{background:#EFEFE8}

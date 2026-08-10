@@ -6298,7 +6298,7 @@ async function photosDe(id) {
        images par organe, et les compteurs d'avis, la note de sélection et le
        verrou ne servent jamais à l'affichage. */
     const { data } = await db.from("plant_images")
-      .select("id,organe,rang,score,url,auteur,licence,fonds,source,retenue,retrait_motif")
+      .select("id,organe,rang,score,url,auteur,licence,fonds,source,retenue,retrait_motif,controle_motifs")
       .eq("plant_id", id);
     lot = data || [];
   } catch (e) { /* sans réseau la section reste absente */ }
@@ -6394,7 +6394,7 @@ function ouvrirPhoto(i, r) {
     + `<p class="ph-bas"><b>${esc(x.auteur || "auteur non renseigné")}</b><br>`
     + `${esc(fonds)}, sous licence ${esc(x.licence || "CC BY-SA")}`
     + (x.source ? `. <a href="${esc(x.source)}" target="_blank" rel="noopener">Voir la source</a>` : "")
-    + `</p>` + boutonsAvis(x)
+    + `</p>` + motifsControle(x) + boutonsAvis(x)
     /* La série de l'organe, en vignettes : on parcourt les autres fleurs d'un
        appui, sans avoir à deviner qu'un glissement vertical existe, et on juge
        celle qu'on regarde. Une pastille marque celles déjà jugées. */
@@ -6609,6 +6609,16 @@ brancherGlissementPhoto();
    Un seul des trois verdicts change ce qui est affiché. Les deux autres sont
    une note de qualité, qui vaut caution pour l'un et demande de remplacement
    pour l'autre. */
+
+/* Ce que le contrôle automatique a relevé au dernier audit, posé devant la
+   personne qui juge. Le contrôle est une suspicion et l'avis un verdict : il
+   ne décide de rien, il dit où regarder. La ligne ne paraît qu'à qui peut
+   juger, et seulement quand il y a quelque chose à dire. */
+function motifsControle(x) {
+  if (!session || !x.controle_motifs || !x.controle_motifs.length) return "";
+  return `<p class="ph-controle">Le contrôle signale : `
+    + esc(enumerer(x.controle_motifs, x.controle_motifs.length)) + `.</p>`;
+}
 
 function boutonsAvis(x) {
   if (!session || !x.id) return "";

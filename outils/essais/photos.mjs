@@ -318,6 +318,24 @@ export default async function essai(navigateur) {
   j.controle("aucun n'est retenu au départ",
     await pg.locator('.ph-avis [aria-pressed="true"]').count() === 0);
 
+  /* Le contrôle automatique a laissé son verdict sur la ligne. Il est posé
+     devant la personne qui juge, sans rien décider : c'est une suspicion,
+     l'avis est le verdict. */
+  const releve = net(await pg.locator(".ph-controle").textContent());
+  j.controle("le relevé du contrôle paraît sous l'attribution",
+    /^Le contrôle signale : /.test(releve), releve);
+  j.controle("il énumère les motifs de la ligne",
+    /image partagée avec la fiche voisine et pas de fleur lisible\.$/.test(releve), releve);
+  const placeReleve = await pg.evaluate(() => {
+    const c = document.querySelector(".ph-controle"), a = document.querySelector(".ph-avis");
+    const b = document.querySelector(".ph-bas");
+    return c && a && b
+      ? c.getBoundingClientRect().top > b.getBoundingClientRect().top
+        && c.getBoundingClientRect().top < a.getBoundingClientRect().top
+      : null;
+  });
+  j.controle("il se range entre l'attribution et les verdicts", placeReleve === true);
+
   await pg.locator('[data-avis="bonne"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
   j.controle("le verdict posé est marqué",
