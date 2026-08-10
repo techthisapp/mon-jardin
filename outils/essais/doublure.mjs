@@ -34,6 +34,14 @@ const TABLES = {
   observations: (window.__CARNET__ || []),
   observation_photos: (window.__PHOTOS_CARNET__ || []),
   cultures: (window.__CULTURES__ || []),
+  /* La vue ne garde qu'une image par plante et par organe, la mieux notée. */
+  vignettes_plante: (window.__PHOTOS__ || [])
+    .filter(i => i.retenue !== false && i.url)
+    .reduce((a, i) => {
+      if (!a.some(x => x.plant_id === i.plant_id && x.organe === i.organe))
+        a.push({ plant_id: i.plant_id, organe: i.organe, url: i.url });
+      return a;
+    }, []),
 };
 
 /* Le compartiment privé des photographies du jardinier, tenu en mémoire : les

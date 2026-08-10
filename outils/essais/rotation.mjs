@@ -3,7 +3,7 @@
    annuelle ou en bisannuelle. Les contrôles portent sur le panneau qui en rend
    compte, sur l'avertissement au moment de poser une plante, et sur les deux
    échappatoires : la saisie des années antérieures et la sourdine. */
-import { ouvrirContexte, journal, net, CATALOGUE } from "./commun.mjs";
+import { ouvrirContexte, journal, entrerEnEdition, net, CATALOGUE } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
 const par = n => PLANTES.find(p => p.name === n);
@@ -60,13 +60,6 @@ async function ouvrirCorrections(pg, id) {
   if (!await c.evaluate(d => d.open)) {
     await c.locator("summary").click();
     await pg.waitForTimeout(250);
-  }
-}
-
-async function ouvrirLigne(pg, ligne) {
-  if (!await ligne.evaluate(e => e.classList.contains("ligne-ouverte"))) {
-    await ligne.locator(".ouvrir-outils").click();
-    await pg.waitForTimeout(300);
   }
 }
 
@@ -167,7 +160,7 @@ export default async function essai(navigateur) {
     await rotation(pg, "z1").locator(".ro-rendre").count() === 1
     && await rotation(pg, "z1").locator(".ro-l").count() === 0);
   vus = [];
-  await ouvrirLigne(pg, zone(pg, "z1").locator(`.ligne-espace[data-plante="${TOMATE.id}"]`));
+  await entrerEnEdition(pg);
   await zone(pg, "z1").locator(`.ligne-espace[data-plante="${TOMATE.id}"] .retirer-lieu`).click();
   await pg.waitForTimeout(500);
   await poser(pg, "z1", "Tomate");

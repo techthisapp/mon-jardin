@@ -4,7 +4,7 @@
    lieu choisi, la règle qui refuse une entrée vide, et le passage des
    photographies par le compartiment privé, où rien ne s'atteint sans adresse
    signée. */
-import { ouvrirContexte, journal, ouvrirListeDesPlantes,
+import { ouvrirContexte, journal, ouvrirListeDesPlantes, entrerEnEdition,
          fermerFiche, ongletIdentite, net, CATALOGUE } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
@@ -65,13 +65,6 @@ async function ouvrirDepuisLaListe(pg, nom) {
   await pg.locator(`.item-bloc:has(.nom-l:text-is("${nom}")) .item`).first()
     .dispatchEvent("click");
   await pg.waitForTimeout(800);
-}
-
-async function ouvrirLigne(pg, ligne) {
-  if (!await ligne.evaluate(e => e.classList.contains("ligne-ouverte"))) {
-    await ligne.locator(".ouvrir-outils").click();
-    await pg.waitForTimeout(300);
-  }
 }
 
 async function deplierJournal(pg) {
@@ -200,7 +193,7 @@ export default async function essai(navigateur) {
     dim[0] === 240 && dim[1] === 176, dim.join(" par "));
 
   j.section("noter depuis la ligne d'une plante");
-  await ouvrirLigne(pg, pg.locator(`.ligne-espace[data-plante="${FRAISE.id}"]`).first());
+  await entrerEnEdition(pg);
   await pg.locator(`.ligne-espace[data-plante="${FRAISE.id}"] .noter-lieu`).first().click();
   await pg.waitForTimeout(400);
   j.controle("le formulaire s'ouvre sur le lieu de la plante",

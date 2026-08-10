@@ -219,6 +219,22 @@ export async function glisserSurFeuille(pg, x, yDepart, yArrivee, pas = 8, delai
   await pg.waitForTimeout(450);
 }
 
+/* L'écran d'un espace ne montre que ce qui se regarde : les gestes sur chaque
+   plante attendent derrière le bouton de coin, dans Modifier les plantes. */
+export async function ouvrirMenuEspace(pg) {
+  if (!await pg.locator("#detailEspace .menu-lieu").count()) {
+    await pg.locator("#menuEspace").click();
+    await pg.waitForTimeout(300);
+  }
+}
+
+export async function entrerEnEdition(pg) {
+  if (await pg.locator("#detailEspace .ligne-editee").count()) return;
+  await ouvrirMenuEspace(pg);
+  await pg.locator('.menu-lieu [data-act="editer"]').click();
+  await pg.waitForTimeout(400);
+}
+
 export async function ongletIdentite(pg) {
   await pg.locator('.f-onglets button[data-pan="identite"]').dispatchEvent("click");
   await pg.waitForTimeout(350);

@@ -8,7 +8,7 @@
    déplacement, seul endroit où un champ pourrait perdre son écouteur ou une
    ouverture suivante effacer le panneau. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirMonJardin,
-         ouvrirFiche, fermerFiche, net, CATALOGUE } from "./commun.mjs";
+         ouvrirFiche, fermerFiche, entrerEnEdition, net, CATALOGUE } from "./commun.mjs";
 
 /* Le jardin figé porte tout le catalogue et aucun espace : cette suite lui en
    donne deux et n'y met qu'une partie des plantes, seul moyen de contrôler à la
@@ -99,19 +99,19 @@ export default async function essai(navigateur) {
   j.controle("le détail porte le nom de l'espace",
     net(await pg.locator(".titre-detail").innerText()) === nomTuile,
     net(await pg.locator(".titre-detail").innerText()));
-  /* Une plante par ligne : la quantité se lit, les gestes se déplient. La note
-     du placement a été reprise par le journal daté. */
+  /* Une plante par ligne : la quantité se lit, les gestes attendent le mode
+     d'édition. La note du placement a été reprise par le journal daté. */
   j.controle("chaque plante tient sur une ligne, sa quantité lisible",
     await pg.locator("#detailEspace .ligne-espace").count() > 0
     && await pg.locator("#detailEspace .ligne-espace .qte-l").count()
        === await pg.locator("#detailEspace .ligne-espace").count()
     && await pg.locator("#detailEspace .ligne-espace .notes").count() === 0
     && await pg.locator("#detailEspace .outils-ligne").count() === 0);
-  await pg.locator("#detailEspace .ligne-espace .ouvrir-outils").first().click();
-  await pg.waitForTimeout(300);
-  j.controle("les gestes paraissent au dépli de la ligne",
-    await pg.locator("#detailEspace .outils-ligne").count() === 1
-    && await pg.locator("#detailEspace .outils-ligne .qte").count() === 1);
+  await entrerEnEdition(pg);
+  j.controle("les gestes paraissent en mode Modifier les plantes",
+    await pg.locator("#detailEspace .outils-ligne").count()
+      === await pg.locator("#detailEspace .ligne-espace").count()
+    && await pg.locator("#detailEspace .outils-ligne .qte").count() > 0);
   await pg.locator("#retourEspace").dispatchEvent("click");
   await pg.waitForTimeout(250);
   j.controle("le retour ramène aux tuiles",

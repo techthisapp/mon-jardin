@@ -55,6 +55,15 @@ const PH_NOM = { fleur: "fleur", feuille: "feuille", fruit: "fruit",
                  racine: "racine", port: "port", ecorce: "écorce" };
 const nomPlante = id => (plantes.find(p => p.id === id) || {}).nom;
 const photosPlante = new Map();   // les fiches déjà ouvertes ne redemandent pas
+/* Une vignette par plante et par organe, la meilleure retenue. L'organe montré
+   suit la typologie : le fruit pour un légume, la fleur pour un ornement. */
+let vignettes = new Map();
+const ORGANE_TYPO = {
+  "Légumes": ["fruit", "feuille", "fleur", "port"],
+  "Fruits": ["fruit", "fleur", "port", "feuille"],
+  "Aromatiques": ["feuille", "fleur", "port", "fruit"],
+  "Ornement": ["fleur", "port", "feuille", "fruit"],
+};
 /* Le journal du jardin. Les entrées sont chargées avec le reste du jardin,
    leurs photographies vivent dans un compartiment privé et ne s'atteignent que
    par une adresse signée, demandée au moment de l'affichage. */
@@ -841,7 +850,7 @@ async function chargerJardin() {
     jardins = []; jardinId = null; espaces = []; aff = new Map(); adapt = {};
     sel = new Set(); espaceChoisi = null; avisPhoto = new Map(); photosPlante.clear();
     carnet = []; photosCarnet.clear(); urlsPhoto.clear(); saisieCarnet = null;
-    saisieFiche = null; cultures = [];
+    saisieFiche = null; cultures = []; vignettes = new Map();
     majCompte(); majJardinUI(); construireChips(); rendreTout(); return;
   }
   /* Les avis de la personne masquent des photographies : ils sont chargés avant
@@ -887,6 +896,7 @@ async function chargerContenuJardin() {
     aff.get(r.plant_id).push(r);
   });
   if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
+  chargerVignettes();
   await lireEauDuJour(cle);
   await Promise.all([lireReleves(), lireStation(), lireVigilance()]);
   majCompte(); majJardinUI(); construireChips(); rendreTout();
@@ -4732,6 +4742,12 @@ const zonesOuvertes = new Set();
 // Les réglages d'un lieu et les gestes d'une plante, dépliés à la demande.
 const reglagesOuverts = new Set();
 const lignesOuvertes = new Set();
+let menuEspace = false;          // le panneau du bouton de coin
+let modeEdition = false;         // les gestes sur chaque plante
+const VUE_ESPACE = "monjardin.vue-espace";
+let vueEspace = "liste";
+try { vueEspace = localStorage.getItem(VUE_ESPACE) === "mosaique" ? "mosaique" : "liste"; }
+catch (e) { /* stockage indisponible */ }
 const GESTE_NOM = { semis: "Semis", plantation: "Plantation", taille: "Taille",
                     recolte: "Récolte", traitement: "Traitement", floraison: "Floraison",
                     maladie: "Maladie", note: "Note" };
@@ -4795,18 +4811,190 @@ function rendreTuilesEspaces(z) {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   L'écran d'un espace. Une bannière qui le nomme, ce qui s'y passe aujourd'hui,
+   puis ses plantes en liste ou en mosaïque. Les réglages et les gestes rares
+   attendent derrière le bouton de coin : on vient d'abord voir son jardin.
+   --------------------------------------------------------------------------- */
+
+async function chargerVignettes() {
+  const ids = [...sel];
+  if (!ids.length) { vignettes = new Map(); return; }
+  const { data } = await avecReprise(() => db.from("vignettes_plante")
+    .select("plant_id,organe,url").in("plant_id", ids));
+  const m = new Map();
+  (data || []).forEach(r => {
+    if (!m.has(r.plant_id)) m.set(r.plant_id, {});
+    m.get(r.plant_id)[r.organe] = r.url;
+  });
+  vignettes = m;
+  if (espaceOuvert !== null) rendreEspaces();
+}
+
+// La plus récente de mes photographies portant sur cette plante.
+function photoPerso(plantId) {
+  for (const e of carnet) {
+    if (e.plant_id !== plantId) continue;
+    const ph = photosCarnet.get(e.id);
+    if (ph && ph.length) return ph[0].chemin;
+  }
+  return null;
+}
+
+/* Ma photographie d'abord, la planche d'herbier ensuite, la photographie du
+   fonds en dernier. L'écran montre mon jardin, pas celui des autres, et ne cède
+   au fonds que faute de planche : cent vingt-cinq fiches n'en ont pas encore. */
+function imagePlante(p) {
+  const c = photoPerso(p.id);
+  if (c) return { genre: "perso", chemin: c };
+  if (aPlanche(p)) return { genre: "planche", slug: p.slug };
+  const v = vignettes.get(p.id) || {};
+  const ordre = ORGANE_TYPO[p.typo] || ORGANE_TYPO["Ornement"];
+  const o = ordre.find(x => v[x]) || Object.keys(v)[0];
+  return o ? { genre: "fonds", url: v[o] } : { genre: "vide" };
+}
+
+function imageHTML(p, classe) {
+  const i = imagePlante(p);
+  if (i.genre === "perso")
+    return `<img class="${classe} im-perso" data-chemin="${esc(i.chemin)}" alt="" loading="lazy">`;
+  if (i.genre === "planche" && classe === "im-t")
+    return `<img class="${classe} im-planche" src="./planches/fiche/${esc(i.slug)}.webp" alt="" loading="lazy">`;
+  if (i.genre === "planche")
+    return `<span class="${classe} im-masque v-planche" data-pl="${esc(i.slug)}" aria-hidden="true"></span>`;
+  if (i.genre === "fonds")
+    return `<img class="${classe} im-fonds" src="${esc(i.url)}" alt="" loading="lazy">`;
+  return `<span class="${classe} im-vide" aria-hidden="true"></span>`;
+}
+
+/* Ce qui se passe ici aujourd'hui, tiré du même calcul que l'écran du moment.
+   Les trois tâches les plus nombreuses suffisent à donner une raison d'ouvrir
+   l'écran un matin d'août. */
+// « Taille, entretien » tient mal sur une pastille : le premier mot suffit.
+function motDeLaTache(k) {
+  return String((phases[k] || {}).label || k).split(",")[0].trim().toLowerCase();
+}
+
+function momentDuLieu(cle) {
+  const lot = plantesDeLEspace(cle);
+  const par = [];
+  ORDRE_MAINTENANT.forEach(k => {
+    if (!phases[k]) return;
+    const n = lot.filter(p => actif(p, k) && !sourdineActive(p, k)).length;
+    if (n) par.push({ k, n, nom: motDeLaTache(k), couleur: teinteK(k) });
+  });
+  return par.sort((a, b) => b.n - a.n).slice(0, 3);
+}
+
+function momentDeLaPlante(p) {
+  const k = ORDRE_MAINTENANT.find(x => phases[x] && actif(p, x) && !sourdineActive(p, x));
+  return k ? { nom: motDeLaTache(k), couleur: teinteK(k) } : null;
+}
+
+/* Sous le nom d'une plante, la dernière chose que j'en ai notée. Rien plutôt
+   qu'un remplissage quand le journal est muet. */
+function sousLaPlante(p) {
+  const e = carnet.find(x => x.plant_id === p.id);
+  if (!e) return "";
+  if (e.geste === "recolte" && e.quantite)
+    return `${nombreFr(Number(e.quantite))} ${e.unite || ""} le ${jourEnClair(e.jour)}`.trim();
+  return `${GESTE_NOM[e.geste] || "notée"} le ${jourEnClair(e.jour)}`;
+}
+
+/* La bannière porte ma photographie du lieu dès qu'il en existe une, sinon la
+   planche d'herbier de la plante la plus présente. Jamais une photographie
+   sourcée : elle prétendrait montrer mon jardin. */
+function banniereDuLieu(zo, compte) {
+  const b = document.createElement("div");
+  b.className = "banniere-lieu";
+  const sous = [zo.id].concat(zonesDe(zo.id).map(x => x.id));
+  const entree = carnet.find(e => sous.includes(e.espace_id) && (photosCarnet.get(e.id) || []).length);
+  const photo = entree ? photosCarnet.get(entree.id)[0].chemin : null;
+  const avec = plantesDeLEspace(zo.id).filter(aPlanche);
+  /* Trois mesures suffisent sous le nom : le nombre, la surface, les litres.
+     L'exposition et le reste attendent derrière le bouton de coin. */
+  const mesure = [compte + (compte > 1 ? " plantes" : " plante"),
+    zo.surface_m2 ? nombreFr(Number(zo.surface_m2)) + " m²" : "",
+    litresDuJour(zo) ? nombreFr(litresDuJour(zo)) + " L par jour" : ""]
+    .filter(Boolean).join(", ");
+  b.innerHTML = (photo ? `<img class="bl-photo" data-chemin="${esc(photo)}" alt="">`
+      : avec.length ? `<span class="bl-planche v-planche" data-pl="${esc(avec[0].slug)}" aria-hidden="true"></span>` : "")
+    + `<button type="button" class="bl-rond bl-g" id="retourEspace" aria-label="Revenir aux espaces">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>`
+    + `<button type="button" class="bl-rond bl-d" id="menuEspace" aria-label="Réglages de l'espace"`
+    + ` aria-expanded="${menuEspace}"><svg viewBox="0 0 24 24" aria-hidden="true">`
+    + `<circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/>`
+    + `</svg></button>`
+    + `<div class="bl-texte"><h2 class="titre-detail">${esc(zo.name)}</h2>`
+    + `<p class="bl-mesure">${esc(mesure)}</p></div>`;
+  b.querySelector("#retourEspace").addEventListener("click", () => {
+    espaceOuvert = null; saisieCarnet = null; menuEspace = false; modeEdition = false;
+    rendreEspaces();
+  });
+  b.querySelector("#menuEspace").addEventListener("click", () => {
+    menuEspace = !menuEspace; rendreEspaces();
+  });
+  return b;
+}
+
+function menuDuLieu(zo) {
+  const d = document.createElement("div");
+  d.className = "menu-lieu";
+  d.innerHTML = `<div class="ml-gestes">`
+    + `<button type="button" class="lien" data-act="editer">`
+    + (modeEdition ? "Terminer" : "Modifier les plantes") + `</button>`
+    + `<button type="button" class="lien" data-act="renommer">Renommer</button>`
+    + `<button type="button" class="lien" data-act="supprimer">Supprimer</button></div>`;
+  d.querySelector('[data-act="editer"]').addEventListener("click", () => {
+    modeEdition = !modeEdition; menuEspace = false; rendreEspaces();
+  });
+  d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
+  d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
+  d.appendChild(attributsDuLieu(zo));
+  return d;
+}
+
+function ligneDuMoment(cle) {
+  const d = document.createElement("div");
+  d.className = "moment-lieu";
+  const lot = momentDuLieu(cle);
+  d.innerHTML = `<div class="ml-chips">`
+    + lot.map(x => `<span class="ml-c"><i style="background:${x.couleur}"></i>`
+      + `<b>${x.n}</b> ${esc(x.nom)}</span>`).join("")
+    + `</div><span class="ml-vue" role="group" aria-label="Affichage des plantes">`
+    + boutonVue("liste", `<path d="M4 7h16M4 12h16M4 17h16"/>`)
+    + boutonVue("mosaique", `<rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/>`
+      + `<rect x="4" y="13" width="7" height="7"/><rect x="13" y="13" width="7" height="7"/>`)
+    + `</span>`;
+  d.querySelectorAll(".ml-b").forEach(b => b.addEventListener("click", () => {
+    vueEspace = b.dataset.vue;
+    try { localStorage.setItem(VUE_ESPACE, vueEspace); } catch (e) { /* sans effet */ }
+    rendreEspaces();
+  }));
+  return d;
+}
+
+function boutonVue(vue, dessin) {
+  return `<button type="button" class="ml-b${vueEspace === vue ? " on" : ""}" data-vue="${vue}"`
+    + ` aria-pressed="${vueEspace === vue}" aria-label="${vue === "liste" ? "Liste" : "Mosaïque"}">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true">${dessin}</svg></button>`;
+}
+
 function rendreDetailEspace(z) {
   const zo = racines().find(x => x.id === espaceOuvert) || null;
-  const nom = zo ? zo.name : "Non placées";
   const membres = plantesDeLEspace(espaceOuvert);
   z.innerHTML = "";
-  z.appendChild(teteDuLieu(zo, nom, membres.length));
-  if (!zo) { z.appendChild(corpsDuLieu("0")); poserPlanches(z); return; }
-
-  z.appendChild(attributsDuLieu(zo));
+  if (!zo) {
+    z.appendChild(teteDuLieu(null, "Non placées", membres.length));
+    z.appendChild(corpsDuLieu("0"));
+    poserPlanches(z);
+    return;
+  }
+  z.appendChild(banniereDuLieu(zo, membres.length));
+  if (menuEspace) z.appendChild(menuDuLieu(zo));
   const rot = panneauRotation(zo);
   if (rot) z.appendChild(rot);
-  z.appendChild(ajoutAuLieu(zo.id));
+  z.appendChild(ligneDuMoment(zo.id));
   const zones = zonesDe(zo.id);
   if (zones.length) {
     const t = document.createElement("div");
@@ -4816,32 +5004,26 @@ function rendreDetailEspace(z) {
   }
   z.appendChild(corpsDuLieu(zo.id));
   zones.forEach(x => z.appendChild(sectionZone(x)));
+  z.appendChild(ajoutAuLieu(zo.id));
   z.appendChild(formulaireZone(zo));
   z.appendChild(sectionCarnet(zo));
   poserPlanches(z);
   poserPhotosCarnet(z);
 }
 
+// L'entête sans bannière, pour les plantes qui ne sont placées nulle part.
 function teteDuLieu(zo, nom, compte) {
   const tete = document.createElement("div");
   tete.className = "tete-detail";
   tete.innerHTML = `<button class="retour-espace" id="retourEspace" type="button" aria-label="Revenir aux espaces">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>`
-    + `<b class="titre-detail">${esc(nom)}</b><span class="nb">${compte}</span>`
-    + (zo ? `<button class="lien" data-act="renommer">Renommer</button>`
-          + `<button class="lien" data-act="supprimer">Supprimer</button>` : "");
+    + `<b class="titre-detail">${esc(nom)}</b><span class="nb">${compte}</span>`;
   tete.querySelector("#retourEspace").addEventListener("click",
     () => { espaceOuvert = null; saisieCarnet = null; rendreEspaces(); });
-  if (zo) {
-    tete.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
-    tete.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
-  }
   return tete;
 }
 
-/* Une zone se déplie sous son espace, sans troisième niveau de navigation :
-   son entête suffit à savoir ce qu'elle porte, son corps répète celui d'un
-   espace. */
+/* Une zone se déplie sous son espace, sans troisième niveau de navigation. */
 function sectionZone(x) {
   const d = document.createElement("details");
   d.className = "zone-espace";
@@ -4872,15 +5054,39 @@ function sectionZone(x) {
   return d;
 }
 
+/* Les plantes du lieu, groupées par typologie et rendues selon la vue choisie.
+   Un potager mêle un figuier, un rosier et des courgettes : les séparer rend la
+   liste lisible d'un coup d'oeil. */
 function corpsDuLieu(cle) {
   const corps = document.createElement("div");
   corps.className = "corps-espace";
   const membres = cle === "0" ? plantesDeLEspace("0") : plantesDuNoeud(cle);
-  membres.forEach(p => corps.appendChild(ligneDuLieu(p, cle)));
   if (!membres.length) {
     corps.innerHTML = cle === "0"
       ? '<p class="vide">Toutes vos plantes sont placées dans un espace.</p>'
-      : '<p class="vide">Aucune plante ici. Cherchez-la dans le catalogue, au-dessus.</p>';
+      : '<p class="vide">Aucune plante ici. Cherchez-la dans le catalogue, plus bas.</p>';
+    return corps;
+  }
+  const mosaique = vueEspace === "mosaique" && cle !== "0";
+  ORDRE_TYPO.forEach(typo => {
+    const lot = membres.filter(p => p.typo === typo);
+    if (!lot.length) return;
+    const t = document.createElement("div");
+    t.className = "groupe-typo";
+    t.innerHTML = `<i style="background:${COUL_TYPO[typo]}"></i><h3>${esc(typo)}</h3>`
+      + `<span class="nb">${lot.length}</span>`;
+    corps.appendChild(t);
+    const b = document.createElement("div");
+    b.className = mosaique ? "mosaique-lieu" : "rangs-lieu";
+    lot.forEach(p => b.appendChild(mosaique ? tuileDuLieu(p, cle) : ligneDuLieu(p, cle)));
+    corps.appendChild(b);
+  });
+  const reste = membres.filter(p => ORDRE_TYPO.indexOf(p.typo) === -1);
+  if (reste.length) {
+    const b = document.createElement("div");
+    b.className = mosaique ? "mosaique-lieu" : "rangs-lieu";
+    reste.forEach(p => b.appendChild(mosaique ? tuileDuLieu(p, cle) : ligneDuLieu(p, cle)));
+    corps.appendChild(b);
   }
   return corps;
 }
@@ -4894,36 +5100,45 @@ function ecartExposition(p, cle) {
   if (!e || !plage) return "";
   const r = EXPO_RANG[e];
   if (r >= plage[0] && r <= plage[1]) return "";
-  return `${p.nom} demande ${(EXPO_NOM[p.expo] || "").toLowerCase()}, `
-    + `ce lieu en offre ${r < plage[0] ? "plus" : "moins"}.`;
+  return `${(EXPO_NOM[e] || "").toLowerCase()} ici, `
+    + `${p.nom} demande ${(EXPO_NOM[p.expo] || "").toLowerCase()}`;
 }
 
-/* Une seule ligne par plante : son nom, ce qui cloche, sa quantité. Les gestes
-   se déplient dessous à la demande. Dix-huit plantes faisaient trente-six rangs
-   et une colonne de liens soulignés plus visible que les noms. */
+function tuileDuLieu(p, cle) {
+  const r = cle === "0" ? null : ((aff.get(p.id) || []).find(x => x.espace_id === cle) || {});
+  const m = momentDeLaPlante(p);
+  const t = document.createElement("button");
+  t.type = "button";
+  t.className = "tuile-plante";
+  t.dataset.plante = p.id;
+  t.innerHTML = imageHTML(p, "im-t")
+    + `<span class="tp-nom">${esc(p.nom)}</span>`
+    + `<span class="tp-haut">`
+    + (r && r.quantity != null ? `<i class="tp-q">${r.quantity}</i>` : "")
+    + (m ? `<i class="tp-m" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
+    + `</span>`;
+  t.addEventListener("click", () => ouvrirFeuille(p));
+  return t;
+}
+
 function ligneDuLieu(p, cle) {
   const r = cle === "0" ? null : ((aff.get(p.id) || []).find(x => x.espace_id === cle) || {});
   const gene = r ? ecartExposition(p, cle) : "";
-  const ouvert = lignesOuvertes.has(cle + "|" + p.id);
+  const m = momentDeLaPlante(p);
+  const sous = gene || sousLaPlante(p);
   const l = document.createElement("div");
-  l.className = "ligne-espace" + (ouvert ? " ligne-ouverte" : "");
+  l.className = "ligne-espace" + (modeEdition ? " ligne-editee" : "");
   l.dataset.plante = p.id;
-  l.innerHTML = `<button type="button" class="nom-espace">`
-    + vignetteOuVide(p, "v-pl-s") + `${esc(p.nom)}</button>`
-    + (gene ? `<span class="mal-expose" title="${esc(gene)}">`
-      + `${esc((EXPO_NOM[attribut(noeud(cle), "exposition")] || "").toLowerCase())}</span>` : "")
-    + (r ? `<span class="qte-l">${r.quantity == null ? "" : r.quantity}</span>`
-         + `<button type="button" class="ouvrir-outils" aria-expanded="${ouvert}"`
-         + ` aria-label="Gestes sur ${esc(p.nom)}"></button>`
+  l.innerHTML = `<button type="button" class="nom-espace">` + imageHTML(p, "im-r")
+    + `<span class="ne-t"><span class="ne-n">${esc(p.nom)}</span>`
+    + (sous ? `<span class="ne-s${gene ? " mal-expose" : ""}">${esc(sous)}</span>` : "")
+    + `</span></button>`
+    + (r ? (m ? `<span class="lp-m" style="background:${m.couleur}">${esc(m.nom)}</span>` : "")
+         + `<span class="qte-l">${r.quantity == null ? "" : r.quantity}</span>`
+         + `<span class="chev-l" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`
          : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
   l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
-  if (!r) return l;
-  l.querySelector(".ouvrir-outils").addEventListener("click", () => {
-    const c = cle + "|" + p.id;
-    lignesOuvertes.has(c) ? lignesOuvertes.delete(c) : lignesOuvertes.add(c);
-    rendreEspaces();
-  });
-  if (ouvert) l.appendChild(outilsDeLaLigne(p, cle, r));
+  if (r && modeEdition) l.appendChild(outilsDeLaLigne(p, cle, r));
   return l;
 }
 
@@ -4988,9 +5203,7 @@ function selectAttribut(zo, cle, noms, etiquette) {
 }
 
 /* Les quatre réglages d'un lieu se replient sous ce qu'ils produisent : la
-   surface, les litres du jour, la part prise par les zones. Quatre listes
-   ouvertes en tête d'écran donnaient un formulaire à remplir avant d'arriver
-   aux plantes. */
+   surface, les litres du jour, la part prise par les zones. */
 function attributsDuLieu(zo) {
   const d = document.createElement("details");
   d.className = "reglages-lieu";
@@ -5024,8 +5237,7 @@ function attributsDuLieu(zo) {
 
 /* La surface transforme le besoin du catalogue, exprimé en litres par jour et
    par mètre carré, en litres à porter. Les plantes sans calcul ne comptent
-   pas, comme partout ailleurs. La surface ne s'hérite pas : elle s'additionne.
-*/
+   pas. La surface ne s'hérite pas : elle s'additionne. */
 function litresDuJour(zo) {
   const s = Number(zo.surface_m2 || 0);
   if (!s) return null;
@@ -5097,6 +5309,7 @@ async function ajouterAuLieu(plantId, cle) {
     if (error) { info("Plante non ajoutée : " + error.message, true); return; }
     sel.add(plantId);
     majCompte();
+    chargerVignettes();
   }
   if (!await placerSur(plantId, cle, true)) return;
   construireChips(); rendreTout();

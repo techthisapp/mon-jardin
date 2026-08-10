@@ -633,15 +633,7 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .tete-espace b{font-size:13.5px}
 .tete-espace .lien{margin-left:auto;font-size:12px}
 .tete-espace .lien+.lien{margin-left:0}
-.corps-espace{padding:6px 10px 10px}
-.ligne-espace{display:flex;align-items:center;gap:6px;padding:4px 0}
-.nom-espace{flex:1;font-size:13px}
-.ligne-espace .qte{width:64px}
-.ligne-espace .notes{flex:2;min-width:80px}
-.ligne-espace input{
-  font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;
-}
+.corps-espace{padding:0}
 
 .niv-protection{background:#FDF0DC;border-color:#E0B978;color:#8A5A12}
 .niv-abri{background:#FCE7E3;border-color:#E3A99E;color:#8C3A2A}
@@ -776,14 +768,6 @@ main{
 .ligne-reglage select,.ligne-reglage input{flex:1 1 170px;min-width:0;max-width:300px}
 .ligne-reglage .lien{flex:0 0 auto}
 .aide-reglage{font-size:12.5px;color:#6B665D;line-height:1.5;margin:8px 0 0}
-
-/* ---------- Espaces : une plante par ligne ---------- */
-.ligne-espace{
-  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-  padding:6px 0;border-top:1px solid var(--filet-clair);
-}
-.corps-espace .ligne-espace:first-child{border-top:0}
-.nom-espace{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:500;text-align:left}
 
 @media (min-width:560px){
   .etiq-reglage{flex:0 0 118px}
@@ -2474,10 +2458,135 @@ select:focus{
 .tete-detail .lien:first-of-type{margin-left:auto}
 .hors-espace{font-size:12px;color:var(--encre-doux)}
 
-/* ---------- Attributs d'un lieu, zones d'un espace ---------- */
+/* ---------- Écran d'un espace ---------- */
 
-/* Les réglages se replient sous ce qu'ils produisent : la ligne visible porte
-   la surface et les litres, les quatre commandes attendent dessous. */
+/* La bannière nomme le lieu sur l'encre du jardin, avec la planche d'herbier
+   de sa plante la plus présente, ou ma photographie dès qu'il en existe une. */
+.banniere-lieu{
+  position:relative;height:132px;background:var(--encre);overflow:hidden;
+  display:flex;align-items:flex-end;border-radius:var(--rayon);margin-top:2px;
+}
+.bl-planche{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  width:150px;height:150px;opacity:.42;background:#EDEFE8;
+}
+.bl-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.banniere-lieu::before{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,var(--encre) 42%,rgba(22,36,30,0));
+}
+.banniere-lieu:has(.bl-photo)::before{
+  background:linear-gradient(transparent 30%,rgba(12,22,17,.82));
+}
+.bl-texte{position:relative;z-index:1;padding:14px 16px}
+.bl-texte .titre-detail{margin:0;font:600 21px/1.2 "IBM Plex Sans",sans-serif;color:var(--papier)}
+.bl-mesure{margin:3px 0 0;font-size:12.5px;color:rgba(244,243,238,.74)}
+.bl-rond{
+  position:absolute;z-index:2;top:12px;width:32px;height:32px;border-radius:50%;
+  border:0;background:rgba(255,255,255,.92);display:grid;place-items:center;cursor:pointer;
+  color:var(--encre);
+}
+.bl-g{left:12px}.bl-d{right:12px}
+.bl-rond svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.bl-d svg{fill:currentColor;stroke:none}
+
+/* Le panneau du bouton de coin : les gestes rares et les quatre réglages. */
+.menu-lieu{
+  margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #E3E0D9;
+  border-radius:var(--rayon);
+}
+.ml-gestes{display:flex;flex-wrap:wrap;gap:14px}
+.ml-gestes .lien{font-size:12.5px}
+
+/* Ce qui se passe ici aujourd'hui, et la bascule d'affichage au bout. */
+.moment-lieu{display:flex;align-items:center;gap:8px;margin:12px 0 2px}
+.ml-chips{flex:1 1 auto;min-width:0;display:flex;gap:7px;overflow-x:auto;
+  scrollbar-width:none;padding:1px 0}
+.ml-chips::-webkit-scrollbar{display:none}
+.ml-c{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;
+  padding:6px 11px;border-radius:999px;background:#fff;border:1px solid var(--filet);
+  box-shadow:var(--ombre);white-space:nowrap;
+}
+.ml-c i{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+.ml-c b{font-weight:600}
+.ml-vue{
+  margin-left:auto;flex:0 0 auto;display:inline-flex;border:1px solid var(--filet);
+  border-radius:999px;background:#fff;padding:2px;
+}
+.ml-b{
+  width:32px;height:26px;border:0;border-radius:999px;background:none;cursor:pointer;
+  display:grid;place-items:center;padding:0;
+}
+.ml-b.on{background:var(--encre)}
+.ml-b svg{width:15px;height:15px;fill:none;stroke:var(--encre-doux);stroke-width:1.8;
+  stroke-linecap:round}
+.ml-b.on svg{stroke:var(--papier)}
+
+/* Un groupe par typologie, dans la couleur que l'application emploie ailleurs. */
+.groupe-typo{display:flex;align-items:baseline;gap:8px;margin:15px 0 6px}
+.groupe-typo i{width:7px;height:7px;border-radius:50%;flex:0 0 7px;align-self:center}
+.groupe-typo h3{margin:0;font:600 13px/1 "IBM Plex Sans",sans-serif}
+.groupe-typo .nb{font-size:11.5px}
+
+.rangs-lieu{background:#fff;border:1px solid #E3E0D9;border-radius:var(--rayon);overflow:hidden}
+.ligne-espace{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+  padding:8px 11px;border-top:1px solid var(--filet-clair);
+}
+.rangs-lieu .ligne-espace:first-child{border-top:0}
+.nom-espace{
+  flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;
+  font-size:13.5px;font-weight:500;text-align:left;
+}
+.ne-t{display:flex;flex-direction:column;min-width:0}
+.ne-n{line-height:1.25}
+.ne-s{font-size:11.5px;font-weight:400;color:var(--encre-doux);line-height:1.3}
+.im-r{width:44px;height:44px;flex:0 0 44px;border-radius:9px;object-fit:cover;display:block}
+.im-r.im-masque{border-radius:0;background:var(--encre);opacity:.8}
+.im-r.im-vide{background:rgba(22,36,30,.05)}
+.lp-m{font-size:11px;color:#fff;border-radius:999px;padding:2px 8px}
+.qte-l{font-size:12.5px;color:var(--encre-doux);min-width:12px;text-align:right}
+.chev-l{display:grid;place-items:center;width:16px;color:var(--filet)}
+.chev-l svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+
+.mosaique-lieu{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tuile-plante{
+  display:block;position:relative;padding:0;border:1px solid #E3E0D9;
+  border-radius:var(--rayon);background:#fff;overflow:hidden;cursor:pointer;
+  font-family:inherit;color:var(--encre);text-align:left;
+}
+.im-t{display:block;width:100%;height:104px;object-fit:cover;background:#F7F5F0}
+.im-t.im-planche{object-fit:contain;padding:6px;background:#fff}
+.im-t.im-vide{background:rgba(22,36,30,.04)}
+.tp-nom{display:block;font-size:13.5px;font-weight:500;padding:8px 10px 9px;line-height:1.25}
+.tp-haut{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:5px;align-items:center}
+.tp-q{
+  font-style:normal;font-size:11.5px;font-weight:600;background:rgba(255,255,255,.92);
+  border-radius:999px;padding:2px 8px;
+}
+.tp-m{font-style:normal;font-size:11px;color:#fff;border-radius:999px;padding:2px 8px;margin-left:auto}
+
+/* Les gestes d'une plante ne paraissent qu'en mode Modifier les plantes. */
+.outils-ligne{
+  flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  padding:8px 0 4px 54px;
+}
+.ol-q{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--encre-doux)}
+.outils-ligne .qte{
+  width:72px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.outils-ligne .sel-zone{
+  max-width:150px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.outils-ligne .lien{font-size:12px}
+.outils-ligne .retirer-lieu{margin-left:auto}
+
+/* Réglages repliés sous ce qu'ils produisent. */
 .reglages-lieu{margin:6px 0 2px}
 .reglages-lieu>summary{
   display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer;
@@ -2490,31 +2599,23 @@ select:focus{
   transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
 }
 .reglages-lieu[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
-.attributs-lieu{
-  display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;
-  padding:2px 0 10px;
-}
+.attributs-lieu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:2px 0 6px}
 .att-l{display:inline-flex;align-items:center;gap:5px}
-.att-e{font-size:12px;color:var(--encre-doux)}
-.att-u{font-size:12px;color:var(--encre-doux)}
+.att-e,.att-u{font-size:12px;color:var(--encre-doux)}
 .att{
   font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:5px 7px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
-  max-width:180px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);max-width:180px;
 }
 .att-surface{width:76px}
 
-/* Recherche au catalogue depuis le lieu : le champ tient la largeur, les
-   propositions se posent dessous et disparaissent au choix. */
-.ajout-plante{margin:10px 0 4px}
-/* Le champ porte son type dans le sélecteur : sans lui, la règle générale des
-   champs de recherche l'emporte et le rend gris et sans bord, ce qui le fait
-   lire comme désactivé. */
+/* Recherche au catalogue, en pied d'écran : on ajoute après avoir regardé. */
+.ajout-plante{margin:16px 0 4px}
 input.rech-lieu{
-  width:100%;font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:9px 11px;
-  border:1px solid var(--filet);border-radius:8px;background:#fff;color:var(--encre);
+  width:100%;font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:10px 12px;
+  border:1px dashed #C9C4B8;border-radius:var(--rayon);background:transparent;color:var(--encre);
 }
-input.rech-lieu::placeholder{color:#8C8779}
+input.rech-lieu::placeholder{color:var(--encre-doux)}
+input.rech-lieu:focus{background:#fff;border-style:solid}
 .props-lieu{
   display:flex;flex-direction:column;margin-top:6px;
   border:1px solid #E3E0D9;border-radius:8px;background:#fff;overflow:hidden;
@@ -2528,19 +2629,17 @@ input.rech-lieu::placeholder{color:#8C8779}
 .prop-nom{flex:1}
 .prop-neuf{font-size:11.5px;color:var(--encre-doux)}
 .props-lieu .vide{margin:0;padding:8px 10px;font-size:12.5px}
+.corps-espace .v-planche.v-vide,.props-lieu .v-planche.v-vide{background:none}
 
 /* Les plantes posées sur l'espace lui-même, avant ses zones. */
 .tete-section-zone{
-  display:flex;align-items:center;gap:8px;margin:14px 0 0;
-  font-size:13px;font-weight:600;
+  display:flex;align-items:center;gap:8px;margin:14px 0 0;font-size:13px;font-weight:600;
 }
 .tete-section-zone .nb{font-size:11px}
 
-/* Une zone se déplie sous son espace. Le repère triangulaire natif est
-   remplacé par un chevron qui pivote, comme ailleurs dans l'application. */
+/* Une zone se déplie sous son espace. */
 .zone-espace{
-  border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;
-  overflow:hidden;
+  border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;overflow:hidden;
 }
 .zone-espace>summary{
   display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;
@@ -2556,41 +2655,14 @@ input.rech-lieu::placeholder{color:#8C8779}
 .zone-nom{font-size:13.5px}
 .zone-mesure{font-size:11.5px;color:var(--encre-doux);margin-left:auto}
 .corps-zone{padding:2px 11px 10px}
+.corps-zone .rangs-lieu{border:0;border-radius:0}
 .pied-zone{display:flex;gap:12px;margin-top:8px}
 .pied-zone .lien{font-size:12px}
 .ajout-zone{margin-top:14px}
 
-/* Dans la liste d'un lieu, la boîte réservée reste invisible : la rangée n'a
-   pas de fond de carte sur lequel un aplat se justifierait. */
-.corps-espace .v-planche.v-vide,.props-lieu .v-planche.v-vide{background:none}
-
-/* Les gestes d'une plante, dépliés sous sa ligne. */
-.ouvrir-outils{
-  flex:0 0 26px;height:26px;display:grid;place-items:center;
-  border:0;background:none;cursor:pointer;padding:0;
-}
-.ouvrir-outils::after{
-  content:"";width:7px;height:7px;
-  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
-  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
-}
-.ligne-ouverte .ouvrir-outils::after{transform:rotate(-135deg) translate(-2px,-2px)}
-.qte-l{font-size:12.5px;color:var(--encre-doux);margin-left:auto;min-width:14px;text-align:right}
-.outils-ligne{
-  flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-  padding:8px 0 4px 30px;
-}
-.ol-q{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--encre-doux)}
-.outils-ligne .qte{
-  width:72px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
-}
-.outils-ligne .sel-zone{
-  max-width:150px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
-}
-.outils-ligne .lien{font-size:12px}
-.outils-ligne .retirer-lieu{margin-left:auto}
+/* La plante demande une exposition, le lieu en offre une autre : seul l'écart
+   se signale, dans l'encre des avertissements de culture. */
+.mal-expose{color:#8A5A12}
 
 /* ---------- Rotation des cultures ---------- */
 
