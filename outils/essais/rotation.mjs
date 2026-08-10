@@ -34,7 +34,8 @@ const CULTURES = [
 ];
 
 const zone = (pg, id) => pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"]`);
-const rotation = (pg, id) => zone(pg, id).locator(".rotation-lieu");
+const reglages = (pg, id) => zone(pg, id).locator(".reglages-lieu");
+const rotation = (pg, id) => reglages(pg, id).locator(".rotation-lieu");
 const ligne = (pg, id, f) => rotation(pg, id).locator(`.ro-l[data-famille="${f}"]`);
 /* La croix de retrait fait partie de la pastille : la lire avec l'année
    mêlerait le geste au fait. */
@@ -54,6 +55,12 @@ async function ouvrirEspace(pg) {
 async function deplier(pg, id) {
   if (!await zone(pg, id).evaluate(d => d.open)) {
     await pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"] > summary`).click();
+    await pg.waitForTimeout(250);
+  }
+  /* La rotation est un réglage du lieu : elle vit dans ce bloc, replié comme
+     lui. L'essai fait le même geste que le doigt. */
+  if (!await reglages(pg, id).evaluate(d => d.open)) {
+    await reglages(pg, id).locator("> summary").click();
     await pg.waitForTimeout(250);
   }
 }
@@ -101,9 +108,16 @@ export default async function essai(navigateur) {
     await pg.locator("#menuEspace.bl-pastille").count() === 1);
   await pg.locator("#menuEspace").dispatchEvent("click");
   await pg.waitForTimeout(300);
-  j.controle("le menu porte le panneau de l'espace",
-    await pg.locator("#detailEspace .menu-lieu .rotation-lieu").count() === 1);
-  const surEspace = net(await pg.locator("#detailEspace .menu-lieu .rotation-lieu .ro-l")
+  j.controle("le menu ne porte pas la rotation à découvert",
+    await pg.locator("#detailEspace .menu-lieu > .rotation-lieu").count() === 0);
+  const reglagesEspace = pg.locator("#detailEspace .menu-lieu .reglages-lieu");
+  j.controle("le résumé des réglages porte le même signal",
+    await reglagesEspace.locator("> summary .rl-attend").count() === 1);
+  await reglagesEspace.locator("> summary").click();
+  await pg.waitForTimeout(300);
+  j.controle("les réglages du lieu portent le panneau",
+    await reglagesEspace.locator(".rotation-lieu").count() === 1);
+  const surEspace = net(await reglagesEspace.locator(".rotation-lieu .ro-l")
     .first().textContent());
   /* L'année saisie à la main porte sa croix de retrait : la lire avec l'année
      mêlerait le geste au fait, elle est retirée avant la comparaison. */
@@ -128,9 +142,24 @@ export default async function essai(navigateur) {
   j.controle("une famille sans règle ne promet rien",
     net(await ligne(pg, "z1", "Lamiaceae").locator(".ro-etat").textContent())
       === "sans règle de retour");
-  j.controle("seule l'année saisie à la main se retire",
-    await ligne(pg, "z1", "Solanaceae").locator(".ro-saisi").count() === 1
-    && await ligne(pg, "z1", "Solanaceae").locator(".ro-a").count() === 2);
+  /* Toute année se retire, celle qu'un déclencheur a écrite comme celle qu'on a
+     saisie : une plante arrachée le lendemain de sa plantation laisse une trace
+     qui n'apprend rien. La saisie à la main se distingue encore. */
+  j.controle("chaque année porte sa croix de retrait",
+    await ligne(pg, "z1", "Solanaceae").locator(".ro-a").count() === 2
+    && await ligne(pg, "z1", "Solanaceae").locator(".ro-oter").count() === 2);
+  j.controle("celle qui vient de la main se distingue",
+    await ligne(pg, "z1", "Solanaceae").locator(".ro-saisi").count() === 1);
+  /* Le retrait porte sur la famille et l'année : deux tomates posées la même
+     année écrivent deux lignes, n'en effacer qu'une laisserait l'année en
+     place. La lamiacée est retirée ici, aucune suite ne l'attend. */
+  await ligne(pg, "z1", "Lamiaceae").locator(".ro-oter").click();
+  await pg.waitForTimeout(600);
+  j.controle("retirer l'année d'un déclencheur emporte la famille",
+    await ligne(pg, "z1", "Lamiaceae").count() === 0);
+  const efface = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "cultures" && e.op === "delete").length);
+  j.controle("la suppression passe bien en base", efface === 1, String(efface));
 
   j.section("l'avertissement au moment de poser la plante");
   vus = []; reponse = "refuser";

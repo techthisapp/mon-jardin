@@ -5113,13 +5113,11 @@ function menuDuLieu(zo) {
   });
   d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
   d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
-  d.appendChild(attributsDuLieu(zo));
   /* La rotation tenait six lignes en tête d'écran, en permanence, alors qu'elle
      ne sert qu'au moment de poser une plante, où l'avertissement se déclenche
-     de lui-même. Elle rejoint le menu ; une pastille sur le bouton de coin dit
-     qu'une famille est encore bloquée, ce qui la garde à un appui. */
-  const rot = panneauRotation(zo);
-  if (rot) d.appendChild(rot);
+     de lui-même. Elle est rangée dans les réglages du lieu, et une pastille sur
+     le bouton de coin dit qu'une famille est encore bloquée. */
+  d.appendChild(attributsDuLieu(zo));
   return d;
 }
 
@@ -5215,8 +5213,6 @@ function sectionZone(x) {
   const corps = document.createElement("div");
   corps.className = "corps-zone";
   corps.appendChild(attributsDuLieu(x));
-  const rotZ = panneauRotation(x);
-  if (rotZ) corps.appendChild(rotZ);
   corps.appendChild(ajoutAuLieu(x.id));
   corps.appendChild(corpsDuLieu(x.id));
   const pied = document.createElement("div");
@@ -5388,9 +5384,14 @@ function attributsDuLieu(zo) {
     d.open ? reglagesOuverts.add(zo.id) : reglagesOuverts.delete(zo.id));
   const mesure = mesureDuLieu(zo);
   const s = document.createElement("summary");
-  // L'entête d'une zone porte déjà sa mesure : la répéter ici ne dirait rien.
+  /* L'entête d'une zone porte déjà sa mesure : la répéter ici ne dirait rien.
+     Une famille qui n'est pas encore libre de revenir se dit par une pastille,
+     le panneau de rotation étant rangé dans ce bloc et fermé la plupart du
+     temps. */
   s.innerHTML = `<span class="rl-resume">${esc(!mesure ? "Préciser la surface et l'exposition"
-    : zo.parent_id ? "Réglages du lieu" : mesure)}</span>`;
+    : zo.parent_id ? "Réglages du lieu" : mesure)}</span>`
+    + (rotationBloquee(zo.id) ? `<span class="rl-attend" aria-label="Une famille attend son`
+      + ` tour de rotation"></span>` : "");
   d.appendChild(s);
   const corps = document.createElement("div");
   corps.className = "attributs-lieu";
@@ -5408,6 +5409,10 @@ function attributsDuLieu(zo) {
     majLieu(zo, { surface_m2: v && v > 0 ? v : null });
   });
   d.appendChild(corps);
+  /* La rotation est un réglage du lieu : elle vit dans ce bloc, replié comme
+     lui, et non dans le fil de lecture des plantes. */
+  const rot = panneauRotation(zo);
+  if (rot) d.appendChild(rot);
   return d;
 }
 
@@ -5564,13 +5569,16 @@ function panneauRotation(zo) {
   d.innerHTML = `<b class="ro-titre">Rotation</b>`
     + lot.map(x => `<p class="ro-l" data-famille="${esc(x.famille)}">`
       + `<span class="ro-f">${esc(nomFamille(x.famille))}</span>`
-      + x.annees.map(a => {
-          const m = x.lignes.find(l => l.annee === a && l.saisi);
-          return m ? `<span class="ro-a ro-saisi">${a}`
-            + `<button type="button" class="ro-oter" data-ligne="${esc(m.id)}"`
-            + ` aria-label="Retirer ${a}">×</button></span>`
-            : `<span class="ro-a">${a}</span>`;
-        }).join("")
+      /* Toute année se retire, celle qu'un déclencheur a écrite comme celle
+         qu'on a saisie. Une plante arrachée le lendemain de sa plantation a
+         laissé une trace qui n'apprend rien, et rien ne permettait de
+         l'effacer. Le retrait emporte les lignes de la famille pour cette
+         année, plusieurs plantes d'une même famille en écrivant une chacune. */
+      + x.annees.map(a => `<span class="ro-a${x.lignes.some(l => l.annee === a && l.saisi)
+            ? " ro-saisi" : ""}">${a}`
+          + `<button type="button" class="ro-oter" data-famille="${esc(x.famille)}"`
+          + ` data-annee="${a}" aria-label="Retirer ${nomFamille(x.famille)} en ${a}">×</button>`
+          + `</span>`).join("")
       + (x.attendre ? `<span class="ro-etat ro-attendre">pas avant ${x.libre}</span>`
         : x.delai ? `<span class="ro-etat">libre</span>`
         : `<span class="ro-etat">sans règle de retour</span>`)
@@ -5585,7 +5593,8 @@ function panneauRotation(zo) {
     + `<button class="lien" type="submit">Ajouter</button>`
     + `<button type="button" class="lien ro-taire">Ne plus afficher</button></form></details>`;
   d.querySelectorAll(".ro-oter").forEach(b =>
-    b.addEventListener("click", () => retirerCulture(b.dataset.ligne)));
+    b.addEventListener("click", () => retirerCulture(zo.id, b.dataset.famille,
+      Number(b.dataset.annee))));
   d.querySelector(".ro-taire").addEventListener("click",
     () => majLieu(zo, { rotation_muette: true }));
   d.querySelector(".ro-ajout").addEventListener("submit", ev => {
@@ -5606,10 +5615,15 @@ async function ajouterCulture(zo, famille, annee) {
   rendreEspaces();
 }
 
-async function retirerCulture(id) {
-  const { error } = await db.from("cultures").delete().eq("id", id);
+/* Le retrait porte sur la famille et l'année, non sur une ligne : deux tomates
+   posées la même année en écrivent deux, et n'en effacer qu'une laisserait
+   l'année en place sans que rien ne le dise. */
+async function retirerCulture(cle, famille, annee) {
+  const { error } = await db.from("cultures").delete()
+    .eq("espace_id", cle).eq("famille", famille).eq("annee", annee);
   if (error) { info("Suppression refusée : " + error.message, true); return; }
-  cultures = cultures.filter(c => c.id !== id);
+  cultures = cultures.filter(c =>
+    !(c.espace_id === cle && c.famille === famille && c.annee === annee));
   rendreEspaces();
 }
 
