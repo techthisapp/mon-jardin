@@ -49,8 +49,24 @@ async function ouvrirEspace(pg) {
 
 async function deplier(pg, id) {
   if (!await zone(pg, id).evaluate(d => d.open)) {
-    await zone(pg, id).locator("summary").click();
+    await pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"] > summary`).click();
     await pg.waitForTimeout(250);
+  }
+}
+
+/* Ajouter une année passée et taire le panneau se déplient derrière Corriger. */
+async function ouvrirCorrections(pg, id) {
+  const c = rotation(pg, id).locator(".ro-plus");
+  if (!await c.evaluate(d => d.open)) {
+    await c.locator("summary").click();
+    await pg.waitForTimeout(250);
+  }
+}
+
+async function ouvrirLigne(pg, ligne) {
+  if (!await ligne.evaluate(e => e.classList.contains("ligne-ouverte"))) {
+    await ligne.locator(".ouvrir-outils").click();
+    await pg.waitForTimeout(300);
   }
 }
 
@@ -131,6 +147,7 @@ export default async function essai(navigateur) {
   j.section("saisir une année antérieure");
   await zone(pg, "z2").locator(".rech-lieu").fill("");
   await deplier(pg, "z1");
+  await ouvrirCorrections(pg, "z1");
   await rotation(pg, "z1").locator(".ro-famille").selectOption("Asteraceae");
   await rotation(pg, "z1").locator(".ro-annee").fill("2025");
   await rotation(pg, "z1").locator('.ro-ajout button[type="submit"]').click();
@@ -143,12 +160,14 @@ export default async function essai(navigateur) {
   j.controle("elle se retire aussi bien", await ligne(pg, "z1", "Asteraceae").count() === 0);
 
   j.section("la sourdine, et le retour en arrière");
+  await ouvrirCorrections(pg, "z1");
   await rotation(pg, "z1").locator(".ro-taire").click();
   await pg.waitForTimeout(600);
   j.controle("le panneau cède la place à un rappel discret",
     await rotation(pg, "z1").locator(".ro-rendre").count() === 1
     && await rotation(pg, "z1").locator(".ro-l").count() === 0);
   vus = [];
+  await ouvrirLigne(pg, zone(pg, "z1").locator(`.ligne-espace[data-plante="${TOMATE.id}"]`));
   await zone(pg, "z1").locator(`.ligne-espace[data-plante="${TOMATE.id}"] .retirer-lieu`).click();
   await pg.waitForTimeout(500);
   await poser(pg, "z1", "Tomate");

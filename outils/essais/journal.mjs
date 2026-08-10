@@ -67,6 +67,13 @@ async function ouvrirDepuisLaListe(pg, nom) {
   await pg.waitForTimeout(800);
 }
 
+async function ouvrirLigne(pg, ligne) {
+  if (!await ligne.evaluate(e => e.classList.contains("ligne-ouverte"))) {
+    await ligne.locator(".ouvrir-outils").click();
+    await pg.waitForTimeout(300);
+  }
+}
+
 async function deplierJournal(pg) {
   if (!await journalLieu(pg).evaluate(d => d.open)) {
     await journalLieu(pg).locator("summary").click();
@@ -193,6 +200,7 @@ export default async function essai(navigateur) {
     dim[0] === 240 && dim[1] === 176, dim.join(" par "));
 
   j.section("noter depuis la ligne d'une plante");
+  await ouvrirLigne(pg, pg.locator(`.ligne-espace[data-plante="${FRAISE.id}"]`).first());
   await pg.locator(`.ligne-espace[data-plante="${FRAISE.id}"] .noter-lieu`).first().click();
   await pg.waitForTimeout(400);
   j.controle("le formulaire s'ouvre sur le lieu de la plante",

@@ -564,6 +564,11 @@ const aPlanche = p => Boolean(planches[p.slug]);
 const vignettePlanche = (p, classe) => aPlanche(p)
   ? `<span class="v-planche${classe ? " " + classe : ""}" data-pl="${esc(p.slug)}" aria-hidden="true"></span>`
   : "";
+/* La boîte reste réservée sans planche : cent vingt-cinq plantes sur trois cent
+   quinze n'en ont pas, et leur nom démarrait à une autre abscisse que celui de
+   leurs voisines. */
+const vignetteOuVide = (p, classe) => aPlanche(p) ? vignettePlanche(p, classe)
+  : `<span class="v-planche v-vide${classe ? " " + classe : ""}" aria-hidden="true"></span>`;
 const plancheDuGenre = p => (planches[p.slug] || "").endsWith("g");
 const creditPlanche = p => {
   const c = planches[p.slug];
@@ -4724,6 +4729,9 @@ function plantesDuNoeud(cle) {
 
 // Les zones dépliées, retenues d'un rendu à l'autre.
 const zonesOuvertes = new Set();
+// Les réglages d'un lieu et les gestes d'une plante, dépliés à la demande.
+const reglagesOuverts = new Set();
+const lignesOuvertes = new Set();
 const GESTE_NOM = { semis: "Semis", plantation: "Plantation", taille: "Taille",
                     recolte: "Récolte", traitement: "Traitement", floraison: "Floraison",
                     maladie: "Maladie", note: "Note" };
@@ -4890,44 +4898,61 @@ function ecartExposition(p, cle) {
     + `ce lieu en offre ${r < plage[0] ? "plus" : "moins"}.`;
 }
 
+/* Une seule ligne par plante : son nom, ce qui cloche, sa quantité. Les gestes
+   se déplient dessous à la demande. Dix-huit plantes faisaient trente-six rangs
+   et une colonne de liens soulignés plus visible que les noms. */
 function ligneDuLieu(p, cle) {
   const r = cle === "0" ? null : ((aff.get(p.id) || []).find(x => x.espace_id === cle) || {});
   const gene = r ? ecartExposition(p, cle) : "";
+  const ouvert = lignesOuvertes.has(cle + "|" + p.id);
   const l = document.createElement("div");
-  l.className = "ligne-espace";
+  l.className = "ligne-espace" + (ouvert ? " ligne-ouverte" : "");
   l.dataset.plante = p.id;
-  /* Deux rangs plutôt qu'un seul qui se replie au hasard : le nom et le lieu
-     en haut, ce qui s'y mesure en dessous. */
-  l.innerHTML = `<div class="haut-ligne"><button type="button" class="nom-espace">`
-    + vignettePlanche(p, "v-pl-s") + `${esc(p.nom)}</button>`
+  l.innerHTML = `<button type="button" class="nom-espace">`
+    + vignetteOuVide(p, "v-pl-s") + `${esc(p.nom)}</button>`
     + (gene ? `<span class="mal-expose" title="${esc(gene)}">`
-      + `${esc((EXPO_NOM[attribut(noeud(cle), "exposition")] || "").toLowerCase())} ici</span>` : "")
-    + (r ? choixZoneHTML(cle) : "") + `</div>`
-    + (r ? `<input class="qte" type="number" min="0" max="32000" placeholder="qté" value="${r.quantity ?? ""}">`
-         + `<button type="button" class="lien noter-lieu">Noter</button>`
-         + `<button type="button" class="lien retirer-lieu">Retirer</button>`
+      + `${esc((EXPO_NOM[attribut(noeud(cle), "exposition")] || "").toLowerCase())}</span>` : "")
+    + (r ? `<span class="qte-l">${r.quantity == null ? "" : r.quantity}</span>`
+         + `<button type="button" class="ouvrir-outils" aria-expanded="${ouvert}"`
+         + ` aria-label="Gestes sur ${esc(p.nom)}"></button>`
          : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
   l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p));
-  if (r) {
-    l.querySelector(".qte").addEventListener("change",
-      () => majAffectation(p.id, cle, l.querySelector(".qte").value));
-    const sz = l.querySelector(".sel-zone");
-    if (sz) sz.addEventListener("change", () => deplacer(p.id, cle, sz.value));
-    /* Noter ouvre le journal du lieu, le formulaire déjà rempli de la plante :
-       c'est le chemin le plus court entre voir une plante et écrire dessus. */
-    l.querySelector(".noter-lieu").addEventListener("click", () => {
-      saisieCarnet = { espace_id: cle, plant_id: p.id };
-      carnetOuvert = true;
-      rendreEspaces();
-      const f = $("formEntree");
-      if (f) f.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
-    l.querySelector(".retirer-lieu").addEventListener("click", async () => {
-      if (!await retirerDe(p.id, cle)) return;
-      construireChips(); rendreTout();
-    });
-  }
+  if (!r) return l;
+  l.querySelector(".ouvrir-outils").addEventListener("click", () => {
+    const c = cle + "|" + p.id;
+    lignesOuvertes.has(c) ? lignesOuvertes.delete(c) : lignesOuvertes.add(c);
+    rendreEspaces();
+  });
+  if (ouvert) l.appendChild(outilsDeLaLigne(p, cle, r));
   return l;
+}
+
+function outilsDeLaLigne(p, cle, r) {
+  const o = document.createElement("div");
+  o.className = "outils-ligne";
+  o.innerHTML = `<label class="ol-q"><span>Quantité</span>`
+    + `<input class="qte" type="number" min="0" max="32000" value="${r.quantity ?? ""}"></label>`
+    + choixZoneHTML(cle)
+    + `<button type="button" class="lien noter-lieu">Noter</button>`
+    + `<button type="button" class="lien retirer-lieu">Retirer</button>`;
+  o.querySelector(".qte").addEventListener("change", ev =>
+    majAffectation(p.id, cle, ev.target.value));
+  const sz = o.querySelector(".sel-zone");
+  if (sz) sz.addEventListener("change", () => deplacer(p.id, cle, sz.value));
+  /* Noter ouvre le journal du lieu, le formulaire déjà rempli de la plante :
+     c'est le chemin le plus court entre voir une plante et écrire dessus. */
+  o.querySelector(".noter-lieu").addEventListener("click", () => {
+    saisieCarnet = { espace_id: cle, plant_id: p.id };
+    carnetOuvert = true;
+    rendreEspaces();
+    const f = $("formEntree");
+    if (f) f.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  o.querySelector(".retirer-lieu").addEventListener("click", async () => {
+    if (!await retirerDe(p.id, cle)) return;
+    construireChips(); rendreTout();
+  });
+  return o;
 }
 
 /* La zone se change sur la ligne de la plante, là où l'on voit déjà sa
@@ -4962,25 +4987,38 @@ function selectAttribut(zo, cle, noms, etiquette) {
   return `<select class="att" data-att="${cle}" aria-label="${esc(etiquette)}">${opts}</select>`;
 }
 
+/* Les quatre réglages d'un lieu se replient sous ce qu'ils produisent : la
+   surface, les litres du jour, la part prise par les zones. Quatre listes
+   ouvertes en tête d'écran donnaient un formulaire à remplir avant d'arriver
+   aux plantes. */
 function attributsDuLieu(zo) {
-  const d = document.createElement("div");
-  d.className = "attributs-lieu";
-  d.innerHTML = `<label class="att-l"><span class="att-e">Surface</span>`
+  const d = document.createElement("details");
+  d.className = "reglages-lieu";
+  d.open = reglagesOuverts.has(zo.id);
+  d.addEventListener("toggle", () =>
+    d.open ? reglagesOuverts.add(zo.id) : reglagesOuverts.delete(zo.id));
+  const mesure = mesureDuLieu(zo);
+  const s = document.createElement("summary");
+  // L'entête d'une zone porte déjà sa mesure : la répéter ici ne dirait rien.
+  s.innerHTML = `<span class="rl-resume">${esc(!mesure ? "Préciser la surface et l'exposition"
+    : zo.parent_id ? "Réglages du lieu" : mesure)}</span>`;
+  d.appendChild(s);
+  const corps = document.createElement("div");
+  corps.className = "attributs-lieu";
+  corps.innerHTML = `<label class="att-l"><span class="att-e">Surface</span>`
     + `<input class="att att-surface" type="number" min="0" step="0.5" inputmode="decimal"`
     + ` value="${zo.surface_m2 ?? ""}" aria-label="Surface en mètres carrés"><span class="att-u">m²</span></label>`
     + selectAttribut(zo, "support", SUPPORT_NOM, "Support")
     + selectAttribut(zo, "exposition", EXPO_NOM, "Exposition")
-    + selectAttribut(zo, "sol_texture", SOL_LIBELLE, "Sol")
-    // La mesure d'une zone est déjà dans son entête : la répéter sous ses
-    // réglages ferait lire deux fois la même ligne.
-    + (zo.parent_id ? "" : `<span class="att-mesure">${esc(mesureDuLieu(zo))}</span>`);
-  d.querySelectorAll("select.att").forEach(s =>
-    s.addEventListener("change", () => majLieu(zo, { [s.dataset.att]: s.value || null })));
-  const su = d.querySelector(".att-surface");
+    + selectAttribut(zo, "sol_texture", SOL_LIBELLE, "Sol");
+  corps.querySelectorAll("select.att").forEach(x =>
+    x.addEventListener("change", () => majLieu(zo, { [x.dataset.att]: x.value || null })));
+  const su = corps.querySelector(".att-surface");
   su.addEventListener("change", () => {
     const v = su.value.trim() === "" ? null : Number(su.value.replace(",", "."));
     majLieu(zo, { surface_m2: v && v > 0 ? v : null });
   });
+  d.appendChild(corps);
   return d;
 }
 
@@ -5039,7 +5077,7 @@ function ajoutAuLieu(cle) {
     lot.forEach(p => {
       const b = document.createElement("button");
       b.type = "button"; b.className = "prop-lieu"; b.dataset.plante = p.id;
-      b.innerHTML = vignettePlanche(p, "v-pl-s") + `<span class="prop-nom">${esc(p.nom)}</span>`
+      b.innerHTML = vignetteOuVide(p, "v-pl-s") + `<span class="prop-nom">${esc(p.nom)}</span>`
         + (sel.has(p.id) ? "" : `<span class="prop-neuf">entre au jardin</span>`);
       b.addEventListener("click", () => {
         ch.value = ""; liste.hidden = true; liste.innerHTML = "";
@@ -5148,12 +5186,15 @@ function panneauRotation(zo) {
         : x.delai ? `<span class="ro-etat">libre</span>`
         : `<span class="ro-etat">sans règle de retour</span>`)
       + `</p>`).join("")
+    /* Ajouter une année passée et taire le panneau sont deux gestes rares :
+       ils se déplient plutôt que d'occuper une ligne sous chaque planche. */
+    + `<details class="ro-plus"><summary>Corriger</summary>`
     + `<form class="ro-ajout"><select class="ro-famille" aria-label="Famille cultivée">`
     + familles.map(f => `<option value="${f}">${esc(nomFamille(f))}</option>`).join("")
     + `</select><input class="ro-annee" type="number" min="2000" max="2100" `
     + `value="${new Date().getFullYear() - 1}" aria-label="Année">`
     + `<button class="lien" type="submit">Ajouter</button>`
-    + `<button type="button" class="lien ro-taire">Ne plus afficher</button></form>`;
+    + `<button type="button" class="lien ro-taire">Ne plus afficher</button></form></details>`;
   d.querySelectorAll(".ro-oter").forEach(b =>
     b.addEventListener("click", () => retirerCulture(b.dataset.ligne)));
   d.querySelector(".ro-taire").addEventListener("click",

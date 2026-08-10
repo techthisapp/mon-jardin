@@ -99,13 +99,19 @@ export default async function essai(navigateur) {
   j.controle("le détail porte le nom de l'espace",
     net(await pg.locator(".titre-detail").innerText()) === nomTuile,
     net(await pg.locator(".titre-detail").innerText()));
-  /* La note du placement a été reprise par le journal daté : seule la quantité
-     reste sur la ligne. */
-  j.controle("chaque plante porte sa quantité, et plus de champ de note",
+  /* Une plante par ligne : la quantité se lit, les gestes se déplient. La note
+     du placement a été reprise par le journal daté. */
+  j.controle("chaque plante tient sur une ligne, sa quantité lisible",
     await pg.locator("#detailEspace .ligne-espace").count() > 0
-    && await pg.locator("#detailEspace .ligne-espace .qte").count()
+    && await pg.locator("#detailEspace .ligne-espace .qte-l").count()
        === await pg.locator("#detailEspace .ligne-espace").count()
-    && await pg.locator("#detailEspace .ligne-espace .notes").count() === 0);
+    && await pg.locator("#detailEspace .ligne-espace .notes").count() === 0
+    && await pg.locator("#detailEspace .outils-ligne").count() === 0);
+  await pg.locator("#detailEspace .ligne-espace .ouvrir-outils").first().click();
+  await pg.waitForTimeout(300);
+  j.controle("les gestes paraissent au dépli de la ligne",
+    await pg.locator("#detailEspace .outils-ligne").count() === 1
+    && await pg.locator("#detailEspace .outils-ligne .qte").count() === 1);
   await pg.locator("#retourEspace").dispatchEvent("click");
   await pg.waitForTimeout(250);
   j.controle("le retour ramène aux tuiles",

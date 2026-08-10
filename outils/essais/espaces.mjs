@@ -28,6 +28,11 @@ const PLACEMENTS = [
 ];
 
 const zone = (pg, id) => pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"]`);
+const sommaireZone = (pg, id) =>
+  pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"] > summary`);
+const reglagesEspace = pg => pg.locator("#detailEspace > .reglages-lieu");
+const reglagesZone = (pg, id) =>
+  pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"] .reglages-lieu`);
 const sansZone = (pg, p) => pg.locator(`#detailEspace > .corps-espace .ligne-espace[data-plante="${p}"]`);
 const dansZone = (pg, z, p) => pg.locator(`#detailEspace details[data-zone="${z}"] .ligne-espace[data-plante="${p}"]`);
 const partout = (pg, p) => pg.locator(`#detailEspace .ligne-espace[data-plante="${p}"]`);
@@ -51,8 +56,24 @@ async function ouvrirEspace(pg, id) {
 
 async function deplier(pg, id) {
   if (!await zone(pg, id).evaluate(d => d.open)) {
-    await zone(pg, id).locator("summary").click();
+    await sommaireZone(pg, id).click();
     await pg.waitForTimeout(250);
+  }
+}
+
+/* Les réglages d'un lieu et les gestes d'une plante se déplient à la demande :
+   l'essai fait le même geste que le doigt. */
+async function ouvrirReglages(pg, r) {
+  if (!await r.evaluate(d => d.open)) {
+    await r.locator("> summary").click();
+    await pg.waitForTimeout(250);
+  }
+}
+
+async function ouvrirLigne(pg, ligne) {
+  if (!await ligne.evaluate(e => e.classList.contains("ligne-ouverte"))) {
+    await ligne.locator(".ouvrir-outils").click();
+    await pg.waitForTimeout(300);
   }
 }
 
@@ -85,7 +106,7 @@ export default async function essai(navigateur) {
     await pg.locator("#detailEspace details.zone-espace").count() === 2);
   j.controle("elles sont repliées à l'ouverture",
     await pg.locator("#detailEspace details.zone-espace[open]").count() === 0);
-  const sommaire = await zone(pg, "z1").locator("summary")
+  const sommaire = await sommaireZone(pg, "z1")
     .evaluate(e => [e.querySelector(".zone-nom").textContent, e.querySelector(".nb").textContent].join(" "));
   j.controle("la zone porte son nom et son compte",
     net(sommaire) === "Carré du fond 1", net(sommaire));
@@ -98,11 +119,15 @@ export default async function essai(navigateur) {
     await dansZone(pg, "z1", RHUBARBE.id).isVisible());
 
   j.section("les attributs du lieu");
-  const reglages = pg.locator("#detailEspace > .attributs-lieu");
+  const resume = net(await reglagesEspace(pg).locator("> summary").textContent());
+  j.controle("le résumé porte la mesure plutôt que quatre listes ouvertes",
+    resume === "40 m², 162 L par jour, 10 m² en zones", resume);
+  await ouvrirReglages(pg, reglagesEspace(pg));
+  const commandes = pg.locator("#detailEspace > .reglages-lieu .attributs-lieu");
   j.controle("l'espace porte sa surface et ses trois listes",
-    await reglages.locator(".att-surface").count() === 1
-    && await reglages.locator("select.att").count() === 3);
-  const surface = await reglages.locator(".att-surface").inputValue();
+    await commandes.locator(".att-surface").count() === 1
+    && await commandes.locator("select.att").count() === 3);
+  const surface = await commandes.locator(".att-surface").inputValue();
   j.controle("la surface lue est celle de la base", Number(surface) === 40, surface);
   const heriteZ1 = net(await zone(pg, "z1")
     .locator('select.att[data-att="exposition"] option[value=""]').textContent());
@@ -112,24 +137,24 @@ export default async function essai(navigateur) {
     .locator('select.att[data-att="exposition"] option[value=""]').textContent());
   j.controle("l'annonce vaut aussi pour une zone repliée",
     heriteZ2 === "comme l'espace, soleil", heriteZ2);
-  const solE1 = net(await reglages
+  const solE1 = net(await commandes
     .locator('select.att[data-att="sol_texture"] option[value=""]').textContent());
   j.controle("un espace sans texture de sol ne prétend rien", solE1 === "non précisé", solE1);
   await deplier(pg, "z2");
+  await ouvrirReglages(pg, reglagesZone(pg, "z2"));
   const choixZ2 = await zone(pg, "z2").locator('select.att[data-att="exposition"]').inputValue();
   j.controle("la zone qui porte la sienne l'affiche", choixZ2 === "mi_ombre", choixZ2);
   const supportZ2 = await zone(pg, "z2").locator('select.att[data-att="support"]').inputValue();
   j.controle("son support aussi", supportZ2 === "serre", supportZ2);
 
   j.section("la surface donne les litres du jour");
-  const mesureZ1 = net(await zone(pg, "z1").locator("summary .zone-mesure").textContent());
+  const mesureZ1 = net(await sommaireZone(pg, "z1").locator(".zone-mesure").textContent());
   j.controle("la zone convertit le besoin du catalogue en litres à porter",
     mesureZ1 === "10 m², 44 L par jour", mesureZ1);
-  const mesureE1 = net(await reglages.locator(".att-mesure").textContent());
   j.controle("l'espace compte les litres de toutes ses plantes",
-    mesureE1.startsWith("40 m², 162 L par jour"), mesureE1);
+    resume.startsWith("40 m², 162 L par jour"), resume);
   j.controle("il annonce la part de surface déjà prise par ses zones",
-    mesureE1.includes("10 m² en zones"), mesureE1);
+    resume.includes("10 m² en zones"), resume);
 
   await zone(pg, "z2").locator(".att-surface").fill("12");
   await zone(pg, "z2").locator(".att-surface").dispatchEvent("change");
@@ -138,12 +163,13 @@ export default async function essai(navigateur) {
     .filter(e => e.table === "espaces" && e.op === "update").pop());
   j.controle("changer la surface d'une zone l'enregistre",
     !!ecrit && Number(ecrit.v.surface_m2) === 12, JSON.stringify(ecrit && ecrit.v));
-  const mesureE1b = net(await pg.locator("#detailEspace > .attributs-lieu .att-mesure").textContent());
-  j.controle("la somme des zones suit", mesureE1b.includes("22 m² en zones"), mesureE1b);
-  const mesureZ2 = net(await zone(pg, "z2").locator("summary .zone-mesure").textContent());
+  const resumeB = net(await reglagesEspace(pg).locator("> summary").textContent());
+  j.controle("la somme des zones suit", resumeB.includes("22 m² en zones"), resumeB);
+  const mesureZ2 = net(await sommaireZone(pg, "z2").locator(".zone-mesure").textContent());
   j.controle("une zone sans plante n'affiche aucun litre", mesureZ2 === "12 m²", mesureZ2);
 
   j.section("une plante n'occupe pas à la fois l'espace et sa zone");
+  await ouvrirLigne(pg, sansZone(pg, FRAISE.id));
   await sansZone(pg, FRAISE.id).locator(".sel-zone").selectOption("z1");
   await pg.waitForTimeout(500);
   j.controle("la fraise a quitté les plantes sans zone",
@@ -154,6 +180,7 @@ export default async function essai(navigateur) {
     await partout(pg, FRAISE.id).count() === 1);
   j.controle("le compte de l'espace ne bouge pas, la plante y est toujours",
     await compteDuTitre(pg) === "2", await compteDuTitre(pg));
+  await ouvrirLigne(pg, dansZone(pg, "z1", FRAISE.id));
   await dansZone(pg, "z1", FRAISE.id).locator(".sel-zone").selectOption("e1");
   await pg.waitForTimeout(500);
   j.controle("le retour hors zone la ramène sous Sans zone",
@@ -186,17 +213,19 @@ export default async function essai(navigateur) {
   j.section("l'exposition du lieu confrontée à ce que la plante demande");
   j.controle("une zone sans exposition prend celle de l'espace, le figuier y est au soleil",
     await dansZone(pg, "z1", FIGUIER.id).locator(".mal-expose").count() === 0);
+  await ouvrirLigne(pg, dansZone(pg, "z1", FIGUIER.id));
   await dansZone(pg, "z1", FIGUIER.id).locator(".sel-zone").selectOption("z2");
   await pg.waitForTimeout(500);
   const marque = dansZone(pg, "z2", FIGUIER.id).locator(".mal-expose");
   j.controle("sous la serre en mi-ombre, l'écart est signalé", await marque.count() === 1);
   j.controle("la marque nomme ce que le lieu offre",
-    net(await marque.textContent()) === "mi-ombre ici", net(await marque.textContent()));
+    net(await marque.textContent()) === "mi-ombre", net(await marque.textContent()));
   const raison = await marque.getAttribute("title");
   j.controle("elle dit ce qui manque",
     raison === "Figuier demande soleil, ce lieu en offre moins.", raison);
   j.controle("la rhubarbe, qui accepte la mi-ombre, n'est pas signalée au soleil",
     await dansZone(pg, "z1", RHUBARBE.id).locator(".mal-expose").count() === 0);
+  await ouvrirLigne(pg, dansZone(pg, "z2", FIGUIER.id));
   await dansZone(pg, "z2", FIGUIER.id).locator(".sel-zone").selectOption("z1");
   await pg.waitForTimeout(500);
 

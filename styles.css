@@ -777,18 +777,15 @@ main{
 .ligne-reglage .lien{flex:0 0 auto}
 .aide-reglage{font-size:12.5px;color:#6B665D;line-height:1.5;margin:8px 0 0}
 
-/* ---------- Espaces : lignes qui tiennent sur un écran étroit ---------- */
+/* ---------- Espaces : une plante par ligne ---------- */
 .ligne-espace{
-  display:flex;flex-wrap:wrap;align-items:center;gap:6px;
-  padding:7px 0;border-top:1px solid var(--filet-clair);
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  padding:6px 0;border-top:1px solid var(--filet-clair);
 }
 .corps-espace .ligne-espace:first-child{border-top:0}
-.nom-espace{flex:1 1 100%;font-size:13px;font-weight:500}
-.ligne-espace .qte{flex:0 0 72px}
-.ligne-espace .notes{flex:1 1 150px}
+.nom-espace{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:500;text-align:left}
 
 @media (min-width:560px){
-  .nom-espace{flex:1 1 150px}
   .etiq-reglage{flex:0 0 118px}
 }
 
@@ -2479,11 +2476,23 @@ select:focus{
 
 /* ---------- Attributs d'un lieu, zones d'un espace ---------- */
 
-/* Quatre réglages sur une ligne qui se replie, suivis de ce qu'ils
-   produisent : la surface et les litres du jour. */
+/* Les réglages se replient sous ce qu'ils produisent : la ligne visible porte
+   la surface et les litres, les quatre commandes attendent dessous. */
+.reglages-lieu{margin:6px 0 2px}
+.reglages-lieu>summary{
+  display:flex;align-items:center;gap:6px;padding:6px 0;cursor:pointer;
+  list-style:none;font-size:12.5px;color:var(--encre-doux);
+}
+.reglages-lieu>summary::-webkit-details-marker{display:none}
+.reglages-lieu>summary::after{
+  content:"";width:7px;height:7px;flex:0 0 7px;
+  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
+}
+.reglages-lieu[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
 .attributs-lieu{
   display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;
-  padding:8px 0 10px;border-bottom:1px solid var(--filet-clair);
+  padding:2px 0 10px;
 }
 .att-l{display:inline-flex;align-items:center;gap:5px}
 .att-e{font-size:12px;color:var(--encre-doux)}
@@ -2494,15 +2503,18 @@ select:focus{
   max-width:180px;
 }
 .att-surface{width:76px}
-.att-mesure{font-size:12px;color:var(--encre-doux);margin-left:auto}
 
 /* Recherche au catalogue depuis le lieu : le champ tient la largeur, les
    propositions se posent dessous et disparaissent au choix. */
 .ajout-plante{margin:10px 0 4px}
-.rech-lieu{
-  width:100%;font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:8px 10px;
-  border:1px solid #D5D2CB;border-radius:8px;background:#fff;color:var(--encre);
+/* Le champ porte son type dans le sélecteur : sans lui, la règle générale des
+   champs de recherche l'emporte et le rend gris et sans bord, ce qui le fait
+   lire comme désactivé. */
+input.rech-lieu{
+  width:100%;font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:9px 11px;
+  border:1px solid var(--filet);border-radius:8px;background:#fff;color:var(--encre);
 }
+input.rech-lieu::placeholder{color:#8C8779}
 .props-lieu{
   display:flex;flex-direction:column;margin-top:6px;
   border:1px solid #E3E0D9;border-radius:8px;background:#fff;overflow:hidden;
@@ -2519,7 +2531,7 @@ select:focus{
 
 /* Les plantes posées sur l'espace lui-même, avant ses zones. */
 .tete-section-zone{
-  display:flex;align-items:center;gap:8px;margin:12px 0 0;
+  display:flex;align-items:center;gap:8px;margin:14px 0 0;
   font-size:13px;font-weight:600;
 }
 .tete-section-zone .nb{font-size:11px}
@@ -2546,32 +2558,46 @@ select:focus{
 .corps-zone{padding:2px 11px 10px}
 .pied-zone{display:flex;gap:12px;margin-top:8px}
 .pied-zone .lien{font-size:12px}
-.haut-ligne{display:flex;align-items:center;gap:8px;flex:1 1 100%}
-.haut-ligne .nom-espace{flex:1 1 auto;min-width:0}
-.ligne-espace .sel-zone{
-  flex:0 0 auto;max-width:132px;
-  font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
-}
-.ligne-espace .retirer-lieu{font-size:12px;margin-left:auto}
 .ajout-zone{margin-top:14px}
 
-/* La plante demande une exposition, le lieu en offre une autre : seul l'écart
-   se signale, dans l'encre des avertissements de culture. */
-.mal-expose{
-  font-size:11.5px;padding:1px 8px;border-radius:999px;
-  background:#FDF0DC;border:1px solid #E0B978;color:#8A5A12;
+/* Dans la liste d'un lieu, la boîte réservée reste invisible : la rangée n'a
+   pas de fond de carte sur lequel un aplat se justifierait. */
+.corps-espace .v-planche.v-vide,.props-lieu .v-planche.v-vide{background:none}
+
+/* Les gestes d'une plante, dépliés sous sa ligne. */
+.ouvrir-outils{
+  flex:0 0 26px;height:26px;display:grid;place-items:center;
+  border:0;background:none;cursor:pointer;padding:0;
 }
+.ouvrir-outils::after{
+  content:"";width:7px;height:7px;
+  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
+  transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
+}
+.ligne-ouverte .ouvrir-outils::after{transform:rotate(-135deg) translate(-2px,-2px)}
+.qte-l{font-size:12.5px;color:var(--encre-doux);margin-left:auto;min-width:14px;text-align:right}
+.outils-ligne{
+  flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  padding:8px 0 4px 30px;
+}
+.ol-q{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--encre-doux)}
+.outils-ligne .qte{
+  width:72px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.outils-ligne .sel-zone{
+  max-width:150px;font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
+  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+}
+.outils-ligne .lien{font-size:12px}
+.outils-ligne .retirer-lieu{margin-left:auto}
 
 /* ---------- Rotation des cultures ---------- */
 
 /* Une ligne par famille déjà passée sur la planche, ses années, et le délai de
    retour quand il n'est pas tenu. Le panneau ne paraît que là où quelque chose
    a poussé. */
-.rotation-lieu{
-  margin:8px 0 2px;padding:8px 10px;
-  border:1px solid #E3E0D9;border-radius:8px;background:#FBFAF7;
-}
+.rotation-lieu{margin:4px 0 2px;padding:7px 0 4px;border-top:1px solid var(--filet-clair)}
 .rotation-lieu.rotation-tue{padding:4px 0;border:0;background:none}
 .ro-titre{display:block;font-size:12px;margin-bottom:5px}
 .ro-l{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:0 0 3px;font-size:12.5px}
@@ -2590,7 +2616,12 @@ select:focus{
   padding:1px 8px;border-radius:999px;
   background:#FDF0DC;border:1px solid #E0B978;color:#8A5A12;margin-left:auto;
 }
-.ro-ajout{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px}
+.ro-plus>summary{
+  list-style:none;cursor:pointer;font-size:12px;color:var(--encre-doux);
+  padding:4px 0;text-decoration:underline;text-underline-offset:2px;width:fit-content;
+}
+.ro-plus>summary::-webkit-details-marker{display:none}
+.ro-ajout{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:2px}
 .ro-ajout select,.ro-ajout input{
   font:400 12px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
   border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
