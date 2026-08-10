@@ -324,6 +324,88 @@ export default async function essai(navigateur) {
        === "Pas encore placée dans un espace.");
   await fermerFiche(pg);
 
+  /* Noter est un geste et non une destination : le bouton se pose au-dessus de
+     la barre des trois écrans, sur tous les écrans, et ce qu'il porte vient de
+     ce qui est à l'écran. */
+  j.section("noter depuis n'importe quel écran");
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  j.controle("le bouton est là sur l'écran du moment",
+    await pg.locator("#btnNoter:not([hidden])").count() === 1);
+  const place = await pg.evaluate(() => {
+    const b = document.getElementById("btnNoter");
+    const n = document.querySelector(".barre-basse");
+    if (!b || !n) return null;
+    const rb = b.getBoundingClientRect(), rn = n.getBoundingClientRect();
+    return { auDessus: rb.bottom <= rn.top + 1, dansLaVue: rb.bottom <= window.innerHeight };
+  });
+  j.controle("il se tient au-dessus de la barre, dans la vue",
+    place && place.auDessus && place.dansLaVue, JSON.stringify(place));
+  await pg.locator("#btnNoter").dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  j.controle("il ouvre la saisie",
+    net(await pg.locator("#feuille-titre").textContent()) === "Noter"
+    && await pg.locator("#corpsNote .form-entree").count() === 1);
+  const offerts = await pg.locator("#corpsNote .ec-lieu option")
+    .evaluateAll(l => l.map(o => o.textContent));
+  j.controle("hors d'un espace, tous les lieux du jardin sont offerts",
+    JSON.stringify(offerts) === JSON.stringify(["Potager", "Potager, Carré du fond"]),
+    offerts.join(" | "));
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+
+  j.section("la saisie vient de ce qui est à l'écran");
+  await ouvrirEspace(pg);
+  await pg.locator("#btnNoter").dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  j.controle("depuis un espace, le lieu est déjà celui de l'écran",
+    await pg.locator("#corpsNote .ec-lieu").inputValue() === "e1",
+    await pg.locator("#corpsNote .ec-lieu").inputValue());
+  j.controle("la plante reste à choisir",
+    await pg.locator("#corpsNote .ec-plantes").count() === 1);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+  await ouvrirDepuisLaListe(pg, "Fraise");
+  await pg.locator("#btnNoter").dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  j.controle("depuis une fiche, la plante est imposée et nommée",
+    net(await pg.locator("#corpsNote .note-sujet").textContent()) === "Fraise"
+    && await pg.locator("#corpsNote .ec-plantes").count() === 0);
+  j.controle("le lieu se choisit parmi ceux qu'elle occupe",
+    await pg.locator("#corpsNote .ec-lieu option").count() === 1,
+    String(await pg.locator("#corpsNote .ec-lieu option").count()));
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+  /* La tomate a été retirée de son lieu plus haut : une plante placée nulle
+     part ne doit pas rendre la saisie impossible. */
+  await ouvrirDepuisLaListe(pg, "Tomate");
+  await pg.locator("#btnNoter").dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  j.controle("une plante sans lieu reçoit le jardin entier",
+    await pg.locator("#corpsNote .ec-lieu option").count() === 2,
+    String(await pg.locator("#corpsNote .ec-lieu option").count()));
+
+  /* Le journal entier ne se lisait nulle part : ni l'espace ni la fiche ne
+     donnent à relire une saison. */
+  j.section("le journal du jardin, dans l'ordre du temps");
+  await pg.locator("#corpsNote .note-vers-journal").click();
+  await pg.waitForTimeout(500);
+  j.controle("la vue d'ensemble s'ouvre",
+    net(await pg.locator("#feuille-titre").textContent()) === "Journal du jardin");
+  const combien = await pg.locator("#corpsJournal .entree-carnet").count();
+  j.controle("elle porte toutes les entrées du jardin", combien >= 2, String(combien));
+  const dates = await pg.locator("#corpsJournal .ec-jour")
+    .evaluateAll(l => l.map(e => e.textContent.trim()));
+  j.controle("la plus récente vient en tête",
+    dates.length > 1 && dates[0] !== dates[dates.length - 1], dates.join(" | "));
+  const parMois = await pg.locator("#corpsJournal .jo-mois")
+    .evaluateAll(l => l.map(e => e.textContent.trim()));
+  j.controle("les entrées se rangent par mois", parMois.length >= 1, parMois.join(" | "));
+  j.controle("chaque entrée dit sa plante et son lieu",
+    await pg.locator("#corpsJournal .ec-lieu").count() >= 1);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+
   await ctx.close();
   return j.fin(erreurs);
 }

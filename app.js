@@ -73,6 +73,11 @@ const urlsPhoto = new Map();
 let carnetOuvert = false;
 let saisieCarnet = null;
 let saisieFiche = null;
+/* La plante dont la fiche est ouverte, et la saisie que le bouton Noter porte.
+   Le bouton est partout, et ce qu'il pré-remplit vient de ce qui est à
+   l'écran : l'espace depuis un espace, la plante depuis sa fiche. */
+let planteFeuille = null;
+let saisiePartout = null;
 /* Ce qui a poussé où, tenu sans saisie par un déclencheur au placement. Seules
    les plantes conduites en annuelle ou en bisannuelle y entrent. */
 let cultures = [];
@@ -1121,6 +1126,7 @@ document.querySelectorAll(".onglet-j").forEach(b =>
    alors au catalogue entier, qui reste consultable. */
 function majAccesJardin(connecte) {
   document.querySelector(".onglets-jardin").hidden = !connecte;
+  majBoutonNoter();
   if (!connecte) {
     porteeSel = "tout";
     document.querySelectorAll(".segment[data-portee]").forEach(x =>
@@ -1132,6 +1138,13 @@ function majAccesJardin(connecte) {
    connexion et ouvre la feuille qui la porte : c'est la seule chose à faire. */
 sur("btnJardin", "click", () => ouvrirVue(session ? "jardin" : "compte"));
 sur("btnConfig", "click", () => ouvrirVue("compte"));
+/* Noter n'a de sens qu'avec un jardin où poser la note : le bouton ne paraît
+   pas sans compte. */
+sur("btnNoter", "click", () => { saisiePartout = null; ouvrirVue("note"); });
+function majBoutonNoter() {
+  const b = $("btnNoter");
+  if (b) b.hidden = !session;
+}
 
 document.querySelectorAll(".segment[data-tri]").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
@@ -3147,6 +3160,112 @@ function vueJardin() {
            brancher: () => poserBloc("bloc-jardin") };
 }
 
+/* Le bouton Noter est le même partout, ce qu'il porte vient de l'écran. Une
+   note prise devant la plante ne devrait pas demander de la renommer, ni une
+   note prise dans un carré de redire le carré. */
+function contexteNote() {
+  if (planteFeuille) {
+    const lieux = (aff.get(planteFeuille.id) || []).map(r => r.espace_id);
+    return { plant_id: planteFeuille.id, espace_id: lieux.length === 1 ? lieux[0] : "" };
+  }
+  if (ecranCourant === "selection" && espaceOuvert && espaceOuvert !== "0") {
+    return { espace_id: espaceOuvert, plant_id: "" };
+  }
+  return { espace_id: "", plant_id: "" };
+}
+
+/* Tous les lieux du jardin, l'espace puis ses zones, pour la note prise hors
+   d'un espace. La liste garde l'ordre de l'écran des espaces. */
+function tousLesLieux() {
+  const o = [];
+  racines().forEach(r => {
+    o.push({ id: r.id, nom: r.name });
+    zonesDe(r.id).forEach(z => o.push({ id: z.id, nom: r.name + ", " + z.name }));
+  });
+  return o;
+}
+
+function vueNote() {
+  return {
+    titre: "Noter", sous: "", corps: `<div id="corpsNote"></div>`,
+    brancher: () => {
+      const z = $("corpsNote");
+      if (!z) return;
+      const etat = saisiePartout || contexteNote();
+      saisiePartout = etat;
+      const p = etat.plant_id ? plantes.find(x => x.id === etat.plant_id) : null;
+      /* Le lieu se choisit parmi ceux que la plante occupe. Une plante encore
+         placée nulle part n'interdit pas d'en noter quelque chose : le jardin
+         entier est alors offert, faute de quoi la saisie serait une impasse. */
+      const places = p ? (aff.get(p.id) || []).map(r => noeud(r.espace_id))
+                           .filter(Boolean).map(x => ({ id: x.id, nom: x.name })) : [];
+      const lieux = places.length ? places : tousLesLieux();
+      if (p) {
+        const t = document.createElement("p");
+        t.className = "note-sujet";
+        t.textContent = p.nom;
+        z.appendChild(t);
+      }
+      if (!lieux.length) {
+        const v = document.createElement("p");
+        v.className = "vide";
+        v.textContent = "Aucun lieu au jardin. La note se prendra depuis un espace.";
+        z.appendChild(v);
+        return;
+      }
+      /* Le renvoi au journal entier vient avant le formulaire : la saisie se
+         termine par Enregistrer, et la barre du bas couvrirait un lien posé
+         tout en bas de la feuille. */
+      const l = document.createElement("button");
+      l.type = "button"; l.className = "lien note-vers-journal";
+      l.textContent = "Voir tout le journal";
+      l.addEventListener("click", () => ouvrirVue("journal"));
+      z.appendChild(l);
+      z.appendChild(formulaireEntree(etat, lieux, Boolean(p), () => {
+        saisiePartout = null;
+        if (ecranCourant === "selection") rendreEspaces();
+        fermerFeuille();
+      }));
+    },
+  };
+}
+
+/* Le journal entier, dans l'ordre du temps. Il n'existait qu'au bas d'un espace
+   et dans la fiche d'une plante : rien ne donnait à relire une saison. */
+function vueJournal() {
+  return {
+    titre: "Journal du jardin", sous: "", corps: `<div id="corpsJournal"></div>`,
+    brancher: rendreJournal,
+  };
+}
+
+function rendreJournal() {
+  const z = $("corpsJournal");
+  if (!z) return;
+  z.innerHTML = "";
+  const lot = carnet.slice().sort((a, b) => (a.jour < b.jour ? 1 : a.jour > b.jour ? -1 : 0));
+  if (!lot.length) {
+    z.innerHTML = `<p class="vide">Rien de noté au jardin pour l'instant.</p>`;
+    return;
+  }
+  /* Les entrées se rangent par mois : une saison se relit par ses mois, non par
+     une suite de jours qui se ressemblent. */
+  let mois = "";
+  lot.forEach(e => {
+    const m = new Date(e.jour + "T12:00")
+      .toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    if (m !== mois) {
+      mois = m;
+      const t = document.createElement("b");
+      t.className = "jo-mois";
+      t.textContent = m.charAt(0).toUpperCase() + m.slice(1);
+      z.appendChild(t);
+    }
+    z.appendChild(ligneEntree(e, { plante: true, apres: rendreJournal }));
+  });
+  poserPhotosCarnet(z);
+}
+
 function vueCompte() {
   return { titre: "Compte", corps: "", brancher: () => poserBloc("bloc-compte") };
 }
@@ -3200,10 +3319,11 @@ function ouvrirVue(vue, enRetour) {
   rangerBlocs();
   const rendus = { jour: vueJour, temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance,
-                   jardin: vueJardin, compte: vueCompte,
-                   photosEcartees: vuePhotosEcartees };
+                   jardin: vueJardin, compte: vueCompte, note: vueNote,
+                   journal: vueJournal, photosEcartees: vuePhotosEcartees };
   const f = (rendus[vue] || vueLieu)();
   if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
+  if (vue !== "note" && vue !== "journal") planteFeuille = null;
   vueCourante = { vue, titre: f.titre };
   poserRetour();
   $("feuille-titre").innerHTML = esc(f.titre)
@@ -4602,6 +4722,7 @@ sur("form-connexion", "submit", async e => {
 
 sur("deconnexion", "click", () => db.auth.signOut());
 sur("voirEcartees", "click", () => ouvrirVue("photosEcartees"));
+sur("voirJournal", "click", () => ouvrirVue("journal"));
 
 db.auth.onAuthStateChange((_e, s) => {
   session = s;
@@ -4961,7 +5082,9 @@ function banniereDuLieu(zo, compte) {
       : avec.length ? `<span class="bl-planche v-planche" data-pl="${esc(avec[0].slug)}" aria-hidden="true"></span>` : "")
     + `<button type="button" class="bl-rond bl-g" id="retourEspace" aria-label="Revenir aux espaces">`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>`
-    + `<button type="button" class="bl-rond bl-d" id="menuEspace" aria-label="Réglages de l'espace"`
+    + `<button type="button" class="bl-rond bl-d${rotationBloquee(zo.id) ? " bl-pastille" : ""}"`
+    + ` id="menuEspace" aria-label="Réglages de l'espace${rotationBloquee(zo.id)
+        ? ", une famille attend son tour de rotation" : ""}"`
     + ` aria-expanded="${menuEspace}"><svg viewBox="0 0 24 24" aria-hidden="true">`
     + `<circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/>`
     + `</svg></button>`
@@ -4991,7 +5114,22 @@ function menuDuLieu(zo) {
   d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
   d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
   d.appendChild(attributsDuLieu(zo));
+  /* La rotation tenait six lignes en tête d'écran, en permanence, alors qu'elle
+     ne sert qu'au moment de poser une plante, où l'avertissement se déclenche
+     de lui-même. Elle rejoint le menu ; une pastille sur le bouton de coin dit
+     qu'une famille est encore bloquée, ce qui la garde à un appui. */
+  const rot = panneauRotation(zo);
+  if (rot) d.appendChild(rot);
   return d;
+}
+
+/* Vrai quand une famille cultivée sur ce lieu n'est pas encore libre de
+   revenir. C'est la seule chose que la rotation ait à dire sans qu'on la
+   demande. */
+function rotationBloquee(cle) {
+  const lieu = noeud(cle);
+  if (!lieu || lieu.rotation_muette) return false;
+  return rotationDuLieu(cle).some(x => x.attendre);
 }
 
 function ligneDuMoment(cle) {
@@ -5032,8 +5170,6 @@ function rendreDetailEspace(z) {
   }
   z.appendChild(banniereDuLieu(zo, membres.length));
   if (menuEspace) z.appendChild(menuDuLieu(zo));
-  const rot = panneauRotation(zo);
-  if (rot) z.appendChild(rot);
   z.appendChild(ligneDuMoment(zo.id));
   const zones = zonesDe(zo.id);
   if (zones.length) {
@@ -5079,8 +5215,8 @@ function sectionZone(x) {
   const corps = document.createElement("div");
   corps.className = "corps-zone";
   corps.appendChild(attributsDuLieu(x));
-  const rot = panneauRotation(x);
-  if (rot) corps.appendChild(rot);
+  const rotZ = panneauRotation(x);
+  if (rotZ) corps.appendChild(rotZ);
   corps.appendChild(ajoutAuLieu(x.id));
   corps.appendChild(corpsDuLieu(x.id));
   const pied = document.createElement("div");
@@ -6726,6 +6862,7 @@ function fermerPhoto() {
 function ouvrirFeuille(p) {
   fermerGlose();
   rangerBlocs();
+  planteFeuille = p;
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
   $("feuille-corps").innerHTML = ficheHTML(p);
@@ -6820,6 +6957,8 @@ function fermerFeuille() {
   rangerBlocs();
   pileFeuille = [];
   vueCourante = null;
+  planteFeuille = null;
+  saisiePartout = null;
   poserRetour();
   fermerGlose();
   $("voile").classList.remove("visible");

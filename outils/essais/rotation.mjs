@@ -27,6 +27,10 @@ const CULTURES = [
     famille: "Cucurbitaceae", annee: 2022, saisi: true },
   { id: "c4", garden_id: "g1", espace_id: "z1", plant_id: null,
     famille: "Lamiaceae", annee: 2026, saisi: false },
+  /* Une famille encore sous délai sur l'espace lui-même, pour éprouver la
+     pastille du bouton de coin. */
+  { id: "c5", garden_id: "g1", espace_id: "e1", plant_id: null,
+    famille: "Brassicaceae", annee: 2025, saisi: true },
 ];
 
 const zone = (pg, id) => pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"]`);
@@ -88,8 +92,27 @@ export default async function essai(navigateur) {
   j.controle("la planche cultivée le porte", await rotation(pg, "z1").count() === 1);
   await deplier(pg, "z2");
   j.controle("la planche neuve n'en a pas", await rotation(pg, "z2").count() === 0);
-  j.controle("l'espace lui-même non plus, rien n'y est placé",
+  /* Le panneau tenait six lignes en tête d'écran, en permanence, alors qu'il ne
+     sert qu'au moment de poser une plante. Il est rangé dans le menu, et une
+     pastille sur le bouton de coin dit qu'une famille attend son tour. */
+  j.controle("l'espace ne le porte plus dans le fil de lecture",
     await pg.locator("#detailEspace > .rotation-lieu").count() === 0);
+  j.controle("le bouton de coin porte la pastille d'attente",
+    await pg.locator("#menuEspace.bl-pastille").count() === 1);
+  await pg.locator("#menuEspace").dispatchEvent("click");
+  await pg.waitForTimeout(300);
+  j.controle("le menu porte le panneau de l'espace",
+    await pg.locator("#detailEspace .menu-lieu .rotation-lieu").count() === 1);
+  const surEspace = net(await pg.locator("#detailEspace .menu-lieu .rotation-lieu .ro-l")
+    .first().textContent());
+  /* L'année saisie à la main porte sa croix de retrait : la lire avec l'année
+     mêlerait le geste au fait, elle est retirée avant la comparaison. */
+  j.controle("il dit la famille de l'espace et son année de retour",
+    surEspace.replace(/[\s×]+/g, "") === "Brassicacées2025pasavant2029", surEspace);
+  await pg.locator("#menuEspace").dispatchEvent("click");
+  await pg.waitForTimeout(300);
+  j.controle("le menu se referme et l'écran retrouve ses plantes",
+    await pg.locator("#detailEspace .menu-lieu").count() === 0);
   const familles = await rotation(pg, "z1").locator(".ro-f")
     .evaluateAll(l => l.map(e => e.textContent));
   j.controle("les familles sont rangées par leur nom français",

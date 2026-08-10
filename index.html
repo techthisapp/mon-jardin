@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=d17d7f70ce">
+<link rel="stylesheet" href="./styles.css?v=b9866e6e83">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="e28c68ce49">
+<meta name="version-appli" content="8237dd3c6c">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -268,6 +268,13 @@
 
       <section class="panneau">
         <h2 class="titre-panneau">Jardin</h2>
+        <!-- Le journal du jardin entier, dans l'ordre du temps. Il ne se lisait
+             qu'au bas d'un espace ou dans la fiche d'une plante : rien ne
+             donnait à relire une saison. -->
+        <div class="ligne-reglage">
+          <span class="etiq-reglage">Journal</span>
+          <button class="lien" id="voirJournal" type="button">Tout le journal</button>
+        </div>
         <div class="ligne-reglage">
           <label class="etiq-reglage" for="selJardin">Jardin actif</label>
           <select id="selJardin"></select>
@@ -291,7 +298,18 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=1a700dfe94"></script>
+<script type="module" src="./app.js?v=2f85eb45ec"></script>
+<!-- Noter est un geste et non une destination : il ne prend pas de place dans
+     la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
+     qui est à l'écran, l'espace ouvert ou la plante regardée. -->
+<button class="bouton-noter" id="btnNoter" type="button" hidden
+        aria-label="Noter au journal" title="Noter">
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4.5 19.5h15M6 15.6l8.6-8.6 2.4 2.4-8.6 8.6H6z"/>
+    <path d="M14.6 7 16.2 5.4a1.7 1.7 0 0 1 2.4 2.4L17 9.4"/>
+  </svg>
+  <span>Noter</span>
+</button>
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
   <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>

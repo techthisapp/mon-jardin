@@ -228,6 +228,31 @@ body::after{
   background:linear-gradient(to top, var(--papier) 46%, rgba(244,243,238,0));
   pointer-events:none;
 }
+/* Noter, partout. Le bouton se pose au-dessus de la barre des trois écrans,
+   contre le bord droit, à la hauteur du pouce. Il n'entre pas dans la barre :
+   celle-ci porte des destinations, celui-ci porte un geste. */
+.bouton-noter{
+  position:fixed;z-index:31;right:14px;
+  bottom:calc(78px + env(safe-area-inset-bottom));
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 15px 9px 12px;border-radius:999px;border:0;cursor:pointer;
+  background:var(--encre);color:#F3F2EC;
+  box-shadow:0 6px 20px rgba(22,36,30,.26);
+  font:600 13.5px/1 inherit;letter-spacing:.01em;
+}
+.bouton-noter svg{width:18px;height:18px;fill:none;stroke:currentColor;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.bouton-noter:active{transform:translateY(1px)}
+/* Une feuille ouverte couvre l'écran : le bouton n'a plus rien à désigner et
+   passerait par-dessus le contenu de la feuille. */
+body.fige .bouton-noter{display:none}
+@media (max-width:360px){.bouton-noter span{display:none}.bouton-noter{padding:11px}}
+/* Le sujet de la note, quand elle est prise depuis une fiche : la plante est
+   imposée, elle se lit au lieu de se choisir. */
+.note-sujet{margin:0 0 10px;font-weight:600}
+.note-vers-journal{margin:0 0 12px}
+.jo-mois{display:block;margin:18px 0 8px;font-size:13px;color:var(--encre-doux)}
+.jo-mois:first-child{margin-top:0}
 .barre-basse{
   position:fixed;z-index:30;
   left:50%;transform:translateX(-50%);
@@ -2492,6 +2517,11 @@ select:focus{
   color:var(--encre);
 }
 .bl-g{left:12px}.bl-d{right:12px}
+/* Une famille qui n'est pas encore libre de revenir se dit par une pastille
+   sur le bouton du menu, où la rotation est rangée. C'est le seul moment où
+   elle a quelque chose à dire sans qu'on la demande. */
+.bl-pastille::after{content:"";position:absolute;top:-2px;right:-2px;width:9px;height:9px;
+  border-radius:50%;background:#E0B978;box-shadow:0 0 0 2px rgba(24,38,28,.92)}
 .bl-rond svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;
   stroke-linecap:round;stroke-linejoin:round}
 .bl-d svg{fill:currentColor;stroke:none}
