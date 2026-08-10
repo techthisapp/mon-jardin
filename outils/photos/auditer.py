@@ -9,6 +9,12 @@ télécharge chaque image à la taille du plein écran, applique les contrôles 
 outils/photos/controles.py et de outils/photos/coherence.py, puis écrit un
 relevé JSON et un résumé lisible.
 
+L'option --verdicts rend en outre le jugement porté sur chaque tuile examinée,
+motifs compris quand ils sont vides, sous une forme chargeable en base dans les
+colonnes controle_motifs, controle_score et controle_le. Un relevé qui ne porte
+que les tuiles fautives ne permettrait pas de distinguer l'image jugée bonne de
+l'image jamais jugée.
+
 Ce script n'est pas dans la chaîne de contrôle avant dépôt : il dépend
 d'OpenCV et du réseau, et n'a de sens qu'après un ajout ou un remplacement de
 photographies. Il ne modifie rien, il signale.
@@ -61,6 +67,7 @@ def tuiles_affichees(images, plantes):
             if o in d:
                 x = d[o]
                 out.append({"slug": p["slug"], "nom": p["name"], "organe": o,
+                            "id": x.get("id"),
                             "rang": x["rang"], "url": x["url"], "auteur": x["auteur"],
                             "source": x["source"], "fonds": x["fonds"],
                             "port": p.get("habit"), "categorie": p.get("category"),
@@ -113,10 +120,11 @@ def main():
     a.add_argument("--cle", required=True, help="clé anonyme Supabase, celle de config.js")
     a.add_argument("--dossier", default="/tmp/mon-jardin-photos")
     a.add_argument("--releve", default="/tmp/mon-jardin-photos/releve.json")
+    a.add_argument("--verdicts", default="", help="fichier de verdicts à charger en base")
     o = a.parse_args()
 
     images = lire_table("plant_images",
-                        "plant_id,organe,rang,url,retenue,auteur,licence,source,fonds", o.cle)
+                        "id,plant_id,organe,rang,url,retenue,auteur,licence,source,fonds", o.cle)
     plantes = {p["id"]: p for p in lire_table(
         "plants", "id,slug,name,latin,flower_colors,category,habit", o.cle)}
     tuiles = tuiles_affichees(images, plantes)
@@ -133,12 +141,15 @@ def main():
     cats = {t["slug"]: t["categorie"] for t in tuiles}
     coh = coherence.controler_lot(tuiles)
     inc = coherence.organe_compatible(tuiles, ports, cats)
-    releve, compte = [], collections.Counter()
+    releve, compte, verdicts = [], collections.Counter(), []
     for t in tuiles:
         m = mes.get(t["grande"])
         motifs = controles.controler(m, t["organe"], t["couleurs"])
         motifs += coh.get((t["slug"], t["organe"]), [])
         motifs += inc.get((t["slug"], t["organe"]), [])
+        if t.get("id") and m is not None:
+            verdicts.append({"i": t["id"], "m": motifs,
+                             "s": controles.suspicion(m, t["organe"])})
         if motifs:
             releve.append({**{k: t[k] for k in ("slug", "nom", "organe", "rang", "url", "port")},
                            "motifs": motifs, "score": controles.suspicion(m, t["organe"])})
@@ -155,6 +166,9 @@ def main():
     manque = coherence.manques(tuiles)
     if manque:
         print(f"\n{len(manque)} fiches sans un organe attendu")
+    if o.verdicts:
+        json.dump(verdicts, open(o.verdicts, "w"), ensure_ascii=False)
+        print(f"{len(verdicts)} verdicts écrits dans {o.verdicts}")
     print(f"\nrelevé complet : {o.releve}")
 
 if __name__ == "__main__":

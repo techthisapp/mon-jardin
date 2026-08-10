@@ -169,8 +169,11 @@ def candidats(plante, organes):
     for taxon in noms:
         taxon = re.sub(r"\s+(var|subsp|f)\.\s+\S+$", "", taxon).strip()
         try:
-            taxon = categorie_du_taxon(taxon)
-            scs = sous_categories(taxon) if taxon else []
+            # Une catégorie sans sous-catégorie n'est pas une catégorie absente :
+            # elle porte souvent ses fichiers en vrac, et c'est le cas de la
+            # plupart des fiches. Le nom d'origine reste donc le repli.
+            taxon = categorie_du_taxon(taxon) or taxon
+            scs = sous_categories(taxon)
         except Exception:
             continue
         for sc in scs:
