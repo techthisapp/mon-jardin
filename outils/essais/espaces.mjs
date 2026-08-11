@@ -344,6 +344,23 @@ export default async function essai(navigateur) {
     await pg.locator("#detailEspace .mosaique-lieu").count() > 0
     && await pg.locator(`#detailEspace .tuile-plante[data-plante="${FRAISE.id}"]`).count() === 1
     && await pg.locator("#detailEspace .rangs-lieu").count() === 0);
+  /* La tuile porte les deux mêmes gestes que la rangée : ouvrir la fiche, et
+     corriger le nombre de pieds. */
+  const tuile = pg.locator(`#detailEspace .tuile-plante[data-plante="${FRAISE.id}"]`);
+  j.controle("elle porte le nombre de pieds, modifiable",
+    await tuile.locator("input.tp-q").count() === 1);
+  await tuile.locator("input.tp-q").fill("9");
+  await tuile.locator("input.tp-q").dispatchEvent("change");
+  await pg.waitForTimeout(400);
+  const ecritTuile = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "garden_plant_espaces" && e.op === "update").pop());
+  j.controle("la saisie sur la tuile s'enregistre",
+    !!ecritTuile && ecritTuile.v.quantity === 9, JSON.stringify(ecritTuile && ecritTuile.v));
+  await tuile.locator(".tp-ouvre").click();
+  await pg.waitForTimeout(700);
+  j.controle("la tuile ouvre la fiche sur son placement",
+    await pg.locator('.f-onglets button[data-pan="jardin"][aria-selected="true"]').count() === 1);
+  await fermerFiche(pg);
   j.controle("le choix est retenu d'un écran à l'autre",
     await pg.evaluate(() => localStorage.getItem("monjardin.vue-espace")) === "mosaique");
   await pg.locator('#detailEspace .ml-b[data-vue="liste"]').click();

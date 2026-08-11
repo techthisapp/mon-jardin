@@ -5299,20 +5299,27 @@ function ecartExposition(p, cle) {
     + `${p.nom} demande ${(EXPO_NOM[p.expo] || "").toLowerCase()}`;
 }
 
+/* La tuile porte deux gestes et non un seul : ouvrir la fiche, et corriger le
+   nombre de pieds comme la rangée le permet. Un champ ne pouvant pas tenir dans
+   un bouton, la tuile est une boîte, le bouton couvre l'image et le nom, et le
+   nombre se pose par-dessus, dans le bandeau déjà en place. */
 function tuileDuLieu(p, cle) {
   const r = cle === "0" ? null : ((aff.get(p.id) || []).find(x => x.espace_id === cle) || {});
   const m = momentDeLaPlante(p);
-  const t = document.createElement("button");
-  t.type = "button";
+  const t = document.createElement("div");
   t.className = "tuile-plante";
   t.dataset.plante = p.id;
-  t.innerHTML = imageHTML(p, "im-t")
-    + `<span class="tp-nom">${esc(p.nom)}</span>`
+  t.innerHTML = `<button type="button" class="tp-ouvre">` + imageHTML(p, "im-t")
+    + `<span class="tp-nom">${esc(p.nom)}</span></button>`
     + `<span class="tp-haut">`
-    + (r && r.quantity != null ? `<i class="tp-q">${r.quantity}</i>` : "")
+    + (r ? `<input class="tp-q" type="number" min="0" max="32000" step="1"`
+         + ` value="${r.quantity == null ? "" : r.quantity}" placeholder="qté"`
+         + ` aria-label="Nombre de pieds de ${esc(p.nom)}">` : "")
     + (m ? `<i class="tp-moment" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
     + `</span>`;
-  t.addEventListener("click", () => ouvrirFeuille(p, "jardin"));
+  t.querySelector(".tp-ouvre").addEventListener("click", () => ouvrirFeuille(p, "jardin"));
+  const q = t.querySelector("input.tp-q");
+  if (q) q.addEventListener("change", ev => majAffectation(p.id, cle, ev.target.value));
   return t;
 }
 
@@ -5347,8 +5354,12 @@ function ligneDuLieu(p, cle) {
 function outilsDeLaLigne(p, cle, r) {
   const o = document.createElement("div");
   o.className = "outils-ligne";
-  // La quantité se saisit désormais sur la rangée elle-même, à toute heure.
-  o.innerHTML = choixZoneHTML(cle)
+  /* La quantité se saisit désormais sur la rangée elle-même, à toute heure. Le
+     choix de zone reste ici, où l'on réorganise plusieurs plantes à la suite
+     sans quitter l'écran, et se nomme maintenant qu'il y est seul de son
+     espèce. La fiche porte le même choix pour une plante prise à part. */
+  const zones = choixZoneHTML(cle);
+  o.innerHTML = (zones ? `<label class="ol-z"><span>Zone</span>${zones}</label>` : "")
     + `<button type="button" class="lien noter-lieu">Noter</button>`
     + `<button type="button" class="lien retirer-lieu">Retirer</button>`;
   const sz = o.querySelector(".sel-zone");
