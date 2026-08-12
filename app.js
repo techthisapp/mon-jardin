@@ -981,14 +981,6 @@ function majCompte() {
   const n = sel.size;
   const t = n ? (n > 1 ? `${n} plantes retenues` : "1 plante retenue") : "aucune plante retenue";
   $("compte").textContent = t;
-  majComptesPortee();
-}
-
-/* Chaque moitié du segment porte le nombre qu'elle ouvre. */
-function majComptesPortee() {
-  const j = $("nbAuJardin"), c = $("nbCatalogue");
-  if (j) j.textContent = String(sel.size);
-  if (c) c.textContent = String(plantes.length);
 }
 
 /* ================== Filtres ================== */
@@ -1112,20 +1104,21 @@ function afficher(dest) {
   if (section === "selection") {
     espaceOuvert = null;
     /* Le catalogue ouvre sur les 315 fiches, le jardin sur ses espaces. La
-       portée n'a plus à se choisir à la main, la destination la dit. */
-    if (dest === "catalogue" && porteeSel !== "tout") {
-      porteeSel = "tout";
-      document.querySelectorAll(".segment[data-portee]").forEach(x =>
-        x.setAttribute("aria-pressed", String(x.dataset.portee === "tout")));
-    }
-    if (dest === "selection" && session && porteeSel !== "jardin") {
-      porteeSel = "jardin";
-      document.querySelectorAll(".segment[data-portee]").forEach(x =>
-        x.setAttribute("aria-pressed", String(x.dataset.portee === "jardin")));
-    }
-    afficherPanneau(dest === "catalogue" || !session ? "plantes" : "jardin");
+       portée n'a plus à se choisir à la main, la destination la dit, et le
+       segment qui la portait a disparu avec ce partage. */
+    const cat = dest === "catalogue" || !session;
+    porteeSel = cat ? "tout" : "jardin";
+    majOngletsJardin();
+    afficherPanneau(cat ? "plantes" : "jardin");
     rendreSelection();
   }
+}
+
+/* La rangée d'onglets appartient au jardin : le catalogue est une destination
+   à part, et sans compte il n'y a ni espace ni carnet à montrer. */
+function majOngletsJardin() {
+  const r = document.querySelector(".onglets-jardin");
+  if (r) r.hidden = !session || ecranCourant === "catalogue";
 }
 
 onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
@@ -1137,17 +1130,26 @@ function afficherPanneau(nom) {
   panneauJardin = nom;
   $("pan-jardin").hidden = nom !== "jardin";
   $("pan-plantes").hidden = nom !== "plantes";
+  $("pan-carnet").hidden = nom !== "carnet";
   document.querySelectorAll(".onglet-j").forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.panneau === nom)));
-  /* Les deux onglets de l'écran mènent aux mêmes contenus que deux fentes de la
-     barre : la fente enfoncée suit celui qui est ouvert, sans quoi la barre
-     annoncerait un écran que l'on ne regarde plus. */
-  if (SECTION[ecranCourant] === "selection") {
-    ecranCourant = nom === "plantes" ? "catalogue" : "selection";
-    marquerOnglets();
-  }
   window.scrollTo(0, 0);
   if (nom === "jardin") rendreEspaces();
+  if (nom === "carnet") rendreJournal();
+}
+
+/* Le carnet est une destination et non plus une feuille : il se rafraîchit avec
+   le reste quand une entrée est écrite ou effacée. */
+function majCarnet() {
+  if (panneauJardin === "carnet" && !$("pan-carnet").hidden) rendreJournal();
+}
+
+/* Les deux renvois qui ouvraient la feuille du journal mènent à son onglet :
+   ils gardent leur place, ils cessent d'être le seul chemin. */
+function allerAuCarnet() {
+  if (!$("feuille").hidden) fermerFeuille();
+  afficher("selection");
+  afficherPanneau("carnet");
 }
 
 document.querySelectorAll(".onglet-j").forEach(b =>
@@ -1157,12 +1159,10 @@ document.querySelectorAll(".onglet-j").forEach(b =>
    montrer et la restriction au jardin viderait la liste. L'écran se réduit
    alors au catalogue entier, qui reste consultable. */
 function majAccesJardin(connecte) {
-  document.querySelector(".onglets-jardin").hidden = !connecte;
+  majOngletsJardin();
   majBoutonNoter();
   if (!connecte) {
     porteeSel = "tout";
-    document.querySelectorAll(".segment[data-portee]").forEach(x =>
-      x.setAttribute("aria-pressed", String(x.dataset.portee === "tout")));
     afficherPanneau("plantes");
   }
 }
@@ -1184,14 +1184,6 @@ document.querySelectorAll(".segment[data-tri]").forEach(s => s.addEventListener(
   rendreSelection();
 }));
 
-/* L'onglet des plantes ouvre sur le jardin. Le catalogue entier est à un appui,
-   et c'est de là qu'on ajoute une plante à son jardin. */
-document.querySelectorAll(".segment[data-portee]").forEach(s => s.addEventListener("click", () => {
-  porteeSel = s.dataset.portee;
-  document.querySelectorAll(".segment[data-portee]").forEach(x =>
-    x.setAttribute("aria-pressed", String(x === s)));
-  rendreSelection();
-}));
 
 /* ================== Écran 1 : ma sélection ================== */
 
@@ -1407,9 +1399,13 @@ function rendreSelection() {
      regarde que le jardin ne se raccordait à rien de visible. */
   const total = porteeSel === "jardin" ? sel.size : plantes.length;
   const bs = $("bilanSel");
-  bs.hidden = lot.length === total;
-  bs.textContent = `${lot.length} sur ${total} affichées`;
-  majComptesPortee();
+  /* Le compte de la portée était porté par le segment qui la choisissait : il
+     revient au bilan, qui le disait déjà quand un filtre écartait quelque
+     chose et se taisait le reste du temps. */
+  bs.hidden = false;
+  bs.textContent = lot.length === total
+    ? `${total} plante${total > 1 ? "s" : ""}`
+    : `${lot.length} sur ${total} affichées`;
 
   if (!lot.length) { $("videSel").hidden = false; return; }
   $("videSel").hidden = true;
@@ -3277,7 +3273,7 @@ function vueNote() {
       const l = document.createElement("button");
       l.type = "button"; l.className = "lien note-vers-journal";
       l.textContent = "Voir tout le journal";
-      l.addEventListener("click", () => ouvrirVue("journal"));
+      l.addEventListener("click", allerAuCarnet);
       z.appendChild(l);
       z.appendChild(formulaireEntree(etat, lieux, Boolean(p), () => {
         saisiePartout = null;
@@ -3285,15 +3281,6 @@ function vueNote() {
         fermerFeuille();
       }));
     },
-  };
-}
-
-/* Le journal entier, dans l'ordre du temps. Il n'existait qu'au bas d'un espace
-   et dans la fiche d'une plante : rien ne donnait à relire une saison. */
-function vueJournal() {
-  return {
-    titre: "Journal du jardin", sous: "", corps: `<div id="corpsJournal"></div>`,
-    brancher: rendreJournal,
   };
 }
 
@@ -3380,7 +3367,7 @@ function ouvrirVue(vue, enRetour) {
   const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance,
                    jardin: vueJardin, compte: vueCompte, note: vueNote,
-                   journal: vueJournal, photosEcartees: vuePhotosEcartees };
+                   photosEcartees: vuePhotosEcartees };
   const f = (rendus[vue] || vueLieu)();
   if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
   if (vue !== "note" && vue !== "journal") planteFeuille = null;
@@ -4747,7 +4734,7 @@ sur("form-connexion", "submit", async e => {
 
 sur("deconnexion", "click", () => db.auth.signOut());
 sur("voirEcartees", "click", () => ouvrirVue("photosEcartees"));
-sur("voirJournal", "click", () => ouvrirVue("journal"));
+sur("voirJournal", "click", allerAuCarnet);
 
 db.auth.onAuthStateChange((_e, s) => {
   session = s;
@@ -6411,6 +6398,7 @@ function rendreTout() {
   rendreMaintenant();
   rendrePlanning();
   rendreEspaces();
+  majCarnet();
 }
 
 /* L'agent de service met en cache le script, la feuille de style et les

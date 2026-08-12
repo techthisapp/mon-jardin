@@ -400,15 +400,21 @@ export default async function essai(navigateur) {
     await pg.locator("#corpsNote .ec-lieu option").count() === 2,
     String(await pg.locator("#corpsNote .ec-lieu option").count()));
 
-  /* Le journal entier ne se lisait nulle part : ni l'espace ni la fiche ne
-     donnent à relire une saison. */
-  j.section("le journal du jardin, dans l'ordre du temps");
+  /* Le carnet du jardin entier n'avait aucune adresse : il se rattrapait depuis
+     la feuille des réglages, le pied d'un espace, l'onglet d'une fiche et le
+     formulaire de saisie. Il est devenu le troisième onglet du jardin, et les
+     renvois y mènent au lieu d'ouvrir une feuille. */
+  j.section("le carnet du jardin, dans l'ordre du temps");
   await pg.locator("#corpsNote .note-vers-journal").click();
-  await pg.waitForTimeout(500);
-  j.controle("la vue d'ensemble s'ouvre",
-    net(await pg.locator("#feuille-titre").textContent()) === "Journal du jardin");
+  await pg.waitForTimeout(700);
+  j.controle("le renvoi ferme la feuille et ouvre l'onglet",
+    await pg.locator("#feuille[hidden]").count() === 1
+    && await pg.locator('.onglet-j[data-panneau="carnet"][aria-selected="true"]').count() === 1
+    && await pg.locator("#pan-carnet:not([hidden])").count() === 1);
+  j.controle("la fente du jardin est celle qui est enfoncée",
+    await pg.locator('.onglet[data-ecran="selection"][aria-selected="true"]').count() === 1);
   const combien = await pg.locator("#corpsJournal .entree-carnet").count();
-  j.controle("elle porte toutes les entrées du jardin", combien >= 2, String(combien));
+  j.controle("il porte toutes les entrées du jardin", combien >= 2, String(combien));
   const dates = await pg.locator("#corpsJournal .ec-jour")
     .evaluateAll(l => l.map(e => e.textContent.trim()));
   j.controle("la plus récente vient en tête",
@@ -418,8 +424,17 @@ export default async function essai(navigateur) {
   j.controle("les entrées se rangent par mois", parMois.length >= 1, parMois.join(" | "));
   j.controle("chaque entrée dit sa plante et son lieu",
     await pg.locator("#corpsJournal .ec-lieu").count() >= 1);
-  await pg.locator("#fermerFeuille").click();
+  /* Le second renvoi, dans la feuille des réglages du jardin, mène au même
+     onglet. */
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
+  await pg.locator("#btnJardin").click();
+  await pg.waitForTimeout(600);
+  await pg.locator("#voirJournal").click();
+  await pg.waitForTimeout(700);
+  j.controle("le renvoi des réglages mène au même onglet",
+    await pg.locator("#feuille[hidden]").count() === 1
+    && await pg.locator("#pan-carnet:not([hidden])").count() === 1);
 
   await ctx.close();
   return j.fin(erreurs);

@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=fe73cf30eb">
+<link rel="stylesheet" href="./styles.css?v=63a3caa7bb">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="c84375aee8">
+<meta name="version-appli" content="5a2d552fa2">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -156,14 +156,16 @@
   <section id="ec-selection" hidden>
     <p class="vide" id="videSelection" hidden>Connectez-vous pour enregistrer votre sélection. Le bouton du compte est en haut à droite de l'écran.</p>
 
-    <!-- Deux onglets de même rang : le jardin tel qu'il est découpé, et le
-         choix de ce qu'on cultive. Le premier ouvre au premier niveau sur une
-         tuile par espace, le second sur les plantes du jardin. -->
-    <div class="onglets-jardin" role="tablist" aria-label="Mon jardin et mes plantes">
+    <!-- Trois onglets de même rang : le jardin tel qu'il est découpé, les
+         plantes qu'on y cultive, et ce qu'on en a noté. Le carnet n'avait
+         aucune adresse, il se rattrapait depuis quatre endroits. -->
+    <div class="onglets-jardin" role="tablist" aria-label="Mon jardin">
       <button class="onglet-j" role="tab" id="ong-jardin" data-panneau="jardin"
-              aria-selected="true" aria-controls="pan-jardin">Mon jardin</button>
+              aria-selected="true" aria-controls="pan-jardin">Espaces</button>
       <button class="onglet-j" role="tab" id="ong-plantes" data-panneau="plantes"
               aria-selected="false" aria-controls="pan-plantes">Mes plantes</button>
+      <button class="onglet-j" role="tab" id="ong-carnet" data-panneau="carnet"
+              aria-selected="false" aria-controls="pan-carnet">Carnet</button>
     </div>
 
     <div id="pan-jardin" role="tabpanel" aria-labelledby="ong-jardin">
@@ -184,14 +186,10 @@
       <div class="ligne-rech">
         <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
       </div>
-      <!-- La portée porte son propre compte : le dénominateur change avec elle,
-           ce qui évite d'annoncer le catalogue entier alors qu'on ne regarde
-           que le jardin. Le reste des filtres se replie. -->
+      <!-- La portée se règle avec la destination : l'onglet du jardin montre ses
+           plantes, la fente du catalogue les trois cent quinze fiches. Le
+           segment qui la choisissait à la main a disparu avec ce partage. -->
       <div class="ligne-portee">
-        <div class="segments seg-portee" role="group" aria-label="Étendue du catalogue">
-          <button class="segment" id="porteeJardin" data-portee="jardin" aria-pressed="true">Au jardin<span class="nb-portee" id="nbAuJardin"></span></button>
-          <button class="segment" data-portee="tout" aria-pressed="false">Tout le catalogue<span class="nb-portee" id="nbCatalogue"></span></button>
-        </div>
         <button class="mini" id="basculeFiltresS" type="button" aria-label="Filtres"
                 aria-expanded="false" aria-controls="corpsFiltresS">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg><span class="lib-mini">Filtres</span><span class="nb" id="nbFiltresS" hidden></span></button>
@@ -231,6 +229,13 @@
 
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
+    </div>
+
+    <!-- Le carnet du jardin entier, par mois. Il n'avait aucune adresse : il se
+         rattrapait depuis la feuille des réglages, le pied d'un espace,
+         l'onglet d'une fiche et le formulaire de saisie. -->
+    <div id="pan-carnet" role="tabpanel" aria-labelledby="ong-carnet" hidden>
+      <div id="corpsJournal"></div>
     </div>
   </section>
 </main>
@@ -311,7 +316,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=5b19acd89c"></script>
+<script type="module" src="./app.js?v=ff70b3683a"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->

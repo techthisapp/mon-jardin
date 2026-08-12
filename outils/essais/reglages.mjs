@@ -139,11 +139,18 @@ export default async function essai(navigateur) {
     await pg.locator("#niveauEspaces:not([hidden])").count() === 1
     && await pg.locator("#detailEspace[hidden]").count() === 1);
 
+  /* Le jardin porte trois onglets : ses espaces, ses plantes, son carnet. Le
+     catalogue est une destination à part, et la portée se règle avec elle : le
+     segment qui la choisissait à la main a disparu. */
   j.section("l'onglet des plantes ouvre sur celles du jardin");
+  j.controle("trois onglets, dont le carnet",
+    JSON.stringify(await pg.locator(".onglet-j").allInnerTexts())
+      === JSON.stringify(["Espaces", "Mes plantes", "Carnet"]),
+    JSON.stringify(await pg.locator(".onglet-j").allInnerTexts()));
   await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
-  j.controle("la portée retenue est mes plantes",
-    await pg.locator("#porteeJardin").getAttribute("aria-pressed") === "true");
+  j.controle("le segment de portée a disparu",
+    await pg.locator(".seg-portee, .segment[data-portee]").count() === 0);
   const auJardin = await pg.locator(".item-bloc").count();
   const coches = await pg.locator('.item[aria-pressed="true"]').count();
   j.controle("toutes les rangées affichées sont cochées",
@@ -172,24 +179,18 @@ export default async function essai(navigateur) {
     await pg.locator("#corpsFiltresS #vider").count() === 1
     && await pg.locator("#corpsFiltresS #compte").count() === 1);
 
-  j.section("chaque portée porte son propre compte");
-  const comptes = await pg.evaluate(() => ({
-    jardin: (document.getElementById("nbAuJardin") || {}).textContent,
-    tout: (document.getElementById("nbCatalogue") || {}).textContent,
-    bilan: document.getElementById("bilanSel").hidden,
-  }));
-  j.controle("le segment annonce le jardin et le catalogue",
-    comptes.jardin === String(auJardin) && Number(comptes.tout) > auJardin,
-    `${comptes.jardin} au jardin, ${comptes.tout} au catalogue`);
-  j.controle("le bilan se tait tant que rien n'est écarté", comptes.bilan);
+  /* Le compte de la portée était porté par le segment qui la choisissait : il
+     revient au bilan, qui le disait déjà quand un filtre écartait quelque
+     chose et se taisait le reste du temps. */
+  j.section("le bilan porte le compte de la portée");
+  const repos = net(await pg.locator("#bilanSel").textContent());
+  j.controle("au repos, il annonce le compte du jardin",
+    repos === `${auJardin} plantes`, repos);
   await pg.fill("#rech", "zzz");
   await pg.waitForTimeout(300);
-  const filtre = await pg.evaluate(() => ({
-    cache: document.getElementById("bilanSel").hidden,
-    texte: document.getElementById("bilanSel").textContent,
-  }));
-  j.controle("il paraît dès qu'un filtre écarte, et compte sur la portée",
-    !filtre.cache && / sur 20 affichées$/.test(filtre.texte), filtre.texte);
+  const filtre = net(await pg.locator("#bilanSel").textContent());
+  j.controle("filtré, il dit ce qui reste sur ce compte",
+    / sur 20 affichées$/.test(filtre), filtre);
   await pg.fill("#rech", "");
   await pg.waitForTimeout(300);
 
@@ -197,14 +198,10 @@ export default async function essai(navigateur) {
      distingue rien et peignait la liste entière. Le rond porte seul le signal,
      la teinte reprend son office au catalogue entier. */
   j.section("un seul signal de retenue selon la portée");
-  const teintes = await pg.evaluate(() => {
-    const fond = () => getComputedStyle(document.querySelector(
-      '#listes .item[aria-pressed="true"]')).backgroundColor;
-    const auJardin = fond();
-    document.querySelector('.segment[data-portee="tout"]').click();
-    return { auJardin };
-  });
-  await pg.waitForTimeout(500);
+  const teintes = { auJardin: await pg.evaluate(() => getComputedStyle(
+    document.querySelector('#listes .item[aria-pressed="true"]')).backgroundColor) };
+  await pg.locator('.onglet[data-ecran="catalogue"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
   const teinteTout = await pg.evaluate(() => getComputedStyle(
     document.querySelector('#listes .item[aria-pressed="true"]')).backgroundColor);
   j.controle("au jardin, la rangée retenue n'est pas teintée",
@@ -220,7 +217,8 @@ export default async function essai(navigateur) {
      Le lieu occupé passe sous le nom, le choix complet ne se déplie que sur la
      rangée touchée. */
   j.section("la rangée ne nomme que les espaces occupés");
-  await pg.locator("#porteeJardin").dispatchEvent("click");
+  await ouvrirMonJardin(pg);
+  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
   await pg.waitForTimeout(500);
   const lieux = await pg.evaluate(() => {
     const blocs = [...document.querySelectorAll("#listes .item-bloc")];
