@@ -1,7 +1,7 @@
 /* Bilan hydrique du sol. Le relevé du jardinier remplace la lame d'eau du
    modèle, la texture du sol fixe la réserve utile, et l'effacement d'un relevé
    ramène le bilan à son état d'origine. */
-import { ouvrirContexte, journal, nombre, net, METEO } from "./commun.mjs";
+import { ouvrirContexte, journal, ouvrirMesure, nombre, net, METEO } from "./commun.mjs";
 
 const pleine = async pg => nombre((await pg.locator(".js-leg b").innerText()));
 const reserve = async pg => nombre((await pg.locator("#sol-note").innerText()).match(/retient ([\d,]+) mm/)[1]);
@@ -11,11 +11,7 @@ export default async function essai(navigateur) {
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur);
 
   j.section("ouverture de la feuille de l'eau");
-  // Les trois mesures du jour vivent dans la feuille du jour, ouverte par la date.
-  await pg.locator("#dateJour").click();
-  await pg.waitForTimeout(500);
-  await pg.locator('.mesure[data-vue="eau"]').click();
-  await pg.waitForTimeout(700);
+  await ouvrirMesure(pg, "eau");
   j.controle("la jauge affiche un remplissage", (await pg.locator(".jauge-sol").count()) === 1);
   const avant = await pleine(pg);
   const solLimoneux = await reserve(pg);
@@ -70,12 +66,11 @@ export default async function essai(navigateur) {
     d.daily.temperature_2m_max = d.daily.temperature_2m_max.map(() => 26);
     retouche(d);
     const { ctx: c, pg: p } = await ouvrirContexte(navigateur, { meteo: JSON.stringify(d) });
-    await p.locator("#dateJour").click();
     await p.waitForTimeout(400);
     const r = await p.evaluate(() => ({
-      eau: (document.querySelector('.mesure[data-vue="eau"]') || {}).textContent
-             ? document.querySelector('.mesure[data-vue="eau"]').textContent.replace(/\s+/g, " ").trim() : "",
-      marquee: !!document.querySelector('.mesure[data-vue="eau"].mesure-agir'),
+      eau: (document.querySelector('.mesure-j[data-vue="eau"]') || {}).textContent
+             ? document.querySelector('.mesure-j[data-vue="eau"]').textContent.replace(/\s+/g, " ").trim() : "",
+      marquee: !!document.querySelector('.mesure-j[data-vue="eau"].mesure-agir'),
       alertes: [...document.querySelectorAll(".bd-alerte")].map(e => e.textContent.replace(/\s+/g, " ").trim()),
     }));
     await c.close();
@@ -87,8 +82,10 @@ export default async function essai(navigateur) {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map((v, k) => k === IJOUR ? 19 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
   });
-  j.controle("sol en dette : la mesure demande un apport",
-    /à apporter/.test(dette.eau), dette.eau);
+  /* La tuile a le tiers de la largeur : elle porte la décision en trois mots,
+     la feuille de l'eau garde la phrase entière. */
+  j.controle("sol en dette : la tuile chiffre l'apport",
+    /L\/m²/.test(dette.eau), dette.eau);
   j.controle("l'alerte énonce la lame sans dissuader d'arroser",
     dette.alertes.some(a => a === "19 mm attendus aujourd'hui"), JSON.stringify(dette.alertes));
   // Une marque ne signale que l'exception : seule la mesure qui demande un geste
@@ -107,8 +104,8 @@ export default async function essai(navigateur) {
       k === IJOUR + 1 ? 30 : k === IJOUR ? 16 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
   });
-  j.controle("pluie annoncée : la mesure dit d'attendre",
-    /attendre/.test(attente.eau), attente.eau);
+  j.controle("pluie annoncée : la tuile chiffre la pluie plutôt que l'apport",
+    / mm$/.test(attente.eau.replace(/^L'eau/, "")), attente.eau);
   j.controle("et elle ne porte plus la marque du geste", attente.marquee === false);
   j.controle("et l'alerte se tait, pour ne pas répéter la mesure",
     !attente.alertes.some(a => /mm attendus/.test(a)), JSON.stringify(attente.alertes));

@@ -100,7 +100,10 @@ export default async function essai(navigateur) {
      des tuiles d'un espace. La règle la plus tardive gagnait : rayon de gélule,
      bourrage réduit et calage à droite de la colonne. */
   j.section("les quatre mesures du temps gardent leur damier");
-  await pg.locator(".tm-temps").click();
+  // Le bloc du temps appartient à l'écran du jour : la boucle l'a quitté.
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  await pg.locator("#blocTemps .tm-temps").click();
   await pg.waitForTimeout(700);
   const mes = await pg.evaluate(() => [...document.querySelectorAll(".tp-m")].map(n => {
     const r = n.getBoundingClientRect(), s = getComputedStyle(n);

@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=8250853334">
+<link rel="stylesheet" href="./styles.css?v=fe73cf30eb">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="1feabfcb2b">
+<meta name="version-appli" content="c84375aee8">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -41,8 +41,10 @@
                     aria-label="Le jardin : climat et commune"><span
                     id="titreJardin">Mon jardin</span></button></h1>
         <div class="tete-ligne">
-          <button class="date-jour" id="dateJour" type="button"
-                  aria-label="Le jour : météo, eau, lumière et saison"></button>
+          <!-- La date oriente sur les quatre écrans. Elle ouvrait une feuille
+               dont les mesures sont descendues dans l'écran du jour : elle n'a
+               plus rien à ouvrir et redevient du texte. -->
+          <span class="date-jour" id="dateJour"></span>
           <button class="puce-climat" id="puceClimat" type="button" hidden></button>
         </div>
       </div>
@@ -53,7 +55,6 @@
         </svg>
       </button>
     </div>
-    <div class="tete-meteo" id="teteMeteo" hidden></div>
   </div>
 </header>
 
@@ -63,6 +64,10 @@
   <section id="ec-maintenant">
     <div class="prairie" id="prairie" aria-hidden="true"></div>
     <div id="vueEnsemble">
+      <!-- Le temps qu'il fait et les trois mesures du jour ouvrent l'écran :
+           ils tenaient l'en-tête des quatre écrans, où ils n'étaient
+           actionnables que sur celui-ci. -->
+      <div class="bloc-temps" id="blocTemps" hidden></div>
       <div class="bandeau" id="bandeau" hidden></div>
       <div class="carte-fleur" id="carteFleur" hidden></div>
       <div class="synthese" id="synthese" hidden></div>
@@ -306,7 +311,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=06ae209e94"></script>
+<script type="module" src="./app.js?v=5b19acd89c"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->

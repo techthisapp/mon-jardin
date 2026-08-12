@@ -62,9 +62,12 @@ body{
 /* Motif d'entête, un dessin par mois. Il occupe l'espace libre à droite du
    bandeau et passe derrière le texte, que son z-index maintient au premier plan.
    Le dessin du mois courant est appelé par app.js après le premier affichage. */
+/* Le bandeau a rendu ses soixante-dix points de météo à l'écran du jour : le
+   dessin est mis à sa nouvelle mesure, faute de quoi les deux tiers, animations
+   comprises, se joueraient sous la ligne de coupe. */
 .motif-mois{
-  position:absolute;top:-6px;right:max(6px, calc(50% - 524px));
-  width:202px;height:179px;pointer-events:none;z-index:0;
+  position:absolute;top:-4px;right:max(6px, calc(50% - 524px));
+  width:111px;height:98px;pointer-events:none;z-index:0;
 }
 .motif-mois svg{display:block;width:100%;height:100%;overflow:visible}
 /* Le bandeau fait la même hauteur sur tous les écrans depuis que les trois
@@ -1766,23 +1769,14 @@ body.fige{overflow:hidden}
 }
 
 /* ---------- En-tête météo, direction tableau de bord ---------- */
-.tete-meteo{position:relative;z-index:1;padding:14px 0 18px}
-/* La date ouvre le jour, depuis le bandeau où elle a pris la place du climat.
-   Elle s'y lit sur fond sombre. */
+/* La date oriente sur les quatre écrans. Elle ouvrait une feuille dont les
+   mesures sont descendues dans l'écran du jour : elle n'a plus rien à ouvrir. */
 .tete-ligne{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:5px}
 .date-jour{
   display:inline-flex;align-items:center;gap:7px;
-  border:0;background:none;padding:0;cursor:pointer;
   font-family:inherit;font-size:12.5px;font-weight:500;letter-spacing:.04em;
   color:#B9CBBE;
 }
-.date-jour::after{
-  content:"";width:6px;height:6px;flex:0 0 auto;
-  border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
-  transform:rotate(-45deg) translate(-1px,-1px);opacity:.5;
-}
-@media (hover:hover){.date-jour:hover{color:#EFEFE8}}
-.date-jour:focus-visible{outline:2px solid #EFEFE8;outline-offset:3px;border-radius:4px}
 /* Les trois mesures du jour, en tête de sa feuille. */
 /* Titre de section dans une feuille : il sépare deux objets de nature
    différente sans poser de cadre. */
@@ -1792,13 +1786,53 @@ body.fige{overflow:hidden}
   font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
   color:var(--encre-doux);
 }
+/* Le temps qu'il fait et les trois mesures du jour ouvrent l'écran, dans une
+   seule carte : ils parlent du même jour. Sur le papier de l'écran et non plus
+   sur l'encre de l'en-tête, les tons repassent à l'encre. */
+.bloc-temps{
+  background:var(--papier-haut);border-radius:var(--rayon);box-shadow:var(--ombre);
+  padding:13px 14px 12px;margin-bottom:12px;
+}
 .tm-temps{
   display:flex;align-items:flex-end;gap:12px;background:none;border:0;padding:0;
-  cursor:pointer;color:inherit;font-family:inherit;text-align:left;
+  cursor:pointer;color:inherit;font-family:inherit;text-align:left;width:100%;
 }
-.tm-deg{font-size:46px;font-weight:600;letter-spacing:-.045em;line-height:.92}
-.tm-etat{padding-bottom:5px;font-size:14px;color:#C6D5CA}
-.tm-etat small{display:block;font-size:11.5px;color:#93A79A;margin-top:2px}
+.tm-temps::after{
+  content:"";width:7px;height:7px;flex:0 0 auto;margin:0 2px 14px auto;
+  border-right:1.6px solid var(--encre-doux);border-bottom:1.6px solid var(--encre-doux);
+  transform:rotate(-45deg);opacity:.45;
+}
+.tm-deg{font-size:44px;font-weight:600;letter-spacing:-.045em;line-height:.92;color:var(--encre)}
+.tm-etat{padding-bottom:5px;font-size:14px;color:var(--encre)}
+.tm-etat small{display:block;font-size:11.5px;color:var(--encre-doux);margin-top:2px}
+
+/* Trois colonnes plutôt que trois rangées : empilées, les mesures repoussaient
+   la première tâche hors de l'écran. La phrase entière reste dans la feuille
+   que chacune ouvre. */
+.mesures-jour{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
+  margin-top:12px;padding-top:11px;border-top:1px solid var(--filet-clair);
+}
+.mesure-j{
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;
+  border:0;border-radius:11px;background:var(--papier);padding:8px 9px 9px;
+  cursor:pointer;font-family:inherit;color:inherit;text-align:left;
+}
+.mesure-j .mj-ic{width:16px;height:16px;flex:0 0 auto;color:#7E8C81;stroke-width:1.7;margin-bottom:3px}
+.mj-nom{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--encre-doux);
+}
+.mesure-j b{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:14px;font-weight:650;
+}
+.mesure-j.mesure-agir{background:#EDF2F7}
+.mesure-j.mesure-agir .mj-ic{color:#48708F}
+@media (hover:hover){ .mesure-j:hover{background:#EDECE4} }
+.mesure-j:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
 /* Les trois mesures du jour, en tête de sa feuille. Chacune est une carte
    nommée : le nom dit de quoi il s'agit, la valeur se lit sur une ligne, et la
    carte ouvre sa propre feuille. Les pastilles du bandeau, taillées pour un

@@ -1479,7 +1479,6 @@ const TEXTE_JOUR =
      la ligne de l'année, côté calendrier. */
   b.innerHTML = `<i class="dj-saison" style="--t:${TEINTE_SAISON[SAISON_DU_JOUR]}"></i>`
     + `<span>${esc(TEXTE_JOUR)}</span>`;
-  b.addEventListener("click", () => ouvrirVue("jour"));
 })();
 
 /* Le ruban de l'année : des bandes posées en jours, un cran par quinzaine, les
@@ -1601,12 +1600,12 @@ const texteAction = (p, k) => conseilPeriode(p, k)
     : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
     : (p.guide[k] || ""));
 
+/* Le bloc du temps est dans la vue d'ensemble : il se cache avec elle quand une
+   tâche s'ouvre, sans qu'on ait à le lui dire. */
 function majNiveau() {
   const ouvert = vueDetail !== null;
   $("vueEnsemble").hidden = ouvert;
   $("niveauDetail").hidden = !ouvert;
-  const tm = $("teteMeteo");
-  if (tm && tm.innerHTML) tm.hidden = ouvert;
 }
 
 function ouvrirDetail(d) {
@@ -3049,6 +3048,15 @@ function vigilanceDuJour() {
   };
 }
 
+/* La même décision, en trois mots : la tuile du jour a le tiers de la largeur,
+   la feuille de l'eau porte la phrase entière. */
+function eauCourte(b) {
+  if (!b) return "inconnue";
+  if (b.etat === "arroser") return nombreFr(b.apport) + " L/m²";
+  if (b.etat === "attendre") return nombreFr(b.prevue) + " mm";
+  return b.jours + (b.jours > 1 ? " jours" : " jour");
+}
+
 // La pastille d'eau porte la décision du jour, non un écart à combler.
 function mesureEau(b) {
   if (!b) return ["Réserve inconnue", ""];
@@ -3062,7 +3070,7 @@ function rendreBandeau() {
   if (!z) return;
   const g = jardinActif();
   if (!g) { z.hidden = true; return; }
-  const tm = $("teteMeteo");
+  const tm = $("blocTemps");
   if (tm) { tm.hidden = true; tm.innerHTML = ""; }
   if (!meteo || iJour() < 0) {
     // Sans position, la tuile de lumière et celle de saison restent calculables.
@@ -3079,8 +3087,12 @@ function rendreBandeau() {
   const delta = Math.round((dur - veille) / 60);
   const sais = positionSaison();
 
-  // La météo tient dans l'en-tête, en pastilles ; le corps ne porte que l'alerte.
-  const t = $("teteMeteo");
+  /* Le temps qu'il fait et les trois mesures du jour ouvrent l'écran, dans une
+     seule carte : ils parlent tous du même jour, et ils tenaient l'en-tête des
+     quatre écrans où ils n'étaient actionnables que sur celui-ci. Les mesures
+     sont posées en trois colonnes : empilées, elles repoussaient la première
+     tâche hors de l'écran. */
+  const t = $("blocTemps");
   // Grand chiffre : la température de l'heure. Le code du jour est celui de la
   // condition la plus sévère des vingt-quatre heures, il annoncerait de la pluie
   // pour un dixième de millimètre tombé à midi.
@@ -3089,11 +3101,22 @@ function rendreBandeau() {
     ? { deg: meteo.hourly.temperature_2m[ih], lib: tempsDe(meteo.hourly.weather_code[ih])[1],
         vent: meteo.hourly.wind_speed_10m[ih] }
     : { deg: d.temperature_2m_max[i], lib, vent: d.wind_speed_10m_max[i] };
+  const eau = mesureEau(b);
+  const tuile = (vue, icone, nom, val, ton) =>
+    `<button type="button" class="mesure-j${ton ? " mesure-agir" : ""}" data-vue="${vue}">`
+    + icoM(icone, "mj-ic") + `<span class="mj-nom">${nom}</span>`
+    + `<b>${esc(val)}</b></button>`;
   t.innerHTML = `<button type="button" class="tm-temps" data-vue="temps">`
     + `<span class="tm-deg">${Math.round(maintenant.deg)}°</span>`
     + `<span class="tm-etat">${esc(maintenant.lib)}<small>`
     + `${Math.round(d.temperature_2m_max[i])}° le jour, ${Math.round(d.temperature_2m_min[i])}° la nuit, `
-    + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`;
+    + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`
+    + `<div class="mesures-jour">`
+    + tuile("eau", "goutte", "L'eau", eauCourte(b), eau[2])
+    + tuile("lumiere", "arc", "La lumière", hhmm(dur))
+    + tuile("saison", "feuille", "La saison",
+            sais.court[0].toUpperCase() + sais.court.slice(1))
+    + `</div>`;
   t.hidden = false;
   t.querySelectorAll("[data-vue]").forEach(x =>
     x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
@@ -3352,7 +3375,9 @@ async function rendreEcartees() {
 function ouvrirVue(vue, enRetour) {
   fermerGlose();
   rangerBlocs();
-  const rendus = { jour: vueJour, temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
+  /* « Le jour » a disparu : ses trois mesures se lisent sur l'écran du jour, et
+     chacune ouvre encore la sienne. */
+  const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance,
                    jardin: vueJardin, compte: vueCompte, note: vueNote,
                    journal: vueJournal, photosEcartees: vuePhotosEcartees };
@@ -4002,41 +4027,6 @@ function tableSemaine() {
   }
   return `<table class="mt-table">${lignes.join("")}</table>`;
 }
-
-/* La feuille du jour porte les trois mesures et rien d'autre : le temps qu'il
-   fait a la sienne, ouverte par la pastille du bandeau. */
-function vueJour() {
-  const d = meteo.daily, i = iJour();
-  const b = bilanHydrique();
-  const dur = d.daylight_duration[i], veille = d.daylight_duration[i - 1];
-  const delta = Math.round((dur - veille) / 60);
-  const sais = positionSaison();
-  const mesure = (vue, icone, nom, val, sous, ton) =>
-    `<button type="button" class="mesure${ton ? " mesure-" + ton : ""}" data-vue="${vue}">`
-    + `${icoM(icone, "mesure-ic")}`
-    + `<span class="mesure-txt"><span class="mesure-nom">${nom}</span>`
-    + `<b>${esc(val)}</b>${sous ? ` <i>${esc(sous)}</i>` : ""}</span></button>`;
-  // Le jour s'allonge ou raccourcit : la minute se lit mieux en toutes lettres
-  // qu'en signe, la feuille ayant la place que le bandeau n'avait pas.
-  const ecart = delta === 0 ? "autant qu'hier"
-    : Math.abs(delta) + " minute" + (Math.abs(delta) > 1 ? "s" : "")
-      + (delta > 0 ? " de plus" : " de moins") + " qu'hier";
-  const etat = sais.long ? sais.long[0].toUpperCase() + sais.long.slice(1)
-    : sais.court[0].toUpperCase() + sais.court.slice(1);
-  const mesures = `<div class="mesures">`
-    + mesure("eau", "goutte", "L'eau", ...mesureEau(b))
-    + mesure("lumiere", "arc", "La lumière", hhmm(dur), ecart)
-    + mesure("saison", "feuille", "La saison", etat, sais.sous)
-    + `</div>`;
-  return { titre: "Le jour",
-    sous: (jardinActif() || {}).commune || "",
-    corps: mesures,
-    brancher() {
-      $("feuille-corps").querySelectorAll("[data-vue]").forEach(x =>
-        x.addEventListener("click", () => ouvrirVue(x.dataset.vue)));
-    } };
-}
-
 function vueEau() {
   const b = bilanHydrique(), d = meteo.daily, i = iJour();
   if (!b) return { titre: "L'eau", corps: "" };

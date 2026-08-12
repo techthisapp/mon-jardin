@@ -163,6 +163,16 @@ export async function ouvrirListeDesPlantes(pg) {
   await pg.waitForTimeout(700);
 }
 
+/* Les trois mesures du jour se lisent sur l'écran du jour, en trois colonnes,
+   chacune ouvrant sa feuille. La feuille « Le jour » qui les réunissait a
+   disparu, ses mesures étant descendues dans l'écran. */
+export async function ouvrirMesure(pg, vue) {
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(350);
+  await pg.locator(`#blocTemps .mesure-j[data-vue="${vue}"]`).click();
+  await pg.waitForTimeout(700);
+}
+
 /* La fente voisine, sur la même section : les espaces du jardin. */
 export async function ouvrirMonJardin(pg) {
   await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");

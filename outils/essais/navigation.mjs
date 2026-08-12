@@ -58,14 +58,17 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(700);
   j.controle("dernier retour, ensemble revenu", await visible("#vueEnsemble") === 1);
 
-  /* La date est montée dans le bandeau, à la place du climat du jardin, qui ne
-     change pas d'un jour à l'autre. Elle y est unique et suit les deux écrans. */
-  j.section("la date est dans le bandeau, une seule fois");
-  j.controle("elle est dans le bandeau", await pg.locator(".tete #dateJour").count() === 1);
+  /* La date oriente sur les quatre écrans. Elle ouvrait une feuille dont les
+     trois mesures sont descendues dans l'écran du jour : elle n'a plus rien à
+     ouvrir et redevient du texte. */
+  j.section("la date oriente, elle n'ouvre plus rien");
+  j.controle("elle est dans l'en-tête", await pg.locator(".tete #dateJour").count() === 1);
   j.controle("il n'y en a pas d'autre ailleurs", await pg.locator(".date-jour").count() === 1);
-  j.controle("elle est ouverte par sa pastille de saison",
+  j.controle("elle porte sa pastille de saison",
     Math.round(await pg.locator("#dateJour .dj-saison").evaluate(
       e => e.getBoundingClientRect().width)) === 8);
+  j.controle("ce n'est plus un bouton",
+    await pg.locator("#dateJour").evaluate(e => e.tagName) === "SPAN");
   const txt = await pg.locator("#dateJour").innerText();
   j.controle("la quinzaine n'y est plus", !/quinzaine/.test(txt), txt);
   j.controle("le climat du jardin ne paraît plus quand il est renseigné",
@@ -73,46 +76,52 @@ export default async function essai(navigateur) {
   j.controle("l'écran du moment ne porte plus la ligne de l'année",
     await pg.locator("#vueEnsemble .regle-annee").count() === 0);
 
-  j.section("la date ouvre le jour");
-  const mesuresEnTete = await pg.locator(".tete .mesure").count();
-  j.controle("le bandeau ne porte plus les trois mesures", mesuresEnTete === 0, mesuresEnTete);
-  await pg.locator("#dateJour").click();
-  await pg.waitForTimeout(600);
-  const titreJour = (await pg.locator("#feuille-titre").innerText()).split("\n")[0];
-  j.controle("la pression sur la date ouvre la feuille du jour", titreJour === "Le jour", titreJour);
-  const mesures = await pg.locator("#feuille-corps .mesure").count();
-  j.controle("elle porte l'eau, la lumière et la saison", mesures === 3, mesures);
-  /* Chaque mesure se nomme : « pleine » ou « 14 h 49 » ne disaient pas de quoi
-     il s'agissait, la valeur seule ne suffit pas à porter la mesure. */
-  const noms = await pg.locator("#feuille-corps .mesure-nom").allInnerTexts();
-  j.controle("chacune est nommée",
+  /* Le temps qu'il fait et les trois mesures du jour tenaient l'en-tête des
+     quatre écrans, où ils n'étaient actionnables que sur celui-ci. */
+  j.section("le temps et les trois mesures ouvrent l'écran du jour");
+  j.controle("l'en-tête ne porte plus la météo",
+    await pg.locator(".tete .tm-temps, .tete .tete-meteo").count() === 0);
+  j.controle("le bloc du jour est en tête de l'écran",
+    await pg.locator("#vueEnsemble > *").first().evaluate(e => e.id) === "blocTemps");
+  const noms = await pg.locator("#blocTemps .mj-nom").allInnerTexts();
+  j.controle("il porte l'eau, la lumière et la saison, nommées",
     noms.join(" | ") === "L'EAU | LA LUMIÈRE | LA SAISON", noms.join(" | "));
-  j.controle("la prévision à sept jours a suivi le temps dans sa propre feuille",
-    await pg.locator("#feuille-corps .mt-table").count() === 0);
-  j.controle("la feuille du jour n'a pas de retour, elle vient de l'écran",
-    await pg.locator("#retourFeuille").isVisible() === false);
-  await pg.locator('#feuille-corps .mesure[data-vue="lumiere"]').click();
-  await pg.waitForTimeout(500);
-  j.controle("chaque mesure ouvre encore sa propre feuille",
+  const colonnes = await pg.locator("#blocTemps .mesure-j").evaluateAll(
+    l => l.map(e => Math.round(e.getBoundingClientRect().top)));
+  j.controle("les trois sont sur une seule ligne",
+    new Set(colonnes).size === 1, colonnes.join(" | "));
+  /* Le seul but de la descente : garder une tâche à l'écran sans défiler. */
+  const tenue = await pg.evaluate(() => {
+    const l = document.querySelector("#synthese .syn-ligne");
+    return l ? { haut: Math.round(l.getBoundingClientRect().top), vue: innerHeight } : null;
+  });
+  j.controle("la première tâche reste visible sans défiler",
+    tenue && tenue.haut < tenue.vue - 60, JSON.stringify(tenue));
+  j.controle("la feuille du jour n'existe plus",
+    await pg.locator("#feuille-corps .mesure").count() === 0);
+
+  await pg.locator('#blocTemps .mesure-j[data-vue="lumiere"]').click();
+  await pg.waitForTimeout(600);
+  j.controle("chaque mesure ouvre sa propre feuille",
     /jour|lumière|soleil/i.test(await pg.locator("#feuille-titre").innerText()),
     (await pg.locator("#feuille-titre").innerText()).split("\n")[0]);
+  j.controle("ouverte depuis l'écran, elle n'a pas de chemin de retour",
+    await pg.locator("#retourFeuille").isVisible() === false);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(500);
 
   /* Une feuille ouverte depuis une autre garde le chemin de celle qu'elle
      recouvre : sans lui, la croix était la seule sortie et faisait tout fermer. */
   j.section("le retour remonte d'un cran, la croix ferme tout");
-  j.controle("le chemin du retour nomme la feuille recouverte",
-    await pg.locator("#retourFeuille").isVisible() === true,
-    await pg.locator("#retourNom").textContent().catch(() => "absent"));
-  j.controle("il nomme la feuille du jour",
-    (await pg.locator("#retourNom").textContent()) === "Le jour");
-  await pg.locator("#retourFeuille").click();
+  await pg.locator("#blocTemps .tm-temps").click();
+  await pg.waitForTimeout(600);
+  await pg.locator('#feuille-corps [data-vue="vigilance"], #feuille-corps .mt-jour').first()
+    .click().catch(() => {});
   await pg.waitForTimeout(500);
-  j.controle("le retour ramène à la feuille du jour",
-    (await pg.locator("#feuille-titre").innerText()).split("\n")[0] === "Le jour");
-  j.controle("et le chemin disparaît, il n'y a plus de cran au-dessus",
-    await pg.locator("#retourFeuille").isVisible() === false);
-  await pg.locator('#feuille-corps .mesure[data-vue="saison"]').click();
-  await pg.waitForTimeout(500);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+  await pg.locator('#blocTemps .mesure-j[data-vue="saison"]').click();
+  await pg.waitForTimeout(600);
   const ruban = await pg.locator("#feuille-corps .ra-s").count();
   j.controle("la saison porte le ruban de l'année", ruban === 5, ruban + " bandes");
   await pg.locator("#fermerFeuille").click();
@@ -121,8 +130,10 @@ export default async function essai(navigateur) {
 
   await pg.locator('.onglet[data-ecran="planning"]').click();
   await pg.waitForTimeout(900);
-  j.controle("le bandeau garde la date sur le calendrier", await visible("#dateJour") === 1,
+  j.controle("l'en-tête garde la date sur l'année", await visible("#dateJour") === 1,
     await pg.locator("#dateJour").innerText().catch(() => "absente"));
+  j.controle("le bloc du jour ne suit pas, il appartient à son écran",
+    await pg.locator("#blocTemps").isVisible() === false);
   /* Le calendrier porte déjà l'axe des douze mois. Le repère du jour y est une
      bande posée sur toute la hauteur du tableau, à l'aplomb de la case du mois
      en cours, et le filtre s'affine à la quinzaine. La mesure se fait ici, seul
@@ -192,10 +203,6 @@ export default async function essai(navigateur) {
   j.controle("tous les mois relâche le filtre et remise les jetons",
     await cache("#jeuQuinz") === 1 && await cache("#bandeMois") === 1);
 
-  await pg.locator("#dateJour").click();
-  await pg.waitForTimeout(600);
-  j.controle("et la même feuille du jour",
-    (await pg.locator("#feuille-titre").innerText()).split("\n")[0] === "Le jour");
 
   await ctx.close();
   return j.fin(erreurs);

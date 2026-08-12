@@ -1,6 +1,6 @@
 /* Pluie mesurée au poste de Météo-France. Le poste rattaché au jardin fournit
    la lame d'eau à la place du modèle, et les valeurs douteuses sont écartées. */
-import { ouvrirContexte, journal, net, nombre } from "./commun.mjs";
+import { ouvrirContexte, journal, ouvrirMesure, net, nombre } from "./commun.mjs";
 
 // Relevés réels du poste de Montbard, tels que collectés en base. La ligne du
 // 20 juillet porte un indicateur de qualité de 2 : elle ne doit pas être retenue.
@@ -20,11 +20,7 @@ export default async function essai(navigateur) {
   const j = journal("Poste de mesure et pluie relevée");
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur, { pluies: PLUIES });
 
-  // Les trois mesures du jour vivent dans la feuille du jour, ouverte par la date.
-  await pg.locator("#dateJour").click();
-  await pg.waitForTimeout(500);
-  await pg.locator('.mesure[data-vue="eau"]').click();
-  await pg.waitForTimeout(800);
+  await ouvrirMesure(pg, "eau");
   const corps = net(await pg.locator("#feuille-corps").innerText());
 
   j.section("identité du poste");

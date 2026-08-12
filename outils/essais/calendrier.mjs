@@ -3,7 +3,7 @@
    posée sur la mauvaise quinzaine ne lève aucune erreur et ne se voit qu'à
    l'oeil. Ils couvrent aussi le décalage climatique, qui déplace toutes les
    fenêtres du jardin sans que rien d'autre ne le signale. */
-import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirFiche,
+import { ouvrirContexte, journal, ouvrirMesure, ouvrirListeDesPlantes, ouvrirFiche,
          fermerFiche, ongletAnnee, net } from "./commun.mjs";
 
 /* Le ruban pose l'abscisse d'une quinzaine à 102 + (r - 1) / 24 * 242.
@@ -76,10 +76,7 @@ export default async function essai(navigateur) {
      étapes de la végétation sous le climat du jardin. C'est le seul endroit où
      ce dessin subsiste, la mesure s'y fait donc. */
   j.section("le ruban de la saison situe le deux août");
-  await pg.locator("#dateJour").click();
-  await pg.waitForTimeout(700);
-  await pg.locator('#feuille-corps .mesure[data-vue="saison"]').click();
-  await pg.waitForTimeout(700);
+  await ouvrirMesure(pg, "saison");
   const regle = await pg.evaluate(() => {
     const r = document.querySelector("#feuille-corps .regle-annee");
     if (!r) return null;

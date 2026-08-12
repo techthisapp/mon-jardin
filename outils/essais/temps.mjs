@@ -256,17 +256,16 @@ export default async function essai(navigateur) {
   j.controle("le ruban n'est pas dessiné en même temps",
     await pg.locator(".mg-v").count() === 0);
 
-  j.section("la feuille du jour ne garde que ses mesures");
+  /* Les trois mesures du jour ont quitté leur feuille pour l'écran, sous le
+     temps qu'il fait : elles parlent du même jour et s'y lisent sans détour. */
+  j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();
   await pg.waitForTimeout(500);
-  await pg.locator("#dateJour").click();
-  await pg.waitForTimeout(700);
-  const tj = (await pg.locator("#feuille-titre").innerText()).split("\n")[0];
-  j.controle("la date ouvre le jour", tj === "Le jour", tj);
-  j.controle("elle porte les trois mesures",
-    await pg.locator("#feuille-corps .mesure").count() === 3);
-  j.controle("la prévision n'y est plus",
-    await pg.locator("#feuille-corps .mt-table").count() === 0);
+  j.controle("le bloc du jour porte le temps et les trois mesures",
+    await pg.locator("#blocTemps .tm-temps").count() === 1
+    && await pg.locator("#blocTemps .mesure-j").count() === 3);
+  j.controle("la prévision à sept jours reste dans la feuille du temps",
+    await pg.locator("#blocTemps .mt-table").count() === 0);
 
   await ctx.close();
   return j.fin(erreurs);
