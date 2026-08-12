@@ -169,9 +169,9 @@ let climatSeul = false;  // Mes plantes, restreint aux plantes adaptées au clim
 /* L'écran du bouton rond porte deux onglets. Le premier montre le jardin tel
    qu'il est découpé, une tuile par espace puis le détail d'un espace. Le second
    montre les plantes, d'abord celles du jardin, le catalogue entier ensuite. */
-let panneauJardin = "jardin";  // jardin ou plantes
 let espaceOuvert = null;       // null au premier niveau, sinon l'espace lu, "0" pour les non placées
 let porteeSel = "jardin";      // jardin ou tout
+let carnetContexte = null;     // le lieu ou la plante sur lequel le carnet est ouvert
 /* La période retenue sur le calendrier, en quinzaines de 1 à 24. Un mois en
    occupe deux, une quinzaine une seule : la même borne sert aux deux échelles,
    et le filtre s'affine sans code séparé. */
@@ -1081,9 +1081,10 @@ function chipsEspaces(conteneur, ligne, apres) {
    catalogue entier : ce sont deux corpus distincts, le jardin tel qu'il est et
    ce que l'application connaît. Ce qui reste des réglages n'est pas un écran
    mais deux feuilles, celle du jardin et celle du compte. */
-const ECRANS = ["maintenant", "planning", "selection"];
+const ECRANS = ["maintenant", "planning", "selection", "plantes", "carnet"];
 const SECTION = { maintenant: "maintenant", planning: "planning",
-                  selection: "selection", catalogue: "selection" };
+                  selection: "selection", plantes: "plantes",
+                  catalogue: "plantes", carnet: "carnet" };
 const onglets = [...document.querySelectorAll(".onglet")];
 let ecranCourant = "maintenant";
 
@@ -1098,81 +1099,87 @@ function afficher(dest) {
   // Changer d'écran principal rend la vue d'ensemble, jamais une tâche ouverte.
   if (vueDetail !== null) { vueDetail = null; rendreMaintenant(); }
   ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== section); });
+  document.body.classList.toggle("sur-carnet", section === "carnet");
   marquerOnglets();
+  marquerLivre();
   window.scrollTo(0, 0);
   if (section === "planning") placerMarqueur();
-  if (section === "selection") {
-    espaceOuvert = null;
-    /* Le catalogue ouvre sur les 315 fiches, le jardin sur ses espaces. La
-       portée n'a plus à se choisir à la main, la destination la dit, et le
-       segment qui la portait a disparu avec ce partage. */
-    const cat = dest === "catalogue" || !session;
-    porteeSel = cat ? "tout" : "jardin";
-    majOngletsJardin();
-    afficherPanneau(cat ? "plantes" : "jardin");
+  if (section === "selection") { espaceOuvert = null; rendreEspaces(); }
+  if (section === "plantes") {
+    /* La même liste à deux étendues : celle du jardin depuis la barre, les
+       trois cent quinze fiches depuis le livre de l'en-tête. La portée se règle
+       avec la destination, le titre dit laquelle est ouverte. */
+    porteeSel = dest === "catalogue" || !session ? "tout" : "jardin";
     rendreSelection();
   }
+  if (section === "carnet") rendreJournal();
 }
 
-/* La rangée d'onglets appartient au jardin : le catalogue est une destination
-   à part, et sans compte il n'y a ni espace ni carnet à montrer. */
-function majOngletsJardin() {
-  const r = document.querySelector(".onglets-jardin");
-  if (r) r.hidden = !session || ecranCourant === "catalogue";
+/* Les deux écrans que la barre ne marque pas se nomment en tête : le carnet,
+   atteint par le rond, et le catalogue, atteint par le livre. */
+function majTeteCarnet() {
+  const t = $("teteEcranCarnet");
+  if (!t) return;
+  const n = entreesDuCarnet().length, ou = nomDuContexte();
+  t.innerHTML = `<b class="te-nom">Carnet</b>`
+    + `<span class="te-sous">${ou ? esc(ou) + ", " : ""}`
+    + `${n} ${n > 1 ? "entrées" : "entrée"}</span>`
+    + (ou ? `<button type="button" class="lien te-tout">Tout le jardin</button>` : "");
+  const b = t.querySelector(".te-tout");
+  if (b) b.addEventListener("click", () => { carnetContexte = null; rendreJournal(); });
+}
+
+function majTetePlantes() {
+  const t = $("teteEcranPlantes");
+  if (!t) return;
+  const cat = ecranCourant === "catalogue";
+  const n = cat ? plantes.length : sel.size;
+  t.innerHTML = `<b class="te-nom">${cat ? "Catalogue" : "Mes plantes"}</b>`
+    + `<span class="te-sous">${n} ${n > 1 ? "plantes" : "plante"}`
+    + `${cat ? " au catalogue" : " au jardin"}</span>`;
+}
+
+/* Le livre de l'en-tête s'enfonce tant que le catalogue est ouvert, aucune
+   fente de la barre ne lui répondant. */
+function marquerLivre() {
+  const b = $("btnCatalogue");
+  if (b) b.setAttribute("aria-pressed", String(ecranCourant === "catalogue"));
 }
 
 onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
 
-/* Les deux onglets de l'écran du bouton rond. Revenir sur cet écran repart du
-   premier niveau : un détail d'espace laissé ouvert n'a pas de sens une fois
-   l'écran quitté, et le retour arrière n'aurait plus de repère. */
-function afficherPanneau(nom) {
-  panneauJardin = nom;
-  $("pan-jardin").hidden = nom !== "jardin";
-  $("pan-plantes").hidden = nom !== "plantes";
-  $("pan-carnet").hidden = nom !== "carnet";
-  document.querySelectorAll(".onglet-j").forEach(b =>
-    b.setAttribute("aria-selected", String(b.dataset.panneau === nom)));
-  window.scrollTo(0, 0);
-  if (nom === "jardin") rendreEspaces();
-  if (nom === "carnet") rendreJournal();
-}
-
-/* Le carnet est une destination et non plus une feuille : il se rafraîchit avec
-   le reste quand une entrée est écrite ou effacée. */
+/* Le carnet se rafraîchit avec le reste quand une entrée est écrite ou
+   effacée. */
 function majCarnet() {
-  if (panneauJardin === "carnet" && !$("pan-carnet").hidden) rendreJournal();
+  if (ecranCourant === "carnet") rendreJournal();
 }
 
-/* Les deux renvois qui ouvraient la feuille du journal mènent à son onglet :
-   ils gardent leur place, ils cessent d'être le seul chemin. */
-function allerAuCarnet() {
-  if (!$("feuille").hidden) fermerFeuille();
-  afficher("selection");
-  afficherPanneau("carnet");
-}
-
-document.querySelectorAll(".onglet-j").forEach(b =>
-  b.addEventListener("click", () => afficherPanneau(b.dataset.panneau)));
-
-/* Sans compte il n'y a ni jardin ni espace : le premier onglet n'a rien à
-   montrer et la restriction au jardin viderait la liste. L'écran se réduit
-   alors au catalogue entier, qui reste consultable. */
+/* Sans compte il n'y a ni jardin ni carnet : la liste des plantes se réduit au
+   catalogue entier, qui reste consultable. */
 function majAccesJardin(connecte) {
-  majOngletsJardin();
   majBoutonNoter();
-  if (!connecte) {
-    porteeSel = "tout";
-    afficherPanneau("plantes");
-  }
+  if (!connecte && SECTION[ecranCourant] !== "plantes") afficher("catalogue");
+  else if (!connecte) { porteeSel = "tout"; rendreSelection(); }
 }
 /* Le titre ouvre le jardin quand il y en a un. Sans compte, il annonce la
    connexion et ouvre la feuille qui la porte : c'est la seule chose à faire. */
 sur("btnJardin", "click", () => ouvrirVue(session ? "jardin" : "compte"));
 sur("btnConfig", "click", () => ouvrirVue("compte"));
+sur("btnCatalogue", "click", () => afficher("catalogue"));
+/* Mes plantes ne sait que retirer : le catalogue est le seul endroit d'où une
+   plante entre au jardin, et la liste y renvoie. */
+sur("versCatalogue", "click", () => afficher("catalogue"));
 /* Noter n'a de sens qu'avec un jardin où poser la note : le bouton ne paraît
    pas sans compte. */
-sur("btnNoter", "click", () => { saisiePartout = null; ouvrirVue("note"); });
+/* Le rond ouvre le carnet et pose la feuille de saisie dessus. Baisser la
+   feuille découvre ce qui est déjà noté, le rond la rappelle : écrire et relire
+   sont le même endroit. */
+sur("btnNoter", "click", () => {
+  saisiePartout = null;
+  carnetContexte = contexteNote();
+  afficher("carnet");
+  ouvrirVue("note");
+});
 function majBoutonNoter() {
   const b = $("btnNoter");
   if (b) b.hidden = !session;
@@ -1389,6 +1396,9 @@ function rendreApresBascule(plantId) {
 
 function rendreSelection() {
   majLegendeClim();
+  majTetePlantes();
+  const pied = $("piedPlantes");
+  if (pied) pied.hidden = ecranCourant === "catalogue" || !session;
   const zone = $("listes");
   zone.innerHTML = "";
   /* La teinte de rangée ne dit rien là où toutes les plantes sont retenues :
@@ -3217,6 +3227,8 @@ function vueJardin() {
 /* Le bouton Noter est le même partout, ce qu'il porte vient de l'écran. Une
    note prise devant la plante ne devrait pas demander de la renommer, ni une
    note prise dans un carré de redire le carré. */
+/* Le contexte se prend au moment de l'appui : le rond mène au carnet avant
+   d'ouvrir la feuille, et l'écran d'où l'on vient n'est alors plus lisible. */
 function contexteNote() {
   if (planteFeuille) {
     const lieux = (aff.get(planteFeuille.id) || []).map(r => r.espace_id);
@@ -3226,6 +3238,32 @@ function contexteNote() {
     return { espace_id: espaceOuvert, plant_id: "" };
   }
   return { espace_id: "", plant_id: "" };
+}
+
+/* Le carnet montre ce qui a déjà été noté là où l'on écrit : depuis un espace,
+   ses entrées et celles de ses zones ; depuis une fiche, celles de la plante. */
+function entreesDuCarnet() {
+  const c = carnetContexte;
+  let lot = carnet;
+  if (c && c.plant_id) lot = lot.filter(e => e.plant_id === c.plant_id);
+  else if (c && c.espace_id) {
+    const sous = [c.espace_id].concat(zonesDe(c.espace_id).map(z => z.id));
+    lot = lot.filter(e => sous.includes(e.espace_id));
+  }
+  return lot.slice().sort((a, b) => (a.jour < b.jour ? 1 : a.jour > b.jour ? -1 : 0));
+}
+
+function nomDuContexte() {
+  const c = carnetContexte;
+  if (c && c.plant_id) {
+    const p = plantes.find(x => x.id === c.plant_id);
+    return p ? p.nom : "";
+  }
+  if (c && c.espace_id) {
+    const n = noeud(c.espace_id);
+    return n ? n.name : "";
+  }
+  return "";
 }
 
 /* Tous les lieux du jardin, l'espace puis ses zones, pour la note prise hors
@@ -3267,18 +3305,12 @@ function vueNote() {
         z.appendChild(v);
         return;
       }
-      /* Le renvoi au journal entier vient avant le formulaire : la saisie se
-         termine par Enregistrer, et la barre du bas couvrirait un lien posé
-         tout en bas de la feuille. */
-      const l = document.createElement("button");
-      l.type = "button"; l.className = "lien note-vers-journal";
-      l.textContent = "Voir tout le journal";
-      l.addEventListener("click", allerAuCarnet);
-      z.appendChild(l);
+      /* La feuille se ferme sur le carnet, qui l'attend derrière : l'entrée
+         écrite s'y lit aussitôt. */
       z.appendChild(formulaireEntree(etat, lieux, Boolean(p), () => {
         saisiePartout = null;
-        if (ecranCourant === "selection") rendreEspaces();
         fermerFeuille();
+        rendreJournal();
       }));
     },
   };
@@ -3287,10 +3319,12 @@ function vueNote() {
 function rendreJournal() {
   const z = $("corpsJournal");
   if (!z) return;
+  majTeteCarnet();
   z.innerHTML = "";
-  const lot = carnet.slice().sort((a, b) => (a.jour < b.jour ? 1 : a.jour > b.jour ? -1 : 0));
+  const lot = entreesDuCarnet();
   if (!lot.length) {
-    z.innerHTML = `<p class="vide">Rien de noté au jardin pour l'instant.</p>`;
+    z.innerHTML = `<p class="vide">Rien de noté ${
+      nomDuContexte() ? "ici" : "au jardin"} pour l'instant.</p>`;
     return;
   }
   /* Les entrées se rangent par mois : une saison se relit par ses mois, non par
@@ -4734,7 +4768,6 @@ sur("form-connexion", "submit", async e => {
 
 sur("deconnexion", "click", () => db.auth.signOut());
 sur("voirEcartees", "click", () => ouvrirVue("photosEcartees"));
-sur("voirJournal", "click", allerAuCarnet);
 
 db.auth.onAuthStateChange((_e, s) => {
   session = s;

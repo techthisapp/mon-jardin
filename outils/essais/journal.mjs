@@ -400,21 +400,28 @@ export default async function essai(navigateur) {
     await pg.locator("#corpsNote .ec-lieu option").count() === 2,
     String(await pg.locator("#corpsNote .ec-lieu option").count()));
 
-  /* Le carnet du jardin entier n'avait aucune adresse : il se rattrapait depuis
-     la feuille des réglages, le pied d'un espace, l'onglet d'une fiche et le
-     formulaire de saisie. Il est devenu le troisième onglet du jardin, et les
-     renvois y mènent au lieu d'ouvrir une feuille. */
-  j.section("le carnet du jardin, dans l'ordre du temps");
-  await pg.locator("#corpsNote .note-vers-journal").click();
+  /* Le carnet se tient derrière la feuille de saisie : le rond l'ouvre et pose
+     la feuille dessus, la baisser le découvre, le rond la rappelle. Écrire et
+     relire sont le même endroit, et le lien « Voir tout le journal » n'a plus
+     lieu d'être. */
+  j.section("le carnet se tient derrière la saisie");
+  j.controle("le renvoi au journal a disparu du formulaire",
+    await pg.locator(".note-vers-journal").count() === 0);
+  j.controle("l'écran derrière la feuille est le carnet",
+    await pg.locator("#ec-carnet:not([hidden])").count() === 1);
+  j.controle("aucune fente n'est enfoncée, le rond porte l'anneau",
+    await pg.locator('.onglet[aria-selected="true"]').count() === 0
+    && await pg.evaluate(() => document.body.classList.contains("sur-carnet")));
+  await pg.locator("#fermerFeuille").click();
   await pg.waitForTimeout(700);
-  j.controle("le renvoi ferme la feuille et ouvre l'onglet",
+  j.controle("baisser la feuille laisse le carnet à l'écran",
     await pg.locator("#feuille[hidden]").count() === 1
-    && await pg.locator('.onglet-j[data-panneau="carnet"][aria-selected="true"]').count() === 1
-    && await pg.locator("#pan-carnet:not([hidden])").count() === 1);
-  j.controle("la fente du jardin est celle qui est enfoncée",
-    await pg.locator('.onglet[data-ecran="selection"][aria-selected="true"]').count() === 1);
+    && await pg.locator("#ec-carnet:not([hidden])").count() === 1);
+  const tete = net(await pg.locator("#teteEcranCarnet").textContent());
+  j.controle("l'écran se nomme et compte ses entrées",
+    /^Carnet/.test(tete) && /entrées?/.test(tete), tete);
   const combien = await pg.locator("#corpsJournal .entree-carnet").count();
-  j.controle("il porte toutes les entrées du jardin", combien >= 2, String(combien));
+  j.controle("il porte les entrées du jardin", combien >= 2, String(combien));
   const dates = await pg.locator("#corpsJournal .ec-jour")
     .evaluateAll(l => l.map(e => e.textContent.trim()));
   j.controle("la plus récente vient en tête",
@@ -422,19 +429,33 @@ export default async function essai(navigateur) {
   const parMois = await pg.locator("#corpsJournal .jo-mois")
     .evaluateAll(l => l.map(e => e.textContent.trim()));
   j.controle("les entrées se rangent par mois", parMois.length >= 1, parMois.join(" | "));
-  j.controle("chaque entrée dit sa plante et son lieu",
-    await pg.locator("#corpsJournal .ec-lieu").count() >= 1);
-  /* Le second renvoi, dans la feuille des réglages du jardin, mène au même
-     onglet. */
-  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
-  await pg.waitForTimeout(400);
-  await pg.locator("#btnJardin").click();
-  await pg.waitForTimeout(600);
-  await pg.locator("#voirJournal").click();
+  await pg.locator("#btnNoter").click();
   await pg.waitForTimeout(700);
-  j.controle("le renvoi des réglages mène au même onglet",
-    await pg.locator("#feuille[hidden]").count() === 1
-    && await pg.locator("#pan-carnet:not([hidden])").count() === 1);
+  j.controle("le rond rappelle la feuille",
+    await pg.locator("#feuille:not([hidden])").count() === 1
+    && await pg.locator("#corpsNote .form-entree").count() === 1);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(500);
+
+  /* Depuis un espace, le carnet ne montre que ce qui a été noté là : on écrit
+     en regardant ce qu'on a déjà écrit au même endroit. */
+  j.section("le carnet suit le contexte de la saisie");
+  await ouvrirEspace(pg);
+  await pg.locator("#btnNoter").click();
+  await pg.waitForTimeout(700);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(600);
+  const teteLieu = net(await pg.locator("#teteEcranCarnet").textContent());
+  j.controle("il se nomme du lieu d'où l'on écrit",
+    teteLieu.includes("Potager"), teteLieu);
+  j.controle("un renvoi rend le jardin entier",
+    await pg.locator("#teteEcranCarnet .te-tout").count() === 1);
+  const dansLeLieu = await pg.locator("#corpsJournal .entree-carnet").count();
+  await pg.locator("#teteEcranCarnet .te-tout").click();
+  await pg.waitForTimeout(500);
+  const partout = await pg.locator("#corpsJournal .entree-carnet").count();
+  j.controle("le jardin entier en porte au moins autant",
+    partout >= dansLeLieu, `${dansLeLieu} au lieu, ${partout} au jardin`);
 
   await ctx.close();
   return j.fin(erreurs);

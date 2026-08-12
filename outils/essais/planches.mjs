@@ -162,7 +162,7 @@ export default async function essai(navigateur) {
       tient: e.scrollWidth <= e.clientWidth + 1,
       haut: Math.round(e.getBoundingClientRect().height),
       cadre: st.borderTopWidth !== "0px" || st.boxShadow !== "none",
-      dansFiltres: Boolean(document.querySelector("#pan-plantes .filtres").contains(e)),
+      dansFiltres: Boolean(document.querySelector("#ec-plantes .filtres").contains(e)),
       dansReplie: Boolean(document.getElementById("corpsFiltresS").contains(e)),
       avecClimat: Boolean(document.getElementById("ligneClimS").contains(e)
         && document.getElementById("ligneClimS").contains(document.getElementById("filtreClimat"))),

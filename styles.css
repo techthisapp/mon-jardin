@@ -234,7 +234,6 @@ body::after{
 /* Le sujet de la note, quand elle est prise depuis une fiche : la plante est
    imposée, elle se lit au lieu de se choisir. */
 .note-sujet{margin:0 0 10px;font-weight:600}
-.note-vers-journal{margin:0 0 12px}
 .jo-mois{display:block;margin:18px 0 8px;font-size:13px;color:var(--encre-doux)}
 .jo-mois:first-child{margin-top:0}
 .barre-basse{
@@ -290,6 +289,12 @@ body::after{
 .acte-noter svg{width:24px;height:24px;fill:none;stroke:currentColor;
   stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .acte-noter:active{transform:translateY(1px)}
+/* Le carnet n'a pas de fente dans la barre : le rond qui l'ouvre porte l'anneau
+   tant qu'on y est, et l'écran se nomme en tête. */
+body.sur-carnet .acte-noter{
+  box-shadow:0 8px 20px rgba(22,36,30,.34), 0 0 0 4px rgba(248,247,243,.80),
+             0 0 0 6.5px var(--terre);
+}
 .acte-noter:focus-visible{outline:2px solid var(--terre);outline-offset:3px}
 @media (hover:hover){.acte-noter:hover{transform:translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){.acte-noter{transition:none}
@@ -711,19 +716,33 @@ main{
 /* ================= Refonte de l'en-tête et des réglages ================= */
 
 .tete-corps{position:relative;z-index:1;padding-top:18px;padding-bottom:16px}
-.tete-haut{display:flex;align-items:center;gap:14px}
+/* Le livre du catalogue a rejoint la ligne : l'écart et les deux ronds se
+   resserrent pour que le nom du jardin garde sa place. */
+.tete-haut{display:flex;align-items:center;gap:9px}
 /* La marque revient auprès du nom du jardin, la barre du bas ayant rendu son
    rond central au geste de saisie. */
 .marque{flex:0 0 auto;display:grid;place-items:center;width:30px;height:30px;color:#EFEFE8}
+/* Le livre du catalogue prend la forme du bouton de compte : ce qui appartient
+   à l'application se tient dans l'en-tête, dans un même langage. */
+.bouton-livre{
+  flex:0 0 auto;width:32px;height:32px;display:grid;place-items:center;padding:0;
+  border:0;border-radius:50%;cursor:pointer;
+  background:rgba(239,239,232,.10);color:#EFEFE8;
+}
+.bouton-livre svg{width:19px;height:19px;fill:none;stroke:currentColor;
+  stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.bouton-livre[aria-pressed="true"]{background:#EFEFE8;color:var(--encre)}
+@media (hover:hover){.bouton-livre:hover{background:rgba(239,239,232,.18)}}
+.bouton-livre:focus-visible{outline:2px solid #EFEFE8;outline-offset:2px}
 .marque svg{width:30px;height:30px}
 .tete-haut .marque + .tete-textes{margin-left:-4px}
 .tete-textes{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .tete h1{
-  max-width:100%;font-size:23px;letter-spacing:.05em;white-space:nowrap;
+  max-width:100%;font-size:21px;letter-spacing:.04em;white-space:nowrap;
   overflow:hidden;text-overflow:ellipsis;line-height:1.02;
 }
 .bouton-compte{
-  flex:none;width:40px;height:40px;border-radius:50%;cursor:pointer;
+  flex:none;width:34px;height:34px;border-radius:50%;cursor:pointer;
   border:1px solid rgba(239,239,232,.26);
   background:rgba(239,239,232,.07);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.10);
@@ -2469,20 +2488,19 @@ select:focus{
   .legende-clim{flex-wrap:wrap;justify-content:flex-start;gap:5px 11px}
 }
 
-/* ---------- Écran du jardin : deux onglets, tuiles puis détail ---------- */
+/* ---------- Titre d'écran ----------
+   Deux écrans ne sont marqués par aucune fente de la barre, le carnet et le
+   catalogue : ils se nomment en tête, avec ce qu'ils comptent. */
+.tete-ecran{
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin:0 0 14px;
+}
+.te-nom{font-size:19px;font-weight:600;letter-spacing:-.01em}
+.te-sous{font-size:12.5px;color:var(--encre-doux)}
+.tete-ecran .lien{margin-left:auto;font-size:12.5px}
+.pied-plantes{margin:16px 0 0}
 
-/* Deux onglets de même rang, sur le modèle de ceux de la fiche : un filet sous
-   la ligne, l'onglet actif seul souligné. */
-.onglets-jardin{
-  display:flex;gap:20px;border-bottom:1px solid var(--filet);
-  margin:0 0 12px;
-}
-.onglet-j{
-  border:0;background:none;padding:9px 0 10px;font-family:inherit;font-size:15px;
-  color:var(--encre-doux);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;
-}
-.onglet-j[aria-selected="true"]{color:var(--encre);font-weight:600;border-bottom-color:var(--encre)}
-.onglet-j:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+/* ---------- Écran du jardin : tuiles puis détail ---------- */
+
 
 /* Une tuile par espace. Le nombre porte le regard, le nom le nomme : c'est
    l'information qu'on vient chercher au premier coup d'oeil. */

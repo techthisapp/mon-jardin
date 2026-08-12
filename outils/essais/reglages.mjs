@@ -1,15 +1,17 @@
 /* La navigation rénovée. Quatre destinations de même rang dans la barre du bas,
-   le jour et l'année à gauche, le jardin et le catalogue à droite, et l'acte de
-   saisie au centre sur un bouton rond. Ce qui restait des réglages devient deux
-   feuilles, celle du jardin ouverte par son nom, celle du compte ouverte par le
-   bouton du coin.
+   le jour et l'année à gauche, le jardin et les plantes à droite, et l'acte de
+   saisie au centre sur un bouton rond. Le catalogue a quitté la barre pour
+   l'en-tête : il ne parle pas du jardin, c'est une bibliothèque à consulter. Ce
+   qui restait des réglages devient deux feuilles, celle du jardin ouverte par
+   son nom, celle du compte ouverte par le bouton du coin.
 
    Les panneaux ne sont pas reconstruits à chaque ouverture, ils sont déplacés
    depuis une réserve hors écran : les contrôles portent surtout sur ce
    déplacement, seul endroit où un champ pourrait perdre son écouteur ou une
    ouverture suivante effacer le panneau. */
 import { ouvrirContexte, journal, ouvrirListeDesPlantes, ouvrirMonJardin,
-         ouvrirFiche, fermerFiche, entrerEnEdition, net, CATALOGUE } from "./commun.mjs";
+         ouvrirMesPlantes, ouvrirFiche, fermerFiche, entrerEnEdition, net,
+         CATALOGUE } from "./commun.mjs";
 
 /* Le jardin figé porte tout le catalogue et aucun espace : cette suite lui en
    donne deux et n'y met qu'une partie des plantes, seul moyen de contrôler à la
@@ -50,9 +52,9 @@ export default async function essai(navigateur) {
   j.section("quatre destinations et un acte au centre");
   const barre = await pg.locator(".barre-basse > button").evaluateAll(
     l => l.map(b => b.dataset.ecran || "acte:" + b.id));
-  j.controle("l'ordre est le jour, l'année, l'acte, le jardin, le catalogue",
+  j.controle("l'ordre est le jour, l'année, l'acte, le jardin, les plantes",
     JSON.stringify(barre) === JSON.stringify(["maintenant", "planning",
-      "acte:btnNoter", "selection", "catalogue"]), JSON.stringify(barre));
+      "acte:btnNoter", "selection", "plantes"]), JSON.stringify(barre));
   j.controle("chaque fente porte son dessin et son mot",
     await pg.locator(".barre-basse .onglet svg").count() === 4
     && await pg.locator(".barre-basse .onglet span").count() === 4);
@@ -84,6 +86,23 @@ export default async function essai(navigateur) {
   j.controle("aucun mot n'est rogné", mots.every(m => m[1]),
     mots.map(m => m[0] + (m[1] ? "" : " ROGNÉ")).join(" | "));
 
+  /* Le catalogue n'est pas un lieu du jardin : il est monté dans l'en-tête, où
+     le livre le tient à côté du bouton du compte. */
+  j.section("le catalogue se tient dans l'en-tête");
+  j.controle("aucune fente de la barre n'y mène",
+    await pg.locator('.barre-basse [data-ecran="catalogue"]').count() === 0);
+  j.controle("le livre est dans l'en-tête, non enfoncé",
+    await pg.locator(".tete #btnCatalogue").count() === 1
+    && await pg.locator("#btnCatalogue").getAttribute("aria-pressed") === "false");
+  await ouvrirListeDesPlantes(pg);
+  j.controle("il ouvre le catalogue et s'enfonce",
+    await pg.locator("#ec-plantes:not([hidden])").count() === 1
+    && await pg.locator("#btnCatalogue").getAttribute("aria-pressed") === "true");
+  j.controle("aucune fente n'est marquée, le catalogue n'en est pas une",
+    await pg.locator('.onglet[aria-selected="true"]').count() === 0);
+  const titreCat = net(await pg.locator("#teteEcranPlantes .te-nom").innerText());
+  j.controle("l'écran se nomme Catalogue", titreCat === "Catalogue", titreCat);
+
   j.section("la fente du jardin ouvre sur les espaces");
   await ouvrirMonJardin(pg);
   j.controle("l'écran est affiché",
@@ -91,10 +110,13 @@ export default async function essai(navigateur) {
   j.controle("elle est la seule fente marquée",
     await pg.locator('.onglet[aria-selected="true"]').count() === 1
     && await pg.locator('.onglet[data-ecran="selection"][aria-selected="true"]').count() === 1);
-  j.controle("il ouvre sur mon jardin et non sur les plantes",
-    await pg.locator('.onglet-j[aria-selected="true"]').getAttribute("data-panneau") === "jardin"
-    && await pg.locator("#pan-jardin:not([hidden])").count() === 1
-    && await pg.locator("#pan-plantes[hidden]").count() === 1);
+  j.controle("le livre s'est relevé",
+    await pg.locator("#btnCatalogue").getAttribute("aria-pressed") === "false");
+  /* On est dans son jardin, complètement : l'écran ne porte plus la rangée
+     d'onglets qui le partageait avec les plantes et le carnet. */
+  j.controle("le jardin n'a plus d'onglet, il ouvre droit sur les espaces",
+    await pg.locator(".onglets-jardin, .onglet-j").count() === 0
+    && await pg.locator("#niveauEspaces:not([hidden])").count() === 1);
 
   j.section("le premier niveau pose une tuile par espace");
   const tuiles = await pg.locator(".tuile-espace").evaluateAll(l => l.map(b => [
@@ -139,16 +161,16 @@ export default async function essai(navigateur) {
     await pg.locator("#niveauEspaces:not([hidden])").count() === 1
     && await pg.locator("#detailEspace[hidden]").count() === 1);
 
-  /* Le jardin porte trois onglets : ses espaces, ses plantes, son carnet. Le
-     catalogue est une destination à part, et la portée se règle avec elle : le
-     segment qui la choisissait à la main a disparu. */
-  j.section("l'onglet des plantes ouvre sur celles du jardin");
-  j.controle("trois onglets, dont le carnet",
-    JSON.stringify(await pg.locator(".onglet-j").allInnerTexts())
-      === JSON.stringify(["Espaces", "Mes plantes", "Carnet"]),
-    JSON.stringify(await pg.locator(".onglet-j").allInnerTexts()));
-  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
-  await pg.waitForTimeout(400);
+  /* Mes plantes tient la quatrième fente, celle que le catalogue occupait. La
+     portée se règle avec la destination : le segment qui la choisissait à la
+     main a disparu. */
+  j.section("la fente des plantes ouvre sur celles du jardin");
+  await ouvrirMesPlantes(pg);
+  const titreMes = net(await pg.locator("#teteEcranPlantes .te-nom").innerText());
+  j.controle("l'écran se nomme Mes plantes", titreMes === "Mes plantes", titreMes);
+  j.controle("la fente est marquée et le livre relevé",
+    await pg.locator('.onglet[data-ecran="plantes"][aria-selected="true"]').count() === 1
+    && await pg.locator("#btnCatalogue").getAttribute("aria-pressed") === "false");
   j.controle("le segment de portée a disparu",
     await pg.locator(".seg-portee, .segment[data-portee]").count() === 0);
   const auJardin = await pg.locator(".item-bloc").count();
@@ -159,11 +181,11 @@ export default async function essai(navigateur) {
      première plante. Ce qui reste déplié se compte ici. */
   j.section("le haut de l'écran laisse la place à la liste");
   const haut = await pg.evaluate(() => {
-    const f = document.querySelector("#pan-plantes .filtres").getBoundingClientRect();
+    const f = document.querySelector("#ec-plantes .filtres").getBoundingClientRect();
     const r = document.querySelector("#listes .item-bloc").getBoundingClientRect();
     return {
       filtres: Math.round(f.height),
-      lignes: [...document.querySelectorAll("#pan-plantes .filtres > *")]
+      lignes: [...document.querySelectorAll("#ec-plantes .filtres > *")]
         .filter(e => !e.hidden).length,
       avant: Math.round(r.top),
       ecran: window.innerHeight,
@@ -200,8 +222,7 @@ export default async function essai(navigateur) {
   j.section("un seul signal de retenue selon la portée");
   const teintes = { auJardin: await pg.evaluate(() => getComputedStyle(
     document.querySelector('#listes .item[aria-pressed="true"]')).backgroundColor) };
-  await pg.locator('.onglet[data-ecran="catalogue"]').dispatchEvent("click");
-  await pg.waitForTimeout(700);
+  await ouvrirListeDesPlantes(pg);
   const teinteTout = await pg.evaluate(() => getComputedStyle(
     document.querySelector('#listes .item[aria-pressed="true"]')).backgroundColor);
   j.controle("au jardin, la rangée retenue n'est pas teintée",
@@ -217,9 +238,7 @@ export default async function essai(navigateur) {
      Le lieu occupé passe sous le nom, le choix complet ne se déplie que sur la
      rangée touchée. */
   j.section("la rangée ne nomme que les espaces occupés");
-  await ouvrirMonJardin(pg);
-  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
-  await pg.waitForTimeout(500);
+  await ouvrirMesPlantes(pg);
   const lieux = await pg.evaluate(() => {
     const blocs = [...document.querySelectorAll("#listes .item-bloc")];
     return {

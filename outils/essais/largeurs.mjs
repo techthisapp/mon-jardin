@@ -31,10 +31,8 @@ const PLACEMENTS = [
 const LARGEURS = [320, 360, 390, 430];
 
 async function allerAuxPlantes(pg) {
-  await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
-  await pg.waitForTimeout(400);
-  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
-  await pg.waitForTimeout(600);
+  await pg.locator('.onglet[data-ecran="plantes"]').dispatchEvent("click");
+  await pg.waitForTimeout(700);
 }
 
 export default async function essai(navigateur) {
@@ -85,7 +83,7 @@ export default async function essai(navigateur) {
   await pg.setViewportSize({ width: 430, height: 940 });
   await pg.waitForTimeout(300);
   for (const [nom, ecran] of [["le moment", "maintenant"], ["le calendrier", "planning"],
-                              ["le jardin", "selection"]]) {
+                              ["le jardin", "selection"], ["les plantes", "plantes"]]) {
     await pg.locator(`.onglet[data-ecran="${ecran}"]`).dispatchEvent("click");
     await pg.waitForTimeout(500);
     const d = await pg.evaluate(() => ({

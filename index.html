@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=63a3caa7bb">
+<link rel="stylesheet" href="./styles.css?v=8b05011a97">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="5a2d552fa2">
+<meta name="version-appli" content="64ac56e2a4">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -48,6 +48,16 @@
           <button class="puce-climat" id="puceClimat" type="button" hidden></button>
         </div>
       </div>
+      <!-- Le catalogue est une bibliothèque à consulter, non une part du jardin :
+           il rejoint l'en-tête, où se tient ce qui appartient à l'application,
+           quand la barre du bas ne porte que ce qui appartient au jardinier. -->
+      <button class="bouton-livre" id="btnCatalogue" type="button" aria-pressed="false"
+              aria-label="Catalogue des plantes" title="Catalogue">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2.5 2.5 0 0 1 2 1v13a2.5 2.5 0 0 0-2-1H5.5A1.5 1.5 0 0 1 4 15.5z"/>
+          <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2.5 2.5 0 0 0-2 1v13a2.5 2.5 0 0 1 2-1h4.5a1.5 1.5 0 0 0 1.5-1.5z"/>
+        </svg>
+      </button>
       <button class="bouton-compte" id="btnConfig" type="button" aria-label="Compte" title="Compte">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="8.4" r="3.5"/>
@@ -156,19 +166,9 @@
   <section id="ec-selection" hidden>
     <p class="vide" id="videSelection" hidden>Connectez-vous pour enregistrer votre sélection. Le bouton du compte est en haut à droite de l'écran.</p>
 
-    <!-- Trois onglets de même rang : le jardin tel qu'il est découpé, les
-         plantes qu'on y cultive, et ce qu'on en a noté. Le carnet n'avait
-         aucune adresse, il se rattrapait depuis quatre endroits. -->
-    <div class="onglets-jardin" role="tablist" aria-label="Mon jardin">
-      <button class="onglet-j" role="tab" id="ong-jardin" data-panneau="jardin"
-              aria-selected="true" aria-controls="pan-jardin">Espaces</button>
-      <button class="onglet-j" role="tab" id="ong-plantes" data-panneau="plantes"
-              aria-selected="false" aria-controls="pan-plantes">Mes plantes</button>
-      <button class="onglet-j" role="tab" id="ong-carnet" data-panneau="carnet"
-              aria-selected="false" aria-controls="pan-carnet">Carnet</button>
-    </div>
-
-    <div id="pan-jardin" role="tabpanel" aria-labelledby="ong-jardin">
+    <!-- Le jardin n'a plus d'onglet : les plantes ont pris une fente de la barre
+         et le carnet se tient derrière la saisie. On est dans son jardin,
+         entièrement. -->
       <div id="niveauEspaces">
         <div class="tuiles-espaces" id="tuilesEspaces"></div>
         <form class="ajout-espace" id="form-espace">
@@ -179,9 +179,13 @@
         <p class="aide-espaces">Découpez le jardin pour filtrer le calendrier, puis chaque espace en zones quand une seule exposition ne suffit plus. Une plante peut appartenir à plusieurs espaces.</p>
       </div>
       <div id="detailEspace" hidden></div>
-    </div>
+  </section>
 
-    <div id="pan-plantes" role="tabpanel" aria-labelledby="ong-plantes" hidden>
+  <!-- Mes plantes et le catalogue sont la même liste à deux étendues : celle du
+       jardin depuis la barre, les trois cent quinze fiches depuis le livre de
+       l'en-tête. Le titre dit laquelle est ouverte. -->
+  <section id="ec-plantes" hidden>
+    <div class="tete-ecran" id="teteEcranPlantes"></div>
     <div class="filtres">
       <div class="ligne-rech">
         <input id="rech" type="search" placeholder="Chercher une plante" aria-label="Chercher une plante">
@@ -229,14 +233,17 @@
 
     <div id="listes"></div>
     <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
-    </div>
+    <p class="pied-plantes" id="piedPlantes" hidden>
+      <button class="lien" id="versCatalogue" type="button">Chercher au catalogue</button>
+    </p>
+  </section>
 
-    <!-- Le carnet du jardin entier, par mois. Il n'avait aucune adresse : il se
-         rattrapait depuis la feuille des réglages, le pied d'un espace,
-         l'onglet d'une fiche et le formulaire de saisie. -->
-    <div id="pan-carnet" role="tabpanel" aria-labelledby="ong-carnet" hidden>
-      <div id="corpsJournal"></div>
-    </div>
+  <!-- Le carnet du jardin entier, par mois, posé derrière la feuille de saisie
+       que le rond central ouvre. Baisser la feuille le découvre, le rond la
+       rappelle. -->
+  <section id="ec-carnet" hidden>
+    <div class="tete-ecran" id="teteEcranCarnet"></div>
+    <div id="corpsJournal"></div>
   </section>
 </main>
 
@@ -286,13 +293,6 @@
 
       <section class="panneau">
         <h2 class="titre-panneau">Jardin</h2>
-        <!-- Le journal du jardin entier, dans l'ordre du temps. Il ne se lisait
-             qu'au bas d'un espace ou dans la fiche d'une plante : rien ne
-             donnait à relire une saison. -->
-        <div class="ligne-reglage">
-          <span class="etiq-reglage">Journal</span>
-          <button class="lien" id="voirJournal" type="button">Tout le journal</button>
-        </div>
         <div class="ligne-reglage">
           <label class="etiq-reglage" for="selJardin">Jardin actif</label>
           <select id="selJardin"></select>
@@ -316,7 +316,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=ff70b3683a"></script>
+<script type="module" src="./app.js?v=2e7187d4c4"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->
@@ -348,11 +348,11 @@
       <rect x="13.5" y="13.5" width="7" height="6" rx="1.5"/></svg>
     <span>Jardin</span>
   </button>
-  <button class="onglet" role="tab" aria-selected="false" data-ecran="catalogue">
+  <button class="onglet" role="tab" aria-selected="false" data-ecran="plantes">
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 19.5c0-7.5 4.5-12.5 14.2-13.5 1 9.7-4 14.5-11 14.5-1.3 0-2.4-.3-3.2-1z"/>
       <path d="M8.6 16C11 13.2 14.2 11.3 17.4 10.6"/></svg>
-    <span>Catalogue</span>
+    <span>Plantes</span>
   </button>
 </nav>
 

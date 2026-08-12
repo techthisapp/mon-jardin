@@ -155,11 +155,17 @@ export function journal(titre) {
 export const net = s => String(s || "").replace(/\s+/g, " ").trim();
 export const nombre = s => Number(String(s).replace(",", ".").replace(/[^0-9.-]/g, ""));
 
-/* La barre du bas porte quatre destinations. Les suites qui parcourent le
-   référentiel veulent le catalogue entier : la fente qui le porte l'ouvre
-   d'un seul appui, la portée n'ayant plus à se choisir à la main. */
+/* Le catalogue est une bibliothèque à consulter : il se tient dans l'en-tête,
+   sous le livre, quand la barre du bas ne porte que ce qui appartient au
+   jardinier. Les suites qui parcourent le référentiel l'ouvrent là. */
 export async function ouvrirListeDesPlantes(pg) {
-  await pg.locator('.onglet[data-ecran="catalogue"]').dispatchEvent("click");
+  await pg.locator("#btnCatalogue").click();
+  await pg.waitForTimeout(700);
+}
+
+/* Les plantes du jardin, quatrième fente de la barre. */
+export async function ouvrirMesPlantes(pg) {
+  await pg.locator('.onglet[data-ecran="plantes"]').dispatchEvent("click");
   await pg.waitForTimeout(700);
 }
 

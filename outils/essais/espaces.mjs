@@ -61,7 +61,6 @@ const compteDuTitre = pg => pg.evaluate(() =>
 
 async function auxEspaces(pg) {
   await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
-  await pg.locator('.onglet-j[data-panneau="jardin"]').dispatchEvent("click");
   await pg.waitForTimeout(500);
   if (await pg.locator("#retourEspace").count()) {
     await pg.locator("#retourEspace").dispatchEvent("click");
