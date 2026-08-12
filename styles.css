@@ -228,25 +228,6 @@ body::after{
   background:linear-gradient(to top, var(--papier) 46%, rgba(244,243,238,0));
   pointer-events:none;
 }
-/* Noter, partout. Le bouton se pose au-dessus de la barre des trois écrans,
-   contre le bord droit, à la hauteur du pouce. Il n'entre pas dans la barre :
-   celle-ci porte des destinations, celui-ci porte un geste. */
-.bouton-noter{
-  position:fixed;z-index:31;right:14px;
-  bottom:calc(78px + env(safe-area-inset-bottom));
-  display:inline-flex;align-items:center;gap:7px;
-  padding:9px 15px 9px 12px;border-radius:999px;border:0;cursor:pointer;
-  background:var(--encre);color:#F3F2EC;
-  box-shadow:0 6px 20px rgba(22,36,30,.26);
-  font:600 13.5px/1 inherit;letter-spacing:.01em;
-}
-.bouton-noter svg{width:18px;height:18px;fill:none;stroke:currentColor;
-  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.bouton-noter:active{transform:translateY(1px)}
-/* Une feuille ouverte couvre l'écran : le bouton n'a plus rien à désigner et
-   passerait par-dessus le contenu de la feuille. */
-body.fige .bouton-noter{display:none}
-@media (max-width:360px){.bouton-noter span{display:none}.bouton-noter{padding:11px}}
 /* Le sujet de la note, quand elle est prise depuis une fiche : la plante est
    imposée, elle se lit au lieu de se choisir. */
 .note-sujet{margin:0 0 10px;font-weight:600}
@@ -265,41 +246,51 @@ body.fige .bouton-noter{display:none}
   backdrop-filter:saturate(180%) blur(22px);
   box-shadow:0 6px 26px rgba(22,36,30,.16), 0 1px 0 rgba(255,255,255,.6) inset;
 }
+/* Quatre fentes portent l'icône au-dessus du mot : à cinq places, le mot seul ne
+   donne plus de repère au coup d'oeil. */
 .onglet{
-  flex:1;border:0;background:none;cursor:pointer;color:var(--encre-doux);
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  padding:10px 6px;border-radius:999px;
+  flex:1 1 0;min-width:0;border:0;background:none;cursor:pointer;color:var(--encre-doux);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  padding:7px 3px 6px;border-radius:16px;
   font-family:"IBM Plex Sans Condensed",sans-serif;
-  font-size:12.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
   transition:background .18s ease, color .18s ease;
 }
+.onglet span{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 .onglet svg{
-  width:17px;height:17px;flex:none;fill:none;stroke:currentColor;
+  width:20px;height:20px;flex:none;fill:none;stroke:currentColor;
   stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;
 }
 .onglet[aria-selected="true"]{background:var(--encre);color:#EFEFE8}
 .onglet:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+/* Sous trois cent quarante points, les quatre mots ne tiennent plus : seule la
+   fente ouverte garde le sien, les trois autres se disent par leur dessin. */
+@media (max-width:339px){
+  .onglet[aria-selected="false"] span{display:none}
+  .onglet{padding:9px 3px}
+}
 
-/* Le bouton des plantes est rond et remonte au-dessus de la barre. Il porte la
-   marque de l'application, une tige à deux feuilles. Sa couronne claire est du
-   ton du papier : elle le détache de la barre translucide comme du contenu qui
-   défile dessous. */
-.onglet-rond{
-  flex:0 0 auto;width:56px;height:56px;padding:0;gap:0;
-  align-self:center;margin:-18px 3px 0;border-radius:50%;
+/* L'acte est rond et remonte au-dessus de la barre. Il n'est pas une
+   destination : aucune fente ne s'enfonce à sa place, il ouvre la saisie et la
+   rend. Sa couronne claire est du ton du papier, elle le détache de la barre
+   translucide comme du contenu qui défile dessous. */
+.acte-noter{
+  flex:0 0 auto;width:52px;height:52px;padding:0;border:0;cursor:pointer;
+  display:grid;place-items:center;
+  align-self:flex-start;margin:-16px 4px 0;border-radius:50%;
   background:var(--encre);color:#F2EFE7;
   box-shadow:0 8px 20px rgba(22,36,30,.28), 0 0 0 4px rgba(248,247,243,.80);
   transition:box-shadow .18s ease, transform .18s ease;
 }
-.onglet-rond svg{width:30px;height:30px}
-.onglet-rond[aria-selected="true"]{
-  background:var(--encre);
-  box-shadow:0 8px 20px rgba(22,36,30,.34), 0 0 0 4px rgba(248,247,243,.80),
-             0 0 0 6.5px var(--terre);
-}
-@media (hover:hover){.onglet-rond:hover{transform:translateY(-2px)}}
-@media (prefers-reduced-motion:reduce){.onglet-rond{transition:none}
-  .onglet-rond:hover{transform:none}}
+.acte-noter svg{width:24px;height:24px;fill:none;stroke:currentColor;
+  stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.acte-noter:active{transform:translateY(1px)}
+.acte-noter:focus-visible{outline:2px solid var(--terre);outline-offset:3px}
+@media (hover:hover){.acte-noter:hover{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.acte-noter{transition:none}
+  .acte-noter:hover{transform:none}}
 
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .barre-basse{background:rgba(248,247,243,.97)}
@@ -718,6 +709,11 @@ main{
 
 .tete-corps{position:relative;z-index:1;padding-top:18px;padding-bottom:16px}
 .tete-haut{display:flex;align-items:center;gap:14px}
+/* La marque revient auprès du nom du jardin, la barre du bas ayant rendu son
+   rond central au geste de saisie. */
+.marque{flex:0 0 auto;display:grid;place-items:center;width:30px;height:30px;color:#EFEFE8}
+.marque svg{width:30px;height:30px}
+.tete-haut .marque + .tete-textes{margin-left:-4px}
 .tete-textes{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:8px}
 .tete h1{
   max-width:100%;font-size:23px;letter-spacing:.05em;white-space:nowrap;

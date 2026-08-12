@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=d24cdcf679">
+<link rel="stylesheet" href="./styles.css?v=8250853334">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="a759181a99">
+<meta name="version-appli" content="1feabfcb2b">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -28,6 +28,14 @@
   <span class="motif-mois" id="motifMois" aria-hidden="true"></span>
   <div class="tete-corps">
     <div class="tete-haut">
+      <!-- La marque, une tige à deux feuilles, quitte le rond de la barre où
+           elle servait de bouton et revient à sa place, auprès du nom. -->
+      <span class="marque" aria-hidden="true"><svg viewBox="0 0 24 24"><g
+           transform="translate(12 20) scale(0.0298) translate(-512 -824)">
+        <path d="M512 824V470" fill="none" stroke="currentColor" stroke-width="56" stroke-linecap="round"/>
+        <path d="M512 620C474 487 406 440 268 452c38 133 106 180 244 168z" fill="#BFD3A0"/>
+        <path d="M512 512c146 15 216-34 252-176-146-15-216 34-252 176z" fill="currentColor"/>
+      </g></svg></span>
       <div class="tete-textes">
         <h1><button class="titre-jardin" id="btnJardin" type="button"
                     aria-label="Le jardin : climat et commune"><span
@@ -298,37 +306,43 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=1c7602e880"></script>
+<script type="module" src="./app.js?v=06ae209e94"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->
-<button class="bouton-noter" id="btnNoter" type="button" hidden
-        aria-label="Noter au journal" title="Noter">
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M4.5 19.5h15M6 15.6l8.6-8.6 2.4 2.4-8.6 8.6H6z"/>
-    <path d="M14.6 7 16.2 5.4a1.7 1.7 0 0 1 2.4 2.4L17 9.4"/>
-  </svg>
-  <span>Noter</span>
-</button>
+<!-- Quatre destinations et un acte. Les deux échelles de temps à gauche, les
+     deux collections à droite, l'acte au centre sous le pouce. Le rond central
+     portait la marque et menait au jardin : la convention des barres mobiles
+     réserve cette place au geste de création, et le bouton flottant qui la
+     tenait recouvrait la dernière rangée de toutes les listes. -->
 <nav class="barre-basse" role="tablist" aria-label="Navigation principale">
-  <button class="onglet" role="tab" aria-selected="true"  data-ecran="maintenant">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
-    <span>En ce moment</span>
-  </button>
-  <button class="onglet onglet-rond" role="tab" aria-selected="false" data-ecran="selection"
-          aria-label="Mon jardin" title="Mon jardin">
-    <!-- La marque de l'application, une tige à deux feuilles, reprise du fichier
-         d'icône : le bouton dit les plantes et l'application d'un même dessin. -->
-    <svg viewBox="0 0 24 24" aria-hidden="true"><g
-         transform="translate(12 20) scale(0.0298) translate(-512 -824)">
-      <path d="M512 824V470" fill="none" stroke="currentColor" stroke-width="56" stroke-linecap="round"/>
-      <path d="M512 620C474 487 406 440 268 452c38 133 106 180 244 168z" fill="#BFD3A0"/>
-      <path d="M512 512c146 15 216-34 252-176-146-15-216 34-252 176z" fill="currentColor"/>
-    </g></svg>
+  <button class="onglet" role="tab" aria-selected="true" data-ecran="maintenant">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/>
+      <path d="M12 3.2v2M12 18.8v2M3.2 12h2M18.8 12h2M5.9 5.9l1.4 1.4M16.7 16.7l1.4 1.4M18.1 5.9l-1.4 1.4M7.3 16.7l-1.4 1.4"/></svg>
+    <span>Jour</span>
   </button>
   <button class="onglet" role="tab" aria-selected="false" data-ecran="planning">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/></svg>
-    <span>Calendrier</span>
+    <span>Année</span>
+  </button>
+  <button class="acte-noter" id="btnNoter" type="button" hidden
+          aria-label="Noter au journal" title="Noter">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4.5 19.5h15M6 15.6l8.6-8.6 2.4 2.4-8.6 8.6H6z"/>
+      <path d="M14.6 7 16.2 5.4a1.7 1.7 0 0 1 2.4 2.4L17 9.4"/>
+    </svg>
+  </button>
+  <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="7" height="6" rx="1.5"/>
+      <rect x="13.5" y="4.5" width="7" height="6" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="6" rx="1.5"/>
+      <rect x="13.5" y="13.5" width="7" height="6" rx="1.5"/></svg>
+    <span>Jardin</span>
+  </button>
+  <button class="onglet" role="tab" aria-selected="false" data-ecran="catalogue">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 19.5c0-7.5 4.5-12.5 14.2-13.5 1 9.7-4 14.5-11 14.5-1.3 0-2.4-.3-3.2-1z"/>
+      <path d="M8.6 16C11 13.2 14.2 11.3 17.4 10.6"/></svg>
+    <span>Catalogue</span>
   </button>
 </nav>
 

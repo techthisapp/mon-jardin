@@ -155,19 +155,15 @@ export function journal(titre) {
 export const net = s => String(s || "").replace(/\s+/g, " ").trim();
 export const nombre = s => Number(String(s).replace(",", ".").replace(/[^0-9.-]/g, ""));
 
-/* Le bouton rond au milieu de la barre du bas mène au jardin, qui ouvre sur ses
-   espaces. Les suites qui parcourent le référentiel veulent le catalogue
-   entier : elles passent donc à l'onglet des plantes et en élargissent la
-   portée, ce que ce raccourci fait pour elles. */
+/* La barre du bas porte quatre destinations. Les suites qui parcourent le
+   référentiel veulent le catalogue entier : la fente qui le porte l'ouvre
+   d'un seul appui, la portée n'ayant plus à se choisir à la main. */
 export async function ouvrirListeDesPlantes(pg) {
-  await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
-  await pg.waitForTimeout(500);
-  await pg.locator('.onglet-j[data-panneau="plantes"]').dispatchEvent("click");
-  await pg.locator('.segment[data-portee="tout"]').dispatchEvent("click");
+  await pg.locator('.onglet[data-ecran="catalogue"]').dispatchEvent("click");
   await pg.waitForTimeout(700);
 }
 
-/* Le même écran, laissé sur son premier onglet : les espaces du jardin. */
+/* La fente voisine, sur la même section : les espaces du jardin. */
 export async function ouvrirMonJardin(pg) {
   await pg.locator('.onglet[data-ecran="selection"]').dispatchEvent("click");
   await pg.waitForTimeout(700);

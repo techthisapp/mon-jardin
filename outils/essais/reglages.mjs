@@ -1,7 +1,8 @@
-/* La navigation rénovée. Trois destinations de même rang dans la barre du bas,
-   les plantes au centre sur un bouton rond. Ce qui restait des réglages devient
-   deux feuilles, celle du jardin ouverte par son nom, celle du compte ouverte
-   par le bouton du coin.
+/* La navigation rénovée. Quatre destinations de même rang dans la barre du bas,
+   le jour et l'année à gauche, le jardin et le catalogue à droite, et l'acte de
+   saisie au centre sur un bouton rond. Ce qui restait des réglages devient deux
+   feuilles, celle du jardin ouverte par son nom, celle du compte ouverte par le
+   bouton du coin.
 
    Les panneaux ne sont pas reconstruits à chaque ouverture, ils sont déplacés
    depuis une réserve hors écran : les contrôles portent surtout sur ce
@@ -42,37 +43,54 @@ export default async function essai(navigateur) {
     { jardin: AU_JARDIN, espaces: ESPACES, placements: PLACEMENTS,
       sourdines: SOURDINES });
 
-  j.section("trois destinations, dont les plantes au centre");
-  const barre = await pg.locator(".barre-basse .onglet").evaluateAll(
-    l => l.map(b => [b.dataset.ecran, b.classList.contains("onglet-rond")]));
-  j.controle("l'ordre est le moment, les plantes, le calendrier",
-    JSON.stringify(barre) === JSON.stringify([["maintenant", false],
-      ["selection", true], ["planning", false]]), JSON.stringify(barre));
+  /* Quatre destinations et un acte. Le rond central portait la marque et menait
+     au jardin : il porte maintenant la saisie, et le bouton flottant qui la
+     tenait, et qui recouvrait la dernière rangée de toutes les listes, a
+     disparu. */
+  j.section("quatre destinations et un acte au centre");
+  const barre = await pg.locator(".barre-basse > button").evaluateAll(
+    l => l.map(b => b.dataset.ecran || "acte:" + b.id));
+  j.controle("l'ordre est le jour, l'année, l'acte, le jardin, le catalogue",
+    JSON.stringify(barre) === JSON.stringify(["maintenant", "planning",
+      "acte:btnNoter", "selection", "catalogue"]), JSON.stringify(barre));
+  j.controle("chaque fente porte son dessin et son mot",
+    await pg.locator(".barre-basse .onglet svg").count() === 4
+    && await pg.locator(".barre-basse .onglet span").count() === 4);
+  j.controle("l'acte n'est pas une destination",
+    await pg.locator("#btnNoter[role]").count() === 0
+    && await pg.locator("#btnNoter[aria-selected]").count() === 0);
+  j.controle("aucun bouton flottant ne reste au-dessus du contenu",
+    await pg.locator(".bouton-noter").count() === 0);
   j.controle("la sous-navigation des réglages a disparu",
     await pg.locator(".sous-onglet, #sousOnglets, #fermerConfig").count() === 0);
   /* Le rond dépasse vers le haut : la marge basse du contenu doit le dégager,
      faute de quoi la dernière ligne de la page se cache dessous. */
   const debord = await pg.evaluate(() => {
-    const r = document.querySelector(".onglet-rond").getBoundingClientRect();
+    const r = document.querySelector(".acte-noter").getBoundingClientRect();
     const b = document.querySelector(".barre-basse").getBoundingClientRect();
     const m = getComputedStyle(document.querySelector("main")).paddingBottom;
     return { haut: b.top - r.top, bas: r.bottom - b.bottom, marge: parseFloat(m),
              hauteurBarre: b.height };
   });
-  j.controle("le bouton rond dépasse par le haut, jamais par le bas",
+  j.controle("l'acte dépasse par le haut, jamais par le bas",
     debord.haut > 8 && debord.bas <= 0, `${debord.haut.toFixed(1)} au-dessus, `
     + `${debord.bas.toFixed(1)} en dessous`);
-  j.controle("le contenu laisse la place à la barre et au rond",
+  j.controle("le contenu laisse la place à la barre et à l'acte",
     debord.marge > debord.hauteurBarre + debord.haut,
     `${debord.marge} de marge pour ${(debord.hauteurBarre + debord.haut).toFixed(1)}`);
+  /* Les quatre mots doivent tenir dans leur fente sans être rognés. */
+  const mots = await pg.locator(".barre-basse .onglet span").evaluateAll(
+    l => l.map(e => [e.textContent, e.scrollWidth <= e.clientWidth + 1]));
+  j.controle("aucun mot n'est rogné", mots.every(m => m[1]),
+    mots.map(m => m[0] + (m[1] ? "" : " ROGNÉ")).join(" | "));
 
-  j.section("le bouton rond mène au jardin");
+  j.section("la fente du jardin ouvre sur les espaces");
   await ouvrirMonJardin(pg);
   j.controle("l'écran est affiché",
     await pg.locator("#ec-selection:not([hidden])").count() === 1);
-  j.controle("le rond est le seul onglet marqué",
+  j.controle("elle est la seule fente marquée",
     await pg.locator('.onglet[aria-selected="true"]').count() === 1
-    && await pg.locator('.onglet-rond[aria-selected="true"]').count() === 1);
+    && await pg.locator('.onglet[data-ecran="selection"][aria-selected="true"]').count() === 1);
   j.controle("il ouvre sur mon jardin et non sur les plantes",
     await pg.locator('.onglet-j[aria-selected="true"]').getAttribute("data-panneau") === "jardin"
     && await pg.locator("#pan-jardin:not([hidden])").count() === 1
@@ -414,13 +432,13 @@ export default async function essai(navigateur) {
   j.controle("le bandeau paraît de lui-même",
     await c.pg.locator("#bandeauMaj:not([hidden])").count() === 1);
   /* Il se pose au-dessus de la barre : posé dessous, il couvrirait les onglets
-     et le bouton rond. */
+     et l'acte. */
   const place = await c.pg.evaluate(() => {
     const m = document.getElementById("bandeauMaj").getBoundingClientRect();
-    const r = document.querySelector(".onglet-rond").getBoundingClientRect();
+    const r = document.querySelector(".acte-noter").getBoundingClientRect();
     return { sous: m.bottom - r.top, dedans: m.top, ecran: innerHeight };
   });
-  j.controle("il ne recouvre ni la barre ni le bouton rond",
+  j.controle("il ne recouvre ni la barre ni l'acte",
     place.sous <= 0 && place.dedans > 0 && place.dedans < place.ecran,
     `${place.sous.toFixed(1)} de recouvrement`);
   // La feuille de style met l'action en capitales : le texte rendu l'est aussi.

@@ -336,23 +336,26 @@ export default async function essai(navigateur) {
     aPlacer.join(" | "));
   await fermerFiche(pg);
 
-  /* Noter est un geste et non une destination : le bouton se pose au-dessus de
-     la barre des trois écrans, sur tous les écrans, et ce qu'il porte vient de
-     ce qui est à l'écran. */
+  /* Noter est un geste et non une destination : il tient le rond central de la
+     barre, sur tous les écrans, et ce qu'il porte vient de ce qui est à
+     l'écran. Il flottait au coin bas droit, où il recouvrait la dernière rangée
+     de toutes les listes. */
   j.section("noter depuis n'importe quel écran");
   await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
-  j.controle("le bouton est là sur l'écran du moment",
+  j.controle("l'acte est là sur l'écran du moment",
     await pg.locator("#btnNoter:not([hidden])").count() === 1);
   const place = await pg.evaluate(() => {
     const b = document.getElementById("btnNoter");
     const n = document.querySelector(".barre-basse");
     if (!b || !n) return null;
     const rb = b.getBoundingClientRect(), rn = n.getBoundingClientRect();
-    return { auDessus: rb.bottom <= rn.top + 1, dansLaVue: rb.bottom <= window.innerHeight };
+    return { dansLaBarre: b.parentNode === n, centre: Math.round(rb.left + rb.width / 2
+               - (rn.left + rn.width / 2)), dansLaVue: rb.bottom <= window.innerHeight };
   });
-  j.controle("il se tient au-dessus de la barre, dans la vue",
-    place && place.auDessus && place.dansLaVue, JSON.stringify(place));
+  j.controle("il tient le centre de la barre, dans la vue",
+    place && place.dansLaBarre && Math.abs(place.centre) <= 2 && place.dansLaVue,
+    JSON.stringify(place));
   await pg.locator("#btnNoter").dispatchEvent("click");
   await pg.waitForTimeout(500);
   j.controle("il ouvre la saisie",

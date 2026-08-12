@@ -1084,23 +1084,48 @@ function chipsEspaces(conteneur, ligne, apres) {
 
 /* ================== Onglets ================== */
 
-/* Trois destinations, toutes de même rang. Les plantes ne sont pas un réglage :
-   c'est là qu'on décide ce qu'on cultive, et l'écran est atteint par le bouton
-   rond au milieu de la barre. Ce qui reste des réglages n'est plus un écran mais
-   deux feuilles, celle du jardin et celle du compte. */
+/* Quatre destinations de même rang, et un acte au centre. Le jardin et le
+   catalogue partagent une section, l'un ouvert sur les espaces, l'autre sur le
+   catalogue entier : ce sont deux corpus distincts, le jardin tel qu'il est et
+   ce que l'application connaît. Ce qui reste des réglages n'est pas un écran
+   mais deux feuilles, celle du jardin et celle du compte. */
 const ECRANS = ["maintenant", "planning", "selection"];
+const SECTION = { maintenant: "maintenant", planning: "planning",
+                  selection: "selection", catalogue: "selection" };
 const onglets = [...document.querySelectorAll(".onglet")];
 let ecranCourant = "maintenant";
 
-function afficher(ecran) {
-  ecranCourant = ecran;
+function marquerOnglets() {
+  onglets.forEach(x => x.setAttribute("aria-selected",
+    String(x.dataset.ecran === ecranCourant)));
+}
+
+function afficher(dest) {
+  ecranCourant = dest;
+  const section = SECTION[dest] || dest;
   // Changer d'écran principal rend la vue d'ensemble, jamais une tâche ouverte.
   if (vueDetail !== null) { vueDetail = null; rendreMaintenant(); }
-  ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== ecran); });
-  onglets.forEach(x => x.setAttribute("aria-selected", String(x.dataset.ecran === ecran)));
+  ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== section); });
+  marquerOnglets();
   window.scrollTo(0, 0);
-  if (ecran === "planning") placerMarqueur();
-  if (ecran === "selection") { espaceOuvert = null; rendreEspaces(); }
+  if (section === "planning") placerMarqueur();
+  if (section === "selection") {
+    espaceOuvert = null;
+    /* Le catalogue ouvre sur les 315 fiches, le jardin sur ses espaces. La
+       portée n'a plus à se choisir à la main, la destination la dit. */
+    if (dest === "catalogue" && porteeSel !== "tout") {
+      porteeSel = "tout";
+      document.querySelectorAll(".segment[data-portee]").forEach(x =>
+        x.setAttribute("aria-pressed", String(x.dataset.portee === "tout")));
+    }
+    if (dest === "selection" && session && porteeSel !== "jardin") {
+      porteeSel = "jardin";
+      document.querySelectorAll(".segment[data-portee]").forEach(x =>
+        x.setAttribute("aria-pressed", String(x.dataset.portee === "jardin")));
+    }
+    afficherPanneau(dest === "catalogue" || !session ? "plantes" : "jardin");
+    rendreSelection();
+  }
 }
 
 onglets.forEach(o => o.addEventListener("click", () => afficher(o.dataset.ecran)));
@@ -1114,6 +1139,13 @@ function afficherPanneau(nom) {
   $("pan-plantes").hidden = nom !== "plantes";
   document.querySelectorAll(".onglet-j").forEach(b =>
     b.setAttribute("aria-selected", String(b.dataset.panneau === nom)));
+  /* Les deux onglets de l'écran mènent aux mêmes contenus que deux fentes de la
+     barre : la fente enfoncée suit celui qui est ouvert, sans quoi la barre
+     annoncerait un écran que l'on ne regarde plus. */
+  if (SECTION[ecranCourant] === "selection") {
+    ecranCourant = nom === "plantes" ? "catalogue" : "selection";
+    marquerOnglets();
+  }
   window.scrollTo(0, 0);
   if (nom === "jardin") rendreEspaces();
 }
