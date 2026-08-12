@@ -2502,14 +2502,17 @@ select:focus{
   position:relative;height:132px;background:var(--encre);overflow:hidden;
   display:flex;align-items:flex-end;border-radius:var(--rayon);margin-top:2px;
 }
+/* Une planche dense rendue à quarante-deux pour cent ne se lisait plus comme un
+   dessin mais comme une masse grise. Elle passe en filigrane, et le voile qui
+   la couvre s'étend jusqu'au bord droit. */
 .bl-planche{
   position:absolute;right:6px;top:50%;transform:translateY(-50%);
-  width:150px;height:150px;opacity:.42;background:#EDEFE8;
+  width:150px;height:150px;opacity:.26;background:#EDEFE8;
 }
 .bl-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .banniere-lieu::before{
   content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,var(--encre) 42%,rgba(22,36,30,0));
+  background:linear-gradient(90deg,var(--encre) 52%,rgba(22,36,30,.3));
 }
 .banniere-lieu:has(.bl-photo)::before{
   background:linear-gradient(transparent 30%,rgba(12,22,17,.82));
@@ -2729,29 +2732,83 @@ input.rech-lieu:focus{background:#fff;border-style:solid}
 .zone-espace{
   border:1px solid #E3E0D9;border-radius:10px;background:#fff;margin-top:10px;overflow:hidden;
 }
+/* Deux lignes dans le sommaire : l'identité de la zone, puis ce qu'elle contient
+   et ce qu'elle mesure. Le chevron se pose à droite de la première. */
 .zone-espace>summary{
-  display:flex;align-items:center;gap:8px;padding:9px 11px;cursor:pointer;
-  background:#F5F3EE;list-style:none;
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+  gap:2px 8px;padding:9px 11px;cursor:pointer;background:#F5F3EE;list-style:none;
 }
 .zone-espace>summary::-webkit-details-marker{display:none}
 .zone-espace>summary::after{
-  content:"";width:8px;height:8px;margin-left:4px;flex:0 0 8px;
+  content:"";width:8px;height:8px;grid-column:2;grid-row:1;
   border-right:1.6px solid var(--encre-doux);border-bottom:1.6px solid var(--encre-doux);
   transform:rotate(45deg) translate(-2px,-2px);transition:transform .15s;
 }
 .zone-espace[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
-.zone-nom{font-size:13.5px}
-/* Renommer et supprimer se tiennent auprès du nom de la zone. Deux dessins
-   plutôt que deux mots : la ligne porte déjà le nom, le compte et la mesure. */
-.zone-actes{display:inline-flex;gap:2px;margin-left:6px}
-.za-b{
-  border:0;background:none;cursor:pointer;padding:3px;line-height:0;
-  color:var(--encre-doux);border-radius:6px;
+.zo-haut{grid-column:1;grid-row:1;display:flex;align-items:center;gap:8px;min-width:0}
+.zo-bas{grid-column:1/-1;grid-row:2;display:flex;align-items:center;gap:8px;min-width:0}
+.zone-nom{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* La bande de vignettes rend lisible ce que la zone contient sans la déplier :
+   six zones repliées ne montraient rien du jardin. */
+.zo-vign{display:flex;align-items:center;gap:4px;min-width:0;flex:0 1 auto}
+.zone-espace .zo-v{
+  flex:0 0 auto;width:22px;height:22px;border-radius:4px;object-fit:cover;
 }
-.za-b:active{background:rgba(22,36,30,.08)}
-.za-b svg{width:15px;height:15px;fill:none;stroke:currentColor;
-  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.zone-espace .zo-v.im-vide{background:rgba(22,36,30,.06)}
+.zo-plus{font-size:11px;color:var(--encre-doux);margin-left:2px}
 .zone-mesure{font-size:11.5px;color:var(--encre-doux);margin-left:auto}
+/* Une zone sans surface ne pèse rien dans les litres de l'espace : le vide de
+   sa ligne devient l'appel à la renseigner. */
+.zo-surface{
+  margin-left:auto;border:0;background:none;padding:0;cursor:pointer;
+  font-family:inherit;font-size:11.5px;color:var(--terre);
+  text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;
+}
+
+/* L'éditeur des zones : une case devant chacune, le nom corrigé sur place. */
+.zone-editee>summary{background:#EFF3EC}
+.zo-coche{flex:0 0 auto;width:19px;height:19px;accent-color:var(--terre);margin:0}
+.zo-nom{
+  flex:1 1 auto;min-width:0;font-family:inherit;font-size:13.5px;font-weight:600;
+  color:var(--encre);padding:4px 7px;border:1px solid #D5D2CB;border-radius:7px;
+  background:#fff;
+}
+.zo-nom:focus{outline:0;box-shadow:0 0 0 2px var(--terre)}
+.barre-zones{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  margin:10px 0 0;padding:8px 11px;border-radius:10px;
+  background:#EFF3EC;border:1px solid #DCE3D6;
+}
+.bz-t{flex:1 1 auto;min-width:0;font-size:12px;color:var(--encre-doux)}
+.barre-zones .lien{font-size:12.5px}
+.bz-suppr{color:var(--alerte)}
+
+/* Les deux ajouts se replient derrière leur nom : ils tenaient deux cents
+   points en permanence au pied de l'écran pour des gestes occasionnels. */
+.pied-lieu{margin-top:12px}
+.pl-liens{display:flex;gap:16px;align-items:center}
+.pl-liens .lien{font-size:12.5px}
+
+/* Le retour et le nom prennent le relais dès que la bannière quitte l'écran. */
+/* Posée hors du flux : elle ne prend aucune place tant que la bannière se voit,
+   et se pose au bord haut de la vue quand celle-ci est partie. */
+.banniere-compacte{
+  position:fixed;top:0;left:0;right:0;z-index:6;display:flex;align-items:center;gap:9px;
+  padding:calc(7px + env(safe-area-inset-top)) calc(var(--marge-d) + 2px) 7px
+          calc(var(--marge-g) + 2px);
+  background:rgba(240,238,231,.94);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--filet);
+  opacity:0;pointer-events:none;transform:translateY(-6px);transition:opacity .15s, transform .15s;
+}
+.banniere-compacte.visible{opacity:1;pointer-events:auto;transform:none}
+.bc-retour{
+  flex:0 0 auto;width:28px;height:28px;display:grid;place-items:center;padding:0;
+  border:0;border-radius:50%;background:rgba(22,36,30,.06);cursor:pointer;color:var(--encre);
+}
+.bc-retour svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round}
+.bc-nom{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .corps-zone{padding:2px 11px 10px}
 .corps-zone .rangs-lieu{border:0;border-radius:0}
 .ajout-zone{margin-top:14px}

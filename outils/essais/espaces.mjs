@@ -169,8 +169,12 @@ export default async function essai(navigateur) {
   const mesureZ1 = net(await sommaireZone(pg, "z1").locator(".zone-mesure").textContent());
   j.controle("la zone convertit le besoin du catalogue en litres à porter",
     mesureZ1 === "10 m², 44 L par jour", mesureZ1);
-  j.controle("l'espace compte les litres de toutes ses plantes",
-    /^40 m², \d+ L par jour/.test(resume), resume);
+  /* L'espace déclare quarante mètres carrés, l'emprise du terrain, mais ne
+     s'arrose que sur ses zones : ses litres sont la somme des leurs. Sa surface
+     multipliée par le besoin moyen de ses plantes annonçait mille huit cents
+     litres par jour pour quatorze pieds tenant dans six carrés. */
+  j.controle("les litres d'un espace découpé sont ceux de ses zones",
+    resume.startsWith("40 m², 44 L par jour"), resume);
   j.controle("il annonce la part de surface déjà prise par ses zones",
     resume.includes("10 m² en zones"), resume);
 
@@ -265,30 +269,46 @@ export default async function essai(navigateur) {
   const nonPlacees = net(await pg.locator('.tuile-espace[data-espace="0"] .tuile-nb').textContent());
   j.controle("la plante reste au jardin, sans lieu", nonPlacees === "1", nonPlacees);
 
-  /* Renommer et supprimer touchent la zone elle-même : ils se tiennent auprès
-     de son nom et non au pied de ses plantes, où il fallait dérouler toute la
-     section pour les atteindre. */
-  j.section("les gestes de la zone se tiennent auprès de son nom");
+  /* Deux icônes par zone faisaient, à six zones, un mur de pictogrammes dont la
+     moitié étaient des corbeilles. Les gestes passent dans un mode : le nom se
+     corrige sur place, une case retient la zone, et une seule confirmation vaut
+     pour toutes celles qui sont retenues. */
+  j.section("l'éditeur des zones");
   await ouvrirEspace(pg, "e1");
-  j.controle("le sommaire porte les deux gestes",
-    await zone(pg, "z1").locator('> summary .za-b').count() === 2);
-  j.controle("le pied de la zone ne les porte plus",
-    await pg.locator("#detailEspace .pied-zone").count() === 0);
-  /* La section garde son état d'un rendu à l'autre : la replier d'abord, pour
-     que l'appui sur un geste soit seul en cause. */
-  if (await zone(pg, "z1").evaluate(d => d.open)) {
-    await sommaireZone(pg, "z1").click();
-    await pg.waitForTimeout(250);
-  }
-  await zone(pg, "z1").locator('> summary [data-act="renommer"]').click();
-  await pg.waitForTimeout(300);
-  j.controle("l'appui sur un geste ne déplie pas la section",
-    !await zone(pg, "z1").evaluate(d => d.open));
-
-  j.section("supprimer une zone rend ses plantes à l'espace");
-  await deplier(pg, "z1");
-  await zone(pg, "z1").locator('> summary [data-act="supprimer"]').click();
+  j.controle("au repos, aucune icône ne pèse sur les sommaires",
+    await pg.locator("#detailEspace .za-b").count() === 0
+    && await pg.locator("#detailEspace .zo-coche").count() === 0);
+  await ouvrirMenuEspace(pg);
+  await pg.locator('.menu-lieu [data-act="zones"]').click();
+  await pg.waitForTimeout(400);
+  const combienZones = await pg.locator("#detailEspace details.zone-espace").count();
+  j.controle("l'éditeur pose une case devant chaque zone",
+    await pg.locator("#detailEspace .zo-coche").count() === combienZones,
+    `${await pg.locator("#detailEspace .zo-coche").count()} pour ${combienZones} zones`);
+  j.controle("et rend le nom modifiable sur place",
+    await zone(pg, "z1").locator("> summary .zo-nom").count() === 1);
+  const champNom = zone(pg, "z1").locator("> summary .zo-nom");
+  await champNom.fill("Carré du fond, repris");
+  await champNom.dispatchEvent("change");
   await pg.waitForTimeout(700);
+  const ecritNom = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "espaces" && e.op === "update" && "name" in e.v).pop());
+  j.controle("le nom corrigé s'enregistre",
+    !!ecritNom && ecritNom.v.name === "Carré du fond, repris",
+    JSON.stringify(ecritNom && ecritNom.v));
+  const avantCoche = await zone(pg, "z1").evaluate(d => d.open);
+  await zone(pg, "z1").locator("> summary .zo-coche").click();
+  await pg.waitForTimeout(400);
+  j.controle("cocher ne change pas l'état de la section",
+    await zone(pg, "z1").evaluate(d => d.open) === avantCoche,
+    `${avantCoche} avant, ${await zone(pg, "z1").evaluate(d => d.open)} après`);
+  j.controle("la barre annonce ce qui est retenu",
+    /1 zone retenue/.test(net(await pg.locator(".barre-zones .bz-t").textContent())),
+    net(await pg.locator(".barre-zones .bz-t").textContent()));
+
+  j.section("supprimer les zones retenues rend leurs plantes à l'espace");
+  await pg.locator(".barre-zones .bz-suppr").click();
+  await pg.waitForTimeout(800);
   j.controle("la zone a disparu", await zone(pg, "z1").count() === 0);
   j.controle("le figuier est revenu sous Sans zone",
     await sansZone(pg, FIGUIER.id).count() === 1);
@@ -308,8 +328,10 @@ export default async function essai(navigateur) {
   j.controle("la bannière porte le nom du lieu",
     net(await pg.locator("#detailEspace .banniere-lieu .titre-detail").textContent()) === "Potager");
   const mes = net(await pg.locator("#detailEspace .bl-mesure").textContent());
-  j.controle("et sa mesure, du nombre aux litres",
-    /^5 plantes, 40 m², \d+ L par jour$/.test(mes), mes);
+  /* Sa seule zone restante est vide : l'espace n'a aucun litre à annoncer, et
+     n'invente pas ceux de son emprise. */
+  j.controle("et sa mesure, sans litres inventés",
+    /^5 plantes, 40 m²$/.test(mes), mes);
   j.controle("elle prend une planche d'herbier, jamais une photographie du fonds",
     await pg.locator("#detailEspace .banniere-lieu .bl-planche[data-pl]").count() === 1
     && await pg.locator("#detailEspace .banniere-lieu img").count() === 0);
@@ -432,6 +454,10 @@ export default async function essai(navigateur) {
       const t = document.querySelector("#detailEspace > .tete-section-zone");
       return !!t && t.nextElementSibling.classList.contains("corps-espace");
     }));
+  /* Six zones repliées ne montraient rien du jardin : le sommaire porte une
+     bande de vignettes, et la mesure passe sur la seconde ligne. */
+  j.controle("un sommaire replié montre ce que la zone contient",
+    await zone(pg, "z2").locator("> summary .zo-vign").count() === 1);
 
   /* Le nombre de pieds bouge souvent, un semis complété ou un plant perdu : il
      se corrige là où il se lit, sans passer par le mode d'édition. */
@@ -481,6 +507,67 @@ export default async function essai(navigateur) {
   j.controle("depuis la liste des plantes, la fiche s'ouvre toujours sur le moment",
     await pg.locator('.f-onglets button[data-pan="moment"][aria-selected="true"]').count() === 1);
   await fermerFiche(pg);
+
+  /* Les deux ajouts tenaient deux cents points en permanence au pied de l'écran
+     pour des gestes occasionnels, et un espace entièrement rangé consacrait
+     encore cent cinquante points à conseiller de chercher au catalogue ce qui
+     ne manquait pas. */
+  j.section("le pied de l'écran ne garde que ce qui se regarde");
+  await auxEspaces(pg);
+  await ouvrirEspace(pg, "e2");
+  j.controle("sans zone, les plantes se lisent sans en-tête de section",
+    await pg.locator("#detailEspace .tete-section-zone").count() === 0
+    && await pg.locator("#detailEspace > .corps-espace .ligne-espace").count() === 1);
+  j.controle("les deux champs d'ajout sont repliés derrière leur nom",
+    await pg.locator("#detailEspace .pied-lieu .rech-lieu").count() === 0
+    && await pg.locator("#detailEspace .pied-lieu #nomZone").count() === 0
+    && await pg.locator("#detailEspace .pl-liens .lien").count() === 2);
+  await pg.locator('#detailEspace .pl-liens [data-ouvre^="z:"]').click();
+  await pg.waitForTimeout(300);
+  j.controle("le lien déplie le champ de la nouvelle zone",
+    await pg.locator("#detailEspace #nomZone").count() === 1);
+  await pg.locator("#detailEspace #nomZone").fill("Fond du verger");
+  await pg.locator("#detailEspace #form-zone .lien").click();
+  await pg.waitForTimeout(800);
+  const zNeuve = await pg.locator("#detailEspace details.zone-espace").first()
+    .getAttribute("data-zone");
+  j.controle("la zone est créée, et Sans zone reparaît puisqu'il reste une plante",
+    !!zNeuve && await pg.locator("#detailEspace .tete-section-zone").count() === 1);
+  /* Une zone sans surface ne pèse rien dans les litres de l'espace : sa ligne
+     appelle à la renseigner plutôt que de laisser un vide. */
+  const surf = pg.locator(`#detailEspace details[data-zone="${zNeuve}"] > summary .zo-surface`);
+  j.controle("une zone sans surface appelle à la renseigner", await surf.count() === 1);
+  await surf.click();
+  await pg.waitForTimeout(400);
+  j.controle("l'appel ouvre la zone et ses réglages",
+    await pg.locator(`#detailEspace details[data-zone="${zNeuve}"][open]`).count() === 1
+    && await pg.locator(`#detailEspace details[data-zone="${zNeuve}"] .reglages-lieu[open]`)
+         .count() === 1);
+
+  await ouvrirLigne(pg);
+  await pg.locator(`#detailEspace > .corps-espace .ligne-espace[data-plante="${RADIS.id}"] .sel-zone`)
+    .selectOption(zNeuve);
+  await pg.waitForTimeout(800);
+  j.controle("la dernière plante rangée fait disparaître la section Sans zone",
+    await pg.locator("#detailEspace .tete-section-zone").count() === 0
+    && await pg.locator("#detailEspace > .corps-espace").count() === 0);
+
+  /* Une tâche retenue ne changeait que des nombres tant que les zones restaient
+     repliées. */
+  j.section("une tâche retenue ouvre les zones qui la portent");
+  await pg.locator("#detailEspace .ml-c").first().click();
+  await pg.waitForTimeout(600);
+  j.controle("la zone qui porte la tâche s'ouvre d'elle-même",
+    await pg.locator(`#detailEspace details[data-zone="${zNeuve}"][open]`).count() === 1);
+  await pg.locator("#detailEspace .ml-c").first().click();
+  await pg.waitForTimeout(500);
+
+  /* Le retour vivait dans la bannière, qui défile. */
+  j.section("la barre compacte prend le relais de la bannière");
+  j.controle("elle est en place, effacée tant que la bannière se voit",
+    await pg.locator("#detailEspace .banniere-compacte").count() === 1
+    && !await pg.locator("#detailEspace .banniere-compacte").evaluate(
+         n => n.classList.contains("visible")));
 
   await ctx.close();
   return j.fin(erreurs);

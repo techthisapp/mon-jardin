@@ -4909,6 +4909,9 @@ const lignesOuvertes = new Set();
 let menuEspace = false;          // le panneau du bouton de coin
 let modeEdition = false;         // les gestes sur chaque plante
 let filtreMoment = null;         // la tâche retenue parmi les pastilles du moment
+let modeZones = false;           // l'éditeur des zones : nom sur place, cases à cocher
+const zonesCochees = new Set();  // les zones retenues pour une suppression groupée
+const ajoutsOuverts = new Set(); // les champs d'ajout dépliés, par lieu
 const VUE_ESPACE = "monjardin.vue-espace";
 let vueEspace = "liste";
 try { vueEspace = localStorage.getItem(VUE_ESPACE) === "mosaique" ? "mosaique" : "liste"; }
@@ -4964,7 +4967,9 @@ function rendreTuilesEspaces(z) {
       + `<span class="tuile-unite">${n > 1 ? "plantes" : "plante"}`
       + (nz ? `, ${nz} ${nz > 1 ? "zones" : "zone"}` : "") + `</span>`;
     b.addEventListener("click", () => {
-      espaceOuvert = v.cle; saisieCarnet = null; filtreMoment = null; rendreEspaces();
+      espaceOuvert = v.cle; saisieCarnet = null; filtreMoment = null;
+      modeZones = false; zonesCochees.clear(); ajoutsOuverts.clear();
+      rendreEspaces();
     });
     z.appendChild(b);
   });
@@ -5110,7 +5115,7 @@ function banniereDuLieu(zo, compte, total) {
     + `<p class="bl-mesure">${esc(mesure)}</p></div>`;
   b.querySelector("#retourEspace").addEventListener("click", () => {
     espaceOuvert = null; saisieCarnet = null; menuEspace = false; modeEdition = false;
-    filtreMoment = null;
+    filtreMoment = null; modeZones = false; zonesCochees.clear(); ajoutsOuverts.clear();
     rendreEspaces();
   });
   b.querySelector("#menuEspace").addEventListener("click", () => {
@@ -5122,13 +5127,23 @@ function banniereDuLieu(zo, compte, total) {
 function menuDuLieu(zo) {
   const d = document.createElement("div");
   d.className = "menu-lieu";
+  const zones = zonesDe(zo.id);
   d.innerHTML = `<div class="ml-gestes">`
     + `<button type="button" class="lien" data-act="editer">`
     + (modeEdition ? "Terminer" : "Modifier les plantes") + `</button>`
+    + (zones.length ? `<button type="button" class="lien" data-act="zones">`
+      + (modeZones ? "Terminer" : "Modifier les zones") + `</button>` : "")
     + `<button type="button" class="lien" data-act="renommer">Renommer</button>`
     + `<button type="button" class="lien" data-act="supprimer">Supprimer</button></div>`;
   d.querySelector('[data-act="editer"]').addEventListener("click", () => {
     modeEdition = !modeEdition; menuEspace = false; rendreEspaces();
+  });
+  const bz = d.querySelector('[data-act="zones"]');
+  if (bz) bz.addEventListener("click", () => {
+    modeZones = !modeZones;
+    if (!modeZones) zonesCochees.clear();
+    menuEspace = false;
+    rendreEspaces();
   });
   d.querySelector('[data-act="renommer"]').addEventListener("click", () => renommerEspace(zo));
   d.querySelector('[data-act="supprimer"]').addEventListener("click", () => supprimerEspace(zo));
@@ -5177,6 +5192,25 @@ function ligneDuMoment(cle) {
   return d;
 }
 
+/* L'éditeur des zones dit ce qu'il permet et ce qu'il a retenu. Il tient une
+   seule ligne, au-dessus des zones qu'il modifie. */
+function barreZones(zo) {
+  const b = document.createElement("div");
+  b.className = "barre-zones";
+  const n = zonesCochees.size;
+  b.innerHTML = `<span class="bz-t">${n
+    ? `${n} ${n > 1 ? "zones retenues" : "zone retenue"}`
+    : "Corrigez les noms sur place, cochez pour supprimer"}</span>`
+    + (n ? `<button type="button" class="lien bz-suppr">Supprimer</button>` : "")
+    + `<button type="button" class="lien bz-fin">Terminer</button>`;
+  const s = b.querySelector(".bz-suppr");
+  if (s) s.addEventListener("click", () => supprimerZonesRetenues(zo));
+  b.querySelector(".bz-fin").addEventListener("click", () => {
+    modeZones = false; zonesCochees.clear(); rendreEspaces();
+  });
+  return b;
+}
+
 function boutonVue(vue, dessin) {
   return `<button type="button" class="ml-b${vueEspace === vue ? " on" : ""}" data-vue="${vue}"`
     + ` aria-pressed="${vueEspace === vue}" aria-label="${vue === "liste" ? "Liste" : "Mosaïque"}">`
@@ -5198,26 +5232,86 @@ function rendreDetailEspace(z) {
      filtre ne doit pas survivre à ce qui l'a fait naître. */
   if (filtreMoment && !momentDuLieu(zo.id).some(x => x.k === filtreMoment)) filtreMoment = null;
   z.appendChild(banniereDuLieu(zo, filtrerMoment(membres).length, membres.length));
+  z.appendChild(banniereCompacte(zo));
   if (menuEspace) z.appendChild(menuDuLieu(zo));
   z.appendChild(ligneDuMoment(zo.id));
+  const zones = zonesDe(zo.id);
+  if (modeZones && zones.length) z.appendChild(barreZones(zo));
   /* Les zones nommées viennent d'abord, le reste ensuite : découper un espace,
      c'est ranger, et ce qui n'est pas encore rangé se lit à la fin. Le
      formulaire d'ajout suit, il pose justement une plante hors zone. */
-  const zones = zonesDe(zo.id);
   zones.forEach(x => z.appendChild(sectionZone(x)));
-  if (zones.length) {
-    const t = document.createElement("div");
-    t.className = "tete-section-zone";
-    t.innerHTML = `<b>Sans zone</b>`
-      + `<span class="nb">${filtrerMoment(plantesDuNoeud(zo.id)).length}</span>`;
-    z.appendChild(t);
+  /* Un espace entièrement rangé n'a rien à dire de ses plantes sans zone : la
+     section entière s'efface plutôt que d'occuper cent cinquante points à
+     conseiller de chercher au catalogue ce qui ne manque pas. */
+  const horsZone = filtrerMoment(plantesDuNoeud(zo.id));
+  if (!zones.length || horsZone.length) {
+    if (zones.length) {
+      const t = document.createElement("div");
+      t.className = "tete-section-zone";
+      t.innerHTML = `<b>Sans zone</b><span class="nb">${horsZone.length}</span>`;
+      z.appendChild(t);
+    }
+    z.appendChild(corpsDuLieu(zo.id));
   }
-  z.appendChild(corpsDuLieu(zo.id));
-  z.appendChild(ajoutAuLieu(zo.id));
-  z.appendChild(formulaireZone(zo));
+  z.appendChild(piedDuLieu(zo));
   z.appendChild(sectionCarnet(zo));
   poserPlanches(z);
   poserPhotosCarnet(z);
+  veillerBanniere(z);
+}
+
+/* Deux gestes occasionnels tenaient deux cents points en permanence au pied de
+   l'écran. Ils se replient derrière leur nom et ne s'ouvrent qu'appelés. */
+function piedDuLieu(zo) {
+  const d = document.createElement("div");
+  d.className = "pied-lieu";
+  const ouvertPlante = ajoutsOuverts.has(zo.id);
+  const ouvertZone = ajoutsOuverts.has("z:" + zo.id);
+  const l = document.createElement("div");
+  l.className = "pl-liens";
+  l.innerHTML = `<button type="button" class="lien" data-ouvre="${esc(zo.id)}">`
+    + `${ouvertPlante ? "Fermer" : "Ajouter une plante"}</button>`
+    + `<button type="button" class="lien" data-ouvre="z:${esc(zo.id)}">`
+    + `${ouvertZone ? "Fermer" : "Ajouter une zone"}</button>`;
+  l.querySelectorAll("[data-ouvre]").forEach(b => b.addEventListener("click", () => {
+    const c = b.dataset.ouvre;
+    if (ajoutsOuverts.has(c)) ajoutsOuverts.delete(c); else ajoutsOuverts.add(c);
+    rendreEspaces();
+  }));
+  d.appendChild(l);
+  if (ouvertPlante) d.appendChild(ajoutAuLieu(zo.id));
+  if (ouvertZone) d.appendChild(formulaireZone(zo));
+  return d;
+}
+
+/* Le retour et le nom du lieu vivaient dans la bannière, qui défile : sur un
+   espace à six zones, revenir aux tuiles demandait de remonter toute la page.
+   Une barre compacte prend le relais dès que la bannière quitte l'écran. */
+function banniereCompacte(zo) {
+  const b = document.createElement("div");
+  b.className = "banniere-compacte";
+  b.innerHTML = `<button type="button" class="bc-retour" aria-label="Revenir aux espaces">`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>`
+    + `<b class="bc-nom">${esc(zo.name)}</b>`;
+  b.querySelector(".bc-retour").addEventListener("click", () => {
+    espaceOuvert = null; saisieCarnet = null; menuEspace = false;
+    modeEdition = false; modeZones = false; filtreMoment = null;
+    rendreEspaces();
+  });
+  return b;
+}
+
+let obsBanniere = null;
+function veillerBanniere(z) {
+  if (obsBanniere) { obsBanniere.disconnect(); obsBanniere = null; }
+  const grande = z.querySelector(".banniere-lieu");
+  const petite = z.querySelector(".banniere-compacte");
+  if (!grande || !petite || !window.IntersectionObserver) return;
+  obsBanniere = new IntersectionObserver(
+    ([e]) => petite.classList.toggle("visible", !e.isIntersecting),
+    { threshold: 0 });
+  obsBanniere.observe(grande);
 }
 
 // L'entête sans bannière, pour les plantes qui ne sont placées nulle part.
@@ -5235,40 +5329,65 @@ function teteDuLieu(zo, nom, compte) {
 /* Une zone se déplie sous son espace, sans troisième niveau de navigation. */
 function sectionZone(x) {
   const d = document.createElement("details");
-  d.className = "zone-espace";
+  d.className = "zone-espace" + (modeZones ? " zone-editee" : "");
   d.dataset.zone = x.id;
-  d.open = zonesOuvertes.has(x.id);
-  const n = filtrerMoment(plantesDuNoeud(x.id)).length;
+  const lot = filtrerMoment(plantesDuNoeud(x.id));
+  const n = lot.length;
+  /* Sous une tâche retenue, une zone qui en porte s'ouvre d'elle-même : repliée,
+     elle n'aurait montré qu'un nombre changé. */
+  d.open = filtreMoment ? n > 0 : zonesOuvertes.has(x.id);
   const s = document.createElement("summary");
-  /* Renommer et supprimer touchent la zone elle-même : ils se tiennent auprès
-     de son nom, non au pied de ses plantes, où il fallait dérouler toute la
-     section pour les atteindre. Deux dessins plutôt que deux mots, la ligne
-     portant déjà le nom, le compte et la mesure. */
-  s.innerHTML = `<b class="zone-nom">${esc(x.name)}</b><span class="nb">${n}</span>`
-    + `<span class="zone-actes">`
-    + `<button type="button" class="za-b" data-act="renommer" aria-label="Renommer ${esc(x.name)}">`
-    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5h15"/>`
-    + `<path d="M6 15.6l8.6-8.6 2.4 2.4-8.6 8.6H6z"/>`
-    + `<path d="M14.6 7 16.2 5.4a1.7 1.7 0 0 1 2.4 2.4L17 9.4"/></svg></button>`
-    + `<button type="button" class="za-b" data-act="supprimer" aria-label="Supprimer ${esc(x.name)}">`
-    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5h4v2"/>`
-    + `<path d="M6.5 7l1 12h9l1-12"/><path d="M10.5 10.5v6M13.5 10.5v6"/></svg></button>`
+  const mesure = mesureDuLieu(x);
+  /* Deux lignes dans le sommaire : l'identité de la zone, puis ce qu'elle
+     contient et ce qu'elle mesure. Six zones repliées ne montraient rien du
+     jardin, la bande de vignettes le rend lisible sans déplier. */
+  s.innerHTML = `<span class="zo-haut">`
+    + (modeZones ? `<input type="checkbox" class="zo-coche"`
+        + `${zonesCochees.has(x.id) ? " checked" : ""}`
+        + ` aria-label="Retenir ${esc(x.name)}">` : "")
+    + (modeZones
+        ? `<input class="zo-nom" type="text" maxlength="40" value="${esc(x.name)}"`
+          + ` aria-label="Nom de la zone">`
+        : `<b class="zone-nom">${esc(x.name)}</b>`)
+    + `<span class="nb">${n}</span></span>`
+    + `<span class="zo-bas">`
+    + `<span class="zo-vign">`
+    + lot.slice(0, 5).map(p => imageHTML(p, "zo-v")).join("")
+    + (n > 5 ? `<span class="zo-plus">+${n - 5}</span>` : "")
     + `</span>`
-    + `<span class="zone-mesure">${esc(mesureDuLieu(x))}</span>`;
+    /* Une zone sans surface laissait un vide à droite et ne pesait rien dans
+       les litres de l'espace : le trou devient l'appel à la renseigner. */
+    + (mesure ? `<span class="zone-mesure">${esc(mesure)}</span>`
+              : `<button type="button" class="zo-surface">surface à préciser</button>`)
+    + `</span>`;
   d.appendChild(s);
-  /* Un appui sur l'un des deux gestes ne doit pas déplier la section. Le
-     dépliage est le comportement d'activation du sommaire lui-même : il se
-     retire à la capture, avant que l'événement n'atteigne le bouton, et non
-     depuis le bouton où l'ordre de dispatch le laisse parfois passer. */
+  /* Un appui sur une case, sur le nom ou sur l'appel de surface ne doit pas
+     déplier la section. Le dépliage est le comportement d'activation du
+     sommaire lui-même : il se retire à la capture, avant que l'événement
+     n'atteigne la commande. */
   s.addEventListener("click", ev => {
-    const b = ev.target.closest(".za-b");
-    if (!b) return;
+    const coche = ev.target.closest(".zo-coche");
+    const nom = ev.target.closest(".zo-nom");
+    const surface = ev.target.closest(".zo-surface");
+    // Rien de tout cela : le sommaire bascule comme il le fait de lui-même.
+    if (!coche && !nom && !surface) return;
     ev.preventDefault();
-    ev.stopPropagation();
-    if (b.dataset.act === "renommer") renommerEspace(x); else supprimerEspace(x);
-  }, true);
-  d.addEventListener("toggle", () =>
-    d.open ? zonesOuvertes.add(x.id) : zonesOuvertes.delete(x.id));
+    if (nom) return;
+    if (coche) {
+      if (zonesCochees.has(x.id)) zonesCochees.delete(x.id); else zonesCochees.add(x.id);
+      rendreEspaces();
+      return;
+    }
+    zonesOuvertes.add(x.id);
+    reglagesOuverts.add(x.id);
+    rendreEspaces();
+  });
+  const champ = s.querySelector(".zo-nom");
+  if (champ) champ.addEventListener("change", () => renommerZoneSurPlace(x, champ.value));
+  d.addEventListener("toggle", () => {
+    if (filtreMoment) return;
+    d.open ? zonesOuvertes.add(x.id) : zonesOuvertes.delete(x.id);
+  });
   const corps = document.createElement("div");
   corps.className = "corps-zone";
   corps.appendChild(attributsDuLieu(x));
@@ -5488,7 +5607,21 @@ function attributsDuLieu(zo) {
 /* La surface transforme le besoin du catalogue, exprimé en litres par jour et
    par mètre carré, en litres à porter. Les plantes sans calcul ne comptent
    pas. La surface ne s'hérite pas : elle s'additionne. */
+/* Un espace découpé en zones ne s'arrose pas sur toute son emprise : ses litres
+   sont la somme de ceux de ses zones. La surface déclarée d'un tel espace est
+   celle du terrain, quatre cents mètres carrés pour six carrés de trois, et la
+   multiplier par le besoin moyen des plantes annonçait mille huit cents litres
+   par jour pour quatorze pieds. Les plantes posées hors zone n'ont pas de
+   surface propre : elles ne sont pas comptées, et la zone sans surface le dit
+   sur sa ligne. */
 function litresDuJour(zo) {
+  if (!zo.parent_id) {
+    const zones = zonesDe(zo.id);
+    if (zones.length) {
+      const somme = zones.reduce((a, z) => a + (litresDuJour(z) || 0), 0);
+      return somme || null;
+    }
+  }
   const s = Number(zo.surface_m2 || 0);
   if (!s) return null;
   const ids = (zo.parent_id ? plantesDuNoeud(zo.id) : plantesDeLEspace(zo.id)).map(p => p.id);
@@ -6129,6 +6262,40 @@ async function creerEspace(nom, parent = null) {
   if (error) { info((parent ? "Zone non créée : " : "Espace non créé : ") + error.message, true); return; }
   espaces.push(data);
   if (parent) zonesOuvertes.add(data.id);
+  construireChips(); majJardinUI(); rendreTout();
+}
+
+/* Dans l'éditeur, le nom se corrige sur place : la boîte de dialogue du
+   navigateur n'a plus lieu d'être quand le champ est déjà sous les yeux. */
+async function renommerZoneSurPlace(x, valeur) {
+  const nom = String(valeur || "").trim();
+  if (!nom || nom === x.name) { rendreEspaces(); return; }
+  const { error } = await db.from("espaces").update({ name: nom }).eq("id", x.id);
+  if (error) { info("Renommage refusé : " + error.message, true); rendreEspaces(); return; }
+  x.name = nom;
+  construireChips(); majJardinUI(); rendreTout();
+}
+
+/* Supprimer six zones une à une demandait six confirmations. L'éditeur les
+   retient par des cases et n'en demande qu'une. */
+async function supprimerZonesRetenues(zo) {
+  const ids = [...zonesCochees];
+  const lot = zonesDe(zo.id).filter(x => ids.includes(x.id));
+  if (!lot.length) return;
+  const plur = lot.length > 1;
+  if (!confirm(`Supprimer ${plur ? "les zones" : "la zone"} ${lot.map(x => x.name).join(", ")} ? `
+    + `${plur ? "Leurs plantes restent" : "Ses plantes restent"} dans l'espace.`)) return;
+  for (const x of lot) {
+    for (const p of plantesDuNoeud(x.id)) {
+      if (!await placerSur(p.id, zo.id)) return;
+    }
+  }
+  const { error } = await db.from("espaces").delete().in("id", ids);
+  if (error) { info("Suppression refusée : " + error.message, true); return; }
+  espaces = espaces.filter(x => !ids.includes(x.id));
+  aff.forEach((v, k) => aff.set(k, v.filter(r => !ids.includes(r.espace_id))));
+  ids.forEach(id => { zonesOuvertes.delete(id); reglagesOuverts.delete(id); });
+  zonesCochees.clear();
   construireChips(); majJardinUI(); rendreTout();
 }
 
