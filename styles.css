@@ -2542,16 +2542,25 @@ select:focus{
 
 /* Ce qui se passe ici aujourd'hui, et la bascule d'affichage au bout. */
 .moment-lieu{display:flex;align-items:center;gap:8px;margin:12px 0 2px}
+/* La ligne défile sous le sélecteur de vue. Elle se termine par un fondu, la
+   coupe nette laissant croire à un mot tronqué plutôt qu'à un défilement. */
 .ml-chips{flex:1 1 auto;min-width:0;display:flex;gap:7px;overflow-x:auto;
-  scrollbar-width:none;padding:1px 0}
+  scrollbar-width:none;padding:1px 0;
+  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);
+  mask-image:linear-gradient(90deg,#000 calc(100% - 20px),transparent);
+}
 .ml-chips::-webkit-scrollbar{display:none}
 .ml-c{
   flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;
   padding:6px 11px;border-radius:999px;background:#fff;border:1px solid var(--filet);
   box-shadow:var(--ombre);white-space:nowrap;
+  font-family:inherit;color:var(--encre);cursor:pointer;
 }
 .ml-c i{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
 .ml-c b{font-weight:600}
+/* Une tâche retenue s'enfonce : le reste de l'écran ne montre plus qu'elle. */
+.ml-c.on{background:var(--encre);color:var(--papier);border-color:var(--encre)}
+.ml-c:focus-visible{outline:2px solid var(--terre);outline-offset:1px}
 .ml-vue{
   margin-left:auto;flex:0 0 auto;display:inline-flex;border:1px solid var(--filet);
   border-radius:999px;background:#fff;padding:2px;
@@ -2618,7 +2627,10 @@ select:focus{
   font-family:inherit;color:inherit;text-align:left;
 }
 .tp-ouvre:focus-visible{outline:2px solid var(--terre);outline-offset:-2px}
-.im-t{display:block;width:100%;height:104px;object-fit:cover;background:#F7F5F0}
+/* Cent quatre points d'image ne laissaient voir que deux rangées de tuiles sur
+   un téléphone. Quatre-vingts suffisent à reconnaître la plante, le nom étant
+   juste dessous. */
+.im-t{display:block;width:100%;height:80px;object-fit:cover;background:#F7F5F0}
 .im-t.im-planche{object-fit:contain;padding:6px;background:#fff}
 .im-t.im-vide{background:rgba(22,36,30,.04)}
 .tp-nom{display:block;font-size:13.5px;font-weight:500;padding:8px 10px 9px;line-height:1.25}

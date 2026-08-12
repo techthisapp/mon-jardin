@@ -368,6 +368,57 @@ export default async function essai(navigateur) {
   j.controle("le retour à la liste se fait du même geste",
     await pg.locator("#detailEspace .rangs-lieu").count() > 0);
 
+  /* Les pastilles annonçaient ce qui se joue sans donner à le voir. Elles
+     retiennent leur tâche, et tout ce que l'écran compte suit ce qu'il montre :
+     un nombre qui annoncerait autre chose que ce qui est sous les yeux serait
+     pire que pas de nombre du tout. */
+  j.section("une pastille du moment retient sa tâche");
+  const pastille = pg.locator("#detailEspace .ml-c").first();
+  j.controle("les pastilles sont des boutons au repos",
+    await pg.locator('#detailEspace .ml-c[aria-pressed="true"]').count() === 0
+    && await pastille.evaluate(n => n.tagName) === "BUTTON");
+  const tache = await pastille.getAttribute("data-tache");
+  const annonce = Number(net(await pastille.locator("b").textContent()));
+  await pastille.click();
+  await pg.waitForTimeout(600);
+  const sous = await pg.evaluate(() => ({
+    retenue: document.querySelectorAll('#detailEspace .ml-c[aria-pressed="true"]').length,
+    montrees: document.querySelectorAll("#detailEspace .ligne-espace,"
+      + " #detailEspace .tuile-plante").length,
+    mesure: document.querySelector(".bl-mesure").textContent,
+    groupes: [...document.querySelectorAll("#detailEspace .groupe-typo .nb")]
+      .reduce((s, n) => s + Number(n.textContent), 0),
+    sections: [...document.querySelectorAll("#detailEspace > .tete-section-zone .nb,"
+      + " #detailEspace > details.zone-espace > summary > .nb")]
+      .reduce((s, n) => s + Number(n.textContent), 0),
+    pastilles: document.querySelectorAll("#detailEspace .lp-m, #detailEspace .tp-moment").length,
+  }));
+  j.controle("une seule pastille est enfoncée", sous.retenue === 1);
+  j.controle("l'écran ne montre plus que les plantes de cette tâche",
+    sous.montrees === annonce, `${sous.montrees} montrées pour ${annonce} annoncées`);
+  j.controle("le compte de la bannière dit ce qui est montré et sur combien",
+    new RegExp(`^${annonce} plantes? sur \\d+,`).test(net(sous.mesure)), net(sous.mesure));
+  j.controle("les comptes des sections suivent",
+    sous.sections === annonce, `${sous.sections} pour ${annonce}`);
+  j.controle("ceux des groupes de typologie aussi",
+    sous.groupes === annonce, `${sous.groupes} pour ${annonce}`);
+  j.controle("aucune carte ne redit la tâche que la pastille nomme",
+    sous.pastilles === 0, `${sous.pastilles} pastilles`);
+  await pg.locator(`#detailEspace .ml-c[data-tache="${tache}"]`).click();
+  await pg.waitForTimeout(600);
+  j.controle("un second appui relâche la tâche",
+    await pg.locator('#detailEspace .ml-c[aria-pressed="true"]').count() === 0
+    && !/ sur /.test(net(await pg.locator(".bl-mesure").textContent())),
+    net(await pg.locator(".bl-mesure").textContent()));
+  /* Le filtre ne survit pas au lieu qui l'a fait naître. */
+  await pastille.click();
+  await pg.waitForTimeout(500);
+  await pg.locator("#retourEspace").dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  await ouvrirEspace(pg, "e1");
+  j.controle("revenir aux espaces relâche la tâche retenue",
+    await pg.locator('#detailEspace .ml-c[aria-pressed="true"]').count() === 0);
+
   /* Découper un espace, c'est ranger : les zones nommées se lisent d'abord, et
      ce qui n'est pas encore rangé vient à la fin. */
   j.section("les plantes sans zone se lisent après les zones");

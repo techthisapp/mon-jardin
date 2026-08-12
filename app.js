@@ -4908,6 +4908,7 @@ const reglagesOuverts = new Set();
 const lignesOuvertes = new Set();
 let menuEspace = false;          // le panneau du bouton de coin
 let modeEdition = false;         // les gestes sur chaque plante
+let filtreMoment = null;         // la tâche retenue parmi les pastilles du moment
 const VUE_ESPACE = "monjardin.vue-espace";
 let vueEspace = "liste";
 try { vueEspace = localStorage.getItem(VUE_ESPACE) === "mosaique" ? "mosaique" : "liste"; }
@@ -4963,7 +4964,7 @@ function rendreTuilesEspaces(z) {
       + `<span class="tuile-unite">${n > 1 ? "plantes" : "plante"}`
       + (nz ? `, ${nz} ${nz > 1 ? "zones" : "zone"}` : "") + `</span>`;
     b.addEventListener("click", () => {
-      espaceOuvert = v.cle; saisieCarnet = null; rendreEspaces();
+      espaceOuvert = v.cle; saisieCarnet = null; filtreMoment = null; rendreEspaces();
     });
     z.appendChild(b);
   });
@@ -5050,7 +5051,18 @@ function momentDuLieu(cle) {
   return par.sort((a, b) => b.n - a.n).slice(0, 3);
 }
 
+/* Le filtre du moment ne change pas ce que le lieu contient, seulement ce qu'on
+   en montre. Tous les comptes de l'écran passent par là, pour qu'aucun nombre
+   n'annonce autre chose que ce qui est sous les yeux. */
+function filtrerMoment(lot) {
+  if (!filtreMoment) return lot;
+  return lot.filter(p => actif(p, filtreMoment) && !sourdineActive(p, filtreMoment));
+}
+
+/* Sous une tâche retenue, toutes les plantes montrées portent la même : la
+   pastille du haut la nomme une fois, les cartes n'ont pas à la redire. */
 function momentDeLaPlante(p) {
+  if (filtreMoment) return null;
   const k = ORDRE_MAINTENANT.find(x => phases[x] && actif(p, x) && !sourdineActive(p, x));
   return k ? { nom: motDeLaTache(k), couleur: teinteK(k) } : null;
 }
@@ -5068,7 +5080,7 @@ function sousLaPlante(p) {
 /* La bannière porte ma photographie du lieu dès qu'il en existe une, sinon la
    planche d'herbier de la plante la plus présente. Jamais une photographie
    sourcée : elle prétendrait montrer mon jardin. */
-function banniereDuLieu(zo, compte) {
+function banniereDuLieu(zo, compte, total) {
   const b = document.createElement("div");
   b.className = "banniere-lieu";
   const sous = [zo.id].concat(zonesDe(zo.id).map(x => x.id));
@@ -5076,8 +5088,11 @@ function banniereDuLieu(zo, compte) {
   const photo = entree ? photosCarnet.get(entree.id)[0].chemin : null;
   const avec = plantesDeLEspace(zo.id).filter(aPlanche);
   /* Trois mesures suffisent sous le nom : le nombre, la surface, les litres.
-     L'exposition et le reste attendent derrière le bouton de coin. */
-  const mesure = [compte + (compte > 1 ? " plantes" : " plante"),
+     L'exposition et le reste attendent derrière le bouton de coin. Sous une
+     tâche retenue, le nombre dit ce qui est montré et sur combien : c'est la
+     seule façon que le compte du haut et ceux des sections s'accordent. */
+  const mesure = [compte + (compte > 1 ? " plantes" : " plante")
+    + (total != null && total !== compte ? ` sur ${total}` : ""),
     zo.surface_m2 ? nombreFr(Number(zo.surface_m2)) + " m²" : "",
     litresDuJour(zo) ? nombreFr(litresDuJour(zo)) + " L par jour" : ""]
     .filter(Boolean).join(", ");
@@ -5095,6 +5110,7 @@ function banniereDuLieu(zo, compte) {
     + `<p class="bl-mesure">${esc(mesure)}</p></div>`;
   b.querySelector("#retourEspace").addEventListener("click", () => {
     espaceOuvert = null; saisieCarnet = null; menuEspace = false; modeEdition = false;
+    filtreMoment = null;
     rendreEspaces();
   });
   b.querySelector("#menuEspace").addEventListener("click", () => {
@@ -5137,9 +5153,13 @@ function ligneDuMoment(cle) {
   const d = document.createElement("div");
   d.className = "moment-lieu";
   const lot = momentDuLieu(cle);
+  /* Les pastilles annonçaient ce qui se joue sans donner à le voir : elles
+     retiennent maintenant leur tâche, et un second appui la relâche. */
   d.innerHTML = `<div class="ml-chips">`
-    + lot.map(x => `<span class="ml-c"><i style="background:${x.couleur}"></i>`
-      + `<b>${x.n}</b> ${esc(x.nom)}</span>`).join("")
+    + lot.map(x => `<button type="button" class="ml-c${filtreMoment === x.k ? " on" : ""}"`
+      + ` data-tache="${x.k}" aria-pressed="${filtreMoment === x.k}">`
+      + `<i style="background:${x.couleur}"></i>`
+      + `<b>${x.n}</b> ${esc(x.nom)}</button>`).join("")
     + `</div><span class="ml-vue" role="group" aria-label="Affichage des plantes">`
     + boutonVue("liste", `<path d="M4 7h16M4 12h16M4 17h16"/>`)
     + boutonVue("mosaique", `<rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/>`
@@ -5148,6 +5168,10 @@ function ligneDuMoment(cle) {
   d.querySelectorAll(".ml-b").forEach(b => b.addEventListener("click", () => {
     vueEspace = b.dataset.vue;
     try { localStorage.setItem(VUE_ESPACE, vueEspace); } catch (e) { /* sans effet */ }
+    rendreEspaces();
+  }));
+  d.querySelectorAll(".ml-c").forEach(b => b.addEventListener("click", () => {
+    filtreMoment = filtreMoment === b.dataset.tache ? null : b.dataset.tache;
     rendreEspaces();
   }));
   return d;
@@ -5164,12 +5188,16 @@ function rendreDetailEspace(z) {
   const membres = plantesDeLEspace(espaceOuvert);
   z.innerHTML = "";
   if (!zo) {
+    filtreMoment = null;
     z.appendChild(teteDuLieu(null, "Non placées", membres.length));
     z.appendChild(corpsDuLieu("0"));
     poserPlanches(z);
     return;
   }
-  z.appendChild(banniereDuLieu(zo, membres.length));
+  /* Une tâche retenue qui n'est plus au tableau se relâche d'elle-même : le
+     filtre ne doit pas survivre à ce qui l'a fait naître. */
+  if (filtreMoment && !momentDuLieu(zo.id).some(x => x.k === filtreMoment)) filtreMoment = null;
+  z.appendChild(banniereDuLieu(zo, filtrerMoment(membres).length, membres.length));
   if (menuEspace) z.appendChild(menuDuLieu(zo));
   z.appendChild(ligneDuMoment(zo.id));
   /* Les zones nommées viennent d'abord, le reste ensuite : découper un espace,
@@ -5180,7 +5208,8 @@ function rendreDetailEspace(z) {
   if (zones.length) {
     const t = document.createElement("div");
     t.className = "tete-section-zone";
-    t.innerHTML = `<b>Sans zone</b><span class="nb">${plantesDuNoeud(zo.id).length}</span>`;
+    t.innerHTML = `<b>Sans zone</b>`
+      + `<span class="nb">${filtrerMoment(plantesDuNoeud(zo.id)).length}</span>`;
     z.appendChild(t);
   }
   z.appendChild(corpsDuLieu(zo.id));
@@ -5209,7 +5238,7 @@ function sectionZone(x) {
   d.className = "zone-espace";
   d.dataset.zone = x.id;
   d.open = zonesOuvertes.has(x.id);
-  const n = plantesDuNoeud(x.id).length;
+  const n = filtrerMoment(plantesDuNoeud(x.id)).length;
   const s = document.createElement("summary");
   /* Renommer et supprimer touchent la zone elle-même : ils se tiennent auprès
      de son nom, non au pied de ses plantes, où il fallait dérouler toute la
@@ -5255,9 +5284,11 @@ function sectionZone(x) {
 function corpsDuLieu(cle) {
   const corps = document.createElement("div");
   corps.className = "corps-espace";
-  const membres = cle === "0" ? plantesDeLEspace("0") : plantesDuNoeud(cle);
+  const membres = filtrerMoment(cle === "0" ? plantesDeLEspace("0") : plantesDuNoeud(cle));
   if (!membres.length) {
-    corps.innerHTML = cle === "0"
+    corps.innerHTML = filtreMoment
+      ? `<p class="vide">Rien à ${esc(motDeLaTache(filtreMoment).toLowerCase())} ici en ce moment.</p>`
+      : cle === "0"
       ? '<p class="vide">Toutes vos plantes sont placées dans un espace.</p>'
       : '<p class="vide">Aucune plante ici. Cherchez-la dans le catalogue, plus bas.</p>';
     return corps;
