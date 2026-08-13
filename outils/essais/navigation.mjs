@@ -203,6 +203,52 @@ export default async function essai(navigateur) {
   j.controle("tous les mois relâche le filtre et remise les jetons",
     await cache("#jeuQuinz") === 1 && await cache("#bandeMois") === 1);
 
+  /* Les rangées formaient une bande d'un seul tenant, à coins vifs, remplie du
+     ton exact du papier : l'aplat couvrait la trame imprimée et se lisait comme
+     un rectangle posé dessus, et le conseil touchait ses deux bords. */
+  j.section("chaque action est une carte posée sur le papier");
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  await pg.locator(".syn-ligne").first().click();
+  await pg.waitForTimeout(700);
+  const carte = await pg.evaluate(() => {
+    const rs = [...document.querySelectorAll("#maintenant .rangee-tache")];
+    const r = rs[1] || rs[0], g = r.querySelector(".glissiere"), a = r.querySelector(".action");
+    const cs = getComputedStyle(g), cr = getComputedStyle(r), ca = getComputedStyle(a);
+    const bord = n => Math.round(n.getBoundingClientRect().left);
+    return { rayon: cr.borderRadius, fond: cs.backgroundColor, retrait: ca.padding,
+             ecart: rs.length > 1 ? getComputedStyle(rs[1]).marginTop : "0px",
+             texte: bord(a.querySelector(".dit-action") || a) - bord(r),
+             filet: cs.borderTopWidth };
+  });
+  j.controle("les coins sont adoucis", carte.rayon === "14px", carte.rayon);
+  /* Le fond laisse voir la trame imprimée : un aplat plein la couvrait, et la
+     rangée se détachait comme un rectangle collé. */
+  j.controle("le fond laisse passer le papier",
+    /^rgba\(.*0\.7\)$/.test(carte.fond), carte.fond);
+  j.controle("le texte se décolle du bord",
+    carte.retrait === "13px 14px" && carte.texte === 14,
+    `${carte.retrait}, texte à ${carte.texte} px du bord`);
+  j.controle("les cartes sont séparées, sans filet",
+    carte.ecart === "7px" && carte.filet === "0px", `${carte.ecart}, filet ${carte.filet}`);
+
+  /* Le tiroir de sourdine vit sous la rangée. Un fond translucide le laissait
+     lire au travers, et ses boutons restaient atteignables au doigt sans avoir
+     été appelés. */
+  j.section("le tiroir de sourdine se cache au repos");
+  const tiroir = await pg.evaluate(() => {
+    const t = document.querySelector("#maintenant .rangee-tache .tiroir");
+    if (!t) return null;
+    const avant = getComputedStyle(t).visibility;
+    t.closest(".rangee-tache").classList.add("tiroir-ouvert");
+    const apres = getComputedStyle(t).visibility;
+    t.closest(".rangee-tache").classList.remove("tiroir-ouvert");
+    return { avant, apres };
+  });
+  j.controle("il est invisible tant qu'il n'est pas appelé",
+    tiroir && tiroir.avant === "hidden", tiroir && tiroir.avant);
+  j.controle("il paraît quand la rangée le déclare ouvert",
+    tiroir && tiroir.apres === "visible", tiroir && tiroir.apres);
 
   await ctx.close();
   return j.fin(erreurs);

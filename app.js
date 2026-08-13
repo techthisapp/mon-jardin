@@ -7682,6 +7682,7 @@ let glissiereOuverte = null;
 function fermerTiroirs() {
   if (!glissiereOuverte) return;
   glissiereOuverte.style.transform = "";
+  glissiereOuverte.parentElement.classList.remove("tiroir-ouvert");
   glissiereOuverte = null;
 }
 
@@ -7725,6 +7726,10 @@ function brancherGlissement(rangee, glissiere, gauche, droite) {
       glissiere.style.transform = "";
       if (glissiereOuverte === glissiere) glissiereOuverte = null;
     }
+    /* Le tiroir se cache au repos : sous une rangée dont le fond laisse voir le
+       papier, il se lisait au travers, et ses trois boutons restaient
+       atteignables sans avoir été appelés. */
+    rangee.classList.toggle("tiroir-ouvert", glissiereOuverte === glissiere);
     // Un glissement ne doit pas déclencher l'ouverture de la feuille.
     glissiere.dataset.glisse = "1";
     setTimeout(() => { delete glissiere.dataset.glisse; }, 320);

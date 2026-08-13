@@ -114,6 +114,40 @@ export default async function essai(navigateur) {
     await pg.evaluate(() =>
       getComputedStyle(document.body, "::after").backgroundImage.slice(-30)));
 
+  /* En plein écran le contenu passe sous la barre d'état du téléphone. L'en-tête
+     n'étant pas collant, le nom du jardin et le livre se lisaient sous l'heure
+     dès qu'on défilait. Le navigateur d'atelier n'a pas de zone sûre : elle est
+     imposée pour la mesure. */
+  j.section("une bande occupe la barre d'état du téléphone");
+  await pg.addStyleTag({ content: ":root{--zone-haute:47px}" });
+  await pg.waitForTimeout(300);
+  const bande = await pg.evaluate(() => {
+    const b = getComputedStyle(document.body, "::before");
+    const t = getComputedStyle(document.querySelector(".tete"));
+    return { hauteur: b.height, fond: b.backgroundColor, plan: Number(b.zIndex),
+             souffle: t.paddingTop };
+  });
+  j.controle("elle prend toute la hauteur de la zone sûre",
+    bande.hauteur === "47px", bande.hauteur);
+  j.controle("elle porte la couleur du haut de l'en-tête",
+    bande.fond === "rgb(30, 50, 42)", bande.fond);
+  j.controle("elle passe sur le contenu, sous la barre du bas",
+    bande.plan > 6 && bande.plan < 30, bande.plan);
+  j.controle("l'en-tête réserve la même hauteur", bande.souffle === "47px", bande.souffle);
+  /* La barre collante s'arrête sous la bande, sinon elle passerait dessous et
+     perdrait sa première ligne. */
+  await pg.locator("#btnTout").click();
+  await pg.waitForTimeout(500);
+  await pg.mouse.wheel(0, 600);
+  await pg.waitForTimeout(600);
+  const collee = await pg.evaluate(() =>
+    Math.round(document.getElementById("barreNiveau").getBoundingClientRect().top));
+  j.controle("la barre de niveau se colle sous la bande", collee === 47, collee + " px");
+  await pg.locator("#barreNiveau .retour").click();
+  await pg.waitForTimeout(400);
+  await pg.evaluate(() => window.scrollTo(0, 0));
+  await pg.waitForTimeout(300);
+
   /* Le catalogue n'est pas un lieu du jardin : il est monté dans l'en-tête, où
      le livre le tient à côté du bouton du compte. */
   j.section("le catalogue se tient dans l'en-tête");

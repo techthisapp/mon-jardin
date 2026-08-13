@@ -20,6 +20,10 @@
   --encre:#16241E;
   --encre-doux:#4A5A52;
   --papier:#F4F3EE;
+  /* Hauteur de la barre d'état du téléphone en plein écran. Déclarée une fois :
+     la bande qui l'occupe et les barres collantes qui s'y arrêtent doivent lire
+     la même valeur. Nulle hors du plein écran. */
+  --zone-haute:env(safe-area-inset-top);
   --papier-haut:#FBFAF7;
   --filet:#D9D8CE;
   --filet-clair:#E8E7DF;
@@ -688,7 +692,15 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .note-clim{margin:6px 0 0;font-size:12.5px;color:#6B665D;line-height:1.45}
 
 /* ---------- Mode plein écran depuis l'écran d'accueil ---------- */
-.tete{padding-top:env(safe-area-inset-top)}
+.tete{padding-top:var(--zone-haute)}
+/* En plein écran le contenu passe sous la barre d'état. L'en-tête n'est pas
+   collant : dès qu'on défilait, le nom du jardin et le livre se lisaient sous
+   l'heure et les icônes du téléphone. Une bande fixe à la couleur du haut de
+   l'en-tête occupe cette hauteur, invisible tant que l'en-tête est en place. */
+body::before{
+  content:"";position:fixed;z-index:28;top:0;left:0;right:0;
+  height:var(--zone-haute);background:#1E322A;pointer-events:none;
+}
 main{
   --marge-g:calc(16px + env(safe-area-inset-left));
   --marge-d:calc(16px + env(safe-area-inset-right));
@@ -979,7 +991,13 @@ body.fige{overflow:hidden}
   touch-action:pan-y;
 }
 .rangee-tache.en-glissement .glissiere{transition:none}
-.tiroir{position:absolute;top:0;bottom:0;width:auto;z-index:0;display:flex;align-items:stretch}
+/* Il ne se montre que pendant le geste ou tant qu'il est ouvert. Sous une rangée
+   dont le fond laisse voir le papier, il se lisait au travers, et ses boutons
+   restaient atteignables sans avoir été appelés. */
+.tiroir{position:absolute;top:0;bottom:0;width:auto;z-index:0;display:flex;align-items:stretch;
+  visibility:hidden}
+.rangee-tache.en-glissement .tiroir,
+.rangee-tache.tiroir-ouvert .tiroir{visibility:visible}
 .tiroir-gauche{left:auto}
 .tiroir-droite{right:auto}
 .tiroir-gauche{right:0}
@@ -1649,7 +1667,7 @@ body.fige{overflow:hidden}
 .ph-pts i{width:6px;height:6px;border-radius:50%;background:rgba(239,239,232,.35)}
 .ph-pts i.ici{background:#EFEFE8}
 .ph-fx{
-  position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;
+  position:absolute;top:calc(14px + var(--zone-haute));right:16px;
   width:34px;height:34px;border:0;background:rgba(239,239,232,.12);border-radius:50%;
   display:flex;align-items:center;justify-content:center;cursor:pointer;
 }
@@ -1951,7 +1969,7 @@ body.fige{overflow:hidden}
    le verre dépoli, qui ne tient pas ses promesses sur tous les moteurs, laissait
    fantômer la ligne recouverte. */
 .barre-niveau{
-  position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:11px;
+  position:sticky;top:var(--zone-haute);z-index:6;display:flex;align-items:center;gap:11px;
   margin:0 -16px 4px;padding:10px 16px;
   background:var(--papier);box-shadow:0 1px 0 var(--filet-clair);
 }
@@ -2005,8 +2023,7 @@ body.fige{overflow:hidden}
 /* ---------- Sections à plat ---------- */
 /* Le rail dit la section lue, l'en-tête reste dans le flux : une seule barre
    collante, et aucune ligne recouverte au défilement. */
-.section-liste{margin-bottom:4px}
-.section-liste + .section-liste{border-top:1px solid var(--filet);padding-top:4px}
+.section-liste{margin-bottom:10px}
 .tete-liste{display:flex;align-items:center;gap:10px;padding:16px 0 8px}
 .corps-section{padding:0}
 #niveauDetail .plante-groupe{
@@ -2019,22 +2036,29 @@ body.fige{overflow:hidden}
   font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.005em;
 }
 #niveauDetail .plante-groupe .glissiere{padding:0}
-#niveauDetail .plante-groupe .rangee-tache + .rangee-tache{border-top:1px solid #EFEDE5}
+#niveauDetail .plante-groupe .rangee-tache{margin-top:6px}
 
-/* ---------- Rangées d'action, sans panneau ---------- */
-#niveauDetail .rangee-tache + .rangee-tache{border-top:1px solid #E6E4DB}
-#niveauDetail .glissiere{background:var(--papier)}
-#niveauDetail .glissiere > .action{padding-block:13px;min-height:0;gap:3px}
+/* ---------- Rangées d'action ----------
+   Elles formaient une bande d'un seul tenant, à coins vifs, remplie du ton exact
+   du papier : l'aplat couvrait la trame imprimée et se voyait donc comme un
+   rectangle posé dessus, et le conseil touchait ses deux bords. Chaque rangée
+   devient une carte à part, aux coins adoucis, dont le fond laisse voir la
+   trame, et dont le texte se décolle du bord. */
+#niveauDetail .rangee-tache{border-radius:14px;margin-top:7px}
+#niveauDetail .rangee-tache:first-child{margin-top:0}
+#niveauDetail .rangee-tache + .rangee-tache{border-top:0}
+#niveauDetail .glissiere{background:var(--papier-haut)}
+#niveauDetail .glissiere > .action{padding:13px 14px;min-height:0;gap:3px}
 #niveauDetail .glissiere > .action b{
   font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.005em;
 }
 #niveauDetail .glissiere > .action .dit-action{font-size:13.5px;line-height:1.45;color:var(--encre-doux)}
+/* Le filet de bord et son retrait servent aux listes sans carte. Ici la rangée
+   porte son propre retrait : seul le filet est annulé. */
 #niveauDetail .action.a-derniere,
-#niveauDetail .action.a-ouverture{border-left:0;padding-left:0}
+#niveauDetail .action.a-ouverture{border-left:0}
 /* Ce qui se termine se lit d'un coup d'œil, sans compter les lignes. */
-#niveauDetail .glissiere > .action.a-derniere{
-  background:#FBF1EE;margin:0 -12px;padding-inline:12px;border-radius:12px;
-}
+#niveauDetail .glissiere > .action.a-derniere{background:#FBF1EE}
 /* Au niveau d'une tâche la liste est courte, le conseil se lit en entier ;
    en liste complète il reste tronqué, le texte intégral est dans la fiche. */
 #niveauDetail .glissiere > .action .dit-action{-webkit-line-clamp:none;display:block}
@@ -2871,7 +2895,7 @@ input.rech-lieu:focus{background:#fff;border-style:solid}
    et se pose au bord haut de la vue quand celle-ci est partie. */
 .banniere-compacte{
   position:fixed;top:0;left:0;right:0;z-index:6;display:flex;align-items:center;gap:9px;
-  padding:calc(7px + env(safe-area-inset-top)) calc(var(--marge-d) + 2px) 7px
+  padding:calc(7px + var(--zone-haute)) calc(var(--marge-d) + 2px) 7px
           calc(var(--marge-g) + 2px);
   background:rgba(240,238,231,.94);backdrop-filter:blur(6px);
   border-bottom:1px solid var(--filet);
