@@ -86,6 +86,34 @@ export default async function essai(navigateur) {
   j.controle("aucun mot n'est rogné", mots.every(m => m[1]),
     mots.map(m => m[0] + (m[1] ? "" : " ROGNÉ")).join(" | "));
 
+  /* Le verre dépoli de la barre laissait lire la ligne qu'il recouvre. Un fondu
+     vers le papier s'intercale dessous, dont l'aplat doit monter au moins
+     jusqu'au haut de la barre : il ne montait qu'aux deux tiers, et le reste
+     reposait sur du fondu presque transparent. */
+  j.section("le fondu du bas éteint ce qui passe sous la barre");
+  const fondu = await pg.evaluate(() => {
+    const s = getComputedStyle(document.body, "::after");
+    const b = document.querySelector(".barre-basse").getBoundingClientRect();
+    // Les bornes de l'aplat, en points, lues sur le dégradé calculé.
+    const bornes = [...s.backgroundImage.matchAll(/\)\s+([\d.]+)px/g)].map(m => Number(m[1]));
+    return { hauteur: parseFloat(s.height), aplat: bornes.length ? bornes[bornes.length - 1] : 0,
+             haut: Math.round(b.top), vue: innerHeight, dessus: s.zIndex };
+  });
+  j.controle("l'aplat couvre toute la hauteur de la barre",
+    fondu.vue - fondu.aplat <= fondu.haut,
+    `aplat jusqu'à ${fondu.vue - fondu.aplat}, barre à ${fondu.haut}`);
+  j.controle("le fondu se prolonge au-dessus, sans marche",
+    fondu.hauteur > fondu.aplat + 20, `${fondu.hauteur} px pour ${fondu.aplat} d'aplat`);
+  j.controle("il passe sous la barre, jamais dessus",
+    Number(fondu.dessus) < 30, fondu.dessus);
+  /* Le ton du papier suit la saison : une fin de fondu écrite en clair aurait
+     figé le ton d'une seule saison. */
+  j.controle("la fin du fondu ne fige aucun ton",
+    !/rgb\(2\d\d,/.test(await pg.evaluate(() =>
+      getComputedStyle(document.body, "::after").backgroundImage.split(",").slice(-2).join(","))),
+    await pg.evaluate(() =>
+      getComputedStyle(document.body, "::after").backgroundImage.slice(-30)));
+
   /* Le catalogue n'est pas un lieu du jardin : il est monté dans l'en-tête, où
      le livre le tient à côté du bouton du compte. */
   j.section("le catalogue se tient dans l'en-tête");

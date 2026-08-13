@@ -2018,6 +2018,17 @@ function rendreMaintenant() {
     rail.appendChild(puce);
     puces.push({ puce, bloc });
   });
+  /* Le bord où il reste à défiler s'éteint en fondu. Sans cela une puce se
+     trouve tranchée net au bord du rail, ce qui se lit comme un défaut. */
+  if (rail) {
+    const majBords = () => {
+      rail.toggleAttribute("data-gauche", rail.scrollLeft > 2);
+      rail.toggleAttribute("data-droite",
+        rail.scrollWidth - rail.clientWidth - rail.scrollLeft > 2);
+    };
+    rail.addEventListener("scroll", majBords, { passive: true });
+    majBords();
+  }
   // Le bord ne compte pas les masquées de la liste entière : il n'en montre pas.
   if (!estBord) poserMasquees(muettes);
   poserPlanches(zone);

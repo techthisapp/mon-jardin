@@ -84,6 +84,44 @@ export default async function essai(navigateur) {
     && await pg.locator(".puce-rail.ici").first().innerText()
       .then(t => net(t)) === "Jardin potager");
 
+  /* Une puce tranchée net au bord du rail se lit comme un défaut d'affichage.
+     Le bord où il reste à défiler s'éteint en fondu, l'autre garde son aplat :
+     le fondu dit alors qu'il y a quelque chose de ce côté. */
+  j.section("le rail s'éteint du côté où il reste à défiler");
+  const repos = await pg.evaluate(() => {
+    const r = document.querySelector(".rail");
+    return { gauche: r.hasAttribute("data-gauche"), droite: r.hasAttribute("data-droite"),
+             deborde: r.scrollWidth > r.clientWidth,
+             fg: getComputedStyle(r).getPropertyValue("--fondu-g").trim(),
+             fd: getComputedStyle(r).getPropertyValue("--fondu-d").trim() };
+  });
+  j.controle("au repos, le bord gauche garde son aplat",
+    repos.deborde && !repos.gauche && repos.droite && repos.fg === "0px" && repos.fd === "18px",
+    JSON.stringify(repos));
+  await pg.evaluate(() => { document.querySelector(".rail").scrollLeft = 60; });
+  await pg.waitForTimeout(300);
+  const pousse = await pg.evaluate(() => {
+    const r = document.querySelector(".rail");
+    return { gauche: r.hasAttribute("data-gauche"),
+             fg: getComputedStyle(r).getPropertyValue("--fondu-g").trim(),
+             masque: getComputedStyle(r).maskImage.includes("linear-gradient") };
+  });
+  j.controle("poussé, le bord gauche s'éteint à son tour",
+    pousse.gauche && pousse.fg === "18px" && pousse.masque, JSON.stringify(pousse));
+  await pg.evaluate(() => {
+    const r = document.querySelector(".rail");
+    r.scrollLeft = r.scrollWidth;
+  });
+  await pg.waitForTimeout(300);
+  j.controle("au bout, le bord droit reprend son aplat",
+    await pg.evaluate(() => {
+      const r = document.querySelector(".rail");
+      return !r.hasAttribute("data-droite")
+        && getComputedStyle(r).getPropertyValue("--fondu-d").trim() === "0px";
+    }));
+  await pg.evaluate(() => { document.querySelector(".rail").scrollLeft = 0; });
+  await pg.waitForTimeout(300);
+
   j.section("la barre tient sur les écrans étroits");
   for (const L of LARGEURS) {
     await pg.setViewportSize({ width: L, height: 900 });

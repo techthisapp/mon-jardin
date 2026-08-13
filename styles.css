@@ -223,12 +223,25 @@ body{
 .dicton:empty{display:none}
 
 /* ---------- Barre de navigation flottante ---------- */
-/* Le verre dépoli laissait passer la ligne qu'il recouvre, à moitié lisible.
-   Un fondu vers le papier s'intercale sous la barre : le texte s'y éteint. */
+/* Le verre dépoli laisse passer la ligne qu'il recouvre, à moitié lisible. Un
+   fondu vers le papier s'intercale sous la barre.
+
+   Il ne montait qu'à soixante-dix-huit points, dont trente-six d'aplat : la
+   barre s'arrête à soixante-quatorze, si bien que ses deux tiers hauts
+   reposaient sur du fondu presque transparent et laissaient lire la ligne
+   dessous. L'aplat couvre maintenant toute la hauteur de la barre, le fondu ne
+   commençant qu'au-dessus d'elle. */
 body::after{
   content:"";position:fixed;z-index:29;left:0;right:0;bottom:0;
-  height:calc(78px + env(safe-area-inset-bottom));
-  background:linear-gradient(to top, var(--papier) 46%, rgba(244,243,238,0));
+  height:calc(116px + env(safe-area-inset-bottom));
+  /* Le papier change de ton avec la saison : la fin du fondu est déclarée
+     transparente et non par une valeur écrite, qui aurait figé le ton d'une
+     seule saison. Les moteurs interpolent en alpha prémultiplié, aucun gris ne
+     traverse. */
+  background:linear-gradient(to top,
+    var(--papier) 0,
+    var(--papier) calc(78px + env(safe-area-inset-bottom)),
+    transparent 100%);
   pointer-events:none;
 }
 /* Le sujet de la note, quand elle est prise depuis une fiche : la plante est
@@ -1934,13 +1947,13 @@ body.fige{overflow:hidden}
 .mini:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:6px}
 
 /* ---------- Barre de niveau, collante ---------- */
+/* Fond plein et non translucide : les rangées passent dessous au défilement, et
+   le verre dépoli, qui ne tient pas ses promesses sur tous les moteurs, laissait
+   fantômer la ligne recouverte. */
 .barre-niveau{
   position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:11px;
   margin:0 -16px 4px;padding:10px 16px;
-  background:rgba(244,243,238,.97);box-shadow:0 1px 0 var(--filet-clair);
-}
-@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
-  .barre-niveau{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+  background:var(--papier);box-shadow:0 1px 0 var(--filet-clair);
 }
 .retour{
   flex:0 0 auto;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
@@ -1962,6 +1975,18 @@ body.fige{overflow:hidden}
 .nb-niveau{flex:0 0 auto;font-size:12px;color:#8A968D}
 
 /* ---------- Rail des sections, mode tout voir ---------- */
+/* Une puce tranchée net au bord du rail se lit comme un défaut d'affichage. Le
+   bord où il reste à défiler s'éteint en fondu, l'autre garde son aplat : le
+   fondu dit alors qu'il y a quelque chose de ce côté. */
+.rail{--fondu-g:0px; --fondu-d:0px}
+.rail[data-gauche]{--fondu-g:18px}
+.rail[data-droite]{--fondu-d:18px}
+.rail{
+  -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 var(--fondu-g),
+    #000 calc(100% - var(--fondu-d)), transparent 100%);
+  mask-image:linear-gradient(90deg, transparent 0, #000 var(--fondu-g),
+    #000 calc(100% - var(--fondu-d)), transparent 100%);
+}
 .barre-rail{gap:8px}
 .rail{
   display:flex;gap:7px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;
