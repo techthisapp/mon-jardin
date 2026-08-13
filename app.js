@@ -103,6 +103,11 @@ let choixEspace = new Set();
 let vueMoment = (() => {
   try { return localStorage.getItem("monjardin.vue") || "tache"; } catch (e) { return "tache"; }
 })();
+/* Le regroupement de la frise, retenu comme celui de la liste du jour : c'est
+   une préférence de lecture, elle ne se repose pas à chaque ouverture. */
+let vueAnnee = (() => {
+  try { return localStorage.getItem("monjardin.annee") || "alpha"; } catch (e) { return "alpha"; }
+})();
 // Position de lecture de l'écran du moment : null pour la vue d'ensemble,
 // { t:"tache", k } pour une tâche ouverte, { t:"tout" } pour la liste complète.
 // L'état voyage dans l'historique, le geste de retour du téléphone ramène donc
@@ -5015,9 +5020,57 @@ function besoinEauDuJour() {
   return m.toFixed(1).replace(".", ",") + " L par m²";
 }
 
+/* Les trois lectures de la frise. L'ordre alphabétique est celui de départ, il
+   ne suppose rien du jardin ; le type range par typologie du référentiel ;
+   l'espace n'est offert qu'à un jardin découpé. Une plante placée dans deux
+   espaces paraît dans les deux, comme dans la liste complète du jour. */
+const VUES_ANNEE = [["alpha", "A à Z"], ["typo", "Type"], ["espace", "Espace"]];
+
+function majBasculeAnnee() {
+  const b = $("basculeAnnee");
+  if (!b) return;
+  const avecEspaces = racines().length > 0;
+  if (vueAnnee === "espace" && !avecEspaces) vueAnnee = "alpha";
+  b.innerHTML = "";
+  VUES_ANNEE.forEach(([v, lib]) => {
+    if (v === "espace" && !avecEspaces) return;
+    const t = document.createElement("button");
+    t.type = "button"; t.className = "vue" + (vueAnnee === v ? " active" : "");
+    t.dataset.vue = v;
+    t.setAttribute("aria-pressed", String(vueAnnee === v));
+    t.textContent = lib;
+    t.addEventListener("click", () => {
+      vueAnnee = v;
+      try { localStorage.setItem("monjardin.annee", v); } catch (e) { /* stockage indisponible */ }
+      majBasculeAnnee();
+      rendrePlanning();
+    });
+    b.appendChild(t);
+  });
+}
+
+// Les sections de la frise, dans l'ordre de lecture du regroupement retenu.
+function sectionsAnnee(lot) {
+  if (vueAnnee === "typo") {
+    return ORDRE_TYPO.map(t => ({ nom: t, teinte: COUL_TYPO[t],
+                                  lot: lot.filter(p => p.typo === t) }))
+      .filter(s => s.lot.length);
+  }
+  if (vueAnnee === "espace") {
+    const dedans = (p, cle) => cle === "0"
+      ? !espacesDe(p.id).length : racinesDe(p.id).indexOf(cle) !== -1;
+    return racines().map(z => ({ nom: z.name, teinte: z.color || "#4C8C3F", cle: z.id }))
+      .concat([{ nom: "Non placées", teinte: "#9AA39B", cle: "0" }])
+      .map(s => ({ ...s, lot: lot.filter(p => dedans(p, s.cle)) }))
+      .filter(s => s.lot.length);
+  }
+  return [{ nom: "", lot }];
+}
+
 function rendrePlanning() {
   const zone = $("rangees");
   zone.innerHTML = "";
+  majBasculeAnnee();
   const lot = plantes.filter(p => {
     if (jardinSeul && !sel.has(p.id)) return false;
     if (espacePlan !== null && (!sel.has(p.id) || !passeEspace(p))) return false;
@@ -5030,17 +5083,32 @@ function rendrePlanning() {
   $("razMois").hidden = periode === null;
   majCompteurFiltres();
 
-  lot.forEach(p => {
-    const r = document.createElement("div");
-    // Le liseré ne marque l'appartenance au jardin que si le catalogue entier est affiché.
-    r.className = "rangee" + (sel.has(p.id) && !jardinSeul ? " retenue" : "");
-    r.innerHTML =
-      `<button class="nom-plante">${vignettePlanche(p, "v-pl-s")}`
-      + `<span class="nom-plante-txt">${esc(p.nom)}`
-      + `<small>${p.latin ? `<i>${esc(p.latin)}</i>` : esc(p.cat)}</small></span></button>`
-      + `<div class="piste">${segs(p)}</div>`;
-    r.querySelector(".nom-plante").addEventListener("click", () => ouvrirFeuille(p));
-    zone.appendChild(r);
+  /* Les rangées d'une section sont enfermées dans leur bloc : la rayure une
+     ligne sur deux se compte par section, un en-tête inséré dans le flux
+     l'aurait décalée d'une rangée à chaque titre. */
+  sectionsAnnee(lot).forEach(s => {
+    if (s.nom) {
+      const t = document.createElement("div");
+      t.className = "tete-frise";
+      t.innerHTML = `<i style="background:${s.teinte}"></i><b>${esc(s.nom)}</b>`
+        + `<span class="nb">${s.lot.length}</span>`;
+      zone.appendChild(t);
+    }
+    const bloc = document.createElement("div");
+    bloc.className = "bloc-frise";
+    s.lot.forEach(p => {
+      const r = document.createElement("div");
+      // Le liseré ne marque l'appartenance au jardin que si le catalogue entier est affiché.
+      r.className = "rangee" + (sel.has(p.id) && !jardinSeul ? " retenue" : "");
+      r.innerHTML =
+        `<button class="nom-plante">${vignettePlanche(p, "v-pl-s")}`
+        + `<span class="nom-plante-txt">${esc(p.nom)}`
+        + `<small>${p.latin ? `<i>${esc(p.latin)}</i>` : esc(p.cat)}</small></span></button>`
+        + `<div class="piste">${segs(p)}</div>`;
+      r.querySelector(".nom-plante").addEventListener("click", () => ouvrirFeuille(p));
+      bloc.appendChild(r);
+    });
+    zone.appendChild(bloc);
   });
 
   poserPlanches(zone);

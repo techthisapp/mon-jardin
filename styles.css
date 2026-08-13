@@ -569,6 +569,23 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
 .rangee{display:grid;grid-template-columns:var(--col-nom) 1fr;border-top:1px solid var(--filet-clair)}
 .rangee:first-child{border-top:0}
 .rangee:nth-child(even){background:#FCFCF9}
+/* Titre de section de la frise. Les rangées vivent dans leur bloc : la rayure
+   une ligne sur deux se compte par section, un titre inséré dans le flux
+   l'aurait décalée d'une rangée à chaque fois. */
+.tete-frise{
+  display:flex;align-items:center;gap:9px;padding:9px 12px;
+  background:var(--panneau);border-top:1px solid var(--filet);
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+}
+.tete-frise:first-child{border-top:0}
+.tete-frise i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.tete-frise .nb{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;
+  font-weight:400;font-size:11px;letter-spacing:0;color:var(--encre-doux);
+}
+.bloc-frise + .tete-frise{border-top:1px solid var(--filet)}
+#basculeAnnee{flex:0 0 auto}
 .nom-plante{
   border:0;background:none;text-align:left;cursor:pointer;padding:8px 11px;
   font-family:inherit;font-size:13.5px;font-weight:500;color:var(--encre);

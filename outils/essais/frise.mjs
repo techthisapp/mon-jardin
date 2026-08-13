@@ -12,6 +12,20 @@ import { ouvrirContexte, journal, net, CATALOGUE } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
 const AU_JARDIN = PLANTES.slice(0, 14).map(p => p.id);
+/* Deux espaces et dix plantes placées : de quoi éprouver les trois lectures,
+   la section des non placées comprise. */
+const ESPACES = [{ id: "e1", name: "Potager", color: "#7BA05B" },
+                 { id: "e2", name: "Verger" }];
+const PLACEMENTS = PLANTES.slice(0, 10)
+  .map((p, i) => ({ plant_id: p.id, espace_id: i % 2 ? "e2" : "e1" }));
+
+const groupe = async pg => pg.evaluate(() => ({
+  titres: [...document.querySelectorAll("#rangees .tete-frise")].map(e =>
+    e.querySelector("b").textContent + " " + e.querySelector(".nb").textContent),
+  rangees: document.querySelectorAll("#rangees .rangee").length,
+  blocs: document.querySelectorAll("#rangees .bloc-frise").length,
+  actif: document.querySelector("#basculeAnnee .vue.active").textContent,
+}));
 
 async function versAnnee(pg) {
   await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
@@ -20,7 +34,8 @@ async function versAnnee(pg) {
 
 export default async function essai(navigateur) {
   const j = journal("Frise de l'année");
-  const { ctx, pg, erreurs } = await ouvrirContexte(navigateur, { jardin: AU_JARDIN });
+  const { ctx, pg, erreurs } = await ouvrirContexte(navigateur,
+    { jardin: AU_JARDIN, espaces: ESPACES, placements: PLACEMENTS });
   await pg.setViewportSize({ width: 393, height: 852 });
   await pg.waitForTimeout(800);
   await versAnnee(pg);
@@ -132,7 +147,61 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(700);
   j.controle("aucun chemin de retour",
     await pg.locator("#retourFeuille").isVisible() === false);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(500);
+
+  /* Le même regroupement que la liste complète du jour, appliqué aux rangées de
+     la frise. Trois lectures : l'ordre alphabétique de départ, la typologie du
+     référentiel, et le découpage du jardin. */
+  j.section("les rangées se regroupent en trois lectures");
+  const segments = (await pg.locator("#basculeAnnee .vue").allInnerTexts()).map(net);
+  j.controle("trois segments, l'alphabet retenu au départ",
+    JSON.stringify(segments) === '["A à Z","Type","Espace"]', JSON.stringify(segments));
+  const plat = await groupe(pg);
+  j.controle("à plat, aucune section et un seul bloc",
+    plat.actif === "A à Z" && plat.titres.length === 0 && plat.blocs === 1,
+    JSON.stringify(plat));
+
+  const choisir = async v => {
+    await pg.locator(`#basculeAnnee .vue[data-vue="${v}"]`).click();
+    await pg.waitForTimeout(600);
+    return groupe(pg);
+  };
+  const parType = await choisir("typo");
+  j.controle("par type, une section par typologie du référentiel",
+    JSON.stringify(parType.titres) === '["Légumes 5","Fruits 4","Aromatiques 2","Ornement 3"]',
+    JSON.stringify(parType.titres));
+  j.controle("aucune rangée perdue en chemin",
+    parType.rangees === plat.rangees, `${plat.rangees} à plat, ${parType.rangees} par type`);
+  /* Les rangées vivent dans leur bloc : la rayure une ligne sur deux se compte
+     par section, un titre inséré dans le flux l'aurait décalée à chaque fois. */
+  j.controle("chaque section enferme ses rangées",
+    parType.blocs === parType.titres.length, `${parType.blocs} blocs`);
+
+  const parEspace = await choisir("espace");
+  j.controle("par espace, les non placées ferment la liste",
+    JSON.stringify(parEspace.titres) === '["Potager 5","Verger 5","Non placées 4"]',
+    JSON.stringify(parEspace.titres));
+  /* Les barres restent les mêmes, quel que soit le regroupement : il range les
+     rangées, il ne touche pas à ce qu'elles disent. */
+  j.controle("les barres ne changent pas avec le regroupement",
+    await pg.locator("#rangees .seg").count()
+      === await (async () => { await choisir("alpha");
+        return pg.locator("#rangees .seg").count(); })(),
+    await pg.locator("#rangees .seg").count() + " barres");
+
+  /* Un jardin sans espace n'a pas de découpage à proposer : le segment ne
+     paraît pas, et un choix devenu impossible retombe sur l'alphabet. */
+  j.section("sans espace, le regroupement par espace n'est pas offert");
+  const c = await ouvrirContexte(navigateur, { jardin: AU_JARDIN });
+  await c.pg.waitForTimeout(800);
+  await versAnnee(c.pg);
+  j.controle("deux segments seulement",
+    JSON.stringify((await c.pg.locator("#basculeAnnee .vue").allInnerTexts()).map(net))
+      === '["A à Z","Type"]',
+    JSON.stringify((await c.pg.locator("#basculeAnnee .vue").allInnerTexts()).map(net)));
+  await c.ctx.close();
 
   await ctx.close();
-  return j.fin(erreurs);
+  return j.fin(erreurs.concat(c.erreurs));
 }
