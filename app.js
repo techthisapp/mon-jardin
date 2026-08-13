@@ -1840,7 +1840,16 @@ function rendreMaintenant() {
     $("zoneMasquees").appendChild(b);
   };
 
-  const clesPresentes = ORDRE_MAINTENANT.filter(k => paires.some(x => x.k === k));
+  /* Un niveau de bord : ce qui se ferme, ou ce qui vient de s'ouvrir, toutes
+     tâches confondues. Il emprunte le rendu de la liste complète sur un lot
+     restreint, ses sections restant celles des tâches. Vidé par un filtre, il
+     ramène à la vue d'ensemble comme le ferait une tâche vidée. */
+  const estBord = vueDetail.t === "bord";
+  const ETAT_BORD = { derniere: "derniere", premiere: "ouverture" };
+  const vues = estBord
+    ? paires.filter(x => etatFenetre(x.p, x.k) === ETAT_BORD[vueDetail.bord]) : paires;
+  if (!vues.length) { vueDetail = null; majNiveau(); return; }
+  const clesPresentes = ORDRE_MAINTENANT.filter(k => vues.some(x => x.k === k));
 
   if (vueDetail.t === "tache") {
     const k = vueDetail.k;
@@ -1908,12 +1917,27 @@ function rendreMaintenant() {
 
   // ---- Liste complète, rail de sections collant ----
   const barre = $("barreNiveau");
-  barre.className = "barre-niveau barre-rail";
+  barre.className = "barre-niveau" + (estBord ? "" : " barre-rail");
   $("niveauDetail").classList.add("mode-tout");
   barre.appendChild(boutonRetour());
-  const rail = document.createElement("div");
-  rail.className = "rail";
-  barre.appendChild(rail);
+  /* Le bord porte un titre plutôt qu'un rail : ses sections sont peu nombreuses
+     et c'est la quinzaine qui est le sujet, non la tâche où l'on se trouve. */
+  let rail = null;
+  if (estBord) {
+    const t = document.createElement("span");
+    t.className = "titre-niveau";
+    t.innerHTML = `<span class="nom-niveau">${vueDetail.bord === "derniere"
+      ? "Dernière quinzaine" : "Première quinzaine"}</span>`;
+    barre.appendChild(t);
+    const n = document.createElement("span");
+    n.className = "nb-niveau";
+    n.textContent = vues.length + (vues.length > 1 ? " actions" : " action");
+    barre.appendChild(n);
+  } else {
+    rail = document.createElement("div");
+    rail.className = "rail";
+    barre.appendChild(rail);
+  }
 
   const sections = [];
   if (vueMoment === "espace") {
@@ -1922,7 +1946,7 @@ function rendreMaintenant() {
     const groupes = espaceChoisi === null ? tous : tous.filter(g => g.cle === espaceChoisi);
     groupes.forEach(g => {
       const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : racinesDe(p.id).indexOf(g.cle) !== -1;
-      const lot = paires.filter(x => dedans(x.p));
+      const lot = vues.filter(x => dedans(x.p));
       if (!lot.length) return;
       const ids = [...new Set(lot.map(x => x.p.id))];
       const corps = document.createElement("div");
@@ -1946,7 +1970,7 @@ function rendreMaintenant() {
     });
   } else {
     clesPresentes.forEach(k => {
-      const lot = paires.filter(x => x.k === k);
+      const lot = vues.filter(x => x.k === k);
       const corps = document.createElement("div");
       corps.className = "corps-section";
       if (k === "floraison") {
@@ -1985,6 +2009,7 @@ function rendreMaintenant() {
     bloc.appendChild(s.corps);
     zone.appendChild(bloc);
 
+    if (!rail) return;
     const puce = document.createElement("button");
     puce.type = "button";
     puce.className = "puce-rail" + (i === 0 ? " ici" : "");
@@ -1996,11 +2021,12 @@ function rendreMaintenant() {
     rail.appendChild(puce);
     puces.push({ puce, bloc });
   });
-  poserMasquees(muettes);
+  // Le bord ne compte pas les masquées de la liste entière : il n'en montre pas.
+  if (!estBord) poserMasquees(muettes);
   poserPlanches(zone);
 
   // La puce du rail suit la section lue, et le rail la ramène à sa vue.
-  if (window.IntersectionObserver) {
+  if (rail && window.IntersectionObserver) {
     obsSections = new IntersectionObserver(entrees => {
       entrees.forEach(e => {
         const t = puces.find(x => x.bloc === e.target);
@@ -4547,6 +4573,12 @@ function rendreSynthese(paires) {
   // chaque fiche, on ne divise pas un pêcher qui se greffe.
   const ferme = (p, k) => (segsDe(p, k) || [])
     .some(t => dansFenetre(demi, t[0], t[1]) && t[1] === demi);
+  /* Le pendant de la fenêtre qui se ferme : celle qui vient de s'ouvrir, le
+     geste étant possible depuis cette quinzaine et non avant. Une fenêtre d'une
+     seule quinzaine s'ouvre et se ferme ensemble : elle compte pour ce qui se
+     ferme, qui est le plus pressant des deux. */
+  const ouvre = (p, k) => (segsDe(p, k) || [])
+    .some(t => dansFenetre(demi, t[0], t[1]) && t[0] === demi && t[1] !== demi);
   const groupes = [];
   ORDRE_MAINTENANT.forEach(k => {
     if (!phases[k]) return;
@@ -4558,7 +4590,8 @@ function rendreSynthese(paires) {
     });
     parVerbe.forEach((m, v) => {
       const plantes = [...m.values()].sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
-      groupes.push({ k, verbe: v, plantes, presse: plantes.filter(p => ferme(p, k)) });
+      groupes.push({ k, verbe: v, plantes, presse: plantes.filter(p => ferme(p, k)),
+                     neuves: plantes.filter(p => ouvre(p, k)) });
     });
   });
   const gestes = groupes.filter(g => ETATS_FICHE.indexOf(g.k) === -1);
@@ -4585,14 +4618,54 @@ function rendreSynthese(paires) {
     });
     return dits.join(", ");
   };
+  /* Les deux bords de la quinzaine mènent chacun à ses actions, toutes tâches
+     confondues : c'est la seule façon de voir d'un coup ce qui se ferme, ou ce
+     qui vient de s'ouvrir. */
+  const bord = (b, texte) => `<button type="button" class="fin" data-bord="${b}">`
+    + `${esc(texte)}</button>`;
+  const verbeOuvrant = (k, mot) => `<button type="button" class="syn-verbe" `
+    + `data-tache="${esc(k)}">${esc(mot.toLowerCase())}</button>`;
+
   const h = [];
   if (tete.length) {
     // Le verbe de la phrase de tête ouvre lui aussi sa tâche : une tâche dont
     // toutes les plantes sont citées ici n'a pas de ligne en dessous.
-    const phrases = tete.map(t => `<button type="button" class="syn-verbe" data-tache="${esc(t.g.k)}">`
-      + `${esc(t.g.verbe.toLowerCase())}</button> ${esc(bout(t.plantes))}`);
+    const phrases = tete.map(t => `${verbeOuvrant(t.g.k, t.g.verbe)} ${esc(bout(t.plantes))}`);
     h.push(`<p class="syn-tete">En ce moment, ${phrases.join(" et ")}`
-      + (tete[0].presse ? ' <span class="fin">avant la fin de la quinzaine</span>' : "") + ".</p>");
+      + (tete[0].presse ? " " + bord("derniere", "avant la fin de la quinzaine") : "") + ".</p>");
+  }
+
+  /* Ce qui vient de s'ouvrir se disait nulle part : une fenêtre entrée dans sa
+     première quinzaine se lisait comme toutes les autres, alors que c'est le
+     moment où le geste devient possible. */
+  /* Une tâche par entrée et non un verbe : la multiplication ouvre trois
+     fenêtres à la fois, marcotter, bouturer et greffer, qui feraient trois
+     mentions d'une seule tâche. */
+  const ouvrants = [];
+  gestes.filter(g => g.neuves.length).forEach(g => {
+    const d = ouvrants.find(o => o.k === g.k);
+    if (!d) { ouvrants.push({ k: g.k, mot: g.verbe, neuves: g.neuves.slice() }); return; }
+    d.mot = VERBE[g.k] || d.mot;
+    g.neuves.forEach(p => { if (d.neuves.indexOf(p) === -1) d.neuves.push(p); });
+  });
+  /* Trois tâches nommées au plus : au delà, la phrase redevient une liste. Les
+     autres se marquent sur leur ligne, ce qui rend le compte de la phrase
+     repérable sans le répéter. */
+  const vus = ouvrants.slice(0, 3);
+  const nommesNeuf = new Set(vus.map(o => o.k));
+  if (ouvrants.length) {
+    /* Une seule tâche s'ouvre : elle nomme ses plantes, comme la phrase de
+       tête. Plusieurs : les verbes seuls, les plantes étant portées par les
+       lignes en dessous et par le niveau qu'ouvre le lien. */
+    const reste = ouvrants.length - vus.length;
+    const parts = ouvrants.length === 1
+      ? [`${verbeOuvrant(vus[0].k, vus[0].mot)} ${esc(bout(vus[0].neuves))}`]
+      : vus.map(o => verbeOuvrant(o.k, o.mot));
+    const dits = reste
+      ? parts.join(", ") + ` et ${reste} autre${reste > 1 ? "s" : ""} tâche${reste > 1 ? "s" : ""}`
+      : parts.length > 1 ? parts.slice(0, -1).join(", ") + " et " + parts[parts.length - 1]
+        : parts[0];
+    h.push(`<p class="syn-neuf">${bord("premiere", "Première quinzaine")} pour ${dits}.</p>`);
   }
 
   // Les lignes reprennent le reste, la plante déjà nommée en tête n'y revient pas.
@@ -4605,15 +4678,21 @@ function rendreSynthese(paires) {
     let reste = dit ? g.plantes.filter(p => dit.plantes.indexOf(p) === -1) : g.plantes;
     if (!reste.length) return;
     const presse = !dit && g.presse.length > 0;
+    /* Ce qui se ferme prime sur ce qui s'ouvre : la ligne ne porte qu'une
+       marque. Une tâche que la phrase des ouvertures a déjà nommée n'en porte
+       pas : la marque sert à retrouver celles que le compte laissait dans
+       l'ombre. */
+    const neuve = !presse && g.neuves.length > 0 && !nommesNeuf.has(g.k);
     if (presse) reste = g.presse.concat(reste.filter(p => g.presse.indexOf(p) === -1));
     const deja = lignes.find(l => l.k === g.k);
     if (deja) {
       deja.parts.push({ verbe: g.verbe, plantes: reste });
       deja.total += reste.length;
       deja.presse = deja.presse || presse;
+      deja.neuve = deja.neuve || neuve;
     } else {
       lignes.push({ k: g.k, verbe: VERBE[g.k], parts: [{ verbe: g.verbe, plantes: reste }],
-                    total: reste.length, presse });
+                    total: reste.length, presse, neuve });
     }
   });
   // Au delà de six lignes la synthèse redevient la liste. Ce qui saute est le
@@ -4646,7 +4725,8 @@ function rendreSynthese(paires) {
         )(l.parts.reduce((a, pa) => a || pa.plantes.find(aPlanche), null)))
       + `<span class="syn-txt"><span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span> `
       + `<span class="l">${esc(texteLigne(l))}`
-      + (l.presse ? ' <span class="fin">· dernière quinzaine</span>' : "")
+      + (l.presse ? ' <span class="fin">· dernière quinzaine</span>'
+        : l.neuve ? ' <span class="fin">· première quinzaine</span>' : "")
       + `</span></span><span class="syn-nb">${compteK[l.k] || l.total}</span>${CHEVRON}</button>`).join("")
       + (trop.length ? `<button type="button" class="syn-ligne syn-plus" data-tache="">`
         + `<span class="syn-pt syn-pt-vide"></span>`
@@ -4720,6 +4800,12 @@ function rendreSynthese(paires) {
     e.stopPropagation();
     const k = b.dataset.tache;
     ouvrirDetail(k ? { t: "tache", k } : { t: "tout" });
+  }));
+  // Les deux bords de la quinzaine ouvrent leur propre niveau, toutes tâches
+  // confondues : ils ne se rattachent à aucune.
+  z.querySelectorAll("[data-bord]").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    ouvrirDetail({ t: "bord", bord: b.dataset.bord });
   }));
 }
 
