@@ -968,6 +968,9 @@ async function chargerAdaptations() {
 async function basculer(plantId) {
   if (!session) { info("Connectez-vous pour enregistrer votre jardin."); $("email")?.focus(); return; }
   const present = sel.has(plantId);
+  /* Retirer une plante défait aussi ses placements, faits un à un dans les
+     espaces et les zones : le geste qui l'annule ne peut pas être muet. */
+  if (present && !confirmerRetrait(plantId)) return;
   present ? sel.delete(plantId) : sel.add(plantId);
   majCompte(); rendreApresBascule(plantId);
   const req = present
@@ -1218,7 +1221,11 @@ function carteItem(p) {
   /* La boîte de vignette est réservée même sans planche : cent vingt-cinq
      plantes sur trois cent quinze n'en ont pas, et leur nom démarrait alors à
      une autre abscisse, ce qui hachait le bord gauche de la liste. */
-  b.innerHTML = `<span class="rond">${CHECK}</span>`
+  /* Au jardin, toutes les rangées sont cochées : le rond n'y distinguait rien
+     et une seule touche retirait la plante du jardin et de tous ses
+     emplacements. La composition du jardin se règle au catalogue, seul endroit
+     où le rond apprend quelque chose. */
+  b.innerHTML = (porteeSel === "jardin" ? "" : `<span class="rond">${CHECK}</span>`)
     + (aPlanche(p)
         ? `<span class="v-planche" data-pl="${esc(p.slug)}" aria-hidden="true"></span>`
         : `<span class="v-planche v-vide" aria-hidden="true"></span>`)
@@ -1282,6 +1289,16 @@ function choixEspaces(p) {
   f.addEventListener("click", () => basculerChoixEspace(p.id));
   r.appendChild(f);
   return r;
+}
+
+/* Ce qu'une plante emporte en quittant le jardin : ses places dans les espaces
+   et les zones. La question les compte, un placement ne se refait pas d'une
+   touche. */
+function confirmerRetrait(plantId) {
+  const p = plantes.find(x => x.id === plantId);
+  const n = (aff.get(plantId) || []).length;
+  return confirm(`Retirer ${p ? nomAvecArticle(p) : "cette plante"} du jardin ?`
+    + (n ? ` ${n > 1 ? `Ses ${n} emplacements sont perdus` : "Son emplacement est perdu"}.` : ""));
 }
 
 /* Trois gestes partagent les mêmes règles de placement : la pastille de la
@@ -1399,6 +1416,10 @@ function rendreSelection() {
   majTetePlantes();
   const pied = $("piedPlantes");
   if (pied) pied.hidden = ecranCourant === "catalogue" || !session;
+  /* « Tout décocher » n'a plus de case à décocher au jardin, et il y viderait le
+     jardin entier d'une touche depuis un écran de consultation. */
+  const vider = $("vider");
+  if (vider) vider.hidden = porteeSel === "jardin";
   const zone = $("listes");
   zone.innerHTML = "";
   /* La teinte de rangée ne dit rien là où toutes les plantes sont retenues :
@@ -1459,6 +1480,8 @@ sur("rech", "input", rendreSelection);
 sur("filtreClimat", "click", () => { climatSeul = !climatSeul; majNbFiltres(); rendreSelection(); });
 sur("vider", "click", async () => {
   if (!sel.size || !session) return;
+  if (!confirm(`Retirer les ${sel.size} plantes du jardin ? `
+    + `Leurs emplacements dans les espaces partent avec elles.`)) return;
   const copie = new Set(sel), copieAff = new Map(aff);
   sel = new Set(); aff = new Map(); majCompte(); construireChips(); rendreTout();
   const { error } = await db.from("garden_plants").delete().eq("garden_id", jardinId);
@@ -6129,6 +6152,8 @@ async function ajouterCulture(zo, famille, annee) {
    posées la même année en écrivent deux, et n'en effacer qu'une laisserait
    l'année en place sans que rien ne le dise. */
 async function retirerCulture(cle, famille, annee) {
+  if (!confirm(`Effacer ${nomFamille(famille).toLowerCase()} de l'année ${annee} ? `
+    + `Cette trace sert à la rotation des cultures.`)) return;
   const { error } = await db.from("cultures").delete()
     .eq("espace_id", cle).eq("famille", famille).eq("annee", annee);
   if (error) { info("Suppression refusée : " + error.message, true); return; }
