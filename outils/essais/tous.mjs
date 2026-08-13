@@ -59,6 +59,7 @@ const SUITES = [
   ["motif", () => import("./motif.mjs")],
   ["herbier", () => import("./herbier.mjs")],
   ["largeurs", () => import("./largeurs.mjs")],
+  ["saison", () => import("./saison.mjs")],
 ];
 
 const demande = process.argv[2];

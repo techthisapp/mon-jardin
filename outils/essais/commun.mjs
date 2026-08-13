@@ -32,9 +32,13 @@ export function catalogueAvecProduction() {
 }
 
 /* Décalage constant plutôt qu'horloge arrêtée : les minuteries de l'interface
-   continuent de tourner, seule la date de départ change. */
-const scriptHorloge = `(() => {
-  const Vrai = Date, ecart = ${JOUR_FIGE} - Vrai.now();
+   continuent de tourner, seule la date de départ change.
+
+   Une suite peut demander un autre jour : les quatre étapes de la végétation ne
+   s'observent pas toutes au deux août, et rien d'autre ne permet de porter
+   l'application en décembre. */
+const horloge = t => `(() => {
+  const Vrai = Date, ecart = ${t} - Vrai.now();
   function Fige(...a) { return a.length ? new Vrai(...a) : new Vrai(Vrai.now() + ecart); }
   Fige.now = () => Vrai.now() + ecart;
   Fige.parse = Vrai.parse; Fige.UTC = Vrai.UTC; Fige.prototype = Vrai.prototype;
@@ -67,19 +71,42 @@ export function cacheAncien() {
                           empreinte: `${c.plants.length}|2026-07-31` });
 }
 
+/* La météo figée est datée du deux août. Une suite qui porte l'application à
+   une autre date doit la déplacer d'autant, sans quoi l'application ne trouve
+   pas le jour courant dans la série et se tait, bloc du temps compris. Les
+   valeurs ne sont pas retouchées : une suite qui voyage ne mesure pas le temps
+   qu'il fait, ni la pluie, ni la vigilance, toutes datées elles aussi. */
+function meteoDecalee(brut, jour) {
+  const ecart = Math.round((jour - JOUR_FIGE) / 864e5);
+  if (!ecart) return brut;
+  const d = JSON.parse(brut);
+  const bouger = t => {
+    const j = new Date(t.slice(0, 10) + "T12:00:00Z");
+    j.setUTCDate(j.getUTCDate() + ecart);
+    return j.toISOString().slice(0, 10) + t.slice(10);
+  };
+  ["daily", "hourly"].forEach(k => {
+    if (!d[k] || !d[k].time) return;
+    d[k].time = d[k].time.map(bouger);
+    ["sunrise", "sunset"].forEach(c => { if (d[k][c]) d[k][c] = d[k][c].map(bouger); });
+  });
+  return JSON.stringify(d);
+}
+
 export async function ouvrirContexte(navigateur, options = {}) {
   const {
     catalogue = CATALOGUE, releves = [], pluies = [], vigilance = [],
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
     session = true, cache = null, versionSite = null, espaces = null, placements = null,
     avis = null, sourdines = null, carnet = null, photosCarnet = null, cultures = null,
+    jour = JOUR_FIGE,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
   const ctx = await navigateur.newContext({ viewport: { width: 430, height: 940 },
                                             deviceScaleFactor: 2, serviceWorkers: "block",
                                             timezoneId: "Europe/Paris", locale: "fr-FR" });
-  await ctx.addInitScript(scriptHorloge);
+  await ctx.addInitScript(horloge(jour));
   await ctx.addInitScript(`window.__FIXTURES__ = ${catalogue};`
     + `window.__RELEVES__ = ${JSON.stringify(releves)};`
     + `window.__PLUIES__ = ${JSON.stringify(pluies)};`
@@ -116,8 +143,9 @@ export async function ouvrirContexte(navigateur, options = {}) {
     status: 200, contentType: "image/png",
     body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=", "base64"),
   }));
+  const meteoDuJour = meteoDecalee(meteo, jour);
   await ctx.route(/api\.open-meteo\.com/, route => {
-    const d = JSON.parse(meteo);
+    const d = JSON.parse(meteoDuJour);
     if (route.request().url().includes("hourly=")) {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ hourly: d.hourly }) });
     }

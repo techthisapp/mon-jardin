@@ -429,6 +429,9 @@ const VERBE_MULTI = {
 const verbeDe = (p, k) => k === "multiplication"
   ? (VERBE_MULTI[p.propagation] || VERBE.multiplication) : VERBE[k];
 
+// Une énumération qui ouvre une phrase prend la capitale de la phrase.
+const majuscule = t => String(t || "").charAt(0).toUpperCase() + String(t || "").slice(1);
+
 // « la glycine », « l'ail », « le pommier ». Sans article connu, le nom seul.
 function nomAvecArticle(p) {
   const nom = p.nom.split(",")[0].toLowerCase();
@@ -4245,38 +4248,202 @@ function vueLumiere() {
       + `<p class="f-note">Lever et coucher calculés au point du jardin.</p>` };
 }
 
+/* ---------- La saison ----------
+   La feuille disait l'année : quatre dates de climat, vraies en janvier comme
+   en août, et que le ruban portait déjà. Elle dit maintenant le temps qui
+   reste et ce que ce temps change au jardin. */
+
+// Le premier jour de la quinzaine q, dans l'année en cours.
+const jourDeQ = q => jourDeLAn(AN_EN_COURS, Math.floor((q - 1) / 2), q % 2 ? 1 : 16);
+// Jours d'ici à cette quinzaine. Une borne déjà passée est celle de l'an prochain.
+const joursVers = q => {
+  const d = jourDeQ(q) - JOUR_AN;
+  return d >= 0 ? d : d + JOURS_AN;
+};
+
+/* Le compte à rebours se dit en semaines. Les bornes du référentiel sont des
+   quinzaines : un compte en jours promettrait une précision qu'elles n'ont pas. */
+function delaiTexte(jours) {
+  if (jours < 4) return "moins d'une semaine";
+  const sem = Math.round(jours / 7);
+  if (sem <= 1) return "une semaine";
+  if (sem < 14) return sem + " semaines";
+  return Math.round(jours / 30.4) + " mois";
+}
+
+/* « le basilic fin septembre, la tomate et la courge fin octobre ». Les plantes
+   qui finissent la même quinzaine sont nommées ensemble : une date par nom
+   aurait répété la moitié de la ligne. */
+function listeParQuinzaine(couples, max) {
+  const parQ = new Map();
+  couples.forEach(([p, q]) => {
+    if (!parQ.has(q)) parQ.set(q, []);
+    parQ.get(q).push(p);
+  });
+  return [...parQ.keys()].sort((a, b) => a - b).slice(0, max || 3)
+    .map(q => enumerer(parQ.get(q).map(nomAvecArticle), 4) + " " + demiTexte(q))
+    .join(", ");
+}
+
+/* La fenêtre de récolte la plus tardive de celles qui courent encore. Une
+   fenêtre qui passe l'hiver, écrite à l'envers, est rendue telle quelle : son
+   propre appelant la reconnaît à sa fin plus petite que son début. */
+function recolteTardive(p) {
+  const segs = segsDe(p, "recolte");
+  if (!segs) return null;
+  const encore = segs.filter(v => v[1] >= v[0] && v[1] >= demi);
+  if (!encore.length) return null;
+  return encore.reduce((a, v) => (v[1] > a[1] ? v : a));
+}
+
+const RAD = Math.PI / 180;
+/* Durée du jour à une latitude, disque solaire et réfraction compris, pour le
+   n-ième jour de l'année. Déclinaison par la série courte de Spencer, à un
+   dixième de degré près, ce qui vaut moins d'une minute de jour. */
+function dureeDuJour(lat, n) {
+  const g = 2 * Math.PI / 365.24 * (n + 0.5);
+  const d = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g)
+    - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g)
+    - 0.002697 * Math.cos(3 * g) + 0.001480 * Math.sin(3 * g);
+  const c = (Math.sin(-0.833 * RAD) - Math.sin(lat * RAD) * Math.sin(d))
+    / (Math.cos(lat * RAD) * Math.cos(d));
+  if (c >= 1) return 0;
+  if (c <= -1) return 24;
+  return 2 * Math.acos(c) / RAD / 15;
+}
+
+/* Le prochain passage du jour au travers de dix heures. Sous ce seuil la
+   végétation se conserve sans plus pousser : c'est la cause de la fin de
+   saison, quand les bornes du référentiel n'en donnent que la date.
+
+   Le calcul et le service météorologique s'écartent de deux minutes environ,
+   leurs conventions d'horizon différant. Cela déplace la date d'un jour au
+   plus, et la feuille de la lumière ne portant aucune date, les deux ne
+   peuvent pas se contredire à l'écran. */
+function passageDixHeures() {
+  const g = jardinActif();
+  const lat = g && g.lat !== null && g.lat !== undefined ? Number(g.lat) : null;
+  // Sous le cercle polaire seulement : au delà le jour ne franchit plus le seuil.
+  if (lat === null || !isFinite(lat) || Math.abs(lat) > 66) return null;
+  const h = n => dureeDuJour(lat, ((n % JOURS_AN) + JOURS_AN) % JOURS_AN);
+  const sous = h(JOUR_AN) < 10;
+  for (let k = 1; k <= JOURS_AN; k++) {
+    if ((h(JOUR_AN + k) < 10) === sous) continue;
+    const d = new Date(Date.UTC(AN_EN_COURS, 0, 1 + JOUR_AN + k));
+    return { sous, dans: k, jour: (d.getUTCDate() === 1 ? "1er" : d.getUTCDate())
+      + " " + MOIS_PLEIN[d.getUTCMonth()] };
+  }
+  return null;
+}
+
 function vueSaison() {
   const s = saison[(jardinActif() || {}).climate_key];
   const p = positionSaison();
-  const froid = [...sel].map(id => plantes.find(x => x.id === id)).filter(Boolean)
-    .filter(x => x.gel !== null && x.gel !== undefined && Number(x.gel) >= -2)
-    .sort((a, b) => Number(b.gel) - Number(a.gel)).slice(0, 6);
+  const auJardin = [...sel].map(id => plantes.find(x => x.id === id)).filter(Boolean);
   /* Le ruban de la saison est celui du bandeau, avec d'autres bandes : les
      quatre étapes de la végétation sous ce climat, et le point du jour à sa
      place dans l'année. Quatre dates alignées ne le disaient pas. */
-  const jq = q => jourDeLAn(AN_EN_COURS, Math.floor((q - 1) / 2), q % 2 ? 1 : 16);
   const ETAPES = [["Repos", "#C3C9C0"], ["Reprise", "#A5C596"],
                   ["Pleine saison", "#6FA35A"], ["Ralentissement", "#C9A277"]];
   const ruban = s ? `<div class="ruban-veget">`
     + `<div class="regle-annee" aria-hidden="true">` + dessinRuban([
-        { a: 0, t: ETAPES[0][1], b: jq(s.debut_q) },
-        { a: jq(s.debut_q), t: ETAPES[1][1], b: jq(s.pleine_q) },
-        { a: jq(s.pleine_q), t: ETAPES[2][1], b: jq(s.senescence_q) },
-        { a: jq(s.senescence_q), t: ETAPES[3][1], b: jq(s.fin_q) },
-        { a: jq(s.fin_q), t: ETAPES[0][1], b: JOURS_AN },
+        { a: 0, t: ETAPES[0][1], b: jourDeQ(s.debut_q) },
+        { a: jourDeQ(s.debut_q), t: ETAPES[1][1], b: jourDeQ(s.pleine_q) },
+        { a: jourDeQ(s.pleine_q), t: ETAPES[2][1], b: jourDeQ(s.senescence_q) },
+        { a: jourDeQ(s.senescence_q), t: ETAPES[3][1], b: jourDeQ(s.fin_q) },
+        { a: jourDeQ(s.fin_q), t: ETAPES[0][1], b: JOURS_AN },
       ]) + `</div>`
     + `<p class="rv-leg">` + ETAPES.map(([nom, t]) =>
         `<span><i style="--t:${t}"></i>${nom.toLowerCase()}</span>`).join("") + `</p></div>` : "";
 
+  /* Ce que la gelée fait au jardin ne se dit qu'à son approche, les quatre
+     derniers mois de la saison, quand le jardinier commence à compter. Plus
+     tôt, une date d'octobre n'apprend rien et encombre la feuille. */
+  const approche = s && joursVers(s.fin_q) <= 120;
+
+  /* L'étape en cours, ce qui lui reste, et ce qui vient après. Le gel se dit à
+     part tant qu'il n'est pas la borne suivante, pour que la feuille porte
+     toujours l'échéance qui commande le jardin. */
+  const SUITE = s ? { Repos: [s.debut_q, "reprise"], Reprise: [s.pleine_q, "pleine saison"],
+                      Pleine: [s.senescence_q, "ralentissement"],
+                      "Déclin": [s.fin_q, "première gelée"] }[p.court] : null;
+  const reste = SUITE ? `<p class="sa-reste"><b>${esc(majuscule(p.long || p.court))}`
+    + ` encore ${esc(delaiTexte(joursVers(SUITE[0])))}</b>, `
+    + `${esc(SUITE[1])} ${esc(demiTexte(SUITE[0]))}.`
+    + (approche && SUITE[0] !== s.fin_q
+      ? ` Première gelée attendue ${esc(demiTexte(s.fin_q))}, `
+        + `dans ${esc(delaiTexte(joursVers(s.fin_q)))}.` : "") + `</p>` : "";
+
+  /* Les plantes que la gelée arrête, et la date où leur récolte s'achève : le
+     croisement des fenêtres du référentiel avec la borne du climat. */
+  const gelives = approche ? auJardin.filter(x => x.gel !== null && x.gel !== undefined
+    && Number(x.gel) >= -2) : [];
+  const derniers = gelives.map(x => [x, recolteTardive(x)]).filter(x => x[1])
+    .map(x => [x[0], x[1][1]]);
+
+  /* La marge, quand elle tombe à une quinzaine ou moins : c'est là que la fin
+     de récolte se joue sur la date d'une gelée, non sur le calendrier. */
+  const serres = s ? derniers.filter(x => x[1] <= s.fin_q && s.fin_q - x[1] <= 1) : [];
+  const qServre = serres.length ? Math.max(...serres.map(x => x[1])) : null;
+  const courts = serres.filter(x => x[1] === qServre);
+  /* La ligne des dernières récoltes tombe quand la marge les nomme toutes : la
+     phrase qui suit porte alors les mêmes noms et la même date. */
+  const recoltes = derniers.length > courts.length
+    ? `<p class="f-txt">Dernières récoltes avant la gelée : `
+      + `${esc(listeParQuinzaine(derniers, 3))}.</p>` : "";
+  const marge = courts.length ? `<p class="f-txt">`
+    + `${esc(majuscule(enumerer(courts.map(x => nomAvecArticle(x[0])), 4)))} se `
+    + `récolte${courts.length > 1 ? "nt" : ""} jusqu'à ${esc(demiTexte(qServre))}, `
+    + (s.fin_q === qServre ? "jusqu'à la première gelée"
+        : "à une quinzaine de la première gelée")
+    + ` : une gelée précoce coupe la fin de la récolte.</p>` : "";
+
+  /* La gelée ferme la saison de croissance sans fermer le jardin. Les cueillettes
+     de toute l'année sont écartées : elles ne disent rien de la saison. */
+  const tardifs = approche ? auJardin.map(x => [x, recolteTardive(x)])
+    .filter(x => x[1] && x[1][1] > s.fin_q && x[1][1] - x[1][0] <= 12)
+    .map(x => [x[0], x[1][1]]) : [];
+  const apres = tardifs.length ? `<p class="f-txt">Récoltes après la gelée : `
+    + `${esc(listeParQuinzaine(tardifs, 2))}.</p>` : "";
+
+  /* Le pendant de la liste des plus exposées, qui nommait celles qui souffrent
+     sans dire quoi faire ni quand. */
+  const proteges = approche
+    ? auJardin.map(x => [x, segsDe(x, "protection")]).filter(x => x[1]) : [];
+  const qProt = proteges.length
+    ? Math.min(...proteges.map(x => Math.min(...x[1].map(v => v[0])))) : null;
+  const protection = qProt ? `<p class="f-txt">`
+    + (proteges.length <= 3
+        ? majuscule(enumerer(proteges.map(x => nomAvecArticle(x[0])), 3)) + " demande"
+          + (proteges.length > 1 ? "nt" : "")
+        : proteges.length + " de vos plantes demandent")
+    + ` une protection à partir de ${esc(demiTexte(qProt))}.</p>` : "";
+
+  /* Les exposées que la ligne des récoltes n'a pas nommées : une plante d'ornement
+     gèle aussi, sans que rien ne se récolte. */
+  const nommees = new Set(derniers.map(x => x[0].id));
+  const muets = gelives.filter(x => !nommees.has(x.id))
+    .sort((a, b) => Number(b.gel) - Number(a.gel));
+  const exposees = muets.length ? `<p class="f-txt">Également exposé${muets.length > 1 ? "es" : "e"} `
+    + `à la première gelée : ${esc(enumerer(muets.map(nomAvecArticle), 6))}.</p>` : "";
+
+  /* Le seuil se dit à la même échéance que la gelée : en avril, un passage de
+     novembre n'apprend rien de plus qu'une date de récolte de novembre. */
+  const d10 = passageDixHeures();
+  const dix = d10 && d10.dans <= 120 ? d10 : null;
+  const lumiere = dix ? `<p class="f-txt sa-lum">Le jour ${dix.sous
+      ? "repasse au-dessus de dix heures le " + esc(dix.jour)
+        + ". Au-delà, la végétation peut repartir."
+      : "passe sous dix heures le " + esc(dix.jour)
+        + ". En deçà, la végétation se conserve sans plus pousser."}</p>` : "";
+
   return { titre: "La saison", sous: p.long || p.court,
-    corps: ruban + (s ? `<dl class="f-kv"><dt>Reprise</dt><dd>${esc(demiTexte(s.debut_q))}</dd>`
-      + `<dt>Pleine saison</dt><dd>${esc(demiTexte(s.pleine_q))}</dd>`
-      + `<dt>Ralentissement</dt><dd>${esc(demiTexte(s.senescence_q))}</dd>`
-      + `<dt>Première gelée</dt><dd>${esc(demiTexte(s.fin_q))}</dd></dl>` : "")
-      + (froid.length ? `<p class="f-txt">Les plus exposées à la première gelée : `
-        + `${esc(enumerer(froid.map(nomAvecArticle), 6))}.</p>` : "")
-      + `<p class="f-note">Bornes de saison par climat, table du référentiel. `
-      + `Le seuil de gel est celui de chaque fiche.</p>` };
+    corps: ruban + reste + recoltes + marge + apres + protection + exposees + lumiere
+      // La note ne cite que les sources de ce qui est à l'écran.
+      + `<p class="f-note">Bornes de saison par climat, table du référentiel.`
+      + (approche ? ` Fenêtres de récolte et de protection, seuil de gel : fiche `
+        + `de chaque plante.` : "")
+      + (dix ? ` Passage sous dix heures calculé au point du jardin.` : "") + `</p>` };
 }
 
 function vueVigilance() {
