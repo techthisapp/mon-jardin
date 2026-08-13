@@ -1106,9 +1106,12 @@ body.fige{overflow:hidden}
   border:1px solid var(--filet);border-radius:999px;overflow:hidden;background:#fff;
 }
 .bascule-vue .vue{
-  border:0;background:none;cursor:pointer;padding:6px 12px;
+  border:0;background:none;cursor:pointer;padding:6px 10px;
   font:600 11.5px/1 "IBM Plex Sans",sans-serif;letter-spacing:.02em;color:var(--encre-doux);
 }
+/* Dans la barre de niveau, le regroupement précède le rail et ne se laisse pas
+   comprimer : c'est le rail qui défile, lui seul pouvant le faire. */
+.barre-niveau .bascule-vue{flex:0 0 auto}
 .bascule-vue .vue.active{background:var(--encre);color:#EFEFE8}
 .bascule-sourdine{margin-left:auto}
 
@@ -1161,15 +1164,7 @@ body.fige{overflow:hidden}
 .regle-annee{margin-bottom:0}
 
 /* ---------- Barre de commandes de l'écran En ce moment ---------- */
-.filtres-moment{margin-bottom:10px;padding:8px 10px}
-.filtres-moment .barre-filtres{align-items:center;gap:8px;flex-wrap:nowrap}
-#basculeFiltresM{flex:none;white-space:nowrap}
-#basculeVue{flex:none}
 #zoneMasquees{margin-left:auto;flex:none;display:flex}
-.filtres-moment #corpsFiltresM{
-  display:flex;flex-direction:column;gap:10px;
-  margin-top:10px;padding-top:10px;border-top:1px solid var(--filet-clair);
-}
 
 .bascule-sourdine{
   display:inline-flex;align-items:center;gap:5px;cursor:pointer;
@@ -1938,14 +1933,6 @@ body.fige{overflow:hidden}
 .mini[aria-pressed="true"]{color:var(--terre)}
 .mini:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:6px}
 
-/* Le panneau de filtres n'existe plus que déplié, sous le pied. */
-.filtres-moment{border:0;background:none;padding:0;margin:10px 0 0}
-.filtres-moment #corpsFiltresM{
-  background:var(--papier-haut);border-radius:14px;padding:11px 13px;
-  margin:0;border-top:0;box-shadow:0 1px 3px rgba(20,30,25,.06);
-}
-.filtres-moment .bascule-vue{margin-top:1px}
-
 /* ---------- Barre de niveau, collante ---------- */
 .barre-niveau{
   position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:11px;
@@ -2372,12 +2359,10 @@ select:focus{
    elle garde un fond clair et prend l'encre verte. L'aplat plein des jetons
    l'écrivait en vert sur vert. */
 #basculeFiltres[aria-pressed="true"],
-#basculeFiltresM[aria-pressed="true"],
 #basculeFiltresS[aria-pressed="true"]{
   background:rgba(76,140,63,.12);border-color:var(--terre);color:var(--terre);
 }
 #basculeFiltres[aria-pressed="true"] .nb,
-#basculeFiltresM[aria-pressed="true"] .nb,
 #basculeFiltresS[aria-pressed="true"] .nb{background:var(--terre);color:#fff}
 #corpsFiltres{
   display:flex;flex-direction:column;gap:8px;

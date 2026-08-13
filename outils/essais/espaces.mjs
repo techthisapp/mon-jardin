@@ -314,12 +314,24 @@ export default async function essai(navigateur) {
   j.controle("l'espace garde le même compte", await compteDuTitre(pg) === "5",
     await compteDuTitre(pg));
 
-  j.section("les filtres ne proposent que les espaces");
-  const chips = await pg.locator("#chipsEspaceM .chip")
+  /* Le regroupement par espace de la liste complète ne connaît que les espaces :
+     une zone est une subdivision, elle ne fait pas section. Le filtre de
+     l'écran du jour qui portait le même contrôle a été retiré, le regroupement
+     donnant la même lecture sans rien écarter. */
+  j.section("le regroupement ne propose que les espaces");
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  await pg.locator("#btnTout").click();
+  await pg.waitForTimeout(600);
+  await pg.locator('#barreNiveau .bascule-vue .vue:not(.active)').click();
+  await pg.waitForTimeout(700);
+  const sections = await pg.locator(".section-liste .nom-niveau")
     .evaluateAll(l => l.map(b => b.textContent.replace(/\s+/g, " ").trim()));
-  j.controle("aucune zone dans le filtre de l'écran du moment",
-    chips.length === 4 && chips.some(c => c.startsWith("Potager"))
-    && !chips.some(c => c.startsWith("Serre")), chips.join(" | "));
+  j.controle("aucune zone parmi les sections d'espace",
+    sections.some(c => c.startsWith("Potager")) && !sections.some(c => c.startsWith("Serre")),
+    sections.join(" | "));
+  await pg.locator("#barreNiveau .retour").click();
+  await pg.waitForTimeout(400);
 
   j.section("la bannière, le moment et la bascule d'affichage");
   await auxEspaces(pg);

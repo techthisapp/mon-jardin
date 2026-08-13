@@ -38,7 +38,11 @@ let jardins = [];
 let espaces = [];
 let aff = new Map();
 let adapt = {};
-let espaceChoisi = null;
+/* Le filtre d'espace appartient au seul écran de l'année. Il portait un nom
+   général et une valeur partagée avec l'écran du jour, qui avait sa propre
+   rangée de pastilles : choisir un espace d'un côté filtrait l'autre sans le
+   dire. */
+let espacePlan = null;
 /* Les avis de la personne sur les photographies, chargés une fois au
    démarrage : masquer une image ne demande pas d'aller le redemander à chaque
    fiche. Clé l'identifiant de la ligne d'image, valeur supprimer, moyenne ou
@@ -179,8 +183,7 @@ let periode = null;
 
 const etatPhase = {}, etatTypo = {}, etatCat = {};      // écran Mes plantes
 const etatTypoP = {}, etatCatP = {};                     // écran Calendrier
-const etatPhaseM = {};                                    // écran En ce moment
-ORDRE.forEach(k => { etatPhase[k] = true; etatPhaseM[k] = true; });
+ORDRE.forEach(k => { etatPhase[k] = true; });
 
 const $ = id => document.getElementById(id);
 
@@ -896,7 +899,7 @@ async function listerJardins() {
 async function chargerJardin() {
   if (!session) {
     jardins = []; jardinId = null; espaces = []; aff = new Map(); adapt = {};
-    sel = new Set(); espaceChoisi = null; avisPhoto = new Map(); photosPlante.clear();
+    sel = new Set(); espacePlan = null; avisPhoto = new Map(); photosPlante.clear();
     carnet = []; photosCarnet.clear(); urlsPhoto.clear(); saisieCarnet = null;
     saisieFiche = null; cultures = []; vignettes = new Map();
     majCompte(); majJardinUI(); construireChips(); rendreTout(); return;
@@ -943,7 +946,7 @@ async function chargerContenuJardin() {
     if (!aff.has(r.plant_id)) aff.set(r.plant_id, []);
     aff.get(r.plant_id).push(r);
   });
-  if (espaceChoisi !== null && espaceChoisi !== "0" && !espaces.some(z => z.id === espaceChoisi)) espaceChoisi = null;
+  if (espacePlan !== null && espacePlan !== "0" && !espaces.some(z => z.id === espacePlan)) espacePlan = null;
   chargerVignettes();
   await lireEauDuJour(cle);
   await Promise.all([lireReleves(), lireStation(), lireVigilance()]);
@@ -1040,12 +1043,6 @@ function construireChips() {
     nb: c => compte(p => p.cat === c),
     apres: () => { construireChips(); rendrePlanning(); },
   });
-  groupeChips($("chipsPhaseM"), ORDRE_MAINTENANT.filter(k => phases[k]), etatPhaseM, {
-    libelle: k => phases[k].label,
-    couleur: k => teinteK(k),
-    apres: () => { construireChips(); rendreMaintenant(); },
-  });
-  chipsEspaces($("chipsEspaceM"), $("ligneEspaceM"), rendreMaintenant);
   chipsEspaces($("chipsEspaceP"), $("ligneEspaceP"), rendrePlanning);
   majNbFiltres();
 }
@@ -1063,14 +1060,14 @@ function chipsEspaces(conteneur, ligne, apres) {
   valeurs.forEach(v => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "chip";
-    b.setAttribute("aria-pressed", String(espaceChoisi === v.id));
+    b.setAttribute("aria-pressed", String(espacePlan === v.id));
     const n = v.id === null ? sel.size
       : v.id === "0" ? [...sel].filter(id => !espacesDe(id).length).length
       : [...sel].filter(id => racinesDe(id).includes(v.id)).length;
     b.innerHTML = (v.couleur ? `<i class="pastille" style="background:${v.couleur}"></i>` : "")
       + esc(v.nom) + `<span class="nb">${n}</span>`;
     b.addEventListener("click", () => {
-      espaceChoisi = espaceChoisi === v.id ? null : v.id;
+      espacePlan = espacePlan === v.id ? null : v.id;
       construireChips(); apres();
     });
     conteneur.appendChild(b);
@@ -1588,9 +1585,9 @@ function attribut(z, cle) {
 }
 
 function passeEspace(p) {
-  if (espaceChoisi === null) return true;
+  if (espacePlan === null) return true;
   const z = racinesDe(p.id);
-  return espaceChoisi === "0" ? z.length === 0 : z.includes(espaceChoisi);
+  return espacePlan === "0" ? z.length === 0 : z.includes(espacePlan);
 }
 
 const actif = (p, k) => (segsDe(p, k) || []).some(v => dansFenetre(demi, v[0], v[1]));
@@ -1672,7 +1669,7 @@ function rendreMaintenant() {
     $("videMoment").innerHTML = '<p class="vide">Aucune plante retenue. Le bouton rond au milieu de la barre du bas ouvre vos plantes.</p>';
     return;
   }
-  const mien = plantes.filter(p => sel.has(p.id) && passeEspace(p));
+  const mien = plantes.filter(p => sel.has(p.id));
 
   const MOIS_LONGS = ["janvier","février","mars","avril","mai","juin",
     "juillet","août","septembre","octobre","novembre","décembre"];
@@ -1760,7 +1757,7 @@ function rendreMaintenant() {
   let muettes = 0;
   const muettesPar = {};
   ORDRE_MAINTENANT.forEach(k => {
-    if (!phases[k] || !etatPhaseM[k]) return;
+    if (!phases[k]) return;
     mien.filter(p => actif(p, k)).forEach(p => {
       const muet = Boolean(sourdineActive(p, k));
       if (muet) { muettes++; muettesPar[k] = (muettesPar[k] || 0) + 1; }
@@ -1773,7 +1770,6 @@ function rendreMaintenant() {
     $("bilanMoment").innerHTML = "";
     $("synthese").hidden = true;
     $("piedVue").hidden = true;
-    majFiltresMoment();
     $("videMoment").innerHTML = '<div class="vide-soigne">'
       + '<svg viewBox="0 0 1024 1024" aria-hidden="true">'
       + '<path d="M 512 824 C 512 720 512 660 512 470" fill="none" stroke="currentColor" stroke-width="52" stroke-linecap="round"/>'
@@ -1793,22 +1789,6 @@ function rendreMaintenant() {
     `<b>${audibles.length}</b> action${audibles.length > 1 ? "s" : ""} sur `
     + `<b>${new Set(audibles.map(x => x.p.id)).size}</b> plantes`;
   $("piedVue").hidden = false;
-
-  const bascule = $("basculeVue");
-  bascule.innerHTML = "";
-  [["tache", "Tâche"], ["espace", "Espace"]].forEach(([v, lib]) => {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = "vue" + (vueMoment === v ? " active" : "");
-    b.textContent = lib;
-    b.addEventListener("click", () => {
-      vueMoment = v;
-      try { localStorage.setItem("monjardin.vue", v); } catch (err) { /* stockage indisponible */ }
-      if (vueDetail && vueDetail.t === "tache") vueDetail = { t: "tout" };
-      rendreMaintenant();
-    });
-    bascule.appendChild(b);
-  });
-  majFiltresMoment();
 
   // Un filtre qui vide la tâche ouverte ramène à la vue d'ensemble.
   if (vueDetail && vueDetail.t === "tache" && !paires.some(x => x.k === vueDetail.k)) vueDetail = null;
@@ -1934,6 +1914,24 @@ function rendreMaintenant() {
     n.textContent = vues.length + (vues.length > 1 ? " actions" : " action");
     barre.appendChild(n);
   } else {
+    /* Le regroupement est descendu ici, seul niveau où il agit : posé sur la
+       vue d'ensemble, il ne changeait rien à la synthèse, toujours ordonnée par
+       tâche. Il précède le rail, dont il commande les puces. */
+    const bascule = document.createElement("div");
+    bascule.className = "bascule-vue";
+    [["tache", "Tâche"], ["espace", "Espace"]].forEach(([v, lib]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "vue" + (vueMoment === v ? " active" : "");
+      b.textContent = lib;
+      b.addEventListener("click", () => {
+        vueMoment = v;
+        try { localStorage.setItem("monjardin.vue", v); } catch (err) { /* stockage indisponible */ }
+        rendreMaintenant();
+        window.scrollTo(0, 0);
+      });
+      bascule.appendChild(b);
+    });
+    barre.appendChild(bascule);
     rail = document.createElement("div");
     rail.className = "rail";
     barre.appendChild(rail);
@@ -1943,8 +1941,7 @@ function rendreMaintenant() {
   if (vueMoment === "espace") {
     const tous = racines().map(z => ({ cle: z.id, nom: z.name }))
       .concat([{ cle: "0", nom: "Non placées" }]);
-    const groupes = espaceChoisi === null ? tous : tous.filter(g => g.cle === espaceChoisi);
-    groupes.forEach(g => {
+    tous.forEach(g => {
       const dedans = p => g.cle === "0" ? !espacesDe(p.id).length : racinesDe(p.id).indexOf(g.cle) !== -1;
       const lot = vues.filter(x => dedans(x.p));
       if (!lot.length) return;
@@ -2032,7 +2029,12 @@ function rendreMaintenant() {
         const t = puces.find(x => x.bloc === e.target);
         if (!t || !e.isIntersecting) return;
         puces.forEach(x => x.puce.classList.toggle("ici", x === t));
-        rail.scrollTo({ left: Math.max(0, t.puce.offsetLeft - 44), behavior: "smooth" });
+        /* Écart mesuré d'une boîte à l'autre et non par `offsetLeft`, qui se
+           compte depuis la barre collante : tout ce qui précède le rail, le
+           chevron de retour puis le regroupement, s'ajoutait à la position et
+           faisait défiler le rail au delà de la puce à montrer. */
+        const dx = t.puce.getBoundingClientRect().left - rail.getBoundingClientRect().left;
+        rail.scrollTo({ left: Math.max(0, rail.scrollLeft + dx - 44), behavior: "smooth" });
       });
     }, { rootMargin: "-92px 0px -72% 0px", threshold: 0 });
     puces.forEach(x => obsSections.observe(x.bloc));
@@ -4922,7 +4924,7 @@ function rendrePlanning() {
   zone.innerHTML = "";
   const lot = plantes.filter(p => {
     if (jardinSeul && !sel.has(p.id)) return false;
-    if (espaceChoisi !== null && (!sel.has(p.id) || !passeEspace(p))) return false;
+    if (espacePlan !== null && (!sel.has(p.id) || !passeEspace(p))) return false;
     if (!etatTypoP[p.typo] || !etatCatP[p.cat]) return false;
     if (!dansMois(p)) return false;
     return ORDRE.some(k => etatPhase[k] && p.phases[k]);
@@ -4973,7 +4975,7 @@ function nbFiltresActifs() {
   if (ORDRE_TYPO.some(t => !etatTypoP[t])) n++;
   const cats = catsVisibles(etatTypoP);
   if (cats.length && cats.some(c => !etatCatP[c])) n++;
-  if (espaceChoisi !== null) n++;
+  if (espacePlan !== null) n++;
   if (periode !== null) n++;
   return n;
 }
@@ -6624,7 +6626,7 @@ async function supprimerEspace(zo) {
   espaces = espaces.filter(x => !partis.includes(x.id));
   aff.forEach((v, k) => aff.set(k, v.filter(r => !partis.includes(r.espace_id))));
   partis.forEach(id => zonesOuvertes.delete(id));
-  if (partis.includes(espaceChoisi)) espaceChoisi = null;
+  if (partis.includes(espacePlan)) espacePlan = null;
   if (partis.includes(espaceOuvert)) espaceOuvert = null;
   construireChips(); majJardinUI(); rendreTout();
 }
@@ -6639,7 +6641,7 @@ sur("form-espace", "submit", e => {
 
 sur("selJardin", "change", async function () {
   jardinId = this.value;
-  espaceChoisi = null;
+  espacePlan = null;
   await chargerContenuJardin();
 });
 
@@ -6661,7 +6663,7 @@ sur("nouveauJardin", "click", async () => {
   if (error) { info("Jardin non créé : " + error.message, true); return; }
   await listerJardins();
   jardinId = data;
-  espaceChoisi = null;
+  espacePlan = null;
   await chargerContenuJardin();
 });
 
@@ -7727,18 +7729,6 @@ document.addEventListener("click", e => {
   if (glissiereOuverte && !glissiereOuverte.parentElement.contains(e.target)) fermerTiroirs();
 }, true);
 
-function majFiltresMoment() {
-  const cles = ORDRE_MAINTENANT.filter(k => phases[k]);
-  let n = 0;
-  if (cles.length && cles.some(k => !etatPhaseM[k])) n++;
-  if (espaceChoisi !== null) n++;
-  const e = $("nbFiltresM");
-  if (!e) return;
-  e.textContent = n;
-  e.hidden = n === 0;
-  $("basculeFiltresM").setAttribute("aria-pressed", String(n > 0));
-}
-
 /* Le bloc de filtres de l'écran des plantes s'ouvrait sur quinze catégories et
    occupait la hauteur de l'écran avant la première plante. Il est replié, et la
    pastille dit combien de filtres écartent quelque chose. */
@@ -7757,12 +7747,6 @@ function majNbFiltres() {
 sur("basculeFiltresS", "click", function () {
   const ouvert = $("corpsFiltresS").hidden;
   $("corpsFiltresS").hidden = !ouvert;
-  this.setAttribute("aria-expanded", String(ouvert));
-});
-
-sur("basculeFiltresM", "click", function () {
-  const ouvert = $("corpsFiltresM").hidden;
-  $("corpsFiltresM").hidden = !ouvert;
   this.setAttribute("aria-expanded", String(ouvert));
 });
 

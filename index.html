@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=91bc06a1ae">
+<link rel="stylesheet" href="./styles.css?v=022636e69a">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="cb7844e08b">
+<meta name="version-appli" content="471b654264">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -82,30 +82,17 @@
       <div class="carte-fleur" id="carteFleur" hidden></div>
       <div class="synthese" id="synthese" hidden></div>
       <div id="videMoment"></div>
+      <!-- Le pied ne porte que le compte et l'accès à la liste. Le bloc de
+           filtres qui le suivait a été retiré : le regroupement n'agissait que
+           sur la liste complète, où il est descendu, le filtre par tâche
+           doublait la synthèse, et celui par espace partageait sa valeur avec
+           l'écran de l'année, qu'il filtrait sans le dire. -->
       <div class="pied-vue" id="piedVue" hidden>
         <span class="bilan-moment" id="bilanMoment"></span>
         <button class="mini" id="btnTout" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h16"/></svg>Tout voir</button>
-        <button class="mini" id="basculeFiltresM" type="button" aria-expanded="false" aria-controls="corpsFiltresM">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltresM" hidden></span></button>
       </div>
       <p class="dicton" id="dicton"></p>
-      <div class="filtres filtres-moment">
-        <div id="corpsFiltresM" hidden>
-          <div class="ligne-filtre">
-            <span class="etiq-filtre">Grouper</span>
-            <div class="bascule-vue" id="basculeVue"></div>
-          </div>
-          <div class="ligne-filtre" id="ligneEspaceM" hidden>
-            <span class="etiq-filtre">Espace</span>
-            <div class="jeu-chips" id="chipsEspaceM"></div>
-          </div>
-          <div class="ligne-filtre">
-            <span class="etiq-filtre">Tâche</span>
-            <div class="jeu-chips" id="chipsPhaseM"></div>
-          </div>
-        </div>
-      </div>
     </div>
     <div id="niveauDetail" hidden>
       <div class="barre-niveau" id="barreNiveau"></div>
@@ -316,7 +303,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=83f83b86b1"></script>
+<script type="module" src="./app.js?v=2faead412e"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->
