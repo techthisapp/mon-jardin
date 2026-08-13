@@ -590,7 +590,11 @@ input:focus{outline:2px solid var(--terre);outline-offset:1px}
     var(--filet-clair) calc(100%/12 - 1px),var(--filet-clair) calc(100%/12));
 }
 .voie{position:relative;height:7px}
-.seg{position:absolute;top:0;height:7px;border-radius:4px}
+/* Sept points de haut ne se touchent pas du doigt : la barre étend sa cible
+   au-dessus et au-dessous, sans grandir à l'œil. */
+.seg{position:absolute;top:0;height:7px;border-radius:4px;cursor:pointer}
+.seg::after{content:"";position:absolute;left:0;right:0;top:-7px;bottom:-7px}
+.seg:focus-visible{outline:2px solid var(--terre);outline-offset:3px}
 
 .fiche{grid-column:1/-1;background:var(--panneau);border-top:1px solid var(--filet);padding:13px 15px;display:none}
 .rangee.ouverte .fiche{display:block}
@@ -2138,6 +2142,24 @@ body.fige{overflow:hidden}
 .rv-leg{display:flex;flex-wrap:wrap;gap:5px 14px;font-size:12px;color:var(--encre-doux)}
 .rv-leg span{display:inline-flex;align-items:center;gap:5px}
 .rv-leg i{width:9px;height:9px;border-radius:2px;background:var(--t);opacity:.9}
+/* Le rond d'information de la barre des filtres, et la légende qu'il ouvre. */
+.bouton-info{
+  flex:0 0 auto;width:28px;height:28px;display:grid;place-items:center;padding:0;
+  border:0;border-radius:50%;cursor:pointer;
+  background:rgba(22,36,30,.06);color:var(--encre-doux);
+}
+.bouton-info svg{width:17px;height:17px;fill:none;stroke:currentColor;
+  stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.bouton-info:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
+@media (hover:hover){.bouton-info:hover{background:rgba(22,36,30,.11);color:var(--encre)}}
+.lg-liste{display:flex;flex-direction:column;gap:1px}
+.lg-ligne{display:flex;align-items:center;gap:11px;padding:8px 0;font-size:14px}
+.lg-ligne + .lg-ligne{border-top:1px solid var(--f-filet, var(--filet-clair))}
+.lg-ligne i{width:22px;height:8px;border-radius:4px;flex:0 0 auto}
+/* Les bornes de la période ouvrent la feuille, à la taille d'un titre de bloc. */
+.pe-bornes{display:flex;align-items:center;gap:11px;font-size:16px;color:var(--f-ink)}
+.pe-bornes i{width:22px;height:8px;border-radius:4px;flex:0 0 auto}
+.pe-fiche{align-self:flex-start}
 /* Le temps qui reste ouvre la feuille : c'est la seule ligne qui bouge d'un
    jour à l'autre, elle porte donc l'accent que les quatre dates avaient pris.
    L'écart aux lignes voisines vient de la colonne, qui espace ses enfants. */

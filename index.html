@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=806fda9c18">
+<link rel="stylesheet" href="./styles.css?v=2d6e4673eb">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="e2ad045995">
+<meta name="version-appli" content="17ccea82b7">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -108,6 +108,15 @@
         <button class="mini" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16l-6 7v6l-4 2v-8z"/></svg>Filtres<span class="nb" id="nbFiltres" hidden></span></button>
         <button class="chip chip-jardin" id="filtreJardin" aria-pressed="true" type="button">Mon jardin seulement</button>
+        <!-- Les dix couleurs de la frise n'étaient nommées que dans le panneau
+             des filtres, replié : les barres se lisaient sans qu'on sache de
+             quelle tâche elles parlent. -->
+        <button class="bouton-info" id="btnLegende" type="button"
+                aria-label="Légende des couleurs" title="Légende">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><path d="M12 7.6v.9"/>
+          </svg>
+        </button>
         <span class="bilan" id="bilanPlan"></span>
         <div class="jeu-quinz" id="jeuQuinz" hidden>
           <button class="chip" id="quinz1" type="button" aria-pressed="false">1re quinzaine</button>
@@ -303,7 +312,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=d00a18d931"></script>
+<script type="module" src="./app.js?v=c6a7a4bcec"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->

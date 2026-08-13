@@ -63,6 +63,7 @@ const SUITES = [
   ["quinzaine", () => import("./quinzaine.mjs")],
   ["regroupement", () => import("./regroupement.mjs")],
   ["retraits", () => import("./retraits.mjs")],
+  ["frise", () => import("./frise.mjs")],
 ];
 
 const demande = process.argv[2];

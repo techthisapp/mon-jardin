@@ -81,6 +81,8 @@ let saisieFiche = null;
    Le bouton est partout, et ce qu'il pré-remplit vient de ce qui est à
    l'écran : l'espace depuis un espace, la plante depuis sa fiche. */
 let planteFeuille = null;
+// La fenêtre de frise touchée : plante, tâche, bornes et identité de période.
+let periodeFeuille = null;
 let saisiePartout = null;
 /* Ce qui a poussé où, tenu sans saisie par un déclencheur au placement. Seules
    les plantes conduites en annuelle ou en bisannuelle y entrent. */
@@ -2159,6 +2161,23 @@ function dansMois(p) {
     && (segsDe(p, k) || []).some(v => v[0] <= periode.b && v[1] >= periode.a));
 }
 
+/* Les bornes d'une fenêtre, dites en quinzaines comme partout ailleurs. Une
+   fenêtre qui couvre l'année entière n'a pas de bornes à énoncer. */
+function bornesTexte(a, b) {
+  if (a === 1 && b === 24) return "toute l'année";
+  return `de ${demiTexte(a)} à ${demiTexte(b)}`;
+}
+
+/* Le conseil attaché à une fenêtre précise, et non à la fenêtre en cours : sur
+   la frise on touche une barre de mars au mois d'août. */
+function conseilDeFenetre(p, k, id) {
+  const g = p.guide_periode || {};
+  const propre = id === undefined || id === null || id === "" ? "" : (g[id] || "");
+  return propre || (k === "taille" ? (p.guide.taille || p.attr.taille || "")
+    : k === "multiplication" ? (p.guide.multiplication || p.attr.multiplication || "")
+    : (p.guide[k] || ""));
+}
+
 function segs(p) {
   // Les périodes sont empilées sur le minimum de voies possible : une voie accueille
   // plusieurs tâches tant qu'elles ne se chevauchent pas. Une plante à dix tâches
@@ -2171,7 +2190,7 @@ function segs(p) {
     if (!seg || !etatPhase[k] || !phases[k]) return;
     seg.forEach(v => {
       if (periode !== null && !(v[0] <= h2 && v[1] >= h1)) return;
-      items.push({ k, s: v[0], e: v[1] });
+      items.push({ k, s: v[0], e: v[1], id: v[3] });
     });
   });
   if (!items.length) return '<div class="voie"></div>';
@@ -2189,7 +2208,12 @@ function segs(p) {
     const morceaux = it.s <= it.e ? [[it.s, it.e]] : [[it.s, 24], [1, it.e]];
     return morceaux.map(([a, b]) => {
       const g = (a - 1) / 24 * 100, w = (b - a + 1) / 24 * 100;
-      return `<span class="seg" style="left:${g}%;width:${w}%;background:${teinteK(it.k)}" title="${esc(phases[it.k].label)}"></span>`;
+      return `<span class="seg" style="left:${g}%;width:${w}%;background:${teinteK(it.k)}"`
+        + ` role="button" tabindex="0" data-plante="${esc(p.id)}" data-tache="${esc(it.k)}"`
+        + ` data-a="${it.s}" data-b="${it.e}"`
+        + (it.id === undefined || it.id === null ? "" : ` data-periode="${esc(it.id)}"`)
+        + ` aria-label="${esc(phases[it.k].label)}, ${esc(bornesTexte(it.s, it.e))}"`
+        + ` title="${esc(phases[it.k].label)}"></span>`;
     }).join("");
   }).join("") + `</div>`).join("");
 }
@@ -3414,6 +3438,43 @@ function vueCompte() {
   return { titre: "Compte", corps: "", brancher: () => poserBloc("bloc-compte") };
 }
 
+/* Les dix couleurs de la frise n'étaient nommées que dans le panneau des
+   filtres, replié : les barres se lisaient sans qu'on sache de quelle tâche
+   elles parlent. La légende se lit à part, sans toucher aux filtres. */
+function vueLegende() {
+  const cles = ORDRE.filter(k => phases[k]);
+  return { titre: "Les couleurs de l'année",
+    corps: `<div class="lg-liste">` + cles.map(k =>
+        `<div class="lg-ligne"><i style="background:${teinteK(k)}"></i>`
+        + `<span>${esc(phases[k].label)}</span></div>`).join("") + `</div>`
+      + `<p class="f-txt">Une barre couvre la période où la tâche se fait sous le `
+      + `climat du jardin. La toucher en donne les dates et le conseil.</p>`
+      + `<p class="f-note">Périodes du référentiel, décalées par le climat de la `
+      + `commune. La colonne teintée marque la quinzaine en cours.</p>` };
+}
+
+/* Ce qu'une barre de la frise a de plus que sa couleur : ses bornes et le
+   conseil propre à cette fenêtre, quand la fiche en porte un par période. */
+function vuePeriode() {
+  const d = periodeFeuille;
+  if (!d || !phases[d.k]) return { titre: "Période", corps: "" };
+  const conseil = conseilDeFenetre(d.p, d.k, d.id);
+  const ici = dansFenetre(demi, d.a, d.b);
+  return { titre: phases[d.k].label, sous: d.p.nom,
+    corps: `<p class="pe-bornes"><i style="background:${teinteK(d.k)}"></i>`
+      + `<b>${esc(majuscule(bornesTexte(d.a, d.b)))}</b></p>`
+      + `<p class="f-txt">${ici ? "La période court cette quinzaine."
+          : `La quinzaine en cours, ${esc(demiTexte(demi))}, est hors de cette période.`}</p>`
+      + (conseil ? `<p class="f-txt">${esc(conseil)}</p>` : "")
+      + `<button type="button" class="lien pe-fiche">Ouvrir la fiche de `
+      + `${esc(d.p.nom.toLowerCase())}</button>`
+      + `<p class="f-note">Période du référentiel, décalée par le climat de la commune.</p>`,
+    brancher: () => {
+      const b = document.querySelector(".pe-fiche");
+      if (b) b.addEventListener("click", () => ouvrirFeuille(d.p, "annee"));
+    } };
+}
+
 /* Ce que la personne a écarté de ses fiches, et de quoi le remettre. Masquer du
    contenu sans offrir de revenir en arrière ferait d'une erreur de doigt une
    décision définitive. */
@@ -3466,6 +3527,7 @@ function ouvrirVue(vue, enRetour) {
   const rendus = { temps: vueTemps, eau: vueEau, lumiere: vueLumiere,
                    saison: vueSaison, lieu: vueLieu, vigilance: vueVigilance,
                    jardin: vueJardin, compte: vueCompte, note: vueNote,
+                   legende: vueLegende, periode: vuePeriode,
                    photosEcartees: vuePhotosEcartees };
   const f = (rendus[vue] || vueLieu)();
   if (!enRetour && vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
@@ -5027,6 +5089,30 @@ sur("basculeFiltres", "click", function () {
   $("corpsFiltres").hidden = !ouvert;
   this.setAttribute("aria-expanded", String(ouvert));
 });
+
+sur("btnLegende", "click", () => ouvrirVue("legende"));
+
+/* Une barre de la frise s'ouvre au doigt comme au clavier : elle porte un rôle
+   de bouton, elle en prend les touches. */
+sur("rangees", "click", e => {
+  const seg = e.target.closest(".seg");
+  if (seg) ouvrirPeriode(seg);
+});
+sur("rangees", "keydown", e => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const seg = e.target.closest(".seg");
+  if (!seg) return;
+  e.preventDefault();
+  ouvrirPeriode(seg);
+});
+
+function ouvrirPeriode(seg) {
+  const p = plantes.find(x => String(x.id) === seg.dataset.plante);
+  if (!p) return;
+  periodeFeuille = { p, k: seg.dataset.tache, a: Number(seg.dataset.a),
+                     b: Number(seg.dataset.b), id: seg.dataset.periode };
+  ouvrirVue("periode");
+}
 
 sur("razMois", "click", () => {
   periode = null; majMois(); rendrePlanning();
@@ -7462,6 +7548,11 @@ function fermerPhoto() {
 function ouvrirFeuille(p, onglet) {
   fermerGlose();
   rangerBlocs();
+  /* Une fiche ouverte depuis une feuille garde le chemin de celle qu'elle
+     recouvre, comme une feuille ouverte depuis une autre. Ouverte depuis un
+     écran, elle n'a pas de chemin de retour. */
+  if (vueCourante && !$("feuille").hidden) pileFeuille.push(vueCourante);
+  vueCourante = null;
   planteFeuille = p;
   $("feuille-titre").innerHTML = esc(p.nom)
     + (p.latin ? `<span class="feuille-latin"><i>${esc(p.latin)}</i>${p.famille ? ` · ${esc(p.famille)}` : ""}</span>` : "");
@@ -7470,6 +7561,7 @@ function ouvrirFeuille(p, onglet) {
   poserPhotos(p);
   chargerEau(p).then(() => majEau(p)).catch(() => {});
   $("feuille-corps").scrollTop = 0;
+  poserRetour();
   poserEtatFeuille();
   $("voile").hidden = false;
   $("feuille").hidden = false;
