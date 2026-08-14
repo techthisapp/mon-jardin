@@ -63,7 +63,7 @@ export default async function essai(navigateur) {
      valeur : trois lignes de texte au plus, dont deux qui disent quelque chose. */
   j.controle("chacune est nommée et chiffrée",
     voies.every(v => {
-      const l = v.split("\n").map(x => x.trim()).filter(x => x && x !== "?");
+      const l = v.split("\n").map(x => x.trim()).filter(x => x && !/^[+\u2212]$/.test(x));
       return l.length === 2 && l[1].length > 0;
     }), voies.map(v => net(v.replace(/\n/g, " : "))).join(" | "));
 
@@ -127,7 +127,7 @@ export default async function essai(navigateur) {
   j.controle("la voie de la température tient quatre-vingt-six points",
     voie(/TEMP/i).haut === 86, voie(/TEMP/i).haut + " points");
   j.controle("le seuil du vent dit ses vingt kilomètres par heure",
-    voie(/VENT/i).chiffres.includes("20 km/h"), voie(/VENT/i).chiffres.join(", "));
+    voie(/VENT/i).chiffres.includes("20 km/h"), voie(/VENT/i).chiffres.join(", "));
   /* L'échelle de l'humidité partait de zéro, et la journée tenait dans le tiers
      haut de la voie : elle part du plancher du jour, que le pied de la bande
      nomme, sans quoi la hauteur remplie se lirait comme une part de cent. */
@@ -147,26 +147,86 @@ export default async function essai(navigateur) {
   j.controle("dans chaque voie, les chiffres sont posés par-dessus les tracés",
     grad.every(v => v.dessus), grad.filter(v => !v.dessus).map(v => v.nom).join(", "));
 
-  /* La lecture d'une voie apprend quelque chose la première fois et se lit en
-     pure perte ensuite : elle est repliée derrière le titre. */
-  j.section("la lecture d'une voie se déplie au toucher");
-  j.controle("les lectures sont repliées",
-    await pg.locator(".mg-l:not([hidden])").count() === 0);
-  await pg.locator(".mg-b").first().click();
-  await pg.waitForTimeout(300);
-  j.controle("le titre touché déplie la sienne",
-    await pg.locator(".mg-l:not([hidden])").count() === 1
-    && await pg.locator(".mg-b").first().getAttribute("aria-expanded") === "true");
-  j.controle("elle parle bien de cette voie",
-    /point de rosée/.test(await pg.locator(".mg-l:not([hidden])").innerText()));
-  await pg.locator(".mg-b").first().click();
-  await pg.waitForTimeout(300);
-  j.controle("un second toucher la replie",
-    await pg.locator(".mg-l:not([hidden])").count() === 0);
-  const larg = await pg.evaluate(() => [...document.querySelectorAll(".mg-s")]
-    .map(e => Math.round(e.getBoundingClientRect().width)));
-  j.controle("toutes les voies partagent la largeur de l'axe",
-    new Set(larg).size === 1, larg.join(", "));
+  /* Sept voies tiennent dans un écran au prix d'une hauteur contenue. Le titre
+     d'une voie l'agrandit alors seule, d'un facteur deux et demi : sa courbe
+     reprend du relief, et le dessin porte ce qu'il ne pouvait pas montrer
+     replié, les valeurs heure par heure et la lecture de ses tracés. */
+  j.section("le titre agrandit sa voie et découvre ce qu'elle cachait");
+  const mesure = async () => pg.evaluate(() => {
+    const v = [...document.querySelectorAll(".mg-v")];
+    return {
+      hauts: v.map(e => { const s = e.querySelector(".mg-s");
+        return s ? Number(s.getAttribute("viewBox").split(" ")[3]) : 0; }),
+      grandes: v.filter(e => e.classList.contains("mg-grand")).length,
+      signes: v.map(e => { const i = e.querySelector(".mg-n i");
+        return i ? i.textContent : ""; }).filter(Boolean),
+      jalons: [...document.querySelectorAll("text.mg-p")].length,
+      lectures: [...document.querySelectorAll(".mg-l:not([hidden])")].length,
+      larg: [...new Set([...document.querySelectorAll(".mg-s")]
+        .map(e => Math.round(e.getBoundingClientRect().width)))],
+    };
+  });
+  const replie = await mesure();
+  j.controle("au repos, aucune voie agrandie, aucune lecture, aucun jalon",
+    replie.grandes === 0 && replie.lectures === 0 && replie.jalons === 0,
+    JSON.stringify(replie));
+  /* Une voie sans dessin n'a rien à agrandir : la pluie, repliée faute de lame,
+     garde un titre ordinaire. */
+  j.controle("chaque voie dessinée porte le signe de sa commande",
+    replie.signes.length === 6 && replie.signes.every(c => c === "+"),
+    replie.signes.join(""));
+
+  await pg.locator('.mg-b[data-voie="temp"]').click();
+  await pg.waitForTimeout(500);
+  const ouverte = await mesure();
+  j.controle("la voie touchée est deux fois et demie plus haute",
+    ouverte.hauts[0] === Math.round(replie.hauts[0] * 2.5),
+    `${replie.hauts[0]} points repliée, ${ouverte.hauts[0]} agrandie`);
+  j.controle("les autres gardent leur taille",
+    JSON.stringify(ouverte.hauts.slice(1)) === JSON.stringify(replie.hauts.slice(1)),
+    JSON.stringify(ouverte.hauts));
+  /* Le quadrillage des heures traverse la pile : une voie plus étroite que les
+     autres ne se lirait plus en regard d'elles. */
+  j.controle("toutes les voies gardent la largeur de l'axe",
+    ouverte.larg.length === 1, ouverte.larg.join(", "));
+  j.controle("une seule voie est agrandie, et son signe s'inverse",
+    ouverte.grandes === 1 && ouverte.signes[0] === "−"
+    && ouverte.signes.slice(1).every(c => c === "+"), ouverte.signes.join(""));
+  j.controle("elle découvre ses valeurs heure par heure",
+    ouverte.jalons >= 5, ouverte.jalons + " jalons");
+  j.controle("et la lecture de ses tracés, seule dépliée",
+    ouverte.lectures === 1
+    && /point de rosée/.test(await pg.locator(".mg-l:not([hidden])").innerText()));
+  /* Sa graduation se resserre : la hauteur gagnée sert aussi à situer les
+     valeurs, non seulement à les étaler. */
+  const pasDe = async () => pg.evaluate(() => {
+    const c = [...document.querySelectorAll(".mg-v")][0]
+      .querySelectorAll("text.mg-g");
+    return [...c].map(t => parseInt(t.textContent));
+  });
+  const pasOuvert = await pasDe();
+  const ecart = t => parseInt(t[1]) - parseInt(t[0]);
+  j.controle("sa graduation se resserre",
+    pasOuvert.length > degres.length && ecart(pasOuvert) < ecart(degres),
+    `${ecart(degres)} degrés entre repères repliée, ${ecart(pasOuvert)} agrandie`);
+
+  /* Une seule voie est ouverte à la fois : deux agrandissements simultanés
+     auraient rendu la pile plus longue que ce qu'on peut parcourir. */
+  await pg.locator('.mg-b[data-voie="vent"]').click();
+  await pg.waitForTimeout(500);
+  const seconde = await mesure();
+  j.controle("ouvrir une autre voie referme la première",
+    seconde.grandes === 1 && seconde.hauts[0] === replie.hauts[0]
+    && seconde.hauts[1] === Math.round(replie.hauts[1] * 2.5),
+    JSON.stringify(seconde.hauts));
+  await pg.locator('.mg-b[data-voie="vent"]').click();
+  await pg.waitForTimeout(500);
+  const refermee = await mesure();
+  j.controle("un second toucher la referme",
+    JSON.stringify(refermee.hauts) === JSON.stringify(replie.hauts)
+    && refermee.grandes === 0 && refermee.jalons === 0 && refermee.lectures === 0,
+    JSON.stringify(refermee.hauts));
+
   /* Une voie vide occupait quarante points de haut et deux lignes de légende
      pour ne montrer qu'un filet : quand rien n'est attendu et que le risque
      reste bas, la ligne de titre le dit seule. Le jeu figé est sec. */
@@ -174,10 +234,9 @@ export default async function essai(navigateur) {
   j.controle("la voie de la pluie se replie quand il ne tombe rien",
     dessinees === 6 && /aucune/.test(voies.find(v => /PLUIE/i.test(v)) || ""),
     `${dessinees} voies dessinées sur ${voies.length}`);
-  j.controle("elle garde son titre et sa lecture",
-    (voies.find(v => /PLUIE/i.test(v)) || "").split("\n").length === 2);
-  const legendes = await pg.locator(".mg-l").count();
-  j.controle("les voies à plusieurs tracés portent leur lecture", legendes === 3, legendes);
+  j.controle("elle garde son titre, sans commande à ouvrir",
+    (voies.find(v => /PLUIE/i.test(v)) || "").split("\n").length === 2
+    && await pg.locator('.mg-b[data-voie="pluie"]').count() === 0);
   /* Les deux bandes de valeur portent le trait de minuit comme les courbes,
      sans quoi elles ne se lisent plus en regard des voies du dessus. */
   const traits = await pg.evaluate(() => [...document.querySelectorAll(".mg-v")]

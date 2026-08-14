@@ -1735,10 +1735,15 @@ body.fige{overflow:hidden}
 }
 .mg-s{display:block;width:100%;height:auto;overflow:visible}
 .mg-l{font-size:11.5px;color:var(--f-ink3);line-height:1.4;margin-top:3px}
-/* Le titre d'une voie qui porte une lecture est une commande : le point
-   d'interrogation le dit sans peser, et le titre garde sa mise en page. */
-/* La mise en forme du titre vient de .mg-t : le bouton ne pose que sa boîte. */
+/* Le titre d'une voie dessinée est la commande qui l'agrandit : le signe dit
+   sans peser dans quel sens elle agit, et le titre garde sa mise en page.
+   La mise en forme vient de .mg-t : le bouton ne pose que sa boîte. */
 .mg-b{width:100%;border:0;background:none;padding:0;cursor:pointer;text-align:left}
+/* La voie ouverte n'a pas besoin d'un cadre : son dessin a changé de taille et
+   son signe de sens. Le titre passe à pleine encre, cela suffit à la désigner.
+   Un cadre eût demandé une marge, et une voie plus étroite que les autres
+   n'aurait plus partagé leur quadrillage des heures. */
+.mg-grand > .mg-t{color:var(--f-ink)}
 .mg-n{display:inline-flex;align-items:center;gap:5px}
 .mg-n i{
   font-style:normal;font-size:9.5px;font-weight:700;line-height:1;
@@ -1758,11 +1763,15 @@ body.fige{overflow:hidden}
 .mg-c{fill:var(--f-ink2)}
 .mg-mm{fill:#1F4F8F}
 /* Les repères de la graduation verticale : lus quand on les cherche, oubliés
-   sinon. Ils ne pèsent pas plus que le trait qu'ils nomment. */
-.mg-g{
-  font-size:9px;fill:var(--f-ink3);font-family:"IBM Plex Mono",monospace;opacity:.8;
+   sinon. Ils ne pèsent pas plus que le trait qu'ils nomment. Les valeurs heure
+   par heure, que seule une voie agrandie porte, prennent la même écriture d'un
+   ton plus ferme : ce sont des mesures, non une échelle. */
+.mg-g,.mg-p{
+  font-size:9px;fill:var(--f-ink3);font-family:"IBM Plex Mono",monospace;
   paint-order:stroke;stroke:var(--f-carte);stroke-width:1.5;stroke-linejoin:round;
 }
+.mg-g{opacity:.8}
+.mg-p{opacity:.95}
 .mg-h{font-size:10px;fill:var(--f-ink3);font-family:"IBM Plex Mono",monospace}
 
 /* Lire une heure sur les courbes. Le glissement horizontal est capté, le

@@ -3625,32 +3625,47 @@ const MG_L = 358, MG_M = 5, MG_P = MG_L - 2 * MG_M;
    suffit : un seul ruban est à l'écran à la fois. */
 let mgLecture = null;
 
-/* Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni légende.
+/* Sept voies tiennent dans un écran de téléphone au prix d'une hauteur qui
+   n'excède pas quatre-vingt-six points. Une voie touchée s'agrandit alors seule,
+   d'un facteur deux et demi : sa courbe reprend du relief, et le dessin porte ce
+   qu'il ne pouvait pas montrer replié, les valeurs heure par heure, une
+   graduation plus fine et la lecture de ses tracés. Les autres voies gardent
+   leur taille, la pile restant lisible d'un bout à l'autre.
 
-   La lecture d'une voie apprend quelque chose la première fois et se lit en
-   pure perte ensuite : elle est repliée, et le titre devient une commande qui
-   la déplie. Un point d'interrogation discret dit qu'il y a quelque chose à
-   ouvrir ; une voie sans lecture garde un titre ordinaire, sans commande. */
+   La série et l'heure lue sont gardées de côté : l'agrandissement recompose le
+   ruban, et une heure lue avant lui doit se retrouver après. */
+const MG_Z = 2.5;
+let mgZoom = null, mgSerie = null, mgLu = -1;
+
+/* Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni commande.
+   Le titre d'une voie dessinée est le bouton qui l'agrandit, et le signe qu'il
+   porte dit dans quel sens il agit. La lecture des tracés, qui apprend quelque
+   chose la première fois et se lit en pure perte ensuite, paraît avec
+   l'agrandissement plutôt que sous une commande à elle. */
 let nVoie = 0;
-function mgVoie(nom, droite, haut, dedans, legende) {
-  /* Le montant de lecture est posé dès le dessin, replié : le faire naître au
-     toucher obligerait à recomposer un dessin à chaque déplacement du doigt. */
-  const dessin = haut
-    ? `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}`
-      + `<line class="mg-cur" x1="0" y1="0" x2="0" y2="${haut}" hidden/></svg>` : "";
+function mgVoie(nom, droite, haut, dedans, legende, cle) {
   // La plage est gardée sur la balise : la lecture d'une heure la remplace.
   const val = `<span class="mg-r" data-plage="${esc(droite)}">${esc(droite)}</span>`;
-  if (!legende) {
-    return `<div class="mg-v"><p class="mg-t">${esc(nom)}` + val + `</p>` + dessin + `</div>`;
+  if (!haut) {
+    return `<div class="mg-v"><p class="mg-t">${esc(nom)}` + val + `</p></div>`;
   }
+  /* Le montant de lecture est posé dès le dessin, replié : le faire naître au
+     toucher obligerait à recomposer un dessin à chaque déplacement du doigt. */
+  const dessin = `<svg class="mg-s" viewBox="0 0 ${MG_L} ${haut}" aria-hidden="true">${dedans}`
+    + `<line class="mg-cur" x1="0" y1="0" x2="0" y2="${haut}" hidden/></svg>`;
+  const grand = mgZoom === cle;
   const id = `mgl${++nVoie}`;
-  return `<div class="mg-v"><button type="button" class="mg-t mg-b" aria-expanded="false" `
-    + `aria-controls="${id}"><span class="mg-n">${esc(nom)}<i aria-hidden="true">?</i></span>`
-    + val + `</button>`
-    + dessin + `<p class="mg-l" id="${id}" hidden>${esc(legende)}</p></div>`;
+  const leg = legende
+    ? `<p class="mg-l" id="${id}"${grand ? "" : " hidden"}>${esc(legende)}</p>` : "";
+  return `<div class="mg-v${grand ? " mg-grand" : ""}">`
+    + `<button type="button" class="mg-t mg-b" data-voie="${esc(cle)}" `
+    + `aria-expanded="${grand}"${legende ? ` aria-controls="${id}"` : ""}>`
+    + `<span class="mg-n">${esc(nom)}<i aria-hidden="true">${grand ? "−" : "+"}</i></span>`
+    + val + `</button>` + dessin + leg + `</div>`;
 }
 
 function dessinMeteogramme(s) {
+  mgSerie = s;
   const X = k => MG_M + k / s.n * MG_P;
   const LA = MG_P / s.n;
   const u = v => v.toFixed(1);
@@ -3724,6 +3739,26 @@ function dessinMeteogramme(s) {
     const x = k < 2 ? MG_M + 1 : k > s.n - 3 ? MG_L - MG_M - 1 : X(k + .5);
     return `<text class="${cls}" x="${u(x)}" y="${u(y)}" text-anchor="${anc}">${esc(txt)}</text>`;
   };
+  /* La hauteur d'une voie : celle du repli, ou celle de l'agrandissement quand
+     c'est elle qui est ouverte. Une seule voie l'est à la fois. */
+  const grand = cle => mgZoom === cle;
+  const H = (cle, base) => (grand(cle) ? Math.round(base * MG_Z) : base);
+  /* Les valeurs heure par heure, écrites au-dessus de leur point. Elles ne
+     paraissent qu'agrandies : à hauteur repliée elles se toucheraient, et un
+     chiffre sur trois se lirait. Une heure sur trois suffit à donner l'échelle
+     sans doubler la courbe d'une ligne de chiffres. */
+  const jalons = (vals, y0, y1, mn, mx, ecrire, dy, sauf) => {
+    let o = "";
+    /* Les dernières heures se calent sur le bord droit, là même où les chiffres
+       de la graduation et des seuils sont posés : un jalon y viendrait par-dessus
+       eux. La série s'arrête avant. */
+    for (let k = 1; k < s.n - 2; k += 3) {
+      if (sauf && sauf.includes(k)) continue;
+      o += etiq(k, y1 - (vals[k] - mn) / ((mx - mn) || 1) * (y1 - y0) + (dy || -7),
+        ecrire(vals[k]), "mg-p");
+    }
+    return o;
+  };
   const voies = [];
 
   // La température, avec le ressenti et le point de rosée : même unité, et
@@ -3738,47 +3773,71 @@ function dessinMeteogramme(s) {
 
      Le pas de la graduation suit cette amplitude : dix degrés sur une journée
      qui en couvre quinze n'auraient donné qu'un seul repère, et une graduation
-     à un trait ne gradue rien. */
-  const [gradT, chiffresT] = graduation(10, 76, tn, tx, tx - tn > 24 ? 10 : 5, d => d + "°");
-  let temp = fond(86) + gradT;
-  temp += `<path d="${aire(s.t, 10, 76, tn, tx)}" fill="#C7BE79" opacity=".26"/>`;
-  temp += `<polyline points="${pts(s.ros, 10, 76, tn, tx)}" fill="none" stroke="#3C6E99" `
+     à un trait ne gradue rien. Agrandie, la voie porte deux fois plus de
+     repères, ce que la hauteur repliée ne permettait pas. */
+  const hT = H("temp", 86), yT = hT - 10;
+  const pasT = tx - tn > 24 ? (grand("temp") ? 5 : 10) : (grand("temp") ? 2 : 5);
+  const [gradT, chiffresT] = graduation(10, yT, tn, tx, pasT, d => d + "°");
+  let temp = fond(hT) + gradT;
+  temp += `<path d="${aire(s.t, 10, yT, tn, tx)}" fill="#C7BE79" opacity=".26"/>`;
+  temp += `<polyline points="${pts(s.ros, 10, yT, tn, tx)}" fill="none" stroke="#3C6E99" `
     + `stroke-width="1.5" stroke-dasharray="5 3.5" stroke-linecap="round" opacity=".85"/>`;
   /* Le ressenti partageait la teinte et le trait plein de la température : les
      deux courbes se confondaient là où elles se rapprochent, c'est-à-dire
      presque partout. Le pointillé les sépare sans ajouter de couleur, et son
      motif diffère franchement de celui du point de rosée. */
   if (ressenti)
-    temp += `<polyline points="${pts(s.res, 10, 76, tn, tx)}" fill="none" stroke="#7A6820" `
+    temp += `<polyline points="${pts(s.res, 10, yT, tn, tx)}" fill="none" stroke="#7A6820" `
       + `stroke-width="1.6" stroke-dasharray="0.5 3.4" stroke-linecap="round" opacity=".9"/>`;
-  temp += `<polyline points="${pts(s.t, 10, 76, tn, tx)}" fill="none" stroke="#6F5E14" `
+  temp += `<polyline points="${pts(s.t, 10, yT, tn, tx)}" fill="none" stroke="#6F5E14" `
     + `stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
   temp += chiffresT;
   const kx = s.t.indexOf(Math.max(...s.t)), kn = s.t.indexOf(Math.min(...s.t));
+  // Les extrêmes gardent leur étiquette pleine : un jalon au même endroit la doublerait.
+  if (grand("temp"))
+    temp += jalons(s.t, 10, yT, tn, tx, v => Math.round(v) + "°", -7, [kx, kn]);
   [[kx, -7], [kn, 14]].forEach(([k, dy]) => {
-    temp += etiq(k, 76 - (s.t[k] - tn) / (tx - tn) * 66 + dy,
+    temp += etiq(k, yT - (s.t[k] - tn) / (tx - tn) * (yT - 10) + dy,
       Math.round(s.t[k]) + "°", "mg-c");
   });
-  voies.push(mgVoie("La température", `${bornes(s.t)} degrés`, 86, temp,
+  voies.push(mgVoie("La température", `${bornes(s.t)} degrés`, hT, temp,
     "Pointillé bleu, le point de rosée : plus il est proche de la courbe, plus l'air est humide."
-    + (ressenti ? " Pointillé serré, le ressenti." : "")));
+    + (ressenti ? " Pointillé serré, le ressenti." : ""), "temp"));
 
   // La pluie : le risque en barre pâle derrière, la lame en barre pleine devant.
   const mmx = Math.max(2, ...s.mm), tot = s.mm.reduce((a, b) => a + b, 0);
-  let pluie = fond(42);
+  /* Agrandie, la voie garde du ciel au-dessus des barres : leur chiffre s'y
+     pose, et une barre pleine hauteur l'aurait rejeté hors du dessin. */
+  const hP = H("pluie", 42), yP = hP - 6, aP = hP - (grand("pluie") ? 20 : 10);
+  let pluie = fond(hP);
   for (let k = 0; k < s.n; k++) {
-    const hp = s.pb[k] / 100 * 32;
-    if (hp > .6) pluie += `<rect x="${u(X(k) + 1)}" y="${u(36 - hp)}" width="${u(LA - 2)}" `
+    const hp = s.pb[k] / 100 * aP;
+    if (hp > .6) pluie += `<rect x="${u(X(k) + 1)}" y="${u(yP - hp)}" width="${u(LA - 2)}" `
       + `height="${u(hp)}" rx="1.5" fill="#4A7CA8" opacity=".18"/>`;
     if (s.mm[k] > 0) {
-      const hb = Math.max(2, s.mm[k] / mmx * 32);
-      pluie += `<rect x="${u(X(k) + 2.2)}" y="${u(36 - hb)}" width="${u(LA - 4.4)}" `
+      const hb = Math.max(2, s.mm[k] / mmx * aP);
+      pluie += `<rect x="${u(X(k) + 2.2)}" y="${u(yP - hb)}" width="${u(LA - 4.4)}" `
         + `height="${u(hb)}" rx="1.5" fill="#4A7CA8"/>`;
     }
   }
-  if (tot >= 0.2) pluie += etiq(s.mm.indexOf(Math.max(...s.mm)),
-    36 - Math.max(2, Math.max(...s.mm) / mmx * 32) - 4, nombreFr(tot) + " mm", "mg-mm");
-  pluie += `<line x1="${MG_M}" y1="36.5" x2="${MG_L - MG_M}" y2="36.5" stroke="#16241E" opacity=".13"/>`;
+  /* Repliée, la voie ne porte que le cumul, faute de place. Agrandie, chaque
+     heure arrosée dit sa lame, et le risque se lit en tête de sa barre pâle
+     une heure sur trois : le cumul, que le titre donne déjà, s'efface alors. */
+  if (grand("pluie")) {
+    for (let k = 0; k < s.n; k++) {
+      if (s.mm[k] < 0.1) continue;
+      pluie += etiq(k, yP - Math.max(2, s.mm[k] / mmx * aP) - 4, nombreFr(s.mm[k]), "mg-mm");
+    }
+    for (let k = 1; k < s.n; k += 3) {
+      if (s.pb[k] < 10) continue;
+      pluie += etiq(k, yP - s.pb[k] / 100 * aP - 4, Math.round(s.pb[k]) + " %", "mg-p");
+    }
+  } else if (tot >= 0.2) {
+    pluie += etiq(s.mm.indexOf(Math.max(...s.mm)),
+      yP - Math.max(2, Math.max(...s.mm) / mmx * aP) - 4, nombreFr(tot) + " mm", "mg-mm");
+  }
+  pluie += `<line x1="${MG_M}" y1="${u(yP + .5)}" x2="${MG_L - MG_M}" y2="${u(yP + .5)}" `
+    + `stroke="#16241E" opacity=".13"/>`;
   const dPluie = tot >= 0.2 ? `${nombreFr(tot)} mm attendus`
     : Math.max(...s.pb) >= 20 ? `aucune lame, risque ${Math.max(...s.pb)} %` : "aucune";
   /* Une voie vide occupait quarante points de haut et deux lignes de légende
@@ -3786,49 +3845,77 @@ function dessinMeteogramme(s) {
      risque reste bas, la ligne de titre le dit déjà, et elle seule paraît. */
   const pluieVide = tot < 0.2 && Math.max(...s.pb) < 20;
   voies.push(pluieVide ? mgVoie("La pluie", dPluie, 0, "")
-    : mgVoie("La pluie", dPluie, 42, pluie,
-      "Barre pleine, la lame attendue. Barre pâle, le risque de pluie."));
+    : mgVoie("La pluie", dPluie, hP, pluie,
+      "Barre pleine, la lame attendue en millimètres. Barre pâle, le risque de pluie.",
+      "pluie"));
 
   // Le vent : la moyenne en aire, les rafales en pointillé, l'orientation en
-  // flèches toutes les trois heures, dans le sens où il souffle.
+  // flèches, dans le sens où il souffle.
   const vmx = Math.max(30, ...s.raf);
-  let vent = fond(66);
-  vent += `<path d="${aire(s.v, 4, 46, 0, vmx)}" fill="#7E8C81" opacity=".26"/>`;
-  vent += `<polyline points="${pts(s.raf, 4, 46, 0, vmx)}" fill="none" stroke="#8A4A10" `
+  const hV = H("vent", 66), yV = hV - 20;
+  let vent = fond(hV);
+  vent += `<path d="${aire(s.v, 4, yV, 0, vmx)}" fill="#7E8C81" opacity=".26"/>`;
+  vent += `<polyline points="${pts(s.raf, 4, yV, 0, vmx)}" fill="none" stroke="#8A4A10" `
     + `stroke-width="1.5" stroke-dasharray="4.5 3" stroke-linecap="round" opacity=".8"/>`;
-  vent += `<polyline points="${pts(s.v, 4, 46, 0, vmx)}" fill="none" stroke="#46554A" `
+  vent += `<polyline points="${pts(s.v, 4, yV, 0, vmx)}" fill="none" stroke="#46554A" `
     + `stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  vent = fil(46 - 20 / vmx * 42, vent, "#8A4A10", ".38")
-    + chiffre(46 - 20 / vmx * 42 - 3, "20 km/h");
-  vent += `<line x1="${MG_M}" y1="46.5" x2="${MG_L - MG_M}" y2="46.5" stroke="#16241E" opacity=".13"/>`;
-  for (let k = 1; k < s.n; k += 3) {
-    /* Les flèches accompagnent la courbe, elles ne la commentent pas : plus
-       courtes, plus fines et plus pâles, sauf là où le vent passe le seuil. */
+  /* Agrandie, la voie chiffre la moyenne une heure sur trois, et la plus forte
+     rafale de la fenêtre : deux séries complètes de jalons se seraient
+     croisées là où les rafales approchent la moyenne. */
+  if (grand("vent")) {
+    vent += jalons(s.v, 4, yV, 0, vmx, v => Math.round(v), -6);
+    const kr = s.raf.indexOf(Math.max(...s.raf));
+    vent += etiq(kr, yV - s.raf[kr] / vmx * (yV - 4) - 6,
+      Math.round(s.raf[kr]) + " km/h", "mg-c");
+  }
+  const yS = yV - 20 / vmx * (yV - 4);
+  vent = fil(yS, vent, "#8A4A10", ".38") + chiffre(yS - 3, "20 km/h");
+  vent += `<line x1="${MG_M}" y1="${u(yV + .5)}" x2="${MG_L - MG_M}" y2="${u(yV + .5)}" `
+    + `stroke="#16241E" opacity=".13"/>`;
+  /* Les flèches accompagnent la courbe, elles ne la commentent pas : plus
+     courtes, plus fines et plus pâles, sauf là où le vent passe le seuil.
+     Agrandie, la voie les pose toutes les deux heures, la place le permettant. */
+  for (let k = 1; k < s.n; k += (grand("vent") ? 2 : 3)) {
     const fort = s.v[k] >= 20;
-    vent += `<g transform="translate(${u(X(k + .5))},58) rotate(${Math.round(s.dir[k] + 180)})" `
+    vent += `<g transform="translate(${u(X(k + .5))},${u(hV - 8)}) `
+      + `rotate(${Math.round(s.dir[k] + 180)})" `
       + `fill="none" stroke="${fort ? "#8A4A10" : "#5F6E63"}" stroke-width="1.1" `
       + `opacity="${fort ? ".85" : ".55"}" stroke-linecap="round" stroke-linejoin="round">`
       + `<path d="M0,-4.6 L0,4.6 M-2.2,-2.2 L0,-4.6 L2.2,-2.2"/></g>`;
   }
   const kv = s.v.indexOf(Math.max(...s.v));
-  voies.push(mgVoie("Le vent", `${Math.round(Math.max(...s.v))} km/h `
-    + `${dCardinal(s.dir[kv])}, rafales à ${Math.round(Math.max(...s.raf))} km/h`, 66, vent,
+  voies.push(mgVoie("Le vent", `${Math.round(Math.max(...s.v))} km/h `
+    + `${dCardinal(s.dir[kv])}, rafales à ${Math.round(Math.max(...s.raf))} km/h`, hV, vent,
     "Pointillé brun, les rafales. Le filet marque vingt kilomètres par heure, "
-    + "au-delà un traitement dérive."));
+    + "au-delà un traitement dérive. Les flèches montrent le sens où il souffle.",
+    "vent"));
 
-  // La couverture du ciel, en bande : c'est un taux d'occultation, une courbe
-  // lui donnerait une précision qu'elle n'a pas.
-  let ciel = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#4A5A52" opacity=".06"/>`;
-  let uvb = `<rect x="${MG_M}" y="1" width="${MG_P}" height="12" rx="2" fill="#C8892F" opacity=".07"/>`;
+  /* La couverture du ciel et l'indice UV, en bandes : ce sont des taux
+     d'occultation et d'intensité, une courbe leur donnerait une précision
+     qu'ils n'ont pas. Agrandies, elles écrivent leur valeur dans la bande une
+     heure sur trois, ce que la teinte seule ne dit qu'approximativement. */
+  const hC = H("ciel", 14), hU = H("uv", 14);
+  const bande = (h, teinte, op) => `<rect x="${MG_M}" y="1" width="${MG_P}" `
+    + `height="${h - 2}" rx="2" fill="${teinte}" opacity="${op}"/>`;
+  let ciel = bande(hC, "#4A5A52", ".06"), uvb = bande(hU, "#C8892F", ".07");
   for (let k = 0; k < s.n; k++) {
-    ciel += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="12" fill="#4A5A52" `
-      + `opacity="${(s.nua[k] / 100 * .5).toFixed(3)}"/>`;
+    ciel += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="${hC - 2}" `
+      + `fill="#4A5A52" opacity="${(s.nua[k] / 100 * .5).toFixed(3)}"/>`;
     const q = Math.min(1, s.uv[k] / 9);
-    if (q > .02) uvb += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="12" `
+    if (q > .02) uvb += `<rect x="${u(X(k))}" y="1" width="${u(LA + 1)}" height="${hU - 2}" `
       + `fill="#C8892F" opacity="${(q * .85).toFixed(3)}"/>`;
   }
-  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel + fond(14, false)));
-  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb + fond(14, false)));
+  ciel += fond(hC, false);
+  uvb += fond(hU, false);
+  for (let k = 1; k < s.n; k += 3) {
+    if (grand("ciel")) ciel += etiq(k, hC / 2 + 3, Math.round(s.nua[k]) + " %", "mg-p");
+    if (grand("uv")) uvb += etiq(k, hU / 2 + 3, nombreFr(s.uv[k]), "mg-p");
+  }
+  voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, hC, ciel,
+    "Plus la bande est sombre, plus le ciel est couvert.", "ciel"));
+  voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, hU, uvb,
+    "Plus la bande est chaude, plus le soleil brûle. Au-dessus de sept, "
+    + "les jeunes plants marquent.", "uv"));
 
   /* L'humidité de l'air, avec le seuil de quatre-vingt-dix pour cent au-delà
      duquel le feuillage reste mouillé et les maladies s'installent.
@@ -3841,18 +3928,26 @@ function dessinMeteogramme(s) {
      zéro : il porte son chiffre, faute de quoi la hauteur remplie se lirait
      comme une part de cent. */
   const hn = Math.max(0, Math.min(60, Math.floor((Math.min(...s.hum) - 4) / 10) * 10));
-  let hum = fond(40);
-  hum += `<path d="${aire(s.hum, 4, 36, hn, 100)}" fill="#8FA5B5" opacity=".30"/>`;
-  hum += `<polyline points="${pts(s.hum, 4, 36, hn, 100)}" fill="none" stroke="#456579" `
+  const hH = H("hum", 40), yH = hH - 4;
+  /* Agrandie, la voie porte une graduation aux vingtaines : elle passe à côté
+     du seuil, qui garde son propre filet et son propre chiffre. */
+  const [gradH, chiffresH] = grand("hum")
+    ? graduation(4, yH, hn, 100, 20, d => d + " %") : ["", ""];
+  let hum = fond(hH) + gradH;
+  hum += `<path d="${aire(s.hum, 4, yH, hn, 100)}" fill="#8FA5B5" opacity=".30"/>`;
+  hum += `<polyline points="${pts(s.hum, 4, yH, hn, 100)}" fill="none" stroke="#456579" `
     + `stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  hum += `<line x1="${MG_M}" y1="36.5" x2="${MG_L - MG_M}" y2="36.5" stroke="#16241E" opacity=".13"/>`;
+  if (grand("hum")) hum += jalons(s.hum, 4, yH, hn, 100, v => Math.round(v), -6);
+  hum += `<line x1="${MG_M}" y1="${u(yH + .5)}" x2="${MG_L - MG_M}" y2="${u(yH + .5)}" `
+    + `stroke="#16241E" opacity=".13"/>`;
   /* Le chiffre du seuil passe sous le filet : au-dessus il ne restait que trois
      points de voie, et la courbe s'y tient dès que l'air est humide. */
-  const yh90 = 36 - (90 - hn) / (100 - hn) * 32;
-  hum = fil(yh90, hum, "#456579", ".45")
-    + chiffre(yh90 + 10.5, "90 %") + chiffre(34, hn + " %");
-  voies.push(mgVoie("L'humidité de l'air", `${bornes(s.hum)} %`, 40, hum,
-    "Le filet marque quatre-vingt-dix pour cent, au-delà le feuillage ne sèche pas."));
+  const yh90 = yH - (90 - hn) / (100 - hn) * (yH - 4);
+  hum = fil(yh90, hum, "#456579", ".45") + chiffresH
+    + chiffre(yh90 + 10.5, "90 %") + chiffre(yH - 2, hn + " %");
+  voies.push(mgVoie("L'humidité de l'air", `${bornes(s.hum)} %`, hH, hum,
+    "Le filet marque quatre-vingt-dix pour cent, au-delà le feuillage ne sèche pas. "
+    + "Le pied de la bande n'est pas le zéro : il porte son chiffre.", "hum"));
 
   /* La pression : sa valeur importe moins que sa pente, une baisse annonce.
      L'échelle épousait l'écart mesuré, à huit dixièmes d'hectopascal près : une
@@ -3862,13 +3957,21 @@ function dessinMeteogramme(s) {
   const pmil = (Math.min(...s.pres) + Math.max(...s.pres)) / 2;
   const pamp = Math.max(6, Math.max(...s.pres) - Math.min(...s.pres) + 1.6);
   const pn = pmil - pamp / 2, px = pmil + pamp / 2;
-  const [gradP, chiffresP] = graduation(4, 36, pn, px, 5, d => d + " hPa");
-  let pres = fond(40) + gradP;
-  pres += `<polyline points="${pts(s.pres, 4, 36, pn, px)}" fill="none" stroke="#4E5C52" `
-    + `stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>` + chiffresP;
+  /* Agrandie, la voie descend au pas de deux hectopascals : cinq n'aurait donné
+     qu'un ou deux repères sur une fenêtre qui en fait six. */
+  const hR = H("pres", 40), yR = hR - 4;
+  const [gradP, chiffresP] = graduation(4, yR, pn, px, grand("pres") ? 2 : 5,
+    d => d + " hPa");
+  let pres = fond(hR) + gradP;
+  pres += `<polyline points="${pts(s.pres, 4, yR, pn, px)}" fill="none" stroke="#4E5C52" `
+    + `stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if (grand("pres")) pres += jalons(s.pres, 4, yR, pn, px, v => Math.round(v), -6);
+  pres += chiffresP;
   const dp = s.pres[s.n - 1] - s.pres[0];
   voies.push(mgVoie("La pression", `${Math.round(s.pres[0])} hPa, `
-    + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), 40, pres));
+    + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), hR, pres,
+    "Sa valeur importe moins que sa pente : une baisse annonce une dégradation, "
+    + "une hausse le retour du beau.", "pres"));
 
   /* L'axe des heures, commun aux voies. Le premier libellé est l'heure en cours,
      marquée de la même teinte que la ligne du moment dans la liste : le mot
@@ -4081,9 +4184,30 @@ function modeTemps() {
 
 const ecritureTemps = (s, m) => {
   mgLecture = null;
+  mgZoom = null;
+  mgLu = -1;
   return m === "liste" ? listeHoraire(s)
     : m === "moments" ? momentsHoraires(s) : dessinMeteogramme(s);
 };
+
+/* Agrandir une voie recompose le ruban : la hauteur d'un dessin ne se change
+   pas sans le redessiner, et les jalons qui paraissent alors n'existaient pas
+   avant. L'heure lue est reposée après coup, et le défilement rattrapé pour que
+   la voie touchée garde sa place à l'écran : sans quoi une voie ouverte en bas
+   de pile emmènerait le doigt hors du champ. */
+function basculerVoie(cle) {
+  if (!mgSerie) return;
+  const corps = $("feuille-corps");
+  const ou = () => {
+    const b = corps.querySelector(`.mg-b[data-voie="${cle}"]`);
+    return b ? b.getBoundingClientRect().top : 0;
+  };
+  const avant = ou();
+  mgZoom = mgZoom === cle ? null : cle;
+  $("tempsCorps").innerHTML = dessinMeteogramme(mgSerie);
+  brancherLectures();
+  corps.scrollTop += ou() - avant;
+}
 
 /* Lire une heure sur les courbes. Un doigt posé désigne une heure, un montant
    la marque dans toutes les voies, et chaque plage cède la place à la valeur de
@@ -4106,6 +4230,7 @@ function brancherRuban() {
 
   const rendre = () => {
     lu = -1;
+    mgLu = -1;
     bloc.classList.remove("mg-lu");
     dits.forEach(d => { d.hidden = true; });
     lignes.forEach(l => {
@@ -4117,6 +4242,7 @@ function brancherRuban() {
   const lire = k => {
     if (k === lu) { rendre(); return; }
     lu = k;
+    mgLu = k;
     bloc.classList.add("mg-lu");
     dits.forEach(d => {
       d.querySelector("span").textContent = `Valeurs à ${L.heure(k)}`;
@@ -4174,17 +4300,15 @@ function brancherRuban() {
   bloc.addEventListener("pointercancel", () => { glisse = false; });
   bloc.addEventListener("pointerleave", () => { glisse = false; });
   bloc.querySelectorAll(".mg-rendre").forEach(b => b.addEventListener("click", rendre));
+  // L'heure lue survit à l'agrandissement d'une voie, qui recompose le ruban.
+  if (mgLu >= 0 && mgLu < L.n) lire(mgLu);
 }
 
-// Le titre d'une voie déplie sa lecture, et la replie.
+// Le titre d'une voie l'agrandit, et la replie.
 function brancherLectures() {
   brancherRuban();
-  $("feuille-corps").querySelectorAll(".mg-b").forEach(b => b.addEventListener("click", () => {
-    const l = document.getElementById(b.getAttribute("aria-controls"));
-    if (!l) return;
-    l.hidden = !l.hidden;
-    b.setAttribute("aria-expanded", String(!l.hidden));
-  }));
+  $("feuille-corps").querySelectorAll(".mg-b").forEach(b =>
+    b.addEventListener("click", () => basculerVoie(b.dataset.voie)));
 }
 
 function vueTemps() {
