@@ -92,6 +92,61 @@ export default async function essai(navigateur) {
   j.controle("le premier libellé est l'heure en cours, marquée",
     ici === String(H0).padStart(2, "0") + " h", ici);
 
+  /* Les courbes dessinaient un relief sans dire de combien il monte : la pile
+     n'avait aucune graduation verticale, et la voie de la température écrasait
+     dix-sept degrés dans quarante-six points. Chaque voie chiffrée porte
+     maintenant ses repères, et le chiffre passe par-dessus les tracés : un filet
+     se laisse traverser par une courbe, un nombre coupé par elle ne se lit plus. */
+  j.section("les voies portent une graduation chiffrée");
+  const grad = await pg.evaluate(() => {
+    const par = [...document.querySelectorAll(".mg-v")].map(v => {
+      const t = v.textContent.replace(/\s+/g, " ").trim();
+      const svg = v.querySelector(".mg-s");
+      const enfants = svg ? [...svg.children] : [];
+      const g = enfants.filter(e => e.classList.contains("mg-g"));
+      const dernierTrace = enfants.map(e => e.tagName).lastIndexOf("polyline");
+      const premierChiffre = g.length ? enfants.indexOf(g[0]) : -1;
+      return {
+        nom: t.split(" ")[0] + " " + (t.split(" ")[1] || ""),
+        plage: (v.querySelector(".mg-r") || {}).textContent || "",
+        haut: svg ? Number(svg.getAttribute("viewBox").split(" ")[3]) : 0,
+        chiffres: g.map(e => e.textContent),
+        dessus: premierChiffre < 0 || dernierTrace < 0 || premierChiffre > dernierTrace,
+      };
+    });
+    return par;
+  });
+  const voie = re => grad.find(v => re.test(v.nom)) || { chiffres: [], haut: 0, plage: "" };
+  const degres = voie(/TEMP/i).chiffres;
+  j.controle("la température porte au moins deux repères en degrés",
+    degres.length >= 2 && degres.every(c => /^-?\d+°$/.test(c)), degres.join(", "));
+  /* Les repères se suivent d'un pas constant : une graduation dont les crans ne
+     sont pas également espacés ne se lit pas d'un coup d'oeil. */
+  const pas = degres.slice(1).map((c, i) => parseInt(c) - parseInt(degres[i]));
+  j.controle("d'un pas constant", new Set(pas).size === 1 && pas[0] > 0, pas.join(", "));
+  j.controle("la voie de la température tient quatre-vingt-six points",
+    voie(/TEMP/i).haut === 86, voie(/TEMP/i).haut + " points");
+  j.controle("le seuil du vent dit ses vingt kilomètres par heure",
+    voie(/VENT/i).chiffres.includes("20 km/h"), voie(/VENT/i).chiffres.join(", "));
+  /* L'échelle de l'humidité partait de zéro, et la journée tenait dans le tiers
+     haut de la voie : elle part du plancher du jour, que le pied de la bande
+     nomme, sans quoi la hauteur remplie se lirait comme une part de cent. */
+  const humG = voie(/HUMIDIT/i).chiffres;
+  const bas = parseInt(humG.filter(c => c !== "90 %")[0]);
+  const minJour = parseInt(voie(/HUMIDIT/i).plage);
+  j.controle("l'humidité nomme son seuil et le pied de sa bande",
+    humG.length === 2 && humG.includes("90 %") && bas % 10 === 0,
+    humG.join(", "));
+  /* Le pied passe sous la plus basse valeur du jour : au-dessus, la courbe
+     sortirait de la voie par le bas. */
+  j.controle("le pied passe sous la plus basse valeur du jour",
+    bas < minJour, `${bas} % pour une journée à ${voie(/HUMIDIT/i).plage}`);
+  j.controle("la pression porte un repère en hectopascals",
+    voie(/PRESSION/i).chiffres.some(c => /^\d{4} hPa$/.test(c)),
+    voie(/PRESSION/i).chiffres.join(", "));
+  j.controle("dans chaque voie, les chiffres sont posés par-dessus les tracés",
+    grad.every(v => v.dessus), grad.filter(v => !v.dessus).map(v => v.nom).join(", "));
+
   /* La lecture d'une voie apprend quelque chose la première fois et se lit en
      pure perte ensuite : elle est repliée derrière le titre. */
   j.section("la lecture d'une voie se déplie au toucher");

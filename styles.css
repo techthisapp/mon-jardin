@@ -1748,8 +1748,21 @@ body.fige{overflow:hidden}
 }
 .mg-b[aria-expanded="true"] .mg-n i{color:var(--f-carte);background:var(--f-ink3)}
 .mg-b:focus-visible{outline:2px solid var(--terre);outline-offset:3px;border-radius:5px}
-.mg-c{font-size:10px;fill:var(--f-ink2);font-weight:600;font-family:"IBM Plex Mono",monospace}
-.mg-mm{font-size:10px;fill:#1F4F8F;font-weight:600;font-family:"IBM Plex Mono",monospace}
+/* Un chiffre posé sur le dessin se lisait mal là où il tombait sur l'aire
+   remplie ou sur un trait. Il porte un liseré de la teinte du papier, tracé
+   sous la lettre : le fond passe sans que la forme du chiffre change. */
+.mg-c,.mg-mm{
+  font-size:10px;font-weight:600;font-family:"IBM Plex Mono",monospace;
+  paint-order:stroke;stroke:var(--f-carte);stroke-width:2.6;stroke-linejoin:round;
+}
+.mg-c{fill:var(--f-ink2)}
+.mg-mm{fill:#1F4F8F}
+/* Les repères de la graduation verticale : lus quand on les cherche, oubliés
+   sinon. Ils ne pèsent pas plus que le trait qu'ils nomment. */
+.mg-g{
+  font-size:9px;fill:var(--f-ink3);font-family:"IBM Plex Mono",monospace;opacity:.8;
+  paint-order:stroke;stroke:var(--f-carte);stroke-width:1.5;stroke-linejoin:round;
+}
 .mg-h{font-size:10px;fill:var(--f-ink3);font-family:"IBM Plex Mono",monospace}
 
 /* Lire une heure sur les courbes. Le glissement horizontal est capté, le

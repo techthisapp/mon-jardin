@@ -3698,6 +3698,26 @@ function dessinMeteogramme(s) {
     + pts(vals, y0, y1, mn, mx).replace(/ /g, " L") + ` L${u(X(s.n - .5))},${u(y1)} Z`;
   const fil = (y, h, teinte, op) => `<line x1="${MG_M}" y1="${u(y)}" x2="${MG_L - MG_M}" `
     + `y2="${u(y)}" stroke="${teinte}" opacity="${op}" stroke-dasharray="2 3"/>` + h;
+  /* Le chiffre d'un repère se pose au bord droit, et par-dessus les tracés : un
+     filet passe sous une courbe sans dommage, un nombre coupé par elle ne se lit
+     plus. Le liseré de papier de la classe fait le reste. */
+  const chiffre = (y, txt) => `<text class="mg-g" x="${MG_L - MG_M}" y="${u(y)}" `
+    + `text-anchor="end">${esc(txt)}</text>`;
+  /* Une graduation horizontale au pas donné, sur les seules valeurs couvertes.
+     Sans elle, l'amplitude d'une bosse ne se rattachait à rien : une voie
+     dessinait un relief sans dire de combien il monte. Les filets et les
+     chiffres reviennent séparés, les uns allant sous le dessin et les autres
+     dessus. */
+  const graduation = (y0, y1, mn, mx, pas, ecrire) => {
+    let traits = "", chiffres = "";
+    for (let d = Math.ceil(mn / pas) * pas; d < mx; d += pas) {
+      const yd = y1 - (d - mn) / (mx - mn) * (y1 - y0);
+      traits += `<line x1="${MG_M}" y1="${u(yd)}" x2="${MG_L - MG_M}" y2="${u(yd)}" `
+        + `stroke="#16241E" opacity=".08"/>`;
+      chiffres += chiffre(yd - 2.5, ecrire(d));
+    }
+    return [traits, chiffres];
+  };
   // Une étiquette près d'un bord se cale sur ce bord plutôt que de le dépasser.
   const etiq = (k, y, txt, cls) => {
     const anc = k < 2 ? "start" : k > s.n - 3 ? "end" : "middle";
@@ -3711,24 +3731,35 @@ function dessinMeteogramme(s) {
   const tt = s.t.concat(s.res, s.ros);
   const tn = Math.min(...tt) - 1, tx = Math.max(...tt) + 1;
   const ressenti = s.res.some((v, k) => Math.abs(v - s.t[k]) >= 1.5);
-  let temp = fond(66);
-  temp += `<path d="${aire(s.t, 10, 56, tn, tx)}" fill="#C7BE79" opacity=".28"/>`;
-  temp += `<polyline points="${pts(s.ros, 10, 56, tn, tx)}" fill="none" stroke="#4A7CA8" `
-    + `stroke-width="1.2" stroke-dasharray="3 3" opacity=".7"/>`;
+  /* La voie tenait soixante-six points, dont quarante-six pour l'amplitude :
+     dix-sept degrés d'écart s'y écrasaient à moins de trois points par degré, et
+     la courbe rendait un relief plat. Elle en tient quatre-vingt-six, dont
+     soixante-six pour l'amplitude.
+
+     Le pas de la graduation suit cette amplitude : dix degrés sur une journée
+     qui en couvre quinze n'auraient donné qu'un seul repère, et une graduation
+     à un trait ne gradue rien. */
+  const [gradT, chiffresT] = graduation(10, 76, tn, tx, tx - tn > 24 ? 10 : 5, d => d + "°");
+  let temp = fond(86) + gradT;
+  temp += `<path d="${aire(s.t, 10, 76, tn, tx)}" fill="#C7BE79" opacity=".26"/>`;
+  temp += `<polyline points="${pts(s.ros, 10, 76, tn, tx)}" fill="none" stroke="#3C6E99" `
+    + `stroke-width="1.5" stroke-dasharray="5 3.5" stroke-linecap="round" opacity=".85"/>`;
   /* Le ressenti partageait la teinte et le trait plein de la température : les
      deux courbes se confondaient là où elles se rapprochent, c'est-à-dire
-     presque partout. Le pointillé les sépare sans ajouter de couleur. */
+     presque partout. Le pointillé les sépare sans ajouter de couleur, et son
+     motif diffère franchement de celui du point de rosée. */
   if (ressenti)
-    temp += `<polyline points="${pts(s.res, 10, 56, tn, tx)}" fill="none" stroke="#8A7A34" `
-      + `stroke-width="1.1" stroke-dasharray="1 2.6" stroke-linecap="round" opacity=".75"/>`;
-  temp += `<polyline points="${pts(s.t, 10, 56, tn, tx)}" fill="none" stroke="#8A7A34" `
-    + `stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>`;
+    temp += `<polyline points="${pts(s.res, 10, 76, tn, tx)}" fill="none" stroke="#7A6820" `
+      + `stroke-width="1.6" stroke-dasharray="0.5 3.4" stroke-linecap="round" opacity=".9"/>`;
+  temp += `<polyline points="${pts(s.t, 10, 76, tn, tx)}" fill="none" stroke="#6F5E14" `
+    + `stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  temp += chiffresT;
   const kx = s.t.indexOf(Math.max(...s.t)), kn = s.t.indexOf(Math.min(...s.t));
-  [[kx, -6], [kn, 12]].forEach(([k, dy]) => {
-    temp += etiq(k, 56 - (s.t[k] - tn) / (tx - tn) * 46 + dy,
+  [[kx, -7], [kn, 14]].forEach(([k, dy]) => {
+    temp += etiq(k, 76 - (s.t[k] - tn) / (tx - tn) * 66 + dy,
       Math.round(s.t[k]) + "°", "mg-c");
   });
-  voies.push(mgVoie("La température", `${bornes(s.t)} degrés`, 66, temp,
+  voies.push(mgVoie("La température", `${bornes(s.t)} degrés`, 86, temp,
     "Pointillé bleu, le point de rosée : plus il est proche de la courbe, plus l'air est humide."
     + (ressenti ? " Pointillé serré, le ressenti." : "")));
 
@@ -3761,25 +3792,27 @@ function dessinMeteogramme(s) {
   // Le vent : la moyenne en aire, les rafales en pointillé, l'orientation en
   // flèches toutes les trois heures, dans le sens où il souffle.
   const vmx = Math.max(30, ...s.raf);
-  let vent = fond(54);
-  vent += `<path d="${aire(s.v, 4, 34, 0, vmx)}" fill="#7E8C81" opacity=".26"/>`;
-  vent += `<polyline points="${pts(s.raf, 4, 34, 0, vmx)}" fill="none" stroke="#8A4A10" `
-    + `stroke-width="1.1" stroke-dasharray="3 2.5" opacity=".65"/>`;
-  vent += `<polyline points="${pts(s.v, 4, 34, 0, vmx)}" fill="none" stroke="#5F6E63" stroke-width="1.6"/>`;
-  vent = fil(34 - 20 / vmx * 30, vent, "#8A4A10", ".30");
-  vent += `<line x1="${MG_M}" y1="34.5" x2="${MG_L - MG_M}" y2="34.5" stroke="#16241E" opacity=".13"/>`;
+  let vent = fond(66);
+  vent += `<path d="${aire(s.v, 4, 46, 0, vmx)}" fill="#7E8C81" opacity=".26"/>`;
+  vent += `<polyline points="${pts(s.raf, 4, 46, 0, vmx)}" fill="none" stroke="#8A4A10" `
+    + `stroke-width="1.5" stroke-dasharray="4.5 3" stroke-linecap="round" opacity=".8"/>`;
+  vent += `<polyline points="${pts(s.v, 4, 46, 0, vmx)}" fill="none" stroke="#46554A" `
+    + `stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  vent = fil(46 - 20 / vmx * 42, vent, "#8A4A10", ".38")
+    + chiffre(46 - 20 / vmx * 42 - 3, "20 km/h");
+  vent += `<line x1="${MG_M}" y1="46.5" x2="${MG_L - MG_M}" y2="46.5" stroke="#16241E" opacity=".13"/>`;
   for (let k = 1; k < s.n; k += 3) {
     /* Les flèches accompagnent la courbe, elles ne la commentent pas : plus
        courtes, plus fines et plus pâles, sauf là où le vent passe le seuil. */
     const fort = s.v[k] >= 20;
-    vent += `<g transform="translate(${u(X(k + .5))},46) rotate(${Math.round(s.dir[k] + 180)})" `
+    vent += `<g transform="translate(${u(X(k + .5))},58) rotate(${Math.round(s.dir[k] + 180)})" `
       + `fill="none" stroke="${fort ? "#8A4A10" : "#5F6E63"}" stroke-width="1.1" `
       + `opacity="${fort ? ".85" : ".55"}" stroke-linecap="round" stroke-linejoin="round">`
       + `<path d="M0,-4.6 L0,4.6 M-2.2,-2.2 L0,-4.6 L2.2,-2.2"/></g>`;
   }
   const kv = s.v.indexOf(Math.max(...s.v));
   voies.push(mgVoie("Le vent", `${Math.round(Math.max(...s.v))} km/h `
-    + `${dCardinal(s.dir[kv])}, rafales à ${Math.round(Math.max(...s.raf))} km/h`, 54, vent,
+    + `${dCardinal(s.dir[kv])}, rafales à ${Math.round(Math.max(...s.raf))} km/h`, 66, vent,
     "Pointillé brun, les rafales. Le filet marque vingt kilomètres par heure, "
     + "au-delà un traitement dérive."));
 
@@ -3797,23 +3830,45 @@ function dessinMeteogramme(s) {
   voies.push(mgVoie("La couverture du ciel", `${bornes(s.nua)} %`, 14, ciel + fond(14, false)));
   voies.push(mgVoie("L'indice UV", `jusqu'à ${nombreFr(Math.max(...s.uv))}`, 14, uvb + fond(14, false)));
 
-  // L'humidité de l'air, avec le seuil de quatre-vingt-dix pour cent au-delà
-  // duquel le feuillage reste mouillé et les maladies s'installent.
-  let hum = fond(30);
-  hum += `<path d="${aire(s.hum, 4, 26, 0, 100)}" fill="#8FA5B5" opacity=".30"/>`;
-  hum += `<polyline points="${pts(s.hum, 4, 26, 0, 100)}" fill="none" stroke="#5F7D91" stroke-width="1.3"/>`;
-  hum = fil(26 - 90 / 100 * 22, hum, "#5F7D91", ".35");
-  voies.push(mgVoie("L'humidité de l'air", `${bornes(s.hum)} %`, 30, hum,
+  /* L'humidité de l'air, avec le seuil de quatre-vingt-dix pour cent au-delà
+     duquel le feuillage reste mouillé et les maladies s'installent.
+
+     L'échelle partait de zéro : une journée passant de cinquante-cinq à
+     quatre-vingt-onze pour cent tenait dans le tiers haut de la voie, les deux
+     autres tiers restant remplis sans rien dire. Elle part de la dizaine sous le
+     plancher du jour, sans jamais dépasser soixante pour cent, ce qui garde le
+     seuil de quatre-vingt-dix dans la voie. Le pied de la bande n'est plus le
+     zéro : il porte son chiffre, faute de quoi la hauteur remplie se lirait
+     comme une part de cent. */
+  const hn = Math.max(0, Math.min(60, Math.floor((Math.min(...s.hum) - 4) / 10) * 10));
+  let hum = fond(40);
+  hum += `<path d="${aire(s.hum, 4, 36, hn, 100)}" fill="#8FA5B5" opacity=".30"/>`;
+  hum += `<polyline points="${pts(s.hum, 4, 36, hn, 100)}" fill="none" stroke="#456579" `
+    + `stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  hum += `<line x1="${MG_M}" y1="36.5" x2="${MG_L - MG_M}" y2="36.5" stroke="#16241E" opacity=".13"/>`;
+  /* Le chiffre du seuil passe sous le filet : au-dessus il ne restait que trois
+     points de voie, et la courbe s'y tient dès que l'air est humide. */
+  const yh90 = 36 - (90 - hn) / (100 - hn) * 32;
+  hum = fil(yh90, hum, "#456579", ".45")
+    + chiffre(yh90 + 10.5, "90 %") + chiffre(34, hn + " %");
+  voies.push(mgVoie("L'humidité de l'air", `${bornes(s.hum)} %`, 40, hum,
     "Le filet marque quatre-vingt-dix pour cent, au-delà le feuillage ne sèche pas."));
 
-  // La pression : sa valeur importe moins que sa pente, une baisse annonce.
-  const pn = Math.min(...s.pres) - .8, px = Math.max(...s.pres) + .8;
-  let pres = fond(30);
-  pres += `<polyline points="${pts(s.pres, 4, 26, pn, px)}" fill="none" stroke="#6E7A70" `
-    + `stroke-width="1.5" stroke-linejoin="round"/>`;
+  /* La pression : sa valeur importe moins que sa pente, une baisse annonce.
+     L'échelle épousait l'écart mesuré, à huit dixièmes d'hectopascal près : une
+     journée sans mouvement rendait une courbe agitée, aussi ample qu'une vraie
+     chute. La fenêtre ne descend pas sous six hectopascals, et la graduation
+     dit lesquels : un frémissement se lit à plat, une baisse se voit tomber. */
+  const pmil = (Math.min(...s.pres) + Math.max(...s.pres)) / 2;
+  const pamp = Math.max(6, Math.max(...s.pres) - Math.min(...s.pres) + 1.6);
+  const pn = pmil - pamp / 2, px = pmil + pamp / 2;
+  const [gradP, chiffresP] = graduation(4, 36, pn, px, 5, d => d + " hPa");
+  let pres = fond(40) + gradP;
+  pres += `<polyline points="${pts(s.pres, 4, 36, pn, px)}" fill="none" stroke="#4E5C52" `
+    + `stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>` + chiffresP;
   const dp = s.pres[s.n - 1] - s.pres[0];
   voies.push(mgVoie("La pression", `${Math.round(s.pres[0])} hPa, `
-    + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), 30, pres));
+    + (dp <= -2 ? "en baisse" : dp >= 2 ? "en hausse" : "stable"), 40, pres));
 
   /* L'axe des heures, commun aux voies. Le premier libellé est l'heure en cours,
      marquée de la même teinte que la ligne du moment dans la liste : le mot
