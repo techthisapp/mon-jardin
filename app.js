@@ -3896,10 +3896,15 @@ function dessinMeteogramme(s) {
       k => `${Math.round(s.pres[k])} hPa`,
     ],
   };
-  return `<div class="mg">${voies.join("")}`
+  /* L'heure lue est annoncée deux fois, au-dessus de la pile et au-dessous. Le
+     ruban fait plus de quatre cents points de haut : une seule ligne, en pied,
+     sortait du champ dès que le doigt lisait les premières voies, et rien ne
+     disait alors de quelle heure venaient les valeurs affichées. */
+  const dit = `<p class="mg-sel" hidden><span></span>`
+    + `<button type="button" class="mg-rendre">Revenir aux plages</button></p>`;
+  return `<div class="mg">${dit}${voies.join("")}`
     + `<svg class="mg-s" viewBox="0 0 ${MG_L} 14" aria-hidden="true">${axe}</svg>`
-    + `<p class="mg-sel" hidden><span></span>`
-    + `<button type="button" id="mgRendre">Revenir aux plages</button></p></div>`;
+    + dit + `</div>`;
 }
 
 /* ---------- La liste ---------- */
@@ -4095,14 +4100,14 @@ function brancherRuban() {
   const lignes = [...bloc.querySelectorAll(".mg-v")].map((v, i) => ({
     val: v.querySelector(".mg-r"), cur: v.querySelector(".mg-cur"), dit: L.voies[i],
   }));
-  const dit = bloc.querySelector(".mg-sel");
-  const nom = dit.querySelector("span");
+  // Les deux annonces, en tête et en pied, disent la même heure.
+  const dits = [...bloc.querySelectorAll(".mg-sel")];
   let lu = -1;
 
   const rendre = () => {
     lu = -1;
     bloc.classList.remove("mg-lu");
-    dit.hidden = true;
+    dits.forEach(d => { d.hidden = true; });
     lignes.forEach(l => {
       if (l.val) l.val.textContent = l.val.dataset.plage;
       if (l.cur) l.cur.setAttribute("hidden", "");
@@ -4113,8 +4118,10 @@ function brancherRuban() {
     if (k === lu) { rendre(); return; }
     lu = k;
     bloc.classList.add("mg-lu");
-    nom.textContent = `Valeurs à ${L.heure(k)}`;
-    dit.hidden = false;
+    dits.forEach(d => {
+      d.querySelector("span").textContent = `Valeurs à ${L.heure(k)}`;
+      d.hidden = false;
+    });
     const x = L.x(k).toFixed(1);
     lignes.forEach(l => {
       if (l.val && l.dit) l.val.textContent = l.dit(k);
@@ -4140,7 +4147,10 @@ function brancherRuban() {
      horizontal, ou au relâchement si le doigt n'a pas bougé. */
   let glisse = false, depart = -1, x0 = 0, y0 = 0, bouge = false;
   bloc.addEventListener("pointerdown", ev => {
-    if (ev.target.closest(".mg-b, #mgRendre")) return;
+    /* La lecture s'engage sur le dessin. Les commandes et les textes qui
+       l'entourent ne sont pas une abscisse : toucher l'annonce en tête aurait
+       lu l'heure qui se trouve sous ce mot. */
+    if (ev.target.closest(".mg-b, .mg-sel, .mg-l")) return;
     glisse = true; bouge = false;
     x0 = ev.clientX; y0 = ev.clientY; depart = indice(ev);
   });
@@ -4163,7 +4173,7 @@ function brancherRuban() {
   bloc.addEventListener("pointerup", fini);
   bloc.addEventListener("pointercancel", () => { glisse = false; });
   bloc.addEventListener("pointerleave", () => { glisse = false; });
-  sur("mgRendre", "click", rendre);
+  bloc.querySelectorAll(".mg-rendre").forEach(b => b.addEventListener("click", rendre));
 }
 
 // Le titre d'une voie déplie sa lecture, et la replie.

@@ -201,8 +201,22 @@ export default async function essai(navigateur) {
   await pg.mouse.down();
   await pg.mouse.up();
   await pg.waitForTimeout(300);
-  const heureLue = net(await pg.locator(".mg-sel span").innerText());
-  j.controle("l'heure lue est annoncée", /^Valeurs à \d{2} h$/.test(heureLue), heureLue);
+  /* Le ruban fait plus de quatre cents points de haut : une seule annonce, en
+     pied, sortait du champ dès que le doigt lisait les premières voies. Elle est
+     doublée en tête, adossée au titre de la section, et les deux disent la même
+     heure. */
+  const annonces = (await pg.locator(".mg-sel span").allInnerTexts()).map(net);
+  j.controle("l'heure lue est annoncée en tête et en pied",
+    annonces.length === 2 && annonces[0] === annonces[1]
+    && /^Valeurs à \d{2} h$/.test(annonces[0]), annonces.join(" | "));
+  const heureLue = annonces[0];
+  j.controle("celle de tête précède les voies, celle de pied les suit",
+    await pg.evaluate(() => {
+      const e = [...document.querySelector(".mg").children];
+      const sel = e.filter(n => n.classList.contains("mg-sel")).map(n => e.indexOf(n));
+      const v = e.filter(n => n.classList.contains("mg-v")).map(n => e.indexOf(n));
+      return sel.length === 2 && sel[0] < Math.min(...v) && sel[1] > Math.max(...v);
+    }));
   const lues = await pg.locator(".mg-r").allInnerTexts();
   j.controle("les sept voies donnent leur valeur à cette heure",
     lues.length === 7 && lues.every((t, i) => net(t) !== plages[i] && /\d/.test(t)),
@@ -215,20 +229,33 @@ export default async function essai(navigateur) {
      zone qu'il désigne, et une valeur qui disparaît au relâchement ne se lit
      jamais. */
   j.controle("elle reste après le doigt levé",
-    await pg.locator(".mg-sel:not([hidden])").count() === 1);
-  await pg.locator("#mgRendre").click();
+    await pg.locator(".mg-sel:not([hidden])").count() === 2);
+  await pg.locator(".mg-rendre").first().click();
   await pg.waitForTimeout(300);
   j.controle("le retour rend les plages",
     (await pg.locator(".mg-r").allInnerTexts()).map(net).join("|") === plages.join("|"));
   j.controle("et retire les montants de lecture",
     await pg.evaluate(() => [...document.querySelectorAll(".mg-cur")]
       .every(l => l.hasAttribute("hidden")))
-    && await pg.locator(".mg-sel[hidden]").count() === 1);
+    && await pg.locator(".mg-sel[hidden]").count() === 2);
   // Un doigt reposé au même endroit rend les plages, sans passer par le lien.
   await pg.mouse.down(); await pg.mouse.up(); await pg.waitForTimeout(250);
   await pg.mouse.down(); await pg.mouse.up(); await pg.waitForTimeout(250);
   j.controle("un second appui au même endroit rend aussi les plages",
-    await pg.locator(".mg-sel[hidden]").count() === 1);
+    await pg.locator(".mg-sel[hidden]").count() === 2);
+  /* L'annonce de tête est un texte, non une abscisse : la toucher lisait
+     jusqu'ici l'heure qui se trouve sous ce mot. */
+  await pg.mouse.move(cadre.x + cadre.width * 0.62, cadre.y + cadre.height / 2);
+  await pg.mouse.down(); await pg.mouse.up(); await pg.waitForTimeout(250);
+  const enTete = pg.locator(".mg-sel").first();
+  const b = await enTete.boundingBox();
+  await pg.mouse.move(b.x + 30, b.y + b.height / 2);
+  await pg.mouse.down(); await pg.mouse.up(); await pg.waitForTimeout(250);
+  j.controle("toucher l'annonce ne change pas l'heure lue",
+    net(await enTete.locator("span").innerText()) === heureLue,
+    net(await enTete.locator("span").innerText()) + " pour " + heureLue);
+  await pg.locator(".mg-rendre").last().click();
+  await pg.waitForTimeout(250);
 
   /* La fenêtre part de l'heure en cours et court sur vingt-quatre heures : elle
      traverse minuit, et la journée civile ne la borne pas. */

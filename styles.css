@@ -1771,10 +1771,14 @@ body.fige{overflow:hidden}
 .mg-cur{stroke:var(--terre);stroke-width:1.2;opacity:.85}
 /* Une valeur lue à l'heure n'est pas une plage : elle est écrite à pleine encre. */
 .mg-lu .mg-r{color:var(--f-ink);font-weight:500}
+/* L'heure lue est annoncée en tête et en pied de la pile : le ruban est trop
+   haut pour qu'une seule annonce reste dans le champ pendant la lecture. Celle
+   de tête est adossée au titre de la section, celle de pied à l'axe. */
 .mg-sel{
   display:flex;align-items:baseline;justify-content:space-between;gap:10px;
   margin-top:2px;font-size:12px;color:var(--f-ink2);
 }
+.mg-sel:first-child{margin-top:-3px;margin-bottom:1px}
 .mg-sel button{
   border:0;background:none;padding:0;cursor:pointer;font:inherit;
   color:var(--terre);text-decoration:underline;text-underline-offset:3px;
