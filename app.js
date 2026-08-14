@@ -3848,36 +3848,64 @@ function dessinMeteogramme(s) {
 }
 
 /* ---------- La liste ---------- */
+/* La table portait cinq des quinze grandeurs que le service rend à l'heure.
+   Elle les porte toutes : le ruban en dessine sept, les moments en résument
+   quatre, la table est l'écriture qui ne choisit pas.
+
+   Treize colonnes ne tiennent pas dans la largeur d'un téléphone. La table
+   défile de côté, l'heure restant collée au bord gauche : sans elle, une valeur
+   lue au milieu du défilement ne se rattache plus à rien. Les unités montent
+   dans l'entête, ce qui rend à chaque cellule la place de son chiffre. */
+const COLONNES_H = [
+  ["hh-ic", "", ""], ["hh-t", "temp.", "°"], ["hh-res", "ressenti", "°"],
+  ["hh-v", "vent", "km/h"], ["hh-raf", "rafales", "km/h"],
+  ["hh-p", "pluie", "mm"], ["hh-pb", "risque", "%"],
+  ["hh-hu", "humidité", "%"], ["hh-ros", "rosée", "°"],
+  ["hh-nu", "nuages", "%"], ["hh-uv", "uv", ""], ["hh-pres", "pression", "hPa"],
+];
+
 function listeHoraire(s) {
   const r = [];
+  const fleche = d => `<i style="transform:rotate(${Math.round(d + 180)}deg)">`
+    + `<svg viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" `
+    + `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
+    + `<path d="M7,1.5 L7,12.5 M4.2,4.3 L7,1.5 L9.8,4.3"/></svg></i>`;
   for (let k = 0; k < s.n; k++) {
-    if (k && s.jour[k] !== s.jour[k - 1]) r.push(`<tr class="hh-jour"><th colspan="6">`
-      + `${esc(jourLong(s.jour[k]))}</th></tr>`);
+    if (k && s.jour[k] !== s.jour[k - 1]) {
+      r.push(`<tr class="hh-jour"><th colspan="${COLONNES_H.length + 1}">`
+        + `<span>${esc(jourLong(s.jour[k]))}</span></th></tr>`);
+    }
     const ic = icoCiel(s.code[k], s.clair[k]);
+    /* Le ressenti ne se répète que lorsqu'il s'écarte du thermomètre : redit à
+       l'identique vingt-quatre fois, il ferait une colonne de doublons. */
+    const dt = Math.round(s.res[k]) - Math.round(s.t[k]);
     r.push(`<tr class="hh${k === 0 ? " hh-ici" : ""}">`
       + `<th>${String(s.heure[k]).padStart(2, "0")} h</th>`
       + `<td class="hh-ic">${icoM(ic, "hh-svg")}</td>`
-      + `<td class="hh-t">${Math.round(s.t[k])}°</td>`
-      + `<td class="hh-v${s.v[k] >= 20 ? " hh-fort" : ""}">`
-      + `<i style="transform:rotate(${Math.round(s.dir[k] + 180)}deg)">`
-      + `<svg viewBox="0 0 14 14" aria-hidden="true" fill="none" stroke="currentColor" `
-      + `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">`
-      + `<path d="M7,1.5 L7,12.5 M4.2,4.3 L7,1.5 L9.8,4.3"/></svg></i>`
+      + `<td class="hh-t">${Math.round(s.t[k])}</td>`
+      + `<td class="hh-res${Math.abs(dt) >= 3 ? " hh-ecart" : ""}">`
+      + `${dt ? Math.round(s.res[k]) : ""}</td>`
+      + `<td class="hh-v${s.v[k] >= 20 ? " hh-fort" : ""}">${fleche(s.dir[k])}`
       + `${Math.round(s.v[k])}<small>${CARD_ABR[iCard(s.dir[k])]}</small></td>`
-      /* La lame et le risque tenaient chacun une colonne, toutes deux muettes
-         par temps sec, ce qui laissait la moitié droite de la table vide. Une
-         seule colonne les porte, la lame quand il en tombe, le risque sinon, et
-         l'humidité de l'air occupe la place gagnée. */
-      + `<td class="hh-p">${s.mm[k] >= 0.1 ? `<b>${nombreFr(s.mm[k])}</b> mm`
-          : s.pb[k] >= 15 ? s.pb[k] + ` %` : ""}</td>`
-      + `<td class="hh-hu${s.hum[k] >= 90 ? " hh-moite" : ""}">`
-      + `${Math.round(s.hum[k])} %</td></tr>`);
+      + `<td class="hh-raf${s.raf[k] >= 40 ? " hh-fort" : ""}">${Math.round(s.raf[k])}</td>`
+      + `<td class="hh-p">${s.mm[k] >= 0.1 ? `<b>${nombreFr(s.mm[k])}</b>` : ""}</td>`
+      + `<td class="hh-pb">${s.pb[k] >= 5 ? Math.round(s.pb[k]) : ""}</td>`
+      + `<td class="hh-hu${s.hum[k] >= 90 ? " hh-moite" : ""}">${Math.round(s.hum[k])}</td>`
+      + `<td class="hh-ros">${Math.round(s.ros[k])}</td>`
+      + `<td class="hh-nu">${Math.round(s.nua[k])}</td>`
+      + `<td class="hh-uv${s.uv[k] >= 6 ? " hh-fort" : ""}">`
+      + `${s.uv[k] >= 0.1 ? nombreFr(Math.round(s.uv[k] * 10) / 10) : ""}</td>`
+      + `<td class="hh-pres">${Math.round(s.pres[k])}</td></tr>`);
   }
-  /* Sans entête, deux colonnes en pour cent se confondraient : la ligne de tête
-     les nomme, et c'est aussi ce qu'attend un lecteur d'écran d'une table. */
-  const tete = `<thead><tr class="hh-tete"><th>heure</th><th></th><th>temp.</th>`
-    + `<th>vent</th><th>pluie</th><th>humidité</th></tr></thead>`;
-  return `<table class="hh-table">${tete}<tbody>${r.join("")}</tbody></table>`;
+  /* Sans entête, six colonnes de nombres nus ne se distingueraient pas. La
+     ligne de tête les nomme et porte leur unité, ce qu'attend aussi un lecteur
+     d'écran d'une table. */
+  const tete = `<thead><tr class="hh-tete"><th>heure</th>`
+    + COLONNES_H.map(([c, nom, u]) => `<th class="${c}">${esc(nom)}`
+        + (u ? `<small>${esc(u)}</small>` : "") + `</th>`).join("")
+    + `</tr></thead>`;
+  return `<div class="hh-defile"><table class="hh-table">${tete}`
+    + `<tbody>${r.join("")}</tbody></table></div>`;
 }
 
 /* ---------- Les moments ----------

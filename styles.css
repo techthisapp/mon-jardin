@@ -1770,38 +1770,63 @@ body.fige{overflow:hidden}
 .mg-ici{fill:var(--terre)}
 
 /* La liste : une ligne par heure, la coupure de minuit annoncée par son jour. */
-.hh-table{width:100%;border-collapse:collapse;font-size:13px}
-.hh th{
-  width:42px;text-align:left;padding:5px 0;font-weight:400;
-  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--f-ink3);
+/* Treize colonnes ne tiennent pas dans la largeur d'un téléphone : la table
+   défile de côté dans son cadre, l'heure restant collée au bord gauche. Sans
+   elle, une valeur lue au milieu du défilement ne se rattache plus à rien. */
+.hh-defile{
+  overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
 }
-.hh td{padding:5px 0;vertical-align:middle}
+.hh-table{border-collapse:collapse;font-size:13px;min-width:100%}
+.hh th{
+  text-align:left;padding:5px 10px 5px 0;font-weight:400;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--f-ink3);
+  position:sticky;left:0;z-index:1;background:var(--f-carte, var(--papier-haut));
+  white-space:nowrap;
+}
+.hh td{padding:5px 10px 5px 0;vertical-align:middle;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.hh td:last-child,.hh-tete th:last-child{padding-right:0}
 .hh+.hh{border-top:1px solid var(--filet-clair)}
 .hh-ici{background:rgba(76,140,63,.09)}
-.hh-ici th{color:var(--terre);font-weight:500}
+.hh-ici th{color:var(--terre);font-weight:500;background:#EAF1E6}
 .hh-jour th{
   padding:12px 0 5px;text-align:left;font-family:"IBM Plex Sans Condensed",sans-serif;
   font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--encre-doux);width:auto;
+  color:var(--encre-doux);position:static;background:none;
 }
-.hh-ic{width:26px}
+/* La cellule couvre toute la table : c'est son texte qui reste au bord gauche,
+   sinon le jour partait de côté avec les colonnes. */
+.hh-jour span{position:sticky;left:0;display:inline-block}
+.hh-ic{width:26px;padding-right:6px}
 .hh-svg{width:17px;height:17px;color:var(--f-ink3);stroke-width:1.6}
-.hh-t{width:40px;font-weight:600;font-variant-numeric:tabular-nums}
-.hh-v{width:76px;color:var(--f-ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hh-t{font-weight:600;color:var(--f-ink)}
+.hh-res,.hh-ros,.hh-nu,.hh-pres,.hh-pb{color:var(--f-ink3)}
+.hh-ecart{color:#8A4A10;font-weight:600}
+.hh-v{color:var(--f-ink2);white-space:nowrap}
 .hh-v i{display:inline-block;vertical-align:-1px;margin-right:3px}
 .hh-v i svg{width:11px;height:11px;display:block}
 .hh-v small{font-size:10.5px;color:var(--f-ink3);margin-left:3px}
+.hh-raf{color:var(--f-ink2)}
 .hh-fort{color:#8A4A10;font-weight:600}
-.hh-p{width:66px;color:#1F4F8F;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hh-hu{text-align:right;color:var(--f-ink3);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hh-p{color:#1F4F8F;font-weight:600}
+.hh-hu{color:var(--f-ink2)}
 .hh-moite{color:#5F7D91;font-weight:600}
-/* La ligne de tête nomme les colonnes : deux d'entre elles sont en pour cent. */
+/* La ligne de tête nomme les colonnes et porte leur unité : sans elle, six
+   colonnes de nombres nus ne se distingueraient pas. */
 .hh-tete th{
-  padding:0 0 4px;font-family:"IBM Plex Sans Condensed",sans-serif;
-  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--f-ink3);width:auto;
+  padding:0 10px 5px 0;font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--f-ink3);vertical-align:bottom;
 }
-.hh-tete th:last-child{text-align:right}
+.hh-tete th:first-child{
+  position:sticky;left:0;z-index:2;vertical-align:top;
+  background:var(--f-carte, var(--papier-haut));
+}
+.hh-tete small{
+  display:block;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  font-weight:400;letter-spacing:0;text-transform:none;opacity:.8;
+}
 
 /* Les moments : les tranches de six heures de la fenêtre, chacune nommée. */
 .mo{display:flex;flex-direction:column;gap:7px}

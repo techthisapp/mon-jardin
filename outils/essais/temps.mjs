@@ -191,26 +191,60 @@ export default async function essai(navigateur) {
     await pg.locator(".hh-jour").innerText().catch(() => "absente"));
   j.controle("l'heure en cours est marquée", await pg.locator(".hh-ici").count() === 1);
 
-  /* La lame et le risque tenaient chacun une colonne, toutes deux muettes par
-     temps sec : la moitié droite de la table restait vide. Une seule colonne
-     les porte, et l'humidité de l'air occupe la place gagnée. */
-  const colonnes = (await pg.locator(".hh-tete th").allInnerTexts()).map(t => net(t).toLowerCase());
-  j.controle("la ligne de tête nomme les colonnes",
-    colonnes.join(" ") === "heure  temp. vent pluie humidité", colonnes.join(" | "));
-  j.controle("une seule colonne de pluie",
-    await pg.locator(".hh-p").count() === 24 && await pg.locator(".hh-pb").count() === 0);
-  const hu = await pg.locator(".hh-hu").allInnerTexts();
-  j.controle("chaque heure porte son humidité",
-    hu.length === 24 && hu.every(t => /^\d+\s*%$/.test(net(t))), net(hu[0] || ""));
-  j.controle("la table occupe la largeur de la feuille",
-    await pg.evaluate(() => {
-      const t = document.querySelector(".hh-table").getBoundingClientRect();
-      const d = [...document.querySelectorAll(".hh-hu")].pop().getBoundingClientRect();
-      return t.right - d.right < 4;
-    }));
+  /* La table portait cinq des grandeurs que le service rend à l'heure. Elle les
+     porte toutes : le ruban en dessine sept, les moments en résument quatre, la
+     table est l'écriture qui ne choisit pas. */
+  const colonnes = await pg.locator(".hh-tete th").evaluateAll(l =>
+    l.map(e => ((e.childNodes[0] || {}).textContent || "").trim()));
+  j.controle("la ligne de tête nomme les douze colonnes et l'heure",
+    colonnes.join(" ") === "heure  temp. ressenti vent rafales pluie risque "
+      + "humidité rosée nuages uv pression", colonnes.join(" | "));
+  const unites = await pg.locator(".hh-tete th small").allInnerTexts();
+  j.controle("chacune porte son unité",
+    unites.map(net).join(" ") === "° ° km/h km/h mm % % ° % hPa",
+    unites.map(net).join(" | "));
+  /* Les nombres se lisent nus, l'unité étant portée par l'entête : elle se
+     répétait vingt-quatre fois par colonne. */
+  const hu = (await pg.locator("tr.hh .hh-hu").allInnerTexts()).map(net);
+  j.controle("chaque heure porte son humidité, sans unité répétée",
+    hu.length === 24 && hu.every(t => /^\d+$/.test(t)), hu[0]);
+  const pres = (await pg.locator("tr.hh .hh-pres").allInnerTexts()).map(net);
+  j.controle("et sa pression, en hectopascals entiers",
+    pres.length === 24 && pres.every(t => /^\d{3,4}$/.test(t)), pres[0]);
+  const ros = (await pg.locator("tr.hh .hh-ros").allInnerTexts()).map(net);
+  j.controle("et son point de rosée", ros.length === 24 && ros.every(t => /^-?\d+$/.test(t)),
+    ros[0]);
+  const nu = (await pg.locator("tr.hh .hh-nu").allInnerTexts()).map(net);
+  j.controle("et sa couverture nuageuse",
+    nu.length === 24 && nu.every(t => /^\d+$/.test(t)), nu[0]);
+  /* Le ressenti ne se répète que lorsqu'il s'écarte du thermomètre : redit à
+     l'identique vingt-quatre fois, il ferait une colonne de doublons. */
+  const res = await pg.evaluate(() => [...document.querySelectorAll("tr.hh")].map(r => ({
+    t: r.querySelector(".hh-t").textContent.trim(),
+    res: r.querySelector(".hh-res").textContent.trim() })));
+  j.controle("le ressenti se tait quand il vaut le thermomètre",
+    res.every(x => x.res === "" || x.res !== x.t) && res.some(x => x.res !== ""),
+    res.slice(0, 3).map(x => `${x.t}/${x.res || "—"}`).join(" "));
+  /* Douze colonnes ne tiennent pas dans un téléphone : la table défile de côté,
+     l'heure restant collée au bord gauche. */
+  const tenue = await pg.evaluate(() => {
+    const d = document.querySelector(".hh-defile");
+    const t = document.querySelector(".hh-table");
+    const th = document.querySelector("tr.hh th");
+    d.scrollLeft = 400;
+    const bord = Math.round(th.getBoundingClientRect().left - d.getBoundingClientRect().left);
+    d.scrollLeft = 0;
+    return { defile: t.scrollWidth > d.clientWidth, collee: getComputedStyle(th).position,
+             bord, page: document.documentElement.scrollWidth
+               <= document.documentElement.clientWidth + 1 };
+  });
+  j.controle("la table défile de côté sans emporter la page",
+    tenue.defile && tenue.page, JSON.stringify(tenue));
+  j.controle("l'heure reste collée au bord, sans rien laisser passer",
+    tenue.collee === "sticky" && tenue.bord === 0, `${tenue.collee}, ${tenue.bord} px du bord`);
   j.controle("un air moite est marqué",
-    await pg.locator(".hh-moite").count() >= 1,
-    String(await pg.locator(".hh-moite").count()));
+    await pg.locator("tr.hh .hh-moite").count() >= 1,
+    String(await pg.locator("tr.hh .hh-moite").count()));
 
   j.section("les moments suivent les bornes civiles");
   await pg.locator('[data-mode="moments"]').click();
@@ -238,7 +272,7 @@ export default async function essai(navigateur) {
     .map(m => [Number(m[1]), Number(m[2])]);
   await pg.locator('[data-mode="liste"]').click();
   await pg.waitForTimeout(500);
-  const temps = (await pg.locator(".hh-t").allInnerTexts()).map(t => Number(t.replace("°", "")));
+  const temps = (await pg.locator("tr.hh .hh-t").allInnerTexts()).map(t => Number(t.replace("°", "")));
   j.controle("le minimum des moments est celui des heures",
     Math.min(...bornes.map(b => b[0])) === Math.min(...temps),
     Math.min(...bornes.map(b => b[0])) + " contre " + Math.min(...temps));
