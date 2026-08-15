@@ -54,13 +54,13 @@ export default async function essai(navigateur) {
     !l.some(t => /^(Tailler|Multiplier|Semer)/.test(t) && t.includes("première quinzaine")),
     l.join(" | "));
 
-  /* Les deux bords sont des liens, et deux seulement : ils ne se rattachent à
-     aucune tâche, contrairement aux verbes qui les entourent. */
+  /* Les deux bords sont des liens. Les verbes qui les entourent en sont aussi,
+     mais restreints à leur tâche : les pastilles seules mènent au bord entier. */
   j.section("les deux bords sont des liens");
-  const bords = await pg.locator("[data-bord]").evaluateAll(
+  const bords = await pg.locator("button.fin[data-bord]").evaluateAll(
     n => n.map(b => [b.tagName, b.dataset.bord, b.textContent.trim(),
                      getComputedStyle(b).cursor]));
-  j.controle("il y en a deux, l'un par bord",
+  j.controle("il y en a deux, une pastille par bord",
     JSON.stringify(bords.map(b => b[1])) === '["derniere","premiere"]',
     JSON.stringify(bords.map(b => b[1])));
   j.controle("ce sont des boutons, au doigt levé",
@@ -68,14 +68,98 @@ export default async function essai(navigateur) {
     bords.map(b => b[0] + " " + b[3]).join(" | "));
   /* Le filet sous le mot est la seule marque du lien : la couleur chaude reste
      à l'échéance, le vert de la végétation va à l'ouverture. */
-  const filets = await pg.locator("[data-bord]").evaluateAll(
+  const filets = await pg.locator("button.fin[data-bord]").evaluateAll(
     n => n.map(b => getComputedStyle(b).boxShadow));
   j.controle("chacun porte son filet, et les deux diffèrent",
     filets.every(f => f && f !== "none") && filets[0] !== filets[1],
     filets.join(" | "));
 
+  /* « Première quinzaine pour tailler » menait à toutes les tailles du moment,
+     celles ouvertes depuis des mois comprises : le mot promettait un filtre
+     qu'il ne posait pas. Il mène au bord restreint à sa tâche. */
+  j.section("un verbe posé près d'un bord mène au bord restreint à sa tâche");
+  const verbes = await pg.locator(".syn-neuf .syn-verbe").evaluateAll(
+    n => n.map(b => [b.textContent.trim(), b.dataset.tache, b.dataset.bord]));
+  j.controle("les verbes des ouvertures portent leur tâche et leur bord",
+    verbes.length === 3 && verbes.every(v => v[1] && v[2] === "premiere"),
+    JSON.stringify(verbes));
+  /* Le verbe de la phrase de tête suit la même règle quand la phrase est
+     pressée : elle ne nomme alors que les plantes dont la fenêtre se ferme. */
+  const teteV = await pg.locator(".syn-tete .syn-verbe").evaluateAll(
+    n => n.map(b => [b.textContent.trim(), b.dataset.tache, b.dataset.bord]));
+  j.controle("celui de la tête pressée aussi, sur l'autre bord",
+    teteV.length > 0 && teteV.every(v => v[1] && v[2] === "derniere"),
+    JSON.stringify(teteV));
+
+  await pg.locator('.syn-neuf .syn-verbe[data-tache="taille"]').click();
+  await pg.waitForTimeout(700);
+  const filtre = await pg.evaluate(() => ({
+    titre: document.querySelector("#barreNiveau .nom-niveau").textContent,
+    sous: (document.querySelector("#barreNiveau .sous-niveau") || {}).textContent || "",
+    compte: document.querySelector("#barreNiveau .nb-niveau").textContent,
+    sections: [...document.querySelectorAll(".section-liste .tete-liste")]
+      .map(e => e.querySelector(".nom-niveau").textContent),
+    actions: document.querySelectorAll("#maintenant .action").length,
+    ouvertes: document.querySelectorAll("#maintenant .action.a-ouverture").length,
+  }));
+  j.controle("le niveau nomme la quinzaine et la tâche qui la restreint",
+    filtre.titre === "Première quinzaine" && filtre.sous === "Tailler",
+    filtre.titre + " " + filtre.sous);
+  j.controle("il ne montre qu'une tâche, et rien qui ne s'ouvre",
+    JSON.stringify(filtre.sections) === '["Tailler"]'
+    && filtre.actions > 0 && filtre.ouvertes === filtre.actions,
+    `${JSON.stringify(filtre.sections)}, ${filtre.ouvertes} sur ${filtre.actions}`);
+  /* Le filtre retranche : la taille du moment porte plus d'actions que celles
+     qui viennent de s'ouvrir, sans quoi le contrôle ne prouverait rien. */
+  await pg.locator("#barreNiveau .retour").click();
+  await pg.waitForTimeout(400);
+  await pg.locator('.syn-ligne[data-tache="taille"]').click().catch(() => {});
+  await pg.waitForTimeout(700);
+  const entiere = await pg.locator("#maintenant .action").count();
+  j.controle("la tâche entière en porte davantage",
+    entiere > filtre.actions, `${filtre.actions} au bord, ${entiere} en tout`);
+  await pg.locator("#barreNiveau .retour").click();
+  await pg.waitForTimeout(400);
+
+  /* Le bord chassait la borne : une ligne de dernière quinzaine ne disait plus
+     jusqu'à quand, et une ligne de première quinzaine ne disait pas qu'elle
+     venait de s'ouvrir. Les deux paraissent. */
+  j.section("chaque action dit son bord et jusqu'à quand elle court");
+  await pg.locator('button.fin[data-bord="premiere"]').click();
+  await pg.waitForTimeout(700);
+  const dits = await pg.evaluate(() => [...document.querySelectorAll("#maintenant .action")]
+    .map(a => ({
+      etat: a.classList.contains("a-derniere") ? "derniere"
+        : a.classList.contains("a-ouverture") ? "ouverture" : "",
+      pastille: (a.querySelector(".echeance.neuve, .echeance.urgente") || {}).textContent || "",
+      borne: [...a.querySelectorAll(".ech-g .echeance")]
+        .filter(e => !e.classList.contains("neuve") && !e.classList.contains("urgente"))
+        .map(e => e.textContent)[0] || "",
+    })));
+  j.controle("chacune porte la pastille de son bord",
+    dits.length > 0 && dits.every(d => d.pastille === "première quinzaine"),
+    dits.length + " actions, " + [...new Set(dits.map(d => d.pastille))].join(" | "));
+  j.controle("et sa borne, que la pastille ne chasse plus",
+    dits.every(d => /^jusqu'à (mi-|fin )/.test(d.borne)),
+    [...new Set(dits.map(d => d.borne))].slice(0, 3).join(" | "));
+  await pg.locator("#barreNiveau .retour").click();
+  await pg.waitForTimeout(400);
+  await pg.locator('button.fin[data-bord="derniere"]').click();
+  await pg.waitForTimeout(700);
+  const ditsD = await pg.evaluate(() => [...document.querySelectorAll("#maintenant .action")]
+    .map(a => [(a.querySelector(".echeance.urgente") || {}).textContent || "",
+               [...a.querySelectorAll(".ech-g .echeance")]
+                 .filter(e => !e.classList.contains("urgente"))
+                 .map(e => e.textContent)[0] || ""]));
+  j.controle("l'autre bord porte la sienne, et sa borne aussi",
+    ditsD.length > 0 && ditsD.every(d => d[0] === "dernière quinzaine"
+      && /^jusqu'à /.test(d[1])),
+    JSON.stringify(ditsD));
+  await pg.locator("#barreNiveau .retour").click();
+  await pg.waitForTimeout(400);
+
   j.section("le bord des échéances n'ouvre que ce qui se ferme");
-  await pg.locator('[data-bord="derniere"]').click();
+  await pg.locator('button.fin[data-bord="derniere"]').click();
   await pg.waitForTimeout(700);
   const bd = await pg.evaluate(() => ({
     titre: document.querySelector("#barreNiveau .nom-niveau").textContent,
@@ -102,7 +186,7 @@ export default async function essai(navigateur) {
   j.section("le bord des ouvertures n'ouvre que ce qui commence");
   await pg.locator("#barreNiveau .retour").click();
   await pg.waitForTimeout(400);
-  await pg.locator('[data-bord="premiere"]').click();
+  await pg.locator('button.fin[data-bord="premiere"]').click();
   await pg.waitForTimeout(700);
   const bp = await pg.evaluate(() => ({
     titre: document.querySelector("#barreNiveau .nom-niveau").textContent,
@@ -133,7 +217,7 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(400);
   j.controle("le chevron rend la vue d'ensemble",
     await pg.locator("#vueEnsemble:not([hidden])").count() === 1);
-  await pg.locator('[data-bord="premiere"]').click();
+  await pg.locator('button.fin[data-bord="premiere"]').click();
   await pg.waitForTimeout(600);
   await pg.goBack();
   await pg.waitForTimeout(600);
@@ -151,9 +235,9 @@ export default async function essai(navigateur) {
   j.controle("la tête se tait sur l'échéance",
     !teteE.includes("avant la fin de la quinzaine"), teteE);
   j.controle("le lien des échéances n'est pas là",
-    await e.pg.locator('[data-bord="derniere"]').count() === 0);
+    await e.pg.locator('button.fin[data-bord="derniere"]').count() === 0);
   j.controle("celui des ouvertures reste",
-    await e.pg.locator('[data-bord="premiere"]').count() === 1,
+    await e.pg.locator('button.fin[data-bord="premiere"]').count() === 1,
     net(await e.pg.locator(".syn-neuf").innerText()));
   await e.ctx.close();
 

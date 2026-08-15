@@ -1761,9 +1761,19 @@ function rendreMaintenant() {
     const muet = Boolean(sourdineActive(p, k));
     const e = etatFenetre(p, k);
     const fin = finFenetre(p, k);
-    const echeance = e === "derniere"
+    /* Le bord de la fenêtre chassait la borne : une ligne de dernière quinzaine
+       ne disait plus jusqu'à quand, et une ligne de première quinzaine ne disait
+       pas qu'elle venait de s'ouvrir. Les deux paraissent, la pastille du bord
+       devant la borne, qui reste dans tous les cas. */
+    const pastille = e === "derniere"
       ? '<span class="echeance urgente">dernière quinzaine</span>'
-      : (fin <= 24 && !muet ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "");
+      : e === "ouverture" ? '<span class="echeance neuve">première quinzaine</span>' : "";
+    const borne = fin <= 24 && !muet
+      ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "";
+    /* Pastille et borne forment un seul bloc : elles passent ensemble à la
+       ligne quand le nom prend toute la largeur, plutôt que de le rogner. */
+    const echeance = pastille || borne
+      ? `<span class="ech-g">${pastille}${borne}</span>` : "";
     const tete = mode === "espace"
       ? `<span class="pt" style="background:${teinteK(k)}"></span>${esc(phases[k].label)}`
       : nomAvecMarque(p);
@@ -1856,8 +1866,13 @@ function rendreMaintenant() {
      ramène à la vue d'ensemble comme le ferait une tâche vidée. */
   const estBord = vueDetail.t === "bord";
   const ETAT_BORD = { derniere: "derniere", premiere: "ouverture" };
+  /* Le bord se restreint à une tâche quand on y vient par son verbe : « première
+     quinzaine pour tailler » menait jusqu'ici à toutes les tailles du moment,
+     celles ouvertes depuis des mois comprises, et le mot promettait un filtre
+     qu'il ne posait pas. */
   const vues = estBord
-    ? paires.filter(x => etatFenetre(x.p, x.k) === ETAT_BORD[vueDetail.bord]) : paires;
+    ? paires.filter(x => etatFenetre(x.p, x.k) === ETAT_BORD[vueDetail.bord]
+        && (!vueDetail.k || x.k === vueDetail.k)) : paires;
   if (!vues.length) { vueDetail = null; majNiveau(); return; }
   const clesPresentes = ORDRE_MAINTENANT.filter(k => vues.some(x => x.k === k));
 
@@ -1936,8 +1951,10 @@ function rendreMaintenant() {
   if (estBord) {
     const t = document.createElement("span");
     t.className = "titre-niveau";
-    t.innerHTML = `<span class="nom-niveau">${vueDetail.bord === "derniere"
-      ? "Dernière quinzaine" : "Première quinzaine"}</span>`;
+    t.innerHTML = (vueDetail.k ? carreTache(vueDetail.k) : "")
+      + `<span class="nom-niveau">${vueDetail.bord === "derniere"
+        ? "Dernière quinzaine" : "Première quinzaine"}</span>`
+      + (vueDetail.k ? `<span class="sous-niveau">${esc(titreTache(vueDetail.k))}</span>` : "");
     barre.appendChild(t);
     const n = document.createElement("span");
     n.className = "nb-niveau";
@@ -4943,14 +4960,20 @@ function rendreSynthese(paires) {
      qui vient de s'ouvrir. */
   const bord = (b, texte) => `<button type="button" class="fin" data-bord="${b}">`
     + `${esc(texte)}</button>`;
-  const verbeOuvrant = (k, mot) => `<button type="button" class="syn-verbe" `
-    + `data-tache="${esc(k)}">${esc(mot.toLowerCase())}</button>`;
+  /* Un verbe posé à côté d'un bord de quinzaine mène au bord restreint à sa
+     tâche, non à la tâche entière : « première quinzaine pour tailler » promet
+     les tailles qui viennent de s'ouvrir, non les huit tailles du moment. */
+  const verbeOuvrant = (k, mot, b) => `<button type="button" class="syn-verbe" `
+    + `data-tache="${esc(k)}"${b ? ` data-bord="${b}"` : ""}>${esc(mot.toLowerCase())}</button>`;
 
   const h = [];
   if (tete.length) {
     // Le verbe de la phrase de tête ouvre lui aussi sa tâche : une tâche dont
     // toutes les plantes sont citées ici n'a pas de ligne en dessous.
-    const phrases = tete.map(t => `${verbeOuvrant(t.g.k, t.g.verbe)} ${esc(bout(t.plantes))}`);
+    /* La phrase pressée ne nomme que les plantes dont la fenêtre se ferme : son
+       verbe mène donc au même lot, et non à la tâche entière. */
+    const phrases = tete.map(t =>
+      `${verbeOuvrant(t.g.k, t.g.verbe, t.presse ? "derniere" : "")} ${esc(bout(t.plantes))}`);
     h.push(`<p class="syn-tete">En ce moment, ${phrases.join(" et ")}`
       + (tete[0].presse ? " " + bord("derniere", "avant la fin de la quinzaine") : "") + ".</p>");
   }
@@ -4979,8 +5002,8 @@ function rendreSynthese(paires) {
        lignes en dessous et par le niveau qu'ouvre le lien. */
     const reste = ouvrants.length - vus.length;
     const parts = ouvrants.length === 1
-      ? [`${verbeOuvrant(vus[0].k, vus[0].mot)} ${esc(bout(vus[0].neuves))}`]
-      : vus.map(o => verbeOuvrant(o.k, o.mot));
+      ? [`${verbeOuvrant(vus[0].k, vus[0].mot, "premiere")} ${esc(bout(vus[0].neuves))}`]
+      : vus.map(o => verbeOuvrant(o.k, o.mot, "premiere"));
     const dits = reste
       ? parts.join(", ") + ` et ${reste} autre${reste > 1 ? "s" : ""} tâche${reste > 1 ? "s" : ""}`
       : parts.length > 1 ? parts.slice(0, -1).join(", ") + " et " + parts[parts.length - 1]
@@ -5115,18 +5138,18 @@ function rendreSynthese(paires) {
     const p = plantes.find(x => String(x.id) === b.dataset.plante);
     if (p) ouvrirFeuille(p);
   }));
-  // Un clic sur une ligne ouvre la tâche, la ligne de reste ouvre la liste complète.
-  z.querySelectorAll(".syn-ligne,.syn-verbe").forEach(b => b.addEventListener("click", e => {
-    e.stopPropagation();
-    const k = b.dataset.tache;
-    ouvrirDetail(k ? { t: "tache", k } : { t: "tout" });
-  }));
-  // Les deux bords de la quinzaine ouvrent leur propre niveau, toutes tâches
-  // confondues : ils ne se rattachent à aucune.
-  z.querySelectorAll("[data-bord]").forEach(b => b.addEventListener("click", e => {
-    e.stopPropagation();
-    ouvrirDetail({ t: "bord", bord: b.dataset.bord });
-  }));
+  /* Un clic sur une ligne ouvre la tâche, la ligne de reste ouvre la liste
+     complète. Un bord de quinzaine ouvre son propre niveau, restreint à la tâche
+     quand le mot touché en portait une, toutes tâches confondues sinon. Un seul
+     branchement pour les trois : un verbe porte les deux attributs, et deux
+     écouteurs se seraient succédé sur lui. */
+  z.querySelectorAll(".syn-ligne,.syn-verbe,[data-bord]").forEach(b =>
+    b.addEventListener("click", e => {
+      e.stopPropagation();
+      const k = b.dataset.tache, bo = b.dataset.bord;
+      ouvrirDetail(bo ? { t: "bord", bord: bo, k: k || null }
+        : k ? { t: "tache", k } : { t: "tout" });
+    }));
 }
 
 // Besoin en eau de la quinzaine, une seule ligne par plante retenue.

@@ -925,19 +925,30 @@ button.action{
 }
 button.action:focus-visible{outline:2px solid var(--terre);outline-offset:-2px;border-radius:6px}
 .ligne-nom{
-  display:flex;align-items:baseline;justify-content:space-between;gap:12px;width:100%;
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;
+  gap:5px 12px;width:100%;
 }
-.ligne-nom b{min-width:0;font-weight:600}
+.ligne-nom b{flex:1 1 auto;min-width:0;font-weight:600}
 .dit-action{display:block}
 .echeance{
   flex:none;font-family:"IBM Plex Mono",monospace;font-size:11px;
   color:var(--encre-doux);white-space:nowrap;
 }
-.echeance.urgente{
+/* Les deux bords de la fenêtre portent la même pastille, l'un dans la teinte de
+   ce qui presse, l'autre dans celle de ce qui commence. Elle précède la borne,
+   qui reste dans tous les cas : la pastille dit où l'on est dans la fenêtre, la
+   borne jusqu'à quand elle court. */
+.echeance.urgente,.echeance.neuve{
   font-family:"IBM Plex Sans",sans-serif;font-size:10.5px;font-weight:600;
   letter-spacing:.04em;text-transform:uppercase;
-  padding:2px 7px;border-radius:999px;background:#FCE7E3;color:#8C3A2A;
+  padding:2px 7px;border-radius:999px;
 }
+.echeance.urgente{background:#FCE7E3;color:#8C3A2A}
+.echeance.neuve{background:#E7F0E2;color:#3A6B30}
+/* La pastille et la borne forment une seule mention, qui passe à la ligne d'un
+   bloc quand le nom prend toute la largeur : rognée, elle laissait lire
+   « Lavand » et « Frambo ». */
+.ech-g{display:inline-flex;align-items:baseline;gap:7px;flex:0 0 auto}
 
 
 
@@ -2062,6 +2073,14 @@ body.fige{overflow:hidden}
   font-size:16px;font-weight:700;letter-spacing:-.01em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
+/* Un bord venu d'un verbe porte deux sujets : la quinzaine, qui est le titre,
+   et la tâche, qui la restreint. La seconde s'écrit d'un rang plus bas, faute
+   de quoi le titre se lirait comme deux titres accolés. */
+.sous-niveau{
+  flex:0 1 auto;font-size:13px;color:#8A968D;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sous-niveau::before{content:"·";margin-right:7px}
 .nb-niveau{flex:0 0 auto;font-size:12px;color:#8A968D}
 
 /* ---------- Rail des sections, mode tout voir ---------- */
@@ -2599,8 +2618,8 @@ select:focus{
    annuelle et dans un espace. Même masque, même encre, taille réduite : la
    plante se reconnaît partout de la même façon. */
 .v-pl-s{width:22px;height:22px;opacity:.72}
-.ligne-nom{align-items:center;gap:8px}
-.ligne-nom b{flex:1;min-width:0}
+.ligne-nom{align-items:center;gap:5px 8px}
+.ligne-nom b{flex:1 1 auto;min-width:0}
 .ligne-nom .echeance{flex:none}
 .tete-plante .v-pl-s{margin-right:2px}
 .nom-plante{flex-direction:row;align-items:center;gap:8px}
