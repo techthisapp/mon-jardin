@@ -1111,6 +1111,12 @@ body.fige{overflow:hidden}
   letter-spacing:0;color:var(--encre-doux);
 }
 .feuille-latin i{font-style:italic}
+/* Un sous-titre qui nomme le ciel le dessine aussi, du même trait que partout
+   ailleurs. L'icône se cale sur la ligne du texte, elle ne la surplombe pas. */
+.f-sous-ic{
+  width:15px;height:15px;stroke-width:1.7;vertical-align:-3px;margin-right:5px;
+  color:var(--f-ink3);
+}
 .fermer-feuille{
   flex:none;width:34px;height:34px;border-radius:50%;cursor:pointer;
   border:1px solid var(--filet);background:#fff;color:var(--encre-doux);
@@ -1866,15 +1872,40 @@ body.fige{overflow:hidden}
 }
 
 /* Les moments : les tranches de six heures de la fenêtre, chacune nommée. */
-.mo{display:flex;flex-direction:column;gap:7px}
-.mo-c{background:var(--papier);border-radius:12px;padding:10px 12px}
+/* Une tête, puis trois mesures en colonnes. Les fragments séparés par des
+   virgules ne se comparaient pas d'une carte à l'autre : une grandeur cherchée
+   se lisait à chaque fois à une place différente. En colonnes, l'oeil descend
+   la pile sans relire. */
+.mo{display:flex;flex-direction:column;gap:8px}
+.mo-c{background:var(--papier-haut);border-radius:14px;padding:10px 11px 11px}
 .mo-ici{background:rgba(76,140,63,.10)}
-.mo-h{font-size:11.5px;color:var(--f-ink3);margin-bottom:3px}
-.mo-l{display:flex;gap:11px;align-items:flex-start}
-.mo-ic{width:20px;height:20px;flex:0 0 auto;margin-top:1px;color:var(--f-ink2);stroke-width:1.6}
-.mo-x{min-width:0}
-.mo-x>b{display:block;font-size:14.5px;font-weight:650}
-.mo-x span{display:block;font-size:12.5px;color:var(--f-ink2);line-height:1.45}
+/* Le nom du moment est une phrase, avec ses heures : en capitales il devenait
+   la ligne la plus bruyante de la carte, et la plus longue. Il garde sa casse
+   et prend la fonte condensée du titre, ce qui suffit à le poser comme
+   étiquette. */
+.mo-h{
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:12px;font-weight:600;letter-spacing:.02em;
+  color:var(--f-ink3);margin-bottom:6px;
+}
+.mo-l{display:flex;gap:9px;align-items:baseline;margin-bottom:7px}
+.mo-ic{width:21px;height:21px;flex:0 0 auto;color:var(--f-ink2);stroke-width:1.6;
+  align-self:center;margin-top:-1px}
+.mo-l>b{font-size:20px;font-weight:600;letter-spacing:-.01em;color:var(--f-ink)}
+/* Le ciel se nomme à côté de la température, non au-dessus des mesures : c'est
+   la même chose qu'elle, l'état du moment, et non une mesure de plus. */
+.mo-l>span{
+  font-size:13px;color:var(--f-ink2);min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mo-m{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+/* Les cellules reprennent le damier de l'en-tête, d'un rang plus bas : elles
+   sont trois par ligne là où l'en-tête en met deux. */
+.mo-m .tp-m{background:rgba(22,36,30,.035);padding:6px 8px 7px;border-radius:10px}
+.mo-ici .mo-m .tp-m{background:rgba(255,255,255,.5)}
+.mo-m .tp-m span{font-size:9.5px;letter-spacing:.06em;margin-bottom:1px}
+.mo-m .tp-m b{font-size:14px}
+.mo-m .tp-m i{font-size:10px;line-height:1.3;margin-top:1px}
 
 /* Deuxième profondeur */
 .mt-table{width:100%;border-collapse:collapse;font-size:14px}
@@ -1940,6 +1971,8 @@ body.fige{overflow:hidden}
   border-right:1.6px solid var(--encre-doux);border-bottom:1.6px solid var(--encre-doux);
   transform:rotate(-45deg);opacity:.45;
 }
+.tm-ic{width:32px;height:32px;flex:0 0 auto;color:var(--encre-doux);stroke-width:1.5;
+  margin-bottom:4px}
 .tm-deg{font-size:44px;font-weight:600;letter-spacing:-.045em;line-height:.92;color:var(--encre)}
 .tm-etat{padding-bottom:5px;font-size:14px;color:var(--encre)}
 .tm-etat small{display:block;font-size:11.5px;color:var(--encre-doux);margin-top:2px}

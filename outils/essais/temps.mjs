@@ -407,8 +407,57 @@ export default async function essai(navigateur) {
 
   /* Les trois écritures lisent la même série : un écart entre elles serait une
      erreur de découpage, invisible à l'oeil. */
+  /* Trois lignes de fragments séparés par des virgules ne se comparaient pas
+     d'une carte à l'autre : « averses, sec » se contredisait, « rafales 41 »
+     perdait son unité, et une grandeur cherchée se lisait à chaque fois à une
+     place différente. Chaque carte porte les mêmes trois mesures, dans le même
+     ordre et à la même place. */
+  j.section("chaque moment porte les mêmes mesures, à la même place");
+  const cartes = await pg.evaluate(() => [...document.querySelectorAll(".mo-c")].map(c => ({
+    tete: c.querySelector(".mo-h").textContent.trim(),
+    ciel: c.querySelector(".mo-l > span").textContent.trim(),
+    ico: c.querySelectorAll(".mo-l > svg.mo-ic").length,
+    noms: [...c.querySelectorAll(".mo-m .tp-m > span")].map(e => e.textContent.trim()),
+    vals: [...c.querySelectorAll(".mo-m .tp-m > b")].map(e => e.textContent.trim()),
+  })));
+  j.controle("trois mesures nommées, dans le même ordre partout",
+    cartes.length >= 4 && cartes.every(c =>
+      JSON.stringify(c.noms) === '["Pluie","Vent","Humidité"]'),
+    JSON.stringify(cartes[0].noms));
+  j.controle("chacune porte un chiffre, ou dit qu'il n'y a rien",
+    cartes.every(c => c.vals.length === 3
+      && /^(aucune|\d)/.test(c.vals[0]) && /km\/h$/.test(c.vals[1]) && /%$/.test(c.vals[2])),
+    JSON.stringify(cartes[0].vals));
+  /* Le ciel se nomme à côté de la température, non collé à la pluie : « averses,
+     sec » mettait sur la même ligne un état et une absence de lame. */
+  j.controle("le ciel est nommé en tête, séparé de la pluie",
+    cartes.every(c => c.ciel.length > 0 && !/mm|risque|sec/.test(c.ciel)),
+    cartes.map(c => c.ciel).join(" | "));
+  j.controle("et dessiné, comme partout ailleurs",
+    cartes.every(c => c.ico === 1), cartes.map(c => c.ico).join(", "));
+
+  /* L'état du ciel était nommé sans être dessiné à deux endroits : le grand
+     chiffre du bandeau et le sous-titre de la feuille. La liste, les moments et
+     la semaine le dessinaient tous. */
+  j.section("le ciel est dessiné partout où il est nommé");
+  j.controle("le sous-titre de la feuille porte son icône",
+    await pg.locator("#feuille-titre .feuille-latin svg.f-sous-ic").count() === 1);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(500);
+  j.controle("le bandeau du jour aussi, devant son grand chiffre",
+    await pg.evaluate(() => {
+      const b = document.querySelector(".tm-temps");
+      return b.firstElementChild.tagName === "svg"
+        && b.firstElementChild.classList.contains("tm-ic")
+        && b.children[1].classList.contains("tm-deg");
+    }));
+  await pg.locator(".tm-temps").click();
+  await pg.waitForTimeout(700);
+  await pg.locator('[data-mode="moments"]').click();
+  await pg.waitForTimeout(500);
+
   j.section("les trois écritures s'accordent");
-  const bornes = (await pg.locator(".mo-x > b").allInnerTexts())
+  const bornes = (await pg.locator(".mo-l > b").allInnerTexts())
     .map(t => t.match(/(-?\d+) à (-?\d+)/)).filter(Boolean)
     .map(m => [Number(m[1]), Number(m[2])]);
   await pg.locator('[data-mode="liste"]').click();

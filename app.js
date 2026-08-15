@@ -3279,7 +3279,14 @@ function rendreBandeau() {
     `<button type="button" class="mesure-j${ton ? " mesure-agir" : ""}" data-vue="${vue}">`
     + icoM(icone, "mj-ic") + `<span class="mj-nom">${nom}</span>`
     + `<b>${esc(val)}</b></button>`;
+  /* Le bandeau nommait le ciel sans le dessiner, quand la liste, les moments et
+     la semaine le dessinent tous. L'icône de l'heure en cours ouvre la ligne,
+     du même dessin et à la même échelle que partout ailleurs. */
+  const cielIci = ih >= 0
+    ? icoCiel(meteo.hourly.weather_code[ih], meteo.hourly.is_day[ih])
+    : ico;
   t.innerHTML = `<button type="button" class="tm-temps" data-vue="temps">`
+    + icoM(cielIci, "tm-ic")
     + `<span class="tm-deg">${Math.round(maintenant.deg)}°</span>`
     + `<span class="tm-etat">${esc(maintenant.lib)}<small>`
     + `${Math.round(d.temperature_2m_max[i])}° le jour, ${Math.round(d.temperature_2m_min[i])}° la nuit, `
@@ -3612,8 +3619,12 @@ function ouvrirVue(vue, enRetour) {
   if (vue !== "note" && vue !== "journal") planteFeuille = null;
   vueCourante = { vue, titre: f.titre };
   poserRetour();
+  /* Un sous-titre peut porter une icône devant lui : la feuille du temps y
+     nomme le ciel, et le nommer sans le dessiner était le seul endroit de
+     l'application où l'état du ciel n'avait pas son dessin. */
   $("feuille-titre").innerHTML = esc(f.titre)
-    + (f.sous ? `<span class="feuille-latin">${esc(f.sous)}</span>` : "");
+    + (f.sous ? `<span class="feuille-latin">`
+      + (f.icoSous ? icoM(f.icoSous, "f-sous-ic") : "") + esc(f.sous) + `</span>` : "");
   $("feuille-corps").innerHTML = `<div class="fiche-v2">${f.corps}</div>`;
   $("feuille-corps").scrollTop = 0;
   poserEtatFeuille();
@@ -4193,6 +4204,13 @@ function momentsHoraires(s) {
   // Une tranche d'une heure en bout de fenêtre est un reste, pas un moment.
   if (tr.length > 1 && tr[tr.length - 1].b - tr[tr.length - 1].a < 1) tr.pop();
 
+  /* Trois lignes de fragments séparés par des virgules se lisaient mal :
+     « averses, sec » se contredisait à la lecture, « rafales 41 » perdait son
+     unité, et rien ne se comparait d'une carte à l'autre puisque les grandeurs
+     n'occupaient pas la même place. La carte prend donc une tête, où le ciel se
+     nomme à côté de la température, et trois mesures en colonnes, les mêmes
+     dans le même ordre partout. Les trois cellules reprennent le damier de
+     l'en-tête de la feuille : une seule écriture pour une seule chose. */
   return `<div class="mo">` + tr.map(x => {
     const q = c => s[c].slice(x.a, x.b + 1);
     const mm = q("mm").reduce((p, n) => p + n, 0);
@@ -4200,17 +4218,28 @@ function momentsHoraires(s) {
     const clair = q("clair").some(Boolean);
     const pb = Math.max(...q("pb")), raf = Math.max(...q("raf"));
     const dir = s.dir[Math.floor((x.a + x.b) / 2)];
-    const pluie = mm >= 0.2 ? `<b>${nombreFr(mm)} mm</b> attendus, risque ${pb} %`
-      : pb >= 20 ? `sec, risque ${pb} %` : "sec";
+    const hum = Math.round(Math.max(...q("hum")));
+    const ros = Math.round(q("ros").reduce((p, n) => p + n, 0) / (x.b - x.a + 1));
+    const mes = (nom, val, sous) => `<div class="tp-m"><span>${esc(nom)}</span>`
+      + `<b>${esc(val)}</b>${sous ? `<i>${esc(sous)}</i>` : ""}</div>`;
+    /* La lame et le risque ne disent pas la même chose : la première est un
+       chiffre attendu, le second une chance. Ils cessent de se suivre sur la
+       même ligne, séparés par une virgule qui les mettait sur le même rang. */
+    const lame = mm >= 0.2 ? `${nombreFr(mm)} mm` : "aucune";
     return `<div class="mo-c${x.a === 0 ? " mo-ici" : ""}">`
       + `<p class="mo-h">${esc(x.demain ? "demain, " : "")}${esc(x.nom)}, `
       + `de ${String(s.heure[x.a]).padStart(2, "0")} h à `
       + `${String((s.heure[x.b] + 1) % 24).padStart(2, "0")} h</p>`
-      + `<div class="mo-l">${icoM(icoCiel(code, clair), "mo-ic")}<div class="mo-x">`
+      + `<p class="mo-l">${icoM(icoCiel(code, clair), "mo-ic")}`
       + `<b>${Math.round(Math.min(...q("t")))} à ${Math.round(Math.max(...q("t")))}°</b>`
-      + `<span>${esc(tempsDe(code)[1].toLowerCase())}, ${pluie}</span>`
-      + `<span>vent ${Math.round(Math.max(...q("v")))} km/h ${esc(dCardinal(dir))}`
-      + `${raf >= 40 ? `, rafales ${Math.round(raf)}` : ""}</span></div></div></div>`;
+      + `<span>${esc(tempsDe(code)[1].toLowerCase())}</span></p>`
+      + `<div class="mo-m">`
+      + mes("Pluie", lame, pb >= 5 ? `risque ${pb} %` : "")
+      + mes("Vent", `${Math.round(Math.max(...q("v")))} km/h`,
+            `${cardinal(dir)}${raf >= 30 ? `, rafales ${Math.round(raf)} km/h` : ""}`)
+      + mes("Humidité", `${hum} %`,
+            hum >= 90 ? "feuillage mouillé" : `rosée à ${ros}°`)
+      + `</div></div>`;
   }).join("") + `</div>`;
 }
 
@@ -4466,7 +4495,7 @@ function vueTemps() {
      concurrence quand les deux sont à l'écran. */
   const sous = [g.commune, s ? `${Math.round(s.t[0])}° et ${tempsDe(s.code[0])[1].toLowerCase()}` : ""]
     .filter(Boolean).join(", ");
-  return { titre: "Le temps", sous,
+  return { titre: "Le temps", sous, icoSous: s ? icoCiel(s.code[0], s.clair[0]) : null,
     corps: tete + heures + `<h3 class="f-sect">La semaine</h3>` + tableSemaine()
       + `<p class="f-note">Prévision Open-Meteo. Les heures viennent d'AROME, le `
       + `modèle de Météo-France à 1,5 km, complété par la sélection automatique là `
