@@ -470,6 +470,36 @@ export default async function essai(navigateur) {
     avec.every(l => /^\d+$/.test(l.t)), JSON.stringify(avec.map(l => l.t)));
   await cA.ctx.close();
 
+  /* Deux modèles chargés, un seul qui annonce la pluie : la prévision est
+     incertaine, et le dire vaut mieux que trancher en silence. C'est le cas du
+     15 août, où la source automatique donnait zéro et AROME plusieurs
+     millimètres. Un écart de quelques dixièmes ne dit rien et ne paraît pas. */
+  j.section("deux modèles qui ne s'accordent pas le disent");
+  const cD = await ouvrirContexte(navigateur, { arome: h => ({
+    ...h, precipitation: h.precipitation.map((_, i) => (i % 24 === 3 ? 3.4 : 0)) }) });
+  await cD.pg.waitForTimeout(700);
+  await cD.pg.locator(".tm-temps").click();
+  await cD.pg.waitForTimeout(700);
+  const dv = (await cD.pg.locator(".jd-l").allInnerTexts()).map(net);
+  j.controle("la première ligne dit l'incertitude et nomme les deux sources",
+    /^Prévision incertaine/.test(dv[0]) && /AROME/.test(dv[0])
+    && /seconde source/.test(dv[0]), dv[0]);
+  j.controle("elle ne double pas la ligne de pluie ordinaire",
+    dv.filter(t => /^Pluie /.test(t)).length === 0, dv.join(" | "));
+  await cD.ctx.close();
+
+  /* Un écart de quelques dixièmes ne change aucune décision au jardin : la
+     mention ne paraît pas, et la ligne de pluie ordinaire reprend sa place. */
+  const cE = await ouvrirContexte(navigateur, { arome: h => ({
+    ...h, precipitation: h.precipitation.map((_, i) => (i % 24 === 3 ? 0.3 : 0)) }) });
+  await cE.pg.waitForTimeout(700);
+  await cE.pg.locator(".tm-temps").click();
+  await cE.pg.waitForTimeout(700);
+  const dvE = (await cE.pg.locator(".jd-l").allInnerTexts()).map(net);
+  j.controle("un écart faible ne se signale pas",
+    !/incertaine/.test(dvE.join(" ")), dvE[0]);
+  await cE.ctx.close();
+
   /* AROME muet, en panne ou hors de portée : l'application rend ce qu'elle
      rendait avant, sans voie vide ni ligne trouée. */
   const cB = await ouvrirContexte(navigateur, { arome: false });

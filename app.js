@@ -3031,6 +3031,10 @@ async function lireMeteo(g) {
       const h = await rh.json();
       if (h && h.hourly) meteo.hourly = h.hourly;
     }
+    /* La série de secours est gardée entière à côté de la série fondue : c'est
+       elle qui permet de dire, plus tard, que les deux modèles ne s'accordent
+       pas sur la pluie. */
+    meteo.horaireSecours = meteo.hourly || null;
     /* AROME absent, en panne ou muet : la série de secours reste seule, et
        l'application rend ce qu'elle rendait avant. */
     if (ra && ra.ok && meteo.hourly) {
@@ -3655,7 +3659,33 @@ function serieHoraire() {
     hum: p("relative_humidity_2m"), mm: p("precipitation"), pb: p("precipitation_probability"),
     code: p("weather_code"), nua: p("cloud_cover"), pres: p("pressure_msl"),
     v: p("wind_speed_10m"), raf: p("wind_gusts_10m"), dir: p("wind_direction_10m"),
-    uv: p("uv_index"), clair: p("is_day") };
+    uv: p("uv_index"), clair: p("is_day"),
+    /* La lame de la série de secours sur la même fenêtre, pour la comparer à
+       celle qu'AROME a posée. Absente si la charge n'en porte pas. */
+    mmS: (() => {
+      const b = meteo.horaireSecours;
+      if (!b || !Array.isArray(b.precipitation) || !Array.isArray(b.time)) return null;
+      const r = new Map(b.time.map((t, k) => [t, k]));
+      return h.time.slice(i, i + n).map(t => {
+        const k = r.get(t);
+        const v = k === undefined ? null : b.precipitation[k];
+        return v === null || v === undefined ? 0 : v;
+      });
+    })() };
+}
+
+/* Deux modèles chargés, un seul qui annonce la pluie : la prévision est alors
+   incertaine, et le dire vaut mieux que trancher en silence. Le seuil est
+   décidé par ce qui change une décision au jardin : un millimètre d'un côté et
+   rien de l'autre font arroser ou non. Un écart de quelques dixièmes ne dit
+   rien et ferait paraître la mention presque tous les soirs d'été. */
+function divergencePluie(s) {
+  if (!s.mmS) return null;
+  const a = s.mm.reduce((x, y) => x + y, 0);
+  const b = s.mmS.reduce((x, y) => x + y, 0);
+  const haut = Math.max(a, b), bas = Math.min(a, b);
+  if (haut < 1 || bas >= 0.2) return null;
+  return { haut, arome: a > b };
 }
 
 // Les plages d'heures consécutives qui vérifient une condition.
@@ -3907,12 +3937,17 @@ function dessinMeteogramme(s) {
   }
   pluie += `<line x1="${MG_M}" y1="${u(yP + .5)}" x2="${MG_L - MG_M}" y2="${u(yP + .5)}" `
     + `stroke="#16241E" opacity=".13"/>`;
+  /* Un seul seuil de mention dans toute l'application : cinq pour cent, celui
+     de la colonne du risque dans la table. Le ruban se taisait sous vingt, si
+     bien qu'une journée à quinze pour cent de risque n'avait pas de voie de
+     pluie du tout, et le lecteur ne pouvait pas distinguer « rien n'est
+     attendu » de « l'application ne le montre pas ». */
   const dPluie = tot >= 0.2 ? `${nombreFr(tot)} mm attendus`
-    : Math.max(...s.pb) >= 20 ? `aucune lame, risque ${Math.max(...s.pb)} %` : "aucune";
+    : Math.max(...s.pb) >= 5 ? `aucune lame, risque ${Math.max(...s.pb)} %` : "aucune";
   /* Une voie vide occupait quarante points de haut et deux lignes de légende
      pour ne montrer qu'un filet horizontal. Quand rien n'est attendu et que le
      risque reste bas, la ligne de titre le dit déjà, et elle seule paraît. */
-  const pluieVide = tot < 0.2 && Math.max(...s.pb) < 20;
+  const pluieVide = tot < 0.2 && Math.max(...s.pb) < 5;
   voies.push(pluieVide ? mgVoie("La pluie", dPluie, 0, "")
     : mgVoie("La pluie", dPluie, hP, pluie,
       "Barre pleine, la lame attendue en millimètres. Barre pâle, le risque de pluie.",
@@ -4192,7 +4227,17 @@ function jardinDuJour(s) {
 
   const pl = plagesDe(s.n, k => s.mm[k] >= 0.1);
   const tot = s.mm.reduce((a, b) => a + b, 0);
-  if (pl.length) {
+  /* La première ligne parle toujours de pluie. Quand les deux modèles ne
+     s'accordent pas, c'est elle qui le dit : deux lignes de pluie, l'une
+     affirmative et l'autre dubitative, se contrediraient à la lecture. */
+  const div = divergencePluie(s);
+  if (div) {
+    lignes.push({ i: "goutte", g: 9,
+      t: `Prévision incertaine : ${nombreFr(div.haut)} mm annoncés par `
+        + `${div.arome ? "AROME" : "la seconde source"}, aucune lame par `
+        + `${div.arome ? "la seconde source" : "AROME"}. `
+        + `Attendre avant d'arroser, et voir le ciel.` });
+  } else if (pl.length) {
     lignes.push({ i: "goutte", g: 9,
       t: `Pluie ${pl.length > 1 ? "par intervalles " : ""}de ${dem(pl[0][0])} à `
         + `${fin(pl[pl.length - 1][1])}, ${nombreFr(tot)} mm attendus.` });
