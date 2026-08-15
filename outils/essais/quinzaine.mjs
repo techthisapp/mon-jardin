@@ -46,12 +46,12 @@ export default async function essai(navigateur) {
      marque sert à retrouver celles que le compte laissait dans l'ombre. */
   j.section("les marques de ligne complètent la phrase sans la répéter");
   const l = await lignes(pg);
-  const marquees = l.filter(t => t.includes("première quinzaine"));
+  const marquees = l.filter(t => t.includes("1ère quinzaine"));
   j.controle("seules les tâches hors phrase portent la marque",
     marquees.length === 2
     && marquees.every(t => /^(Planter|Récolter)/.test(t)), marquees.join(" | "));
   j.controle("aucune des trois nommées ne la porte",
-    !l.some(t => /^(Tailler|Multiplier|Semer)/.test(t) && t.includes("première quinzaine")),
+    !l.some(t => /^(Tailler|Multiplier|Semer)/.test(t) && t.includes("1ère quinzaine")),
     l.join(" | "));
 
   /* Les deux bords sont des liens. Les verbes qui les entourent en sont aussi,
@@ -137,7 +137,7 @@ export default async function essai(navigateur) {
         .map(e => e.textContent)[0] || "",
     })));
   j.controle("chacune porte la pastille de son bord",
-    dits.length > 0 && dits.every(d => d.pastille === "première quinzaine"),
+    dits.length > 0 && dits.every(d => d.pastille === "1ère quinzaine"),
     dits.length + " actions, " + [...new Set(dits.map(d => d.pastille))].join(" | "));
   j.controle("et sa borne, que la pastille ne chasse plus",
     dits.every(d => /^jusqu'à (mi-|fin )/.test(d.borne)),

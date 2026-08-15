@@ -1764,10 +1764,15 @@ function rendreMaintenant() {
     /* Le bord de la fenêtre chassait la borne : une ligne de dernière quinzaine
        ne disait plus jusqu'à quand, et une ligne de première quinzaine ne disait
        pas qu'elle venait de s'ouvrir. Les deux paraissent, la pastille du bord
-       devant la borne, qui reste dans tous les cas. */
+       devant la borne, qui reste dans tous les cas.
+
+       « 1ère » plutôt que « première » : les deux mentions et le nom de la
+       plante tiennent alors sur une ligne dans la plupart des cas, là où la
+       forme longue les faisait passer à la ligne presque toujours. Les phrases
+       et les titres gardent la forme pleine, ils ont la place. */
     const pastille = e === "derniere"
       ? '<span class="echeance urgente">dernière quinzaine</span>'
-      : e === "ouverture" ? '<span class="echeance neuve">première quinzaine</span>' : "";
+      : e === "ouverture" ? '<span class="echeance neuve">1ère quinzaine</span>' : "";
     const borne = fin <= 24 && !muet
       ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "";
     /* Pastille et borne forment un seul bloc : elles passent ensemble à la
@@ -5069,7 +5074,7 @@ function rendreSynthese(paires) {
       + `<span class="syn-txt"><span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span> `
       + `<span class="l">${esc(texteLigne(l))}`
       + (l.presse ? ' <span class="fin">· dernière quinzaine</span>'
-        : l.neuve ? ' <span class="fin">· première quinzaine</span>' : "")
+        : l.neuve ? ' <span class="fin">· 1ère quinzaine</span>' : "")
       + `</span></span><span class="syn-nb">${compteK[l.k] || l.total}</span>${CHEVRON}</button>`).join("")
       + (trop.length ? `<button type="button" class="syn-ligne syn-plus" data-tache="">`
         + `<span class="syn-pt syn-pt-vide"></span>`
