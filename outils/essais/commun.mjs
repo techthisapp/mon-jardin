@@ -99,7 +99,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
     session = true, cache = null, versionSite = null, espaces = null, placements = null,
     avis = null, sourdines = null, carnet = null, photosCarnet = null, cultures = null,
-    jour = JOUR_FIGE,
+    jour = JOUR_FIGE, arome = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -144,13 +144,24 @@ export async function ouvrirContexte(navigateur, options = {}) {
     body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=", "base64"),
   }));
   const meteoDuJour = meteoDecalee(meteo, jour);
+  /* Trois appels : le quotidien, l'horaire de secours et AROME par-dessus.
+     La doublure d'AROME est réglable par l'essai : rien par défaut, ce qui
+     revient à la charge d'avant et laisse les autres suites inchangées. */
   await ctx.route(/api\.open-meteo\.com/, route => {
+    const url = route.request().url();
     const d = JSON.parse(meteoDuJour);
-    if (route.request().url().includes("hourly=")) {
-      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ hourly: d.hourly }) });
+    const rendre = corps => route.fulfill({ status: 200,
+      contentType: "application/json", body: JSON.stringify(corps) });
+    if (url.includes("models=meteofrance_arome")) {
+      /* Par défaut AROME redit la même chose : les autres suites ne voient
+         aucune différence. `arome: false` le fait répondre sans série, ce qui
+         éprouve le repli sans poser d'erreur de réseau dans la console. */
+      if (arome === false) return rendre({});
+      return rendre({ hourly: arome ? arome(d.hourly) : d.hourly });
     }
+    if (url.includes("hourly=")) return rendre({ hourly: d.hourly });
     delete d.hourly;
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(d) });
+    return rendre(d);
   });
   const pg = await ctx.newPage();
   const erreurs = [];

@@ -2903,8 +2903,45 @@ function ficheHTML(p, voulu) {
    le lieu de la Base Adresse Nationale, l'évapotranspiration est celle du
    bulletin FAO 56 calculée au point du jardin. */
 
-const METEO_CACHE = "monjardin.meteo.v4";
+const METEO_CACHE = "monjardin.meteo.v5";
 const METEO_TTL = 3600 * 1000;   // une heure, la prévision ne bouge pas plus vite
+/* Le cache tombe aussi au changement d'heure, sans attendre que l'heure pleine
+   soit écoulée. Une charge prise à 23 h 55 tenait sinon jusqu'à 0 h 55, et un
+   run arrivé entre-temps ne se voyait pas. */
+const heureCle = () => new Date().toISOString().slice(0, 13);
+
+/* AROME par-dessus la sélection automatique. Le modèle n'est pas choisi de la
+   même façon par tous : Open-Meteo dit retenir « le modèle applicable de plus
+   haute résolution », sans garantir AROME sur la France, et un ticket de son
+   dépôt signale ICON-D2, le modèle allemand, retenu pour Paris. Un soir d'août
+   orageux, l'application ne portait aucune pluie quand Météo France et
+   Pleinchamp en donnaient deux à trois millimètres dans l'heure qui suivait.
+
+   AROME France HD tient la France à 1,5 km de maille sur deux jours, ce que
+   demande exactement la charge horaire. Il ne remplace pas la série de
+   secours, il se pose dessus : toutes les grandeurs ne lui sont pas connues,
+   l'indice UV est dérivé et peut revenir vide, et une colonne entièrement vide
+   laisserait une voie muette. Le repli se fait donc grandeur par grandeur, puis
+   heure par heure. */
+function fondreHoraire(fond, dessus) {
+  if (!fond || !fond.time || !dessus || !Array.isArray(dessus.time)) return fond;
+  const rang = new Map(dessus.time.map((t, i) => [t, i]));
+  const out = { time: fond.time };
+  Object.keys(fond).forEach(c => {
+    const src = dessus[c];
+    if (c === "time" || !Array.isArray(fond[c])) { out[c] = fond[c]; return; }
+    if (!Array.isArray(src) || src.every(v => v === null || v === undefined)) {
+      out[c] = fond[c];
+      return;
+    }
+    out[c] = fond[c].map((v, i) => {
+      const j = rang.get(fond.time[i]);
+      const w = j === undefined ? null : src[j];
+      return w === null || w === undefined ? v : w;
+    });
+  });
+  return out;
+}
 
 // Codes de temps sensible de l'Organisation météorologique mondiale.
 const TEMPS = [
@@ -2959,11 +2996,12 @@ async function lireMeteo(g) {
   const cle = `${g.lat},${g.lon}`;
   try {
     const c = JSON.parse(localStorage.getItem(METEO_CACHE) || "null");
-    if (c && c.cle === cle && Date.now() - c.t < METEO_TTL) { meteo = c.d; return; }
+    if (c && c.cle === cle && c.h === heureCle() && Date.now() - c.t < METEO_TTL) {
+      meteo = c.d; return;
+    }
   } catch (e) { /* cache indisponible */ }
-  // Le modèle n'est pas forcé. Météo-France seul s'arrête à quatre jours et rend
-  // des valeurs vides ensuite ; la sélection automatique d'Open-Meteo prend AROME
-  // sur les premiers jours puis prolonge, et couvre la semaine entière.
+  // Le quotidien garde la sélection automatique : elle seule couvre les sept
+  // jours, là où AROME s'arrête à deux.
   const base = "https://api.open-meteo.com/v1/forecast?latitude=" + g.lat + "&longitude=" + g.lon
     + "&timezone=Europe%2FParis";
   // Trente jours d'antériorité : le bilan hydrique a besoin d'une mise en route
@@ -2983,15 +3021,24 @@ async function lireMeteo(g) {
     + "relative_humidity_2m,precipitation,precipitation_probability,weather_code,"
     + "cloud_cover,pressure_msl,wind_speed_10m,wind_gusts_10m,wind_direction_10m,"
     + "uv_index,is_day&forecast_days=2";
+  const ua = uh + "&models=meteofrance_arome_france_hd";
   try {
-    const [r, rh] = await Promise.all([fetch(u), fetch(uh).catch(() => null)]);
+    const [r, rh, ra] = await Promise.all([
+      fetch(u), fetch(uh).catch(() => null), fetch(ua).catch(() => null)]);
     if (!r.ok) throw new Error(r.status);
     meteo = await r.json();
     if (rh && rh.ok) {
       const h = await rh.json();
       if (h && h.hourly) meteo.hourly = h.hourly;
     }
-    localStorage.setItem(METEO_CACHE, JSON.stringify({ cle, t: Date.now(), d: meteo }));
+    /* AROME absent, en panne ou muet : la série de secours reste seule, et
+       l'application rend ce qu'elle rendait avant. */
+    if (ra && ra.ok && meteo.hourly) {
+      const av = await ra.json().catch(() => null);
+      if (av && av.hourly) meteo.hourly = fondreHoraire(meteo.hourly, av.hourly);
+    }
+    localStorage.setItem(METEO_CACHE,
+      JSON.stringify({ cle, t: Date.now(), h: heureCle(), d: meteo }));
   } catch (e) { meteo = null; }
 }
 
@@ -4376,8 +4423,10 @@ function vueTemps() {
     .filter(Boolean).join(", ");
   return { titre: "Le temps", sous,
     corps: tete + heures + `<h3 class="f-sect">La semaine</h3>` + tableSemaine()
-      + `<p class="f-note">Prévision Open-Meteo, combinaison automatique des meilleurs `
-      + `modèles disponibles au point du jardin. Relecture toutes les heures.</p>`,
+      + `<p class="f-note">Prévision Open-Meteo. Les heures viennent d'AROME, le `
+      + `modèle de Météo-France à 1,5 km, complété par la sélection automatique là `
+      + `où il se tait ; la semaine vient de cette sélection. Relecture toutes les `
+      + `heures.</p>`,
     brancher() {
       if (!s) return;
       brancherLectures();

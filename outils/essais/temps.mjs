@@ -433,6 +433,65 @@ export default async function essai(navigateur) {
 
   /* Les trois mesures du jour ont quitté leur feuille pour l'écran, sous le
      temps qu'il fait : elles parlent du même jour et s'y lisent sans détour. */
+  /* Un soir d'août orageux, l'application ne portait aucune pluie quand Météo
+     France et Pleinchamp en donnaient deux à trois millimètres dans l'heure qui
+     suivait. La sélection automatique d'Open-Meteo ne garantit pas AROME sur la
+     France : le modèle français à 1,5 km est demandé et posé par-dessus, sans
+     remplacer la série de secours là où il se tait. */
+  j.section("AROME se pose sur la série, et se replie là où il se tait");
+  const lit = async (c, n) => c.pg.evaluate(nb =>
+    [...document.querySelectorAll("tr.hh")].slice(0, nb).map(r => ({
+      p: r.querySelector(".hh-p").textContent.trim(),
+      uv: r.querySelector(".hh-uv").textContent.trim(),
+      t: r.querySelector(".hh-t").textContent.trim(),
+    })), n);
+  const versListe = async c => {
+    await c.pg.locator(".tm-temps").click();
+    await c.pg.waitForTimeout(700);
+    await c.pg.locator('[data-mode="liste"]').click();
+    await c.pg.waitForTimeout(500);
+  };
+  /* AROME donne la pluie et se tait sur l'indice UV, qui est une grandeur
+     dérivée : c'est exactement le cas qui aurait vidé une voie du ruban si le
+     modèle avait remplacé la série entière. */
+  const cA = await ouvrirContexte(navigateur, { arome: h => ({
+    ...h, precipitation: h.precipitation.map(() => 2.5),
+    uv_index: h.uv_index.map(() => null),
+    temperature_2m: h.temperature_2m.map(() => null),
+  }) });
+  await cA.pg.waitForTimeout(700);
+  await versListe(cA);
+  const avec = await lit(cA, 3);
+  j.controle("la pluie d'AROME passe devant",
+    avec.every(l => l.p === "2,5"), JSON.stringify(avec.map(l => l.p)));
+  j.controle("une colonne entièrement vide laisse la série de secours",
+    avec.every(l => /\d/.test(l.uv)), JSON.stringify(avec.map(l => l.uv)));
+  j.controle("une heure vide se replie aussi, sans trouer la colonne",
+    avec.every(l => /^\d+$/.test(l.t)), JSON.stringify(avec.map(l => l.t)));
+  await cA.ctx.close();
+
+  /* AROME muet, en panne ou hors de portée : l'application rend ce qu'elle
+     rendait avant, sans voie vide ni ligne trouée. */
+  const cB = await ouvrirContexte(navigateur, { arome: false });
+  await cB.pg.waitForTimeout(700);
+  await versListe(cB);
+  const sans = await lit(cB, 3);
+  j.controle("sans AROME, la série de secours tient seule",
+    sans.every(l => /\d/.test(l.t) && /\d/.test(l.uv))
+    && sans.some(l => l.p !== "2,5"), JSON.stringify(sans));
+
+  /* La charge est gardée une heure, et tombe aussi au changement d'heure : une
+     charge prise à 23 h 55 tenait sinon jusqu'à 0 h 55. */
+  const cle = await cB.pg.evaluate(() => Object.keys(localStorage)
+    .filter(k => k.startsWith("monjardin.meteo")));
+  j.controle("le cache porte l'heure de sa prise et son numéro de version",
+    cle.length === 1 && cle[0] === "monjardin.meteo.v5"
+    && await cB.pg.evaluate(() => {
+      const c = JSON.parse(localStorage.getItem("monjardin.meteo.v5"));
+      return typeof c.h === "string" && c.h.length === 13;
+    }), cle.join(", "));
+  await cB.ctx.close();
+
   j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();
   await pg.waitForTimeout(500);
