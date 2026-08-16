@@ -711,6 +711,105 @@ export default async function essai(navigateur) {
     saisie === dates.local, `${saisie} pour un ${dates.local}`);
   await cN.ctx.close();
 
+  /* Les neuf arbitrages de l'audit. Chacun ferme une contradiction entre deux
+     écritures d'un même fait. */
+  j.section("l'audit : un seul seuil de mention pour la lame");
+  const ms = JSON.parse(METEO);
+  // Une seule heure à quinze centièmes : au-dessus du seuil, sous l'ancien.
+  ms.hourly.precipitation = ms.hourly.time.map((t, k) =>
+    (k === ms.hourly.time.findIndex(x => Number(x.slice(11, 13)) === 15) ? 0.15 : 0));
+  ms.hourly.precipitation_probability = ms.hourly.time.map(() => 30);
+  const cS2 = await ouvrirContexte(navigateur, { meteo: JSON.stringify(ms), arome: false });
+  await cS2.pg.waitForTimeout(700);
+  await cS2.pg.locator(".tm-temps").click();
+  await cS2.pg.waitForTimeout(700);
+  const dit = await cS2.pg.evaluate(() => ({
+    conseil: [...document.querySelectorAll(".jd-l")].map(e => e.textContent.trim()),
+    ruban: [...document.querySelectorAll(".mg-v")].filter(v => /PLUIE/i.test(v.textContent))
+      .map(v => v.querySelector(".mg-r").textContent.trim())[0] || "",
+  }));
+  /* Une heure à quinze centièmes donnait « 0,2 mm attendus » dans le conseil et
+     « aucune lame » dans le ruban, deux centimètres plus bas. */
+  j.controle("le conseil et le ruban disent la même chose de la même lame",
+    dit.conseil.some(t => /mm attendus/.test(t)) === /mm attendus/.test(dit.ruban),
+    `${dit.conseil[0]} contre ${dit.ruban}`);
+  await cS2.ctx.close();
+
+  /* « Aucune pluie annoncée » s'écrivait jusqu'à trente-neuf pour cent de
+     risque, la formulation qui le mentionne n'existant qu'à partir de quarante. */
+  j.section("l'audit : une phrase sans lame porte quand même son risque");
+  const mr = JSON.parse(METEO);
+  mr.hourly.precipitation = mr.hourly.time.map(() => 0);
+  mr.hourly.precipitation_probability = mr.hourly.time.map(() => 39);
+  const cR = await ouvrirContexte(navigateur, { meteo: JSON.stringify(mr), arome: false });
+  await cR.pg.waitForTimeout(700);
+  await cR.pg.locator(".tm-temps").click();
+  await cR.pg.waitForTimeout(700);
+  const sansLame = net(await cR.pg.locator(".jd-l").first().innerText());
+  j.controle("elle ne nie plus la pluie, et chiffre le risque",
+    !/Aucune pluie annoncée/.test(sansLame) && /39 %/.test(sansLame), sansLame);
+  await cR.ctx.close();
+
+  /* Le créneau dit quand arroser, le bilan dit s'il faut : la feuille proposait
+     un créneau le lendemain de trente-cinq millimètres pendant que l'accueil
+     disait « la réserve tient six jours ». */
+  j.section("l'audit : le créneau d'arrosage se tait quand le sol est plein");
+  const mp = JSON.parse(METEO);
+  mp.hourly.precipitation = mp.hourly.time.map(() => 0);
+  mp.hourly.precipitation_probability = mp.hourly.time.map(() => 0);
+  mp.hourly.wind_speed_10m = mp.hourly.wind_speed_10m.map(() => 5);
+  mp.hourly.wind_gusts_10m = mp.hourly.wind_gusts_10m.map(() => 10);
+  mp.hourly.uv_index = mp.hourly.uv_index.map(() => 0.5);
+  mp.daily.precipitation_sum = mp.daily.precipitation_sum.map(() => 35);
+  mp.daily.et0_fao_evapotranspiration = mp.daily.et0_fao_evapotranspiration.map(() => 1);
+  const cP = await ouvrirContexte(navigateur, { meteo: JSON.stringify(mp), arome: false });
+  await cP.pg.waitForTimeout(700);
+  const jauge = net(await cP.pg.locator('.mesure-j[data-vue="eau"]').innerText());
+  await cP.pg.locator(".tm-temps").click();
+  await cP.pg.waitForTimeout(700);
+  const av = (await cP.pg.locator(".jd-l").allInnerTexts()).map(net);
+  j.controle("le sol n'est pas en dette dans ce jeu", !/L\/m²/.test(jauge), jauge);
+  j.controle("et la feuille ne propose aucun créneau",
+    !av.some(t => /Créneau d'arrosage/.test(t)), av.join(" | "));
+  await cP.ctx.close();
+
+  /* La règle ne reconnaissait qu'un motif, l'un annonce et l'autre pas :
+     quarante-deux millimètres contre trois dixièmes ne déclenchait rien. */
+  j.section("l'audit : la divergence se mesure en rapport");
+  const cW = await ouvrirContexte(navigateur, { arome: h => ({
+    ...h, precipitation: h.precipitation.map((_, k) => (k % 24 === 3 ? 42 : 0)) }),
+    meteo: (() => { const m = JSON.parse(METEO);
+      m.hourly.precipitation = m.hourly.time.map((t, k) => (k % 24 === 3 ? 0.3 : 0));
+      return JSON.stringify(m); })() });
+  await cW.pg.waitForTimeout(700);
+  await cW.pg.locator(".tm-temps").click();
+  await cW.pg.waitForTimeout(700);
+  const rapport = net(await cW.pg.locator(".jd-l").first().innerText());
+  j.controle("un rapport de un à cent quarante se signale",
+    /Prévision incertaine/.test(rapport) && /42/.test(rapport)
+    && /0,3 mm/.test(rapport), rapport);
+  await cW.ctx.close();
+
+  /* L'humidité est un état, non un extrême : une seule heure à quatre-vingt-onze
+     pour cent faisait écrire « feuillage mouillé » sur six heures entières. */
+  j.section("l'audit : les moments nomment leur agrégation");
+  const mh = JSON.parse(METEO);
+  mh.hourly.relative_humidity_2m = mh.hourly.time.map((t, k) => (k % 6 === 0 ? 95 : 50));
+  const cH = await ouvrirContexte(navigateur, { meteo: JSON.stringify(mh), arome: false });
+  await cH.pg.waitForTimeout(700);
+  await cH.pg.locator(".tm-temps").click();
+  await cH.pg.waitForTimeout(700);
+  await cH.pg.locator('[data-mode="moments"]').click();
+  await cH.pg.waitForTimeout(600);
+  const cel = await cH.pg.evaluate(() => [...document.querySelectorAll(".mo-c")].map(c =>
+    [...c.querySelectorAll(".mo-m .tp-m")].map(m => m.textContent.replace(/\s+/g, " ").trim())));
+  j.controle("une heure humide sur six ne mouille pas le feuillage six heures",
+    cel.length > 0 && cel.every(c => !/feuillage mouillé/.test(c[2])),
+    cel[0] ? cel[0][2] : "");
+  j.controle("le vent dit qu'il donne son plus fort",
+    cel.every(c => /au plus fort/.test(c[1])), cel[0] ? cel[0][1] : "");
+  await cH.ctx.close();
+
   j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();
   await pg.waitForTimeout(500);

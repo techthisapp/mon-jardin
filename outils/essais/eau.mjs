@@ -80,12 +80,13 @@ export default async function essai(navigateur) {
   /* L'alerte de lame lit désormais la série horaire, comme la feuille du temps :
      elle ne parle que de ce qui reste à tomber. La pluie du jeu d'essai se pose
      donc dans les heures à venir de la journée, non dans le seul quotidien. */
-  const pluieHoraire = (d, mm) => {
-    const jour = d.hourly.time[0].slice(0, 10);
+  const pluieHoraire = (d, mm, demain) => {
+    const jours = [...new Set(d.hourly.time.map(t => t.slice(0, 10)))];
+    const jour = jours[demain ? 1 : 0];
     const cible = d.hourly.time.map((t, k) => ({ t, k })).filter(x =>
       x.t.slice(0, 10) === jour && Number(x.t.slice(11, 13)) >= 14
       && Number(x.t.slice(11, 13)) <= 18);
-    d.hourly.precipitation = d.hourly.precipitation.map(() => 0);
+    if (!demain) d.hourly.precipitation = d.hourly.precipitation.map(() => 0);
     cible.forEach(x => { d.hourly.precipitation[x.k] = mm / cible.length; });
   };
 
@@ -116,6 +117,8 @@ export default async function essai(navigateur) {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map((v, k) =>
       k === IJOUR + 1 ? 30 : k === IJOUR ? 16 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
+    pluieHoraire(d, 16);
+    pluieHoraire(d, 30, true);
   });
   j.controle("pluie annoncée : la tuile chiffre la pluie plutôt que l'apport",
     / mm$/.test(attente.eau.replace(/^L'eau/, "")), attente.eau);

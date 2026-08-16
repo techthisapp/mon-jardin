@@ -2926,14 +2926,22 @@ const heureCle = () => new Date().toISOString().slice(0, 13);
 function fondreHoraire(fond, dessus) {
   if (!fond || !fond.time || !dessus || !Array.isArray(dessus.time)) return fond;
   const rang = new Map(dessus.time.map((t, i) => [t, i]));
-  const out = { time: fond.time };
+  /* Quelles colonnes viennent d'AROME. La question n'était pas vérifiable de
+     l'extérieur, le chemin de l'API étant fermé aux robots : l'application la
+     tranche donc elle-même, à chaque charge, et le dit là où deux tracés d'une
+     même voie n'auraient pas la même origine. */
+  const venues = [];
+  const out = { time: fond.time, aromeColonnes: venues };
   Object.keys(fond).forEach(c => {
     const src = dessus[c];
-    if (c === "time" || !Array.isArray(fond[c])) { out[c] = fond[c]; return; }
+    if (c === "time" || c === "aromeColonnes" || !Array.isArray(fond[c])) {
+      out[c] = fond[c]; return;
+    }
     if (!Array.isArray(src) || src.every(v => v === null || v === undefined)) {
       out[c] = fond[c];
       return;
     }
+    venues.push(c);
     out[c] = fond[c].map((v, i) => {
       const j = rang.get(fond.time[i]);
       const w = j === undefined ? null : src[j];
@@ -3114,15 +3122,49 @@ function bilanHydrique() {
   const kcDe = iso => kcParQuinzaine[quinzaineDe(iso)]
     || kcParQuinzaine[demi] || 0.85;
 
+  /* La lame d'un jour se lit dans la série horaire là où elle le couvre, comme
+     partout ailleurs depuis l'audit : le bilan prenait encore la charge
+     quotidienne, si bien que la feuille du temps pouvait annoncer six
+     millimètres cet après-midi pendant que le bilan continuait de sécher. */
+  const lameModele = k => {
+    const h = jourHoraire(d.time[k]);
+    return h ? h.mm : d.precipitation_sum[k];
+  };
+  /* Une évapotranspiration inconnue ne veut pas dire que le sol n'a pas séché.
+     La valeur nulle passait pour une demande nulle dans le passé et arrêtait la
+     projection dans le futur : deux lectures opposées de la même absence. Elle
+     reprend la valeur connue la plus proche, comme les trous de la série
+     horaire. */
+  const et0Connu = d.et0_fao_evapotranspiration
+    .map(v => (v === null || v === undefined ? null : Number(v)));
+  const et0De = k => {
+    if (et0Connu[k] !== null) return et0Connu[k];
+    for (let e = 1; e < et0Connu.length; e++) {
+      if (et0Connu[k - e] !== null && k - e >= 0) return et0Connu[k - e];
+      if (et0Connu[k + e] !== null && k + e < et0Connu.length) return et0Connu[k + e];
+    }
+    return 0;
+  };
+
+  /* Le jour en cours ne compte que l'eau déjà arrivée. La boucle prenait le
+     cumul de la journée civile entière, orage du soir compris : à huit heures
+     du matin la feuille de l'eau affirmait « Sur sept jours, 28 mm sont
+     tombés », la jauge les avait déjà déduits, et la même eau était « attendue »
+     dans le bandeau. Ce qui reste à tomber part dans la projection. */
+  const jourJ = jourHoraire(d.time[i]);
+  const tombeJ = jourJ ? jourJ.passe : null;
+  const resteJ = jourJ ? Math.max(0, jourJ.mm - jourJ.passe) : 0;
+
   let dr = taw / 2;
   const serie = [];
   for (let k = 0; k <= i; k++) {
-    const l = lameDuJour(d.time[k], d.precipitation_sum[k]);
-    const et0 = Number(d.et0_fao_evapotranspiration[k]) || 0;
+    const brut = k === i && tombeJ !== null ? tombeJ : lameModele(k);
+    const l = lameDuJour(d.time[k], brut);
+    const et0 = et0De(k);
     const etc = et0 * kcDe(d.time[k]);
     dr = Math.min(taw, Math.max(0, dr - l.pluie - l.arrosage + etc));
     serie.push({ jour: d.time[k], pluie: l.pluie, mesuree: l.mesuree, source: l.source,
-                 arrosage: l.arrosage, et0, etc, dr });
+                 arrosage: l.arrosage, et0, etc, dr, reste: k === i ? resteJ : 0 });
   }
 
   // Seuil de confort, ajusté à la demande du jour comme le prévoit le bulletin.
@@ -3132,15 +3174,17 @@ function bilanHydrique() {
 
   // Projection sur la prévision : combien de jours avant d'atteindre le seuil,
   // et quelle pluie est annoncée d'ici là.
-  let sec = 0, cumulPluie = 0, drProj = dr;
+  /* La projection part de ce qui reste à tomber aujourd'hui, que la boucle du
+     passé ne compte plus. */
+  let sec = 0, cumulPluie = resteJ, drProj = Math.min(taw, Math.max(0, dr - resteJ));
   for (let k = i + 1; k < d.time.length; k++) {
-    const pl = d.precipitation_sum[k] || 0;
+    const pl = lameModele(k) || 0;
     cumulPluie += pl;
     if (d.et0_fao_evapotranspiration[k] === null) break;
-    drProj = Math.min(taw, Math.max(0, drProj - pl + (Number(d.et0_fao_evapotranspiration[k]) || 0) * kcDe(d.time[k])));
+    drProj = Math.min(taw, Math.max(0, drProj - pl + et0De(k) * kcDe(d.time[k])));
     if (drProj < raw) sec++; else break;
   }
-  const prevue2 = (d.precipitation_sum[i + 1] || 0) + (d.precipitation_sum[i + 2] || 0);
+  const prevue2 = resteJ + (lameModele(i + 1) || 0) + (lameModele(i + 2) || 0);
 
   // Cumuls de la semaine écoulée, pour la lecture d'ensemble.
   let pluie7 = 0, demande7 = 0, apporte7 = 0;
@@ -3736,8 +3780,13 @@ function divergencePluie(s) {
   const a = s.mm.reduce((x, y) => x + y, 0);
   const b = s.mmS.reduce((x, y) => x + y, 0);
   const haut = Math.max(a, b), bas = Math.min(a, b);
-  if (haut < 1 || bas >= 0.2) return null;
-  return { haut, arome: a > b };
+  /* La règle ne reconnaissait qu'un motif, l'un annonce et l'autre pas :
+     quarante-deux millimètres contre trois dixièmes ne déclenchait rien, le
+     plus sec dépassant deux dixièmes. Un rapport de un à cent quarante est
+     pourtant plus incertain qu'un millimètre contre zéro. C'est donc le rapport
+     qui décide, avec un plancher pour que des dixièmes ne parlent pas. */
+  if (haut < 1 || bas > haut / 4) return null;
+  return { haut, bas, arome: a > b };
 }
 
 /* Ce qu'une journée civile vaut d'après la série horaire.
@@ -4003,7 +4052,9 @@ function dessinMeteogramme(s) {
   let pluie = fond(hP);
   for (let k = 0; k < s.n; k++) {
     const hp = s.pb[k] / 100 * aP;
-    if (hp > .6) pluie += `<rect x="${u(X(k) + 1)}" y="${u(yP - hp)}" width="${u(LA - 2)}" `
+    // Le seuil de mention est en pour cent, non en points de dessin : la barre
+    // paraissait en agrandissant et disparaissait en repliant, à donnée égale.
+    if (s.pb[k] >= 5) pluie += `<rect x="${u(X(k) + 1)}" y="${u(yP - hp)}" width="${u(LA - 2)}" `
       + `height="${u(hp)}" rx="1.5" fill="#4A7CA8" opacity=".18"/>`;
     if (s.mm[k] > 0) {
       const hb = Math.max(2, s.mm[k] / mmx * aP);
@@ -4020,7 +4071,7 @@ function dessinMeteogramme(s) {
       pluie += etiq(k, yP - Math.max(2, s.mm[k] / mmx * aP) - 4, nombreFr(s.mm[k]), "mg-mm");
     }
     for (let k = 1; k < s.n; k += 3) {
-      if (s.pb[k] < 10) continue;
+      if (s.pb[k] < 5) continue;
       pluie += etiq(k, yP - s.pb[k] / 100 * aP - 4, Math.round(s.pb[k]) + " %", "mg-p");
     }
   } else if (tot >= 0.2) {
@@ -4034,15 +4085,24 @@ function dessinMeteogramme(s) {
      bien qu'une journée à quinze pour cent de risque n'avait pas de voie de
      pluie du tout, et le lecteur ne pouvait pas distinguer « rien n'est
      attendu » de « l'application ne le montre pas ». */
-  const dPluie = tot >= 0.2 ? `${nombreFr(tot)} mm attendus`
-    : Math.max(...s.pb) >= 5 ? `aucune lame, risque ${Math.max(...s.pb)} %` : "aucune";
+  const dPluie = tot >= 0.1 ? `${nombreFr(tot)} mm attendus`
+    : Math.max(...s.pb) >= 5 ? `aucune lame, risque ${Math.round(Math.max(...s.pb))} %` : "aucune";
   /* Une voie vide occupait quarante points de haut et deux lignes de légende
      pour ne montrer qu'un filet horizontal. Quand rien n'est attendu et que le
      risque reste bas, la ligne de titre le dit déjà, et elle seule paraît. */
-  const pluieVide = tot < 0.2 && Math.max(...s.pb) < 5;
+  const pluieVide = tot < 0.1 && Math.max(...s.pb) < 5;
+  /* AROME ne publie pas toujours la probabilité de précipitation. Quand la lame
+     vient de lui et le risque de la seconde source, la voie superpose deux
+     modèles : la lecture le dit plutôt que de laisser croire à une seule
+     prévision. */
+  const col = (meteo.hourly && meteo.hourly.aromeColonnes) || [];
+  const melange = col.indexOf("precipitation") !== -1
+    && col.indexOf("precipitation_probability") === -1;
   voies.push(pluieVide ? mgVoie("La pluie", dPluie, 0, "")
     : mgVoie("La pluie", dPluie, hP, pluie,
-      "Barre pleine, la lame attendue en millimètres. Barre pâle, le risque de pluie.",
+      "Barre pleine, la lame attendue en millimètres. Barre pâle, le risque de pluie."
+      + (melange ? " La lame vient d'AROME, le risque de la seconde source : "
+          + "les deux barres ne sont pas du même modèle." : ""),
       "pluie"));
 
   // Le vent : la moyenne en aire, les rafales en pointillé, l'orientation en
@@ -4299,14 +4359,21 @@ function momentsHoraires(s) {
     const clair = q("clair").some(Boolean);
     const pb = Math.max(...q("pb")), raf = Math.max(...q("raf"));
     const dir = s.dir[Math.floor((x.a + x.b) / 2)];
-    const hum = Math.round(Math.max(...q("hum")));
+    /* L'humidité est un état, non un extrême : la carte prenait le maximum, et
+       une seule heure à quatre-vingt-onze pour cent faisait écrire « feuillage
+       mouillé » sur six heures entières, quand la règle du conseil exige cinq
+       heures consécutives et se tait. Moyenne pour la valeur, majorité des
+       heures pour la note. */
+    const hs = q("hum");
+    const hum = Math.round(hs.reduce((p2, n2) => p2 + n2, 0) / hs.length);
+    const mouille = hs.filter(v2 => v2 >= 90).length > hs.length / 2;
     const ros = Math.round(q("ros").reduce((p, n) => p + n, 0) / (x.b - x.a + 1));
     const mes = (nom, val, sous) => `<div class="tp-m"><span>${esc(nom)}</span>`
       + `<b>${esc(val)}</b>${sous ? `<i>${esc(sous)}</i>` : ""}</div>`;
     /* La lame et le risque ne disent pas la même chose : la première est un
        chiffre attendu, le second une chance. Ils cessent de se suivre sur la
        même ligne, séparés par une virgule qui les mettait sur le même rang. */
-    const lame = mm >= 0.2 ? `${nombreFr(mm)} mm` : "aucune";
+    const lame = mm >= 0.1 ? `${nombreFr(mm)} mm` : "aucune";
     return `<div class="mo-c${x.a === 0 ? " mo-ici" : ""}">`
       + `<p class="mo-h">${esc(x.demain ? "demain, " : "")}${esc(x.nom)}, `
       + `de ${String(s.heure[x.a]).padStart(2, "0")} h à `
@@ -4315,11 +4382,12 @@ function momentsHoraires(s) {
       + `<b>${Math.round(Math.min(...q("t")))} à ${Math.round(Math.max(...q("t")))}°</b>`
       + `<span>${esc(tempsDe(code)[1].toLowerCase())}</span></p>`
       + `<div class="mo-m">`
-      + mes("Pluie", lame, pb >= 5 ? `risque ${pb} %` : "")
+      + mes("Pluie", lame, pb >= 5 ? `risque jusqu'à ${Math.round(pb)} %` : "")
       + mes("Vent", `${Math.round(Math.max(...q("v")))} km/h`,
-            `${cardinal(dir)}${raf >= 30 ? `, rafales ${Math.round(raf)} km/h` : ""}`)
+            `au plus fort, ${cardinal(dir)}`
+            + (raf >= 30 ? `, rafales ${Math.round(raf)} km/h` : ""))
       + mes("Humidité", `${hum} %`,
-            hum >= 90 ? "feuillage mouillé" : `rosée à ${ros}°`)
+            mouille ? "feuillage mouillé" : `rosée à ${ros}°`)
       + `</div></div>`;
   }).join("") + `</div>`;
 }
@@ -4336,7 +4404,8 @@ function jardinDuJour(s) {
      heure vingt-trois : une plage finissant à quatorze heures le lendemain
      s'écrivait « de 16 h à 14 h », une fin avant son début. */
   const fin = k => {
-    const change = k + 1 < s.n ? s.jour[k + 1] !== s.jour[0] : s.heure[k] === 23;
+    const change = k + 1 < s.n ? s.jour[k + 1] !== s.jour[0]
+      : s.jour[k] !== s.jour[0] || s.heure[k] === 23;
     return (change ? "demain " : "") + String((s.heure[k] + 1) % 24).padStart(2, "0") + " h";
   };
   const lignes = [];
@@ -4350,19 +4419,24 @@ function jardinDuJour(s) {
   if (div) {
     lignes.push({ i: "goutte", g: 9,
       t: `Prévision incertaine : ${nombreFr(div.haut)} mm annoncés par `
-        + `${div.arome ? "AROME" : "la seconde source"}, aucune lame par `
+        + `${div.arome ? "AROME" : "la seconde source"}, `
+        + `${div.bas < 0.1 ? "aucune lame" : nombreFr(div.bas) + " mm"} par `
         + `${div.arome ? "la seconde source" : "AROME"}. `
         + `Attendre avant d'arroser, et voir le ciel.` });
   } else if (pl.length) {
     lignes.push({ i: "goutte", g: 9,
       t: `Pluie ${pl.length > 1 ? "par intervalles " : ""}de ${dem(pl[0][0])} à `
         + `${fin(pl[pl.length - 1][1])}, ${nombreFr(tot)} mm attendus.` });
-  } else if (Math.max(...s.pb) >= 40) {
-    lignes.push({ i: "goutte", g: 9, t: `Aucune lame annoncée, mais un risque de pluie `
-      + `qui monte à ${Math.max(...s.pb)} % vers ${dem(s.pb.indexOf(Math.max(...s.pb)))}.` });
   } else {
+    /* « Aucune pluie annoncée » s'écrivait jusqu'à trente-neuf pour cent de
+       risque, la formulation qui le mentionne n'existant qu'à partir de
+       quarante. Une seule phrase désormais : la lame manque, et le risque est
+       dit dès qu'il atteint le seuil de mention de l'application. */
+    const rx = Math.round(Math.max(...s.pb));
     lignes.push({ i: "goutte", g: 9,
-      t: `Aucune pluie annoncée d'ici ${dem(s.n - 1)}.` });
+      t: `Aucune lame annoncée d'ici ${fin(s.n - 1)}.`
+        + (rx >= 5 ? ` Risque de pluie jusqu'à ${rx} % vers `
+            + `${dem(s.pb.indexOf(Math.max(...s.pb)))}.` : "") });
   }
 
   const gel = plagesDe(s.n, k => s.t[k] <= 1);
@@ -4385,10 +4459,22 @@ function jardinDuJour(s) {
     + `${fin(mal[0][1])} sous une température douce. Le feuillage reste mouillé, aérer les `
     + `abris et arroser au pied.` });
 
-  const arr = plagesDe(s.n, k => s.mm[k] < 0.1 && s.pb[k] < 40 && s.v[k] < 15 && s.uv[k] < 2)
+  /* Le créneau dit quand arroser, le bilan du sol dit s'il faut : la feuille
+     proposait un créneau le lendemain de trente-cinq millimètres de pluie
+     pendant que l'accueil disait « la réserve tient six jours ». Il se tait
+     quand le sol n'a rien demandé.
+
+     Ses critères disaient « sans vent » sur la seule moyenne, alors qu'une
+     rafale de quarante emporte l'eau et le produit : la rafale entre dans la
+     règle. Et « hors soleil » nommait un test d'indice UV, toujours vrai en
+     décembre : la phrase dit maintenant ce qu'elle teste. */
+  const arr = plagesDe(s.n, k => s.mm[k] < 0.1 && s.pb[k] < 40
+      && s.v[k] < 15 && s.raf[k] < 30 && s.uv[k] < 2)
     .filter(([a, b]) => b - a >= 1).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
-  if (arr && tot < 3) lignes.push({ i: "arc", g: 2, t: `Créneau d'arrosage de ${dem(arr[0])} à `
-    + `${fin(arr[1])} : sec, sans vent et hors soleil.` });
+  const solDemande = (() => { const b = bilanHydrique(); return !b || b.etat === "arroser"; })();
+  if (arr && tot < 3 && solDemande) lignes.push({ i: "arc", g: 2,
+    t: `Créneau d'arrosage de ${dem(arr[0])} à ${fin(arr[1])} : sec, sans vent `
+      + `et l'évaporation y est faible.` });
 
   const uvx = Math.max(...s.uv);
   if (uvx >= 7) lignes.push({ i: "soleil", g: 1, t: `Indice UV ${nombreFr(uvx)} vers `
