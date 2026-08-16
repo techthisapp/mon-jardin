@@ -3002,6 +3002,21 @@ let meteo = null;      // charge brute, telle que rendue par le service
    heures : le cache la permettait, rien ne la déclenchait. */
 let heureCharge = null;
 
+/* La dernière série horaire connue, reprise du cache quand la requête échoue.
+   Elle ne sert que si elle couvre encore l'heure en cours : une série de la
+   veille rendrait une fenêtre entièrement passée. */
+function horaireRepris(cle) {
+  try {
+    const c = JSON.parse(localStorage.getItem(METEO_CACHE) || "null");
+    if (!c || c.cle !== cle || !c.d || !c.d.hourly) return null;
+    const d = new Date();
+    const heure = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+      + "-" + String(d.getDate()).padStart(2, "0")
+      + "T" + String(d.getHours()).padStart(2, "0") + ":00";
+    return c.d.hourly.time.indexOf(heure) >= 0 ? c.d.hourly : null;
+  } catch (e) { return null; }
+}
+
 async function lireMeteo(g) {
   if (!g || g.lat === null || g.lat === undefined) { meteo = null; return; }
   const cle = `${g.lat},${g.lon}`;
@@ -3033,23 +3048,39 @@ async function lireMeteo(g) {
     + "cloud_cover,pressure_msl,wind_speed_10m,wind_gusts_10m,wind_direction_10m,"
     + "uv_index,is_day&forecast_days=2";
   const ua = uh + "&models=meteofrance_arome_france_hd";
+  /* Trois requêtes partaient de front. Sur un réseau à une barre, une seule qui
+     échoue suffisait à vider la feuille : le quotidien arrivait, l'horaire non,
+     et l'application annonçait « la prévision heure par heure n'est pas
+     disponible pour ce jardin », ce qui accusait le jardin d'un incident de
+     réseau. Depuis que le bandeau, la table, les alertes et le bilan lisent tous
+     la série horaire, cette perte se voit partout.
+
+     L'horaire est donc réessayé une fois, AROME part après le premier couple
+     plutôt qu'avec lui, et une série qui manque est reprise de la dernière
+     charge connue tant qu'elle couvre l'heure en cours. */
+  const prendre = async (url, essais) => {
+    for (let k = 0; k <= essais; k++) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) return await r.json();
+      } catch (e) { /* réseau indisponible, on retente */ }
+    }
+    return null;
+  };
   try {
-    const [r, rh, ra] = await Promise.all([
-      fetch(u), fetch(uh).catch(() => null), fetch(ua).catch(() => null)]);
+    const [r, h] = await Promise.all([fetch(u), prendre(uh, 1)]);
     if (!r.ok) throw new Error(r.status);
     meteo = await r.json();
-    if (rh && rh.ok) {
-      const h = await rh.json();
-      if (h && h.hourly) meteo.hourly = h.hourly;
-    }
+    if (h && h.hourly) meteo.hourly = h.hourly;
+    else meteo.hourly = horaireRepris(cle);
     /* La série de secours est gardée entière à côté de la série fondue : c'est
        elle qui permet de dire, plus tard, que les deux modèles ne s'accordent
        pas sur la pluie. */
     meteo.horaireSecours = meteo.hourly || null;
     /* AROME absent, en panne ou muet : la série de secours reste seule, et
        l'application rend ce qu'elle rendait avant. */
-    if (ra && ra.ok && meteo.hourly) {
-      const av = await ra.json().catch(() => null);
+    if (meteo.hourly) {
+      const av = h && h.hourly ? await prendre(ua, 0) : null;
       if (av && av.hourly) meteo.hourly = fondreHoraire(meteo.hourly, av.hourly);
     }
     heureCharge = heureCle();
@@ -4661,7 +4692,12 @@ function vueTemps() {
   const heures = s ? jardinDuJour(s)
       + `<div class="f-carte-tete"><h3>Heure par heure</h3>${seg}</div>`
       + `<div id="tempsCorps">${ecritureTemps(s, m)}</div>`
-    : `<p class="f-vide">La prévision heure par heure n'est pas disponible pour ce jardin.</p>`;
+    /* La phrase accusait le jardin d'un incident de réseau. Elle dit ce qui
+       s'est passé, et donne le moyen d'y revenir sans quitter la feuille. */
+    : `<p class="f-vide">Les heures n'ont pas pu être chargées. La prévision du `
+      + `jour et de la semaine, elle, est à jour.</p>`
+      + `<p class="f-vide"><button type="button" class="lien-relire" id="relireMeteo">`
+      + `Réessayer</button></p>`;
 
   /* La température et le ciel descendent dans le sous-titre : la feuille reste
      ainsi lisible seule quand elle défile et couvre le bandeau, sans lui faire
@@ -4676,6 +4712,13 @@ function vueTemps() {
       + `suivants viennent de la sélection automatique. Relecture toutes les `
       + `heures.</p>`,
     brancher() {
+      sur("relireMeteo", "click", async () => {
+        const b = $("relireMeteo");
+        if (b) { b.disabled = true; b.textContent = "Relecture…"; }
+        await lireMeteo(jardinActif());
+        rendreMaintenant();
+        ouvrirVue("temps");
+      });
       if (!s) return;
       brancherLectures();
       $("feuille-corps").querySelectorAll("[data-mode]").forEach(b =>

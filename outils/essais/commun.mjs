@@ -99,7 +99,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
     session = true, cache = null, versionSite = null, espaces = null, placements = null,
     avis = null, sourdines = null, carnet = null, photosCarnet = null, cultures = null,
-    jour = JOUR_FIGE, arome = null,
+    jour = JOUR_FIGE, arome = null, horairePanne = 0,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -147,8 +147,14 @@ export async function ouvrirContexte(navigateur, options = {}) {
   /* Trois appels : le quotidien, l'horaire de secours et AROME par-dessus.
      La doublure d'AROME est réglable par l'essai : rien par défaut, ce qui
      revient à la charge d'avant et laisse les autres suites inchangées. */
+  /* Le réseau d'un téléphone à une barre : la requête horaire échoue les
+     premières fois, puis passe. `horairePanne: Infinity` la fait échouer
+     toujours. */
+  let pannes = 0;
   await ctx.route(/api\.open-meteo\.com/, route => {
     const url = route.request().url();
+    if (url.includes("hourly=") && !url.includes("models=")
+        && pannes++ < horairePanne) return route.abort("failed");
     const d = JSON.parse(meteoDuJour);
     const rendre = corps => route.fulfill({ status: 200,
       contentType: "application/json", body: JSON.stringify(corps) });

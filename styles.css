@@ -1531,6 +1531,13 @@ body.fige{overflow:hidden}
 .f-txt{font-size:13.5px;color:var(--f-ink2)}
 .f-note{font-size:12.5px;color:var(--f-ink3);margin-top:6px}
 .f-vide{font-size:13.5px;color:var(--f-ink3);padding:6px 0}
+/* Un incident de réseau se rattrape sans quitter la feuille. */
+.lien-relire{
+  border:0;background:none;padding:0;cursor:pointer;font:inherit;
+  color:var(--terre);text-decoration:underline;text-underline-offset:3px;
+}
+.lien-relire[disabled]{color:var(--f-ink3);text-decoration:none;cursor:default}
+.lien-relire:focus-visible{outline:2px solid var(--terre);outline-offset:3px;border-radius:4px}
 
 .f-hero{
   background:var(--f-carte);border:1px solid var(--filet-clair);

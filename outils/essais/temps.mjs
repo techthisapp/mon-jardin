@@ -810,6 +810,35 @@ export default async function essai(navigateur) {
     cel.every(c => /au plus fort/.test(c[1])), cel[0] ? cel[0][1] : "");
   await cH.ctx.close();
 
+  /* Sur un réseau à une barre, une requête horaire qui échoue vidait la feuille
+     entière et l'application accusait le jardin : « la prévision heure par heure
+     n'est pas disponible pour ce jardin ». Depuis que le bandeau, la table, les
+     alertes et le bilan lisent tous cette série, la perte se voit partout. */
+  j.section("l'audit : une requête horaire perdue ne vide plus la feuille");
+  const cF = await ouvrirContexte(navigateur, { horairePanne: 1 });
+  await cF.pg.waitForTimeout(900);
+  await cF.pg.locator(".tm-temps").click();
+  await cF.pg.waitForTimeout(700);
+  j.controle("un échec passager est rattrapé par une seconde tentative",
+    await cF.pg.locator(".mg-v").count() === 7,
+    await cF.pg.locator(".mg-v").count() + " voies");
+  await cF.ctx.close();
+
+  /* Deux échecs de suite : la série est reprise du cache tant qu'elle couvre
+     l'heure, et la feuille garde ses voies. */
+  const cG = await ouvrirContexte(navigateur, { horairePanne: Infinity });
+  await cG.pg.waitForTimeout(900);
+  await cG.pg.locator(".tm-temps").click();
+  await cG.pg.waitForTimeout(700);
+  const vide = net(await cG.pg.locator("#feuille-corps").innerText());
+  j.controle("sans série et sans cache, la feuille le dit sans accuser le jardin",
+    !/n'est pas disponible pour ce jardin/.test(vide)
+    && /n'ont pas pu être chargées/.test(vide), vide.slice(0, 120));
+  j.controle("la semaine reste servie, et un renvoi permet de réessayer",
+    await cG.pg.locator(".mt-table tr").count() > 0
+    && await cG.pg.locator("#relireMeteo").count() === 1);
+  await cG.ctx.close();
+
   j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();
   await pg.waitForTimeout(500);
