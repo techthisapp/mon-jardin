@@ -1917,6 +1917,10 @@ body.fige{overflow:hidden}
 .mt-t{text-align:right;white-space:nowrap}
 .mt-t span{color:var(--encre-doux)}
 .mt-p{text-align:right;color:#1F4F8F;font-size:13px;white-space:nowrap;padding-left:10px}
+/* La journée en cours a déjà coulé en partie : sa lame dit ce qui est tombé
+   avant l'heure, faute de quoi elle contredit les heures qui partent de
+   maintenant. */
+.mt-p small{display:block;font-size:11px;color:var(--f-ink3);margin-top:1px}
 .mt-barres{display:flex;align-items:flex-end;gap:6px;height:74px;padding:0 2px}
 .mt-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;height:100%}
 .mt-col.ce-jour .mt-j{color:var(--encre);font-weight:600}

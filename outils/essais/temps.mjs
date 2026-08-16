@@ -3,7 +3,7 @@
    portent sur ce que le code ne peut pas vérifier seul : la fenêtre part bien
    de l'heure en cours et traverse minuit, chaque écriture rend la même série,
    et le météogramme ne mélange pas deux unités dans une voie. */
-import { ouvrirContexte, journal, net } from "./commun.mjs";
+import { ouvrirContexte, journal, net, METEO } from "./commun.mjs";
 
 // L'horloge des essais est figée au 2 août 2026 à 9 h, heure de Paris.
 const H0 = 9;
@@ -570,6 +570,60 @@ export default async function essai(navigateur) {
       return typeof c.h === "string" && c.h.length === 13;
     }), cle.join(", "));
   await cB.ctx.close();
+
+  /* La table de la semaine lisait la charge quotidienne, qui vient de la
+     sélection automatique, quand les heures viennent d'AROME. Le même dimanche
+     y portait vingt-neuf degrés et trente-deux, « orage » et « couvert », trois
+     millimètres et six dixièmes et rien du tout. Deux sources pour un seul jour
+     font trois contradictions dans une même feuille. */
+  j.section("la semaine et les heures ne se contredisent plus");
+  const md = JSON.parse(METEO);
+  md.daily.precipitation_sum = md.daily.precipitation_sum.map(() => 9.9);
+  md.daily.weather_code = md.daily.weather_code.map(() => 95);
+  md.daily.temperature_2m_max = md.daily.temperature_2m_max.map(() => 9);
+  md.daily.temperature_2m_min = md.daily.temperature_2m_min.map(() => 8);
+  // Deux millimètres et quatre dixièmes à trois heures du matin, rien ensuite.
+  md.hourly.precipitation = md.hourly.time.map(t => (Number(t.slice(11, 13)) === 3 ? 2.4 : 0));
+  const cS = await ouvrirContexte(navigateur, { meteo: JSON.stringify(md) });
+  await cS.pg.waitForTimeout(700);
+  await cS.pg.locator(".tm-temps").click();
+  await cS.pg.waitForTimeout(700);
+  const sem = await cS.pg.evaluate(() => [...document.querySelectorAll(".mt-table tr")].map(r => ({
+    jour: r.querySelector("th").textContent.trim(),
+    max: parseInt(r.querySelector(".mt-t b").textContent),
+    mm: (r.querySelector(".mt-p").firstChild || {}).textContent || "",
+    note: (r.querySelector(".mt-p small") || {}).textContent || "",
+  })));
+  /* Les deux premières lignes se résument des heures, les suivantes gardent la
+     charge quotidienne : la série horaire ne couvre que deux jours. */
+  j.controle("aujourd'hui et demain suivent les heures, non le quotidien",
+    sem[0].max !== 9 && sem[1].max !== 9 && sem[2].max === 9,
+    sem.slice(0, 3).map(l => `${l.jour} ${l.max}°`).join(" | "));
+  j.controle("leur lame est celle des heures",
+    sem[0].mm.startsWith("2,4") && sem[1].mm.startsWith("2,4") && sem[2].mm.startsWith("9,9"),
+    sem.slice(0, 3).map(l => `${l.jour} ${l.mm}`).join(" | "));
+  /* La table donne la journée civile, les heures partent de maintenant : ce qui
+     est tombé avant l'heure manquait à l'appel sans que rien ne le dise. */
+  j.controle("la journée en cours dit ce qui est déjà tombé",
+    /^dont 2,4 tombés$/.test(sem[0].note), sem[0].note);
+  j.controle("les autres jours n'ont rien à dire de tel",
+    sem.slice(1).every(l => l.note === ""), sem.slice(1).map(l => l.note).join("|"));
+  /* Le recoupement qui vaut : le maximum de la table est celui des heures. Sans
+     lui, deux sources cohérentes entre elles mais fausses passeraient. */
+  await cS.pg.locator('[data-mode="liste"]').click();
+  await cS.pg.waitForTimeout(500);
+  const tj = await cS.pg.evaluate(() => {
+    const jour = document.querySelector("tr.hh .hh-h, tr.hh th");
+    void jour;
+    return [...document.querySelectorAll("tr.hh")]
+      .filter(r => !r.previousElementSibling
+        || !r.previousElementSibling.classList.contains("hh-jour"))
+      .map(r => Number(r.querySelector(".hh-t").textContent));
+  });
+  j.controle("le maximum de la table est celui des heures du jour",
+    sem[0].max === Math.max(...tj.slice(0, 24).filter(Number.isFinite)),
+    `${sem[0].max}° dans la table, ${Math.max(...tj)}° dans les heures`);
+  await cS.ctx.close();
 
   j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();

@@ -3699,6 +3699,46 @@ function divergencePluie(s) {
   return { haut, arome: a > b };
 }
 
+/* Ce qu'une journée civile vaut d'après la série horaire.
+
+   La table de la semaine lisait la charge quotidienne, qui vient de la sélection
+   automatique, quand les heures viennent d'AROME. Le même dimanche y portait
+   vingt-neuf degrés et trente-deux, « orage » et « couvert », trois millimètres
+   et six dixièmes et rien du tout : deux sources pour un seul jour font trois
+   contradictions dans une même feuille. La table prend donc les heures là où
+   elles couvrent la journée entière, et la charge quotidienne au-delà.
+
+   La série horaire part de zéro heure du jour en cours et couvre deux jours :
+   aujourd'hui et demain se calculent, le reste de la semaine non. */
+function jourHoraire(date) {
+  const h = meteo && meteo.hourly;
+  if (!h || !Array.isArray(h.time)) return null;
+  const k = [];
+  h.time.forEach((t, j) => { if (t.slice(0, 10) === date) k.push(j); });
+  if (k.length < 24) return null;
+  const val = (c, j) => {
+    const v = (h[c] || [])[j];
+    return v === null || v === undefined ? null : v;
+  };
+  const t = k.map(j => val("temperature_2m", j)).filter(v => v !== null);
+  // Une journée trouée ne se résume pas : la charge quotidienne reprend la main.
+  if (t.length < k.length) return null;
+  const ih = iHeure();
+  return {
+    tx: Math.max(...t), tn: Math.min(...t),
+    mm: k.reduce((a, j) => a + (val("precipitation", j) || 0), 0),
+    /* Ce qui est déjà tombé dans la journée en cours. La table donne la journée
+       civile, les heures partent de maintenant : trois millimètres tombés à
+       trois heures du matin manquaient à l'appel sans que rien ne le dise. */
+    passe: ih < 0 ? 0
+      : k.filter(j => j < ih).reduce((a, j) => a + (val("precipitation", j) || 0), 0),
+    code: k.reduce((a, j) => {
+      const c = val("weather_code", j);
+      return c !== null && GRAVITE_CIEL(c) > GRAVITE_CIEL(a) ? c : a;
+    }, 0),
+  };
+}
+
 // Les plages d'heures consécutives qui vérifient une condition.
 function plagesDe(n, test) {
   const out = [];
@@ -4499,7 +4539,8 @@ function vueTemps() {
     corps: tete + heures + `<h3 class="f-sect">La semaine</h3>` + tableSemaine()
       + `<p class="f-note">Prévision Open-Meteo. Les heures viennent d'AROME, le `
       + `modèle de Météo-France à 1,5 km, complété par la sélection automatique là `
-      + `où il se tait ; la semaine vient de cette sélection. Relecture toutes les `
+      + `où il se tait. Aujourd'hui et demain se résument de ces heures ; les jours `
+      + `suivants viennent de la sélection automatique. Relecture toutes les `
       + `heures.</p>`,
     brancher() {
       if (!s) return;
@@ -4526,19 +4567,25 @@ function vueTemps() {
 // La prévision à sept jours, en table.
 function tableSemaine() {
   const d = meteo.daily, i = iJour();
+  const dec = v => v.toFixed(1).replace(".", ",");
   const lignes = [];
   for (let k = i; k <= Math.min(i + 6, d.time.length - 1); k++) {
+    // Les heures d'abord, la charge quotidienne au-delà de leur portée.
+    const hj = jourHoraire(d.time[k]);
+    const tx = hj ? hj.tx : d.temperature_2m_max[k];
+    const tn = hj ? hj.tn : d.temperature_2m_min[k];
     // Une journée sans température n'est pas une journée à zéro degré : au-delà
     // de son horizon le modèle ne rend rien, et la ligne ne doit pas exister.
-    const tx = d.temperature_2m_max[k], tn = d.temperature_2m_min[k];
     if (tx === null || tx === undefined) continue;
-    const [, lib, ico] = tempsDe(d.weather_code[k]);
-    const p = d.precipitation_sum[k];
+    const [, lib, ico] = tempsDe(hj ? hj.code : d.weather_code[k]);
+    const p = hj ? hj.mm : d.precipitation_sum[k];
+    const tombe = k === i && hj && hj.passe >= 0.2 ? hj.passe : 0;
     lignes.push(`<tr><th>${k === i ? "aujourd'hui" : esc(jourCourt(d.time[k]))}</th>`
       + `<td class="mt-ic">${icoM(ico)}</td><td class="mt-lib">${esc(lib)}</td>`
       + `<td class="mt-t"><b>${Math.round(tx)}°</b> `
       + `<span>${tn === null || tn === undefined ? "" : Math.round(tn) + "°"}</span></td>`
-      + `<td class="mt-p">${p >= 0.2 ? p.toFixed(1).replace(".", ",") + " mm" : ""}</td></tr>`);
+      + `<td class="mt-p">${p >= 0.2 ? dec(p) + " mm" : ""}`
+      + (tombe ? `<small>dont ${dec(tombe)} tombés</small>` : "") + `</td></tr>`);
   }
   return `<table class="mt-table">${lignes.join("")}</table>`;
 }
