@@ -77,10 +77,22 @@ export default async function essai(navigateur) {
     return r;
   };
   const IJOUR = 31;   // 2026-08-02 dans la série du jeu d'essai
+  /* L'alerte de lame lit désormais la série horaire, comme la feuille du temps :
+     elle ne parle que de ce qui reste à tomber. La pluie du jeu d'essai se pose
+     donc dans les heures à venir de la journée, non dans le seul quotidien. */
+  const pluieHoraire = (d, mm) => {
+    const jour = d.hourly.time[0].slice(0, 10);
+    const cible = d.hourly.time.map((t, k) => ({ t, k })).filter(x =>
+      x.t.slice(0, 10) === jour && Number(x.t.slice(11, 13)) >= 14
+      && Number(x.t.slice(11, 13)) <= 18);
+    d.hourly.precipitation = d.hourly.precipitation.map(() => 0);
+    cible.forEach(x => { d.hourly.precipitation[x.k] = mm / cible.length; });
+  };
 
   const dette = await scene(d => {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map((v, k) => k === IJOUR ? 19 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
+    pluieHoraire(d, 19);
   });
   /* La tuile a le tiers de la largeur : elle porte la décision en trois mots,
      la feuille de l'eau garde la phrase entière. */
@@ -95,6 +107,7 @@ export default async function essai(navigateur) {
   const confort = await scene(d => {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map(() => 19);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 1);
+    pluieHoraire(d, 19);
   });
   j.controle("sol au confort : l'alerte peut dissuader d'arroser",
     confort.alertes.some(a => a === "19 mm attendus, inutile d'arroser"), JSON.stringify(confort.alertes));

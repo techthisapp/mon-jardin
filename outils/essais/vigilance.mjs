@@ -85,15 +85,31 @@ export default async function essai(navigateur) {
     return r;
   };
   const IJOUR = 31;   // 2026-08-02 dans la série du jeu d'essai
+  /* L'alerte de lame lit désormais la série horaire, comme la feuille du temps :
+     elle ne parle que de ce qui reste à tomber. La pluie du jeu d'essai se pose
+     donc dans les heures à venir de la journée, non dans le seul quotidien. */
+  const pluieHoraire = (d, mm) => {
+    const jour = d.hourly.time[0].slice(0, 10);
+    const cible = d.hourly.time.map((t, k) => ({ t, k })).filter(x =>
+      x.t.slice(0, 10) === jour && Number(x.t.slice(11, 13)) >= 14
+      && Number(x.t.slice(11, 13)) <= 18);
+    d.hourly.precipitation = d.hourly.precipitation.map(() => 0);
+    cible.forEach(x => { d.hourly.precipitation[x.k] = mm / cible.length; });
+  };
+  /* Les extrêmes du jour se lisent désormais dans la série horaire, comme la
+     table de la semaine : abaisser le seul quotidien ne suffit plus à faire
+     taire l'alerte de chaleur. */
+  const tiedir = d => {
+    d.daily.temperature_2m_max = d.daily.temperature_2m_max.map(() => 26);
+    d.hourly.temperature_2m = d.hourly.temperature_2m.map(v => Math.min(v, 26));
+  };
   const pluie = d => {
     d.daily.precipitation_sum = d.daily.precipitation_sum.map((v, k) => k === IJOUR ? 19 : 0);
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
+    pluieHoraire(d, 19);
   };
 
-  const jauneEau = await scene(CAS.jaune, d => {
-    d.daily.temperature_2m_max = d.daily.temperature_2m_max.map(() => 26);
-    pluie(d);
-  });
+  const jauneEau = await scene(CAS.jaune, d => { tiedir(d); pluie(d); });
   j.controle("la vigilance et la lame d'eau tiennent dans une seule carte",
     jauneEau.cartes === 1 && jauneEau.lignes.length === 2,
     jauneEau.cartes + " carte, " + jauneEau.lignes.length + " lignes");
@@ -102,10 +118,7 @@ export default async function essai(navigateur) {
     /Vigilance/.test(jauneEau.lignes[0]) && /mm attendus/.test(jauneEau.lignes[1]),
     jauneEau.lignes.join(" | ").slice(0, 70));
 
-  const eauSeule = await scene([], d => {
-    d.daily.temperature_2m_max = d.daily.temperature_2m_max.map(() => 26);
-    pluie(d);
-  });
+  const eauSeule = await scene([], d => { tiedir(d); pluie(d); });
   j.controle("sans vigilance, la carte prend le bleu de l'eau",
     eauSeule.cartes === 1 && eauSeule.ton === "t-eau", eauSeule.ton);
 

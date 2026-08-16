@@ -3,7 +3,7 @@
    portent sur ce que le code ne peut pas vérifier seul : la fenêtre part bien
    de l'heure en cours et traverse minuit, chaque écriture rend la même série,
    et le météogramme ne mélange pas deux unités dans une voie. */
-import { ouvrirContexte, journal, net, METEO } from "./commun.mjs";
+import { ouvrirContexte, journal, net, METEO, JOUR_FIGE } from "./commun.mjs";
 
 // L'horloge des essais est figée au 2 août 2026 à 9 h, heure de Paris.
 const H0 = 9;
@@ -624,6 +624,92 @@ export default async function essai(navigateur) {
     sem[0].max === Math.max(...tj.slice(0, 24).filter(Number.isFinite)),
     `${sem[0].max}° dans la table, ${Math.max(...tj)}° dans les heures`);
   await cS.ctx.close();
+
+  /* Audit du 16 août. Trois défauts capables de poser deux chiffres
+     contradictoires sur le même écran, ou d'écrire une saisie sur le mauvais
+     jour. Les contrôles portent sur ce qui se voit, non sur le calcul. */
+  j.section("l'audit : un trou de charge n'est pas une valeur nulle");
+  const mt = JSON.parse(METEO);
+  const creuser = (c, hh) => mt.hourly[c].forEach((v, k) => {
+    if (hh.includes(Number(mt.hourly.time[k].slice(11, 13)))) mt.hourly[c][k] = null;
+  });
+  creuser("temperature_2m", [14, 15]);
+  creuser("uv_index", [12, 13, 14]);
+  const cT = await ouvrirContexte(navigateur, { meteo: JSON.stringify(mt), arome: false });
+  await cT.pg.waitForTimeout(700);
+  await cT.pg.locator(".tm-temps").click();
+  await cT.pg.waitForTimeout(700);
+  const avis = (await cT.pg.locator(".jd-l").allInnerTexts()).map(net);
+  /* Zéro degré en août déclenchait « Gel probable, voiler ce qui craint », et un
+     indice UV nul l'après-midi ouvrait un créneau d'arrosage en plein soleil. */
+  j.controle("un trou de température ne fabrique pas une gelée d'août",
+    !avis.some(t => /[Gg]el probable/.test(t)), avis.join(" | "));
+  const creux = await cT.pg.evaluate(() => {
+    const l = [...document.querySelectorAll("tr.hh")].map(r => ({
+      h: r.querySelector(".hh-h") ? r.querySelector(".hh-h").textContent.trim() : "",
+      t: parseInt(r.querySelector(".hh-t").textContent),
+      uv: r.querySelector(".hh-uv").textContent.trim(),
+    }));
+    return { bas: l.filter(x => x.t < 5).length,
+             uvVide: l.filter(x => x.uv === "0" || x.uv === "0,0").length };
+  });
+  j.controle("aucune heure d'août ne tombe sous cinq degrés",
+    creux.bas === 0, creux.bas + " heures sous 5°");
+  await cT.ctx.close();
+
+  /* La borne de fin est l'heure qui suit la plage, et c'est son jour qui décide
+     du mot « demain ». Le test portait sur la seule heure vingt-trois : une
+     plage finissant à quatorze heures le lendemain s'écrivait « de 16 h à
+     14 h », une fin avant son début. */
+  j.section("l'audit : une plage qui franchit minuit le dit");
+  const bornees = [];
+  [avis, (await pg.locator(".jd-l").allInnerTexts()).map(net)].forEach(l =>
+    l.forEach(t => {
+      const m = t.match(/de (demain )?(\d{2}) h à (demain )?(\d{2}) h/);
+      if (m) bornees.push({ t, a: parseInt(m[2]), b: parseInt(m[4]),
+                            da: Boolean(m[1]), db: Boolean(m[3]) });
+    }));
+  j.controle("aucune plage ne finit avant d'avoir commencé",
+    bornees.length > 0 && bornees.every(x => x.db || x.da || x.b > x.a),
+    bornees.map(x => x.t).join(" | "));
+
+  /* Le quotidien lisait la date en temps universel, l'horaire en heure locale :
+     entre minuit et deux heures l'été, les deux séries ne désignaient pas le
+     même jour. La table intitulait « aujourd'hui » la journée écoulée, et un
+     relevé de pluviomètre saisi à minuit et demi s'enregistrait sur la veille. */
+  j.section("l'audit : à minuit et demi, le jour est le bon des deux côtés");
+  const nuit = JOUR_FIGE + 15.5 * 3600e3;   // 3 août, 00 h 30, heure de Paris
+  const cN = await ouvrirContexte(navigateur, { jour: nuit });
+  await cN.pg.waitForTimeout(800);
+  const dates = await cN.pg.evaluate(() => {
+    const d = new Date();
+    return { local: d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+      + "-" + String(d.getDate()).padStart(2, "0"), utc: d.toISOString().slice(0, 10) };
+  });
+  j.controle("l'horloge est bien posée dans la fenêtre du défaut",
+    dates.local !== dates.utc, `${dates.local} en local, ${dates.utc} en universel`);
+  await cN.pg.locator(".tm-temps").click();
+  await cN.pg.waitForTimeout(700);
+  await cN.pg.locator('[data-mode="liste"]').click();
+  await cN.pg.waitForTimeout(500);
+  const prem = await cN.pg.evaluate(() => {
+    const r = document.querySelector("tr.hh");
+    return r ? r.firstElementChild.textContent : "(aucune ligne)";
+  });
+  j.controle("la première heure de la liste est minuit", net(prem) === "00 h", net(prem));
+  await cN.pg.locator("#fermerFeuille").click();
+  await cN.pg.waitForTimeout(400);
+  /* Le chemin qui corrompt : la ligne de saisie « aujourd'hui » de la feuille de
+     l'eau porte la date écrite en base. */
+  await cN.pg.locator('[data-vue="eau"]').first().click();
+  await cN.pg.waitForTimeout(700);
+  const saisie = await cN.pg.evaluate(() => {
+    const l = document.querySelector(".rel-ligne");
+    return l ? l.dataset.jour : "";
+  });
+  j.controle("la ligne de saisie du jour porte la date locale, non celle d'hier",
+    saisie === dates.local, `${saisie} pour un ${dates.local}`);
+  await cN.ctx.close();
 
   j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();

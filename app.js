@@ -2990,6 +2990,9 @@ const icoM = (n, cls) => `<svg class="${cls || "bd-ic"}" viewBox="0 0 24 24" ari
   + `fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${GM[n] || ""}</svg>`;
 
 let meteo = null;      // charge brute, telle que rendue par le service
+/* L'heure de la charge en mémoire. La feuille promet une relecture toutes les
+   heures : le cache la permettait, rien ne la déclenchait. */
+let heureCharge = null;
 
 async function lireMeteo(g) {
   if (!g || g.lat === null || g.lat === undefined) { meteo = null; return; }
@@ -2997,7 +3000,7 @@ async function lireMeteo(g) {
   try {
     const c = JSON.parse(localStorage.getItem(METEO_CACHE) || "null");
     if (c && c.cle === cle && c.h === heureCle() && Date.now() - c.t < METEO_TTL) {
-      meteo = c.d; return;
+      meteo = c.d; heureCharge = c.h; return;
     }
   } catch (e) { /* cache indisponible */ }
   // Le quotidien garde la sélection automatique : elle seule couvre les sept
@@ -3041,25 +3044,30 @@ async function lireMeteo(g) {
       const av = await ra.json().catch(() => null);
       if (av && av.hourly) meteo.hourly = fondreHoraire(meteo.hourly, av.hourly);
     }
+    heureCharge = heureCle();
     localStorage.setItem(METEO_CACHE,
       JSON.stringify({ cle, t: Date.now(), h: heureCle(), d: meteo }));
   } catch (e) { meteo = null; }
 }
 
+/* La date du jour, en heure locale. Le quotidien la lisait en temps universel
+   quand l'horaire la lisait en heure locale : entre minuit et deux heures l'été,
+   les deux séries ne désignaient pas le même jour. Toute la journée reculait
+   alors d'un cran, le bandeau donnait les extrêmes de la veille, la table de la
+   semaine intitulait « aujourd'hui » la journée écoulée, et un relevé de
+   pluviomètre saisi à minuit et demi s'enregistrait sur la veille. */
+const cleJour = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
+  + "-" + String(d.getDate()).padStart(2, "0");
+
 // Index du jour dans la série, sept jours de passé précèdent aujourd'hui.
-const iJour = () => {
-  if (!meteo) return -1;
-  const h = new Date().toISOString().slice(0, 10);
-  return meteo.daily.time.indexOf(h);
-};
+const iJour = () => (meteo ? meteo.daily.time.indexOf(cleJour(new Date())) : -1);
 
 // Index de l'heure en cours dans la série horaire, quand elle est disponible.
 const iHeure = () => {
   if (!meteo || !meteo.hourly) return -1;
   const d = new Date();
-  const cle = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-"
-    + String(d.getDate()).padStart(2, "0") + "T" + String(d.getHours()).padStart(2, "0") + ":00";
-  return meteo.hourly.time.indexOf(cle);
+  return meteo.hourly.time.indexOf(
+    cleJour(d) + "T" + String(d.getHours()).padStart(2, "0") + ":00");
 };
 
 // Les nombres s'écrivent avec la virgule, et sans décimale au delà de dix.
@@ -3168,10 +3176,16 @@ function alertesMeteo() {
   const vg = vigilanceDuJour();
   const couverts = vg ? vg.ids.map(x => VIGI_COUVRE[x]).filter(Boolean) : [];
   const d = meteo.daily, out = [];
+  /* Les extrêmes et la lame d'un jour se lisent dans la série horaire là où elle
+     le couvre, comme la table de la semaine : le bandeau et la feuille étaient
+     sinon à l'écran ensemble avec deux couples de valeurs pour le même jour. */
+  const jh = k => jourHoraire(d.time[k]);
+  const tMin = k => { const j = jh(k); return j ? j.tn : d.temperature_2m_min[k]; };
+  const tMax = k => { const j = jh(k); return j ? j.tx : d.temperature_2m_max[k]; };
   const quand = k => k === i ? "aujourd'hui" : k === i + 1 ? "demain"
     : new Date(d.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "long" });
   for (let k = i; k <= Math.min(i + 2, d.time.length - 1); k++) {
-    const tmin = d.temperature_2m_min[k], tmax = d.temperature_2m_max[k];
+    const tmin = tMin(k), tmax = tMax(k);
     if (tmin !== null && tmin <= 2) {
       const risque = [...sel].map(id => plantes.find(p => p.id === id)).filter(Boolean)
         .filter(p => p.gel !== null && p.gel !== undefined && Number(p.gel) > tmin)
@@ -3192,7 +3206,12 @@ function alertesMeteo() {
      il a déjà déduit cette lame. L'alerte énonce donc le fait quand le sol reste
      en dette malgré elle, se tait quand la pastille d'eau annonce déjà la pluie
      à venir, et ne conseille de ne pas arroser que lorsque le bilan le dit. */
-  const p = d.precipitation_sum[i];
+  /* « X mm attendus » portait le cumul de la journée civile, passé compris : à
+     dix-neuf heures, dix-huit millimètres tombés le matin s'annonçaient encore
+     au futur, pendant que la feuille du temps disait « aucune pluie annoncée ».
+     L'alerte ne parle plus que de ce qui reste à tomber. */
+  const jour = jourHoraire(d.time[i]);
+  const p = jour ? jour.mm - jour.passe : d.precipitation_sum[i];
   if (p !== null && p >= 15) {
     const b = meteo ? bilanHydrique() : null;
     if (!b) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
@@ -3270,6 +3289,10 @@ function rendreBandeau() {
   // condition la plus sévère des vingt-quatre heures, il annoncerait de la pluie
   // pour un dixième de millimètre tombé à midi.
   const ih = iHeure();
+  /* Les extrêmes du jour viennent des heures là où elles couvrent la journée,
+     comme la table de la semaine : le bandeau reste visible au-dessus de la
+     feuille, et les deux donnaient quatre degrés d'écart pour le même jour. */
+  const jourJ = jourHoraire(d.time[i]);
   const maintenant = ih >= 0
     ? { deg: meteo.hourly.temperature_2m[ih], lib: tempsDe(meteo.hourly.weather_code[ih])[1],
         vent: meteo.hourly.wind_speed_10m[ih] }
@@ -3289,7 +3312,8 @@ function rendreBandeau() {
     + icoM(cielIci, "tm-ic")
     + `<span class="tm-deg">${Math.round(maintenant.deg)}°</span>`
     + `<span class="tm-etat">${esc(maintenant.lib)}<small>`
-    + `${Math.round(d.temperature_2m_max[i])}° le jour, ${Math.round(d.temperature_2m_min[i])}° la nuit, `
+    + `${Math.round(jourJ ? jourJ.tx : d.temperature_2m_max[i])}° le jour, `
+    + `${Math.round(jourJ ? jourJ.tn : d.temperature_2m_min[i])}° la nuit, `
     + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`
     + `<div class="mesures-jour">`
     + tuile("eau", "goutte", "L'eau", eauCourte(b), eau[2])
@@ -3661,13 +3685,30 @@ function serieHoraire() {
   const h = meteo.hourly;
   const n = Math.min(24, h.time.length - i);
   if (n < 8) return null;
-  const p = c => (h[c] || []).slice(i, i + n)
-    .map(v => (v === null || v === undefined ? 0 : v));
+  /* Un trou dans la charge n'est pas une valeur nulle. Zéro degré en août
+     déclenchait « gel probable, voiler ce qui craint », un indice UV nul à midi
+     ouvrait un créneau d'arrosage en plein soleil, un jour marqué nuit dessinait
+     une lune à quatorze heures. Les grandeurs continues reprennent donc la
+     valeur connue la plus proche, avant ou après. Une lame de pluie, elle, vaut
+     bien zéro quand rien n'est annoncé : interpoler y inventerait de l'eau. */
+  const p = (c, cumul) => {
+    const b = (h[c] || []).slice(i, i + n)
+      .map(v => (v === null || v === undefined ? null : v));
+    if (cumul) return b.map(v => (v === null ? 0 : v));
+    let der = null;
+    const out = b.map(v => (v === null ? der : (der = v)));
+    let suiv = null;
+    for (let k = n - 1; k >= 0; k--) {
+      if (b[k] !== null) suiv = b[k];
+      else if (out[k] === null) out[k] = suiv;
+    }
+    return out.map(v => (v === null ? 0 : v));
+  };
   return { n,
     heure: h.time.slice(i, i + n).map(t => Number(t.slice(11, 13))),
     jour: h.time.slice(i, i + n).map(t => t.slice(0, 10)),
     t: p("temperature_2m"), res: p("apparent_temperature"), ros: p("dew_point_2m"),
-    hum: p("relative_humidity_2m"), mm: p("precipitation"), pb: p("precipitation_probability"),
+    hum: p("relative_humidity_2m"), mm: p("precipitation", true), pb: p("precipitation_probability"),
     code: p("weather_code"), nua: p("cloud_cover"), pres: p("pressure_msl"),
     v: p("wind_speed_10m"), raf: p("wind_gusts_10m"), dir: p("wind_direction_10m"),
     uv: p("uv_index"), clair: p("is_day"),
@@ -4290,8 +4331,14 @@ function momentsHoraires(s) {
 function jardinDuJour(s) {
   const H = k => String(s.heure[k]).padStart(2, "0") + " h";
   const dem = k => (s.jour[k] !== s.jour[0] ? "demain " : "") + H(k);
-  const fin = k => (s.jour[Math.min(k + 1, s.n - 1)] !== s.jour[0]
-    && s.heure[k] === 23 ? "demain " : "") + String((s.heure[k] + 1) % 24).padStart(2, "0") + " h";
+  /* La borne de fin est l'heure qui suit la dernière heure de la plage, et
+     c'est son jour qui décide du mot « demain ». Le test portait sur la seule
+     heure vingt-trois : une plage finissant à quatorze heures le lendemain
+     s'écrivait « de 16 h à 14 h », une fin avant son début. */
+  const fin = k => {
+    const change = k + 1 < s.n ? s.jour[k + 1] !== s.jour[0] : s.heure[k] === 23;
+    return (change ? "demain " : "") + String((s.heure[k] + 1) % 24).padStart(2, "0") + " h";
+  };
   const lignes = [];
 
   const pl = plagesDe(s.n, k => s.mm[k] >= 0.1);
@@ -4567,7 +4614,6 @@ function vueTemps() {
 // La prévision à sept jours, en table.
 function tableSemaine() {
   const d = meteo.daily, i = iJour();
-  const dec = v => v.toFixed(1).replace(".", ",");
   const lignes = [];
   for (let k = i; k <= Math.min(i + 6, d.time.length - 1); k++) {
     // Les heures d'abord, la charge quotidienne au-delà de leur portée.
@@ -4584,8 +4630,8 @@ function tableSemaine() {
       + `<td class="mt-ic">${icoM(ico)}</td><td class="mt-lib">${esc(lib)}</td>`
       + `<td class="mt-t"><b>${Math.round(tx)}°</b> `
       + `<span>${tn === null || tn === undefined ? "" : Math.round(tn) + "°"}</span></td>`
-      + `<td class="mt-p">${p >= 0.2 ? dec(p) + " mm" : ""}`
-      + (tombe ? `<small>dont ${dec(tombe)} tombés</small>` : "") + `</td></tr>`);
+      + `<td class="mt-p">${p >= 0.2 ? nombreFr(p) + " mm" : ""}`
+      + (tombe ? `<small>dont ${nombreFr(tombe)} tombés</small>` : "") + `</td></tr>`);
   }
   return `<table class="mt-table">${lignes.join("")}</table>`;
 }
@@ -5709,8 +5755,17 @@ function controlerEtAnnoncer() {
 /* Le navigateur ne va voir de lui-même s'il existe une copie neuve qu'à la
    navigation, qui n'a jamais lieu dans une application posée sur l'écran
    d'accueil. Le retour au premier plan en tient lieu. */
+/* Une application posée sur l'écran d'accueil est reprise, non rechargée : elle
+   affichait indéfiniment la charge de son démarrage pendant que la fenêtre
+   glissante avançait sur des données figées, et la note de la feuille promettait
+   pourtant une relecture toutes les heures. Le retour au premier plan la relit
+   quand l'heure a changé, et pas plus souvent. */
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) controlerEtAnnoncer();
+  if (document.hidden) return;
+  controlerEtAnnoncer();
+  if (heureCharge === null || heureCharge === heureCle()) return;
+  const g = jardinActif();
+  if (g) lireMeteo(g).then(() => rendreMaintenant());
 });
 /* Un lancement hors ligne sert le document mis en cache : le contrôle est repris
    une fois la page en place, sans retarder l'affichage. */
