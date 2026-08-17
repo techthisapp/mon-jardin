@@ -3002,6 +3002,30 @@ let meteo = null;      // charge brute, telle que rendue par le service
    heures : le cache la permettait, rien ne la déclenchait. */
 let heureCharge = null;
 
+/* Une réponse à plusieurs modèles porte ses colonnes suffixées du nom du
+   modèle, une réponse à un seul les porte nues. La fonction rend une série par
+   modèle, du plus fin au plus grossier, dans l'ordre où ils ont été demandés :
+   la superposition les applique ensuite dans l'ordre inverse, si bien que le
+   plus fin passe en dernier et l'emporte. */
+function separerModeles(brut, modeles) {
+  const suffixes = modeles.map(m => "_" + m);
+  const nu = Object.keys(brut).some(c => c !== "time"
+    && !suffixes.some(x => c.endsWith(x)));
+  if (nu) return [brut];
+  const series = modeles.map(m => {
+    const suf = "_" + m;
+    const out = { time: brut.time };
+    let porte = false;
+    Object.keys(brut).forEach(c => {
+      if (c === "time" || !c.endsWith(suf)) return;
+      out[c.slice(0, -suf.length)] = brut[c];
+      porte = true;
+    });
+    return porte ? out : null;
+  }).filter(Boolean);
+  return series.reverse();
+}
+
 /* La dernière série horaire connue, reprise du cache quand la requête échoue.
    Elle ne sert que si elle couvre encore l'heure en cours : une série de la
    veille rendrait une fenêtre entièrement passée. */
@@ -3047,7 +3071,20 @@ async function lireMeteo(g) {
     + "relative_humidity_2m,precipitation,precipitation_probability,weather_code,"
     + "cloud_cover,pressure_msl,wind_speed_10m,wind_gusts_10m,wind_direction_10m,"
     + "uv_index,is_day&forecast_days=2";
-  const ua = uh + "&models=meteofrance_arome_france_hd";
+  /* Deux modèles de Météo-France, non un seul. AROME France HD tient la maille
+     la plus fine, 1,5 km, mais sa documentation le dit : « AROME France HD a la
+     même zone, à plus haute résolution, avec une sélection réduite de variables
+     météorologiques ». Les grandeurs qu'il ne porte pas retombaient donc sur la
+     sélection automatique, c'est-à-dire possiblement sur un modèle allemand ou
+     sur ARPEGE à onze kilomètres, alors qu'AROME France les publie à 2,5 km.
+
+     Les deux sont demandés dans un seul appel, ce qui ne coûte pas de requête de
+     plus : la superposition se fait du plus fin au plus grossier, HD d'abord,
+     AROME France ensuite, la sélection automatique en dernier ressort. Hors de
+     la zone française les deux se taisent et la sélection automatique porte
+     tout, sans rien de particulier à prévoir. */
+  const AROME = ["meteofrance_arome_france_hd", "meteofrance_arome_france"];
+  const ua = uh + "&models=" + AROME.join(",");
   /* Trois requêtes partaient de front. Sur un réseau à une barre, une seule qui
      échoue suffisait à vider la feuille : le quotidien arrivait, l'horaire non,
      et l'application annonçait « la prévision heure par heure n'est pas
@@ -3081,7 +3118,15 @@ async function lireMeteo(g) {
        l'application rend ce qu'elle rendait avant. */
     if (meteo.hourly) {
       const av = h && h.hourly ? await prendre(ua, 0) : null;
-      if (av && av.hourly) meteo.hourly = fondreHoraire(meteo.hourly, av.hourly);
+      if (av && av.hourly) {
+        /* Le service suffixe les colonnes du nom du modèle quand plusieurs sont
+           demandés, et les laisse nues quand un seul répond. Les deux formes
+           sont acceptées : la réponse réelle n'est pas observable d'ici, le
+           chemin de l'API étant fermé aux robots. */
+        separerModeles(av.hourly, AROME).forEach(serie => {
+          meteo.hourly = fondreHoraire(meteo.hourly, serie);
+        });
+      }
     }
     heureCharge = heureCle();
     localStorage.setItem(METEO_CACHE,
@@ -4704,14 +4749,39 @@ function vueTemps() {
      concurrence quand les deux sont à l'écran. */
   const sous = [g.commune, s ? `${Math.round(s.t[0])}° et ${tempsDe(s.code[0])[1].toLowerCase()}` : ""]
     .filter(Boolean).join(", ");
+  /* Deux horizons, deux onglets. La semaine vivait sous les heures, au bout d'un
+     défilement qui traverse le ruban entier : on n'y arrivait qu'en la
+     cherchant. Le choix des trois écritures reste à l'intérieur des heures,
+     c'est une façon de lire les mêmes vingt-quatre heures, non un autre
+     horizon. */
+  const ong = `<div class="f-onglets" role="tablist">`
+    + [["heures", "Les heures"], ["semaine", "La semaine"]].map(([c, nom], k) =>
+      `<button type="button" role="tab" class="${k ? "" : "actif"}" `
+      + `aria-selected="${k ? "false" : "true"}" data-pan="${c}">${nom}</button>`).join("")
+    + `</div>`;
   return { titre: "Le temps", sous, icoSous: s ? icoCiel(s.code[0], s.clair[0]) : null,
-    corps: tete + heures + `<h3 class="f-sect">La semaine</h3>` + tableSemaine()
+    corps: tete + ong
+      + `<div class="f-pan" role="tabpanel" data-pan="heures">${heures}</div>`
+      + `<div class="f-pan" role="tabpanel" data-pan="semaine" hidden>`
+      + tableSemaine() + `</div>`
       + `<p class="f-note">Prévision Open-Meteo. Les heures viennent d'AROME, le `
       + `modèle de Météo-France à 1,5 km, complété par la sélection automatique là `
       + `où il se tait. Aujourd'hui et demain se résument de ces heures ; les jours `
       + `suivants viennent de la sélection automatique. Relecture toutes les `
       + `heures.</p>`,
     brancher() {
+      const corps = $("feuille-corps");
+      const ongs = [...corps.querySelectorAll(".f-onglets button")];
+      ongs.forEach(b => b.addEventListener("click", () => {
+        ongs.forEach(x => {
+          x.classList.toggle("actif", x === b);
+          x.setAttribute("aria-selected", String(x === b));
+        });
+        corps.querySelectorAll(".f-pan").forEach(z => {
+          z.hidden = z.dataset.pan !== b.dataset.pan;
+        });
+        corps.scrollTop = 0;
+      }));
       sur("relireMeteo", "click", async () => {
         const b = $("relireMeteo");
         if (b) { b.disabled = true; b.textContent = "Relecture…"; }
@@ -4755,12 +4825,23 @@ function tableSemaine() {
     const [, lib, ico] = tempsDe(hj ? hj.code : d.weather_code[k]);
     const p = hj ? hj.mm : d.precipitation_sum[k];
     const tombe = k === i && hj && hj.passe >= 0.2 ? hj.passe : 0;
+    /* Le risque de pluie du jour était demandé au service et n'était affiché
+       nulle part, alors que les trois écritures des heures le portent. Il tient
+       dans la cellule de la lame, sous elle : les deux disent la même chose du
+       même jour. Le vent se pose sous l'état du ciel, et seulement quand il
+       compte pour le jardin. */
+    const rq = d.precipitation_probability_max[k];
+    const vt = d.wind_speed_10m_max[k];
     lignes.push(`<tr><th>${k === i ? "aujourd'hui" : esc(jourCourt(d.time[k]))}</th>`
-      + `<td class="mt-ic">${icoM(ico)}</td><td class="mt-lib">${esc(lib)}</td>`
+      + `<td class="mt-ic">${icoM(ico)}</td><td class="mt-lib">${esc(lib)}`
+      + (vt !== null && vt !== undefined && vt >= 30
+          ? `<small>vent ${Math.round(vt)} km/h</small>` : "") + `</td>`
       + `<td class="mt-t"><b>${Math.round(tx)}°</b> `
       + `<span>${tn === null || tn === undefined ? "" : Math.round(tn) + "°"}</span></td>`
-      + `<td class="mt-p">${p >= 0.2 ? nombreFr(p) + " mm" : ""}`
-      + (tombe ? `<small>dont ${nombreFr(tombe)} tombés</small>` : "") + `</td></tr>`);
+      + `<td class="mt-p">${p >= 0.1 ? nombreFr(p) + " mm" : ""}`
+      + (tombe ? `<small>dont ${nombreFr(tombe)} tombés</small>`
+         : rq !== null && rq !== undefined && rq >= 5
+           ? `<small>risque ${Math.round(rq)} %</small>` : "") + `</td></tr>`);
   }
   return `<table class="mt-table">${lignes.join("")}</table>`;
 }

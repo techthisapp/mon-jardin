@@ -593,6 +593,7 @@ export default async function essai(navigateur) {
     max: parseInt(r.querySelector(".mt-t b").textContent),
     mm: (r.querySelector(".mt-p").firstChild || {}).textContent || "",
     note: (r.querySelector(".mt-p small") || {}).textContent || "",
+    tombe: /tombés/.test((r.querySelector(".mt-p small") || {}).textContent || ""),
   })));
   /* Les deux premières lignes se résument des heures, les suivantes gardent la
      charge quotidienne : la série horaire ne couvre que deux jours. */
@@ -606,8 +607,10 @@ export default async function essai(navigateur) {
      est tombé avant l'heure manquait à l'appel sans que rien ne le dise. */
   j.controle("la journée en cours dit ce qui est déjà tombé",
     /^dont 2,4 tombés$/.test(sem[0].note), sem[0].note);
-  j.controle("les autres jours n'ont rien à dire de tel",
-    sem.slice(1).every(l => l.note === ""), sem.slice(1).map(l => l.note).join("|"));
+  /* Seule la journée en cours a du passé à défalquer ; les autres portent au
+     plus leur risque de pluie. */
+  j.controle("les autres jours n'ont rien à défalquer",
+    sem.slice(1).every(l => !l.tombe), sem.slice(1).map(l => l.note).join("|"));
   /* Le recoupement qui vaut : le maximum de la table est celui des heures. Sans
      lui, deux sources cohérentes entre elles mais fausses passeraient. */
   await cS.pg.locator('[data-mode="liste"]').click();
@@ -838,6 +841,39 @@ export default async function essai(navigateur) {
     await cG.pg.locator(".mt-table tr").count() > 0
     && await cG.pg.locator("#relireMeteo").count() === 1);
   await cG.ctx.close();
+
+  /* La semaine vivait sous les heures, au bout d'un défilement qui traverse le
+     ruban entier. Deux onglets, deux horizons ; le choix des trois écritures
+     reste à l'intérieur des heures, c'est une façon de lire les mêmes
+     vingt-quatre heures et non un autre horizon. */
+  j.section("l'audit : la semaine a son onglet");
+  const cO = await ouvrirContexte(navigateur);
+  await cO.pg.waitForTimeout(700);
+  await cO.pg.locator(".tm-temps").click();
+  await cO.pg.waitForTimeout(700);
+  const ongs = (await cO.pg.locator("#feuille-corps .f-onglets button").allInnerTexts()).map(net);
+  j.controle("deux onglets, les heures d'abord",
+    JSON.stringify(ongs) === '["Les heures","La semaine"]', JSON.stringify(ongs));
+  j.controle("à l'ouverture, les heures sont servies et la semaine attend",
+    await cO.pg.locator('.f-pan[data-pan="heures"]:not([hidden])').count() === 1
+    && await cO.pg.locator('.f-pan[data-pan="semaine"][hidden]').count() === 1);
+  j.controle("le choix des écritures reste dans les heures",
+    await cO.pg.locator('.f-pan[data-pan="heures"] .f-seg').count() === 1);
+  await cO.pg.locator('.f-onglets button[data-pan="semaine"]').click();
+  await cO.pg.waitForTimeout(500);
+  const sem2 = await cO.pg.evaluate(() => ({
+    visible: !!document.querySelector('.f-pan[data-pan="semaine"]:not([hidden])'),
+    heures: !!document.querySelector('.f-pan[data-pan="heures"]:not([hidden])'),
+    lignes: document.querySelectorAll(".mt-table tr").length,
+    risque: [...document.querySelectorAll(".mt-p small")].map(e => e.textContent.trim()),
+  }));
+  j.controle("l'onglet touché prend la place de l'autre",
+    sem2.visible && !sem2.heures && sem2.lignes >= 6, sem2.lignes + " jours");
+  /* Le risque de pluie du jour était demandé au service et n'était affiché
+     nulle part, alors que les trois écritures des heures le portent. */
+  j.controle("la semaine porte enfin le risque qu'elle chargeait déjà",
+    sem2.risque.some(t => /^risque \d+ %$/.test(t)), sem2.risque.join(" | "));
+  await cO.ctx.close();
 
   j.section("les trois mesures se lisent sur l'écran du jour");
   await pg.locator("#fermerFeuille").click();

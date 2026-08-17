@@ -1921,6 +1921,9 @@ body.fige{overflow:hidden}
 .mt-table tr+tr{border-top:1px solid var(--filet-clair)}
 .mt-ic{width:26px}.mt-ic svg{width:20px;height:20px;color:var(--encre-doux)}
 .mt-lib{color:var(--encre-doux)}
+/* Le vent sous l'état du ciel, le risque sous la lame : deux mentions de second
+   rang qui n'ajoutent pas de colonne à une table déjà large. */
+.mt-lib small{display:block;font-size:11px;color:var(--f-ink3);margin-top:1px}
 .mt-t{text-align:right;white-space:nowrap}
 .mt-t span{color:var(--encre-doux)}
 .mt-p{text-align:right;color:#1F4F8F;font-size:13px;white-space:nowrap;padding-left:10px}
