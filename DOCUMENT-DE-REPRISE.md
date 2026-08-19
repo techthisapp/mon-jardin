@@ -359,6 +359,46 @@ Le code postal ne suffit pas à situer un jardin : 21500 couvre huit communes, 2
 
 La pastille d'eau de l'en-tête et le pied de la synthèse portent la décision du jour, arroser tant de litres, attendre la pluie annoncée, ou ne rien faire pendant tant de jours. Le litrage par plante de la fiche reste calé sur la normale de saison, qui est une référence stable et non une prévision.
 
+### Corrections du module météorologique, 19 août 2026
+
+Quatorze corrections relevées sur le commit `dc9069b`, distinctes des vingt-trois de l'audit du 16 août. Trois défauts de calcul, deux contradictions de seuil et d'unité, une exclusion silencieuse, une affirmation sans fondement, un mécanisme jamais contrôlé, deux défauts de nommage et trois commentaires faux.
+
+**La projection du bilan s'arrêtait sur une évapotranspiration inconnue.** La reprise de la valeur connue la plus proche n'était appliquée qu'au passé : une garde coupait la boucle de projection avant l'appel. « La réserve tient N jours » se tronquait en silence dès le premier jour sans valeur. La garde est retirée. Une série entièrement dépourvue d'évapotranspiration rend désormais un bilan inconnu plutôt qu'une demande nulle, qui laisserait le sol ne jamais sécher.
+
+**La feuille de l'eau recalculait ce que le bilan avait déjà construit.** Ses barres relisaient la charge quotidienne sans la règle de source ni la reprise de l'évapotranspiration, et le jour en cours y portait la journée civile entière quand la jauge, deux cartes plus haut, n'avait déduit que l'eau déjà tombée. Le bilan rend maintenant sa série et ses trois jours annoncés, la feuille les lit.
+
+**Deux mentions échappaient au seuil unique de lame.** L'étiquette de cumul du ruban replié et le « dont X tombés » de la table testaient deux dixièmes de millimètre, quand le seuil de mention est d'un dixième.
+
+**La consigne d'arrosage se disait en millimètres.** Le litre par mètre carré est l'unité de l'arrosoir et porte la consigne ; le millimètre reste à ce qui se mesure. La feuille de l'eau est le seul endroit où les deux coexistent, l'équivalence s'y enseignant.
+
+**« Inutile d'arroser » s'écrivait sans bilan.** Quand le bilan ne rend rien, faute de jour de référence ou d'évapotranspiration, l'alerte énonce la lame sans conclure. Le sol a seul autorité sur l'arrosage.
+
+**La Corse ne recevait pas sa vigilance.** Les deux premiers caractères du code postal rendaient « 20 », que la table ne porte pas : elle nomme 2A et 2B. La requête revenait vide sans qu'aucun message ne le signale. La borne suit l'usage, Corse-du-Sud sous 20200 et Haute-Corse au-delà. Quelques communes de Haute-Corse portent un code en 201xx et sont rangées en 2A ; le code INSEE de la commune les trancherait, il n'est pas enregistré.
+
+**La superposition à deux modèles n'était jouée par aucun essai.** La doublure ne rendait que des colonnes nues, si bien que la découpe par suffixe et l'ordre de superposition n'étaient exécutés ni en essai ni en production, le chemin de l'API étant fermé aux robots. La doublure sait maintenant rendre la forme à deux modèles, et trois contrôles affirment que la série la plus fine passe en dernier et l'emporte. C'est la seule observation que ce mécanisme connaîtra.
+
+**Trente lignes de styles orphelines et une collision de préfixe.** Le bloc `.mesure` appartenait à la feuille « Le jour », retirée. Les tuiles de plante et les mesures de la feuille du temps partageaient le préfixe `tp-` : les tuiles portent désormais `tpl-`.
+
+#### Deux niveaux de seuils, et la règle qui les sépare
+
+Le bandeau et la feuille du temps portaient deux jeux de seuils pour trois faits : gel à deux degrés contre un, chaleur à trente-deux contre trente, vent à soixante kilomètres par heure contre une rafale de quarante ou une moyenne de vingt-cinq.
+
+Les aligner aurait été une correction mécanique appliquée à une question qui ne l'est pas. Le bandeau interrompt : ses seuils sont des seuils de décision, il ne parle que du grave. La feuille détaille : les siens sont des seuils de mention. L'audit du 16 août pose déjà cette distinction, à condition que le code la dise. Il la dit maintenant, dans deux tables nommées, `SEUILS_BANDEAU` et `SEUILS_FEUILLE`.
+
+La règle est que le bandeau ne dise jamais l'inverse de la feuille, non qu'il dise tout ce qu'elle dit. Elle impose un sens à chacun des trois écarts. Le seuil de gel du bandeau est le plus large des deux : une gelée blanche se forme au ras du sol pendant que le thermomètre sous abri lit deux degrés, et descendre à un degré aurait fait perdre cette marge. Ses seuils de chaleur et de vent sont les plus étroits : trente degrés et une rafale de quarante kilomètres par heure sont courants et n'ont pas à interrompre.
+
+Un cinquième contrôle de `outils/verification.mjs` refuse un dépôt qui inverse l'un de ces trois sens. Une inversion ne lève aucune erreur et ne se voit qu'à l'écran, sur deux blocs qui se contredisent.
+
+#### Défauts relevés au passage
+
+Trois défauts hors du relevé, de la même famille que ceux qu'il porte.
+
+L'évapotranspiration des barres de la feuille de l'eau valait zéro quand elle était inconnue, reprenant la faute que l'audit du 16 août avait fermée partout ailleurs. La correction de la lecture de série la referme.
+
+L'alerte de vent du bandeau lit la charge quotidienne du seul jour en cours, quand les alertes de gel et de chaleur, deux lignes plus haut, passent par la série horaire sur trois jours. La fonction s'annonce pourtant comme portant « le jour et les deux jours suivants ». Non corrigé : `jourHoraire` ne rend ni le vent moyen ni les rafales, les y ajouter dépasse le périmètre du relevé.
+
+`separerModeles` reconnaît une réponse à modèle unique dès qu'une seule colonne est nue. Une réponse mêlant colonnes suffixées et colonnes nues, cas qu'AROME peut produire en ne publiant pas la probabilité de précipitation, ferait retomber toute la superposition sur une série aux noms suffixés que rien ne lit. Non corrigé : la forme réelle de la réponse n'est pas observable.
+
 ### Pic de floraison
 
 Colonne `floraison_pic_q`, quinzaine du maximum de floraison, avec `floraison_pic_note` pour la source. Douze fiches sourcées, aucune dérivée.
@@ -491,7 +531,9 @@ La colonne `nectar_season`, qui disait à quelle saison la ressource est offerte
 
 ### Essais de bout en bout
 
-`npm run essais` sert le dépôt sur un port local, ouvre un navigateur et joue neuf suites, cent neuf contrôles, en rendant un code de sortie non nul au premier échec. Une seule suite se joue par `npm run essais -- glossaire`. Le détail est dans `outils/essais/README.md`.
+`npm run essais` sert le dépôt sur un port local, ouvre un navigateur et joue vingt-sept suites, neuf cent soixante-trois contrôles, en rendant un code de sortie non nul au premier échec. Une seule suite se joue par `npm run essais -- glossaire`. Le détail est dans `outils/essais/README.md`.
+
+Ce décompte n'est tenu qu'ici. Les notes de chantier en portaient chacune un, figé au jour de leur rédaction, et les trois se contredisaient : un décompte est un fait mouvant, il n'a qu'une source comme tout autre fait.
 
 Le client Supabase est remplacé par une doublure qui sert des instantanés figés, les appels météo sont détournés vers un jeu de trente jours passés et sept jours de prévision, et l'horloge du navigateur est décalée sur le 2 août 2026 par un écart constant, de sorte que les contrôles portant sur la tâche du moment ne changent pas de résultat au fil des saisons. Les minuteries de l'interface continuent de tourner, seule la date de départ change.
 
@@ -830,7 +872,7 @@ Le voisinage paraît à deux endroits, pour deux usages. Il suit le geste de pla
 
 **Aucun retour du terrain.** L'application sait quand une tâche est cochée. Un écart systématique entre la date réelle et la fenêtre annoncée est le seul signal qui ne vienne pas d'une source écrite.
 
-**Les essais de bout en bout ne couvrent pas tout.** Ils existent depuis le 2 août, `npm run essais`, cent neuf contrôles sur neuf suites, décrits dans `outils/essais/README.md`. Restent hors couverture : le calendrier annuel et ses segments, le décalage climatique et les dates qu'il produit, l'écran des espaces, la connexion et la reprise par code.
+**Les essais de bout en bout ne couvrent pas tout.** Ils existent depuis le 2 août, `npm run essais`, décrits dans `outils/essais/README.md`. Le calendrier annuel, l'écran des espaces et la frise ont depuis reçu leur suite. Restent hors couverture : le décalage climatique et les dates qu'il produit, la connexion et la reprise par code.
 
 **Aucun audit tournant.** Rien ne se dégrade seul, mais rien ne se re-vérifie non plus. Dix fiches par mois reconfrontées aux sources maintiennent la qualité sans campagne.
 

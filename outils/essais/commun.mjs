@@ -99,7 +99,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
     session = true, cache = null, versionSite = null, espaces = null, placements = null,
     avis = null, sourdines = null, carnet = null, photosCarnet = null, cultures = null,
-    jour = JOUR_FIGE, arome = null, horairePanne = 0,
+    jour = JOUR_FIGE, arome = null, aromeSuffixe = null, horairePanne = 0,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -163,6 +163,24 @@ export async function ouvrirContexte(navigateur, options = {}) {
          aucune différence. `arome: false` le fait répondre sans série, ce qui
          éprouve le repli sans poser d'erreur de réseau dans la console. */
       if (arome === false) return rendre({});
+      /* Deux modèles demandés dans un seul appel : le service suffixe alors
+         chaque colonne du nom du modèle. La doublure ne rendait que des colonnes
+         nues, si bien que `separerModeles` prenait toujours la branche du modèle
+         unique : la découpe par suffixe et l'ordre de superposition n'étaient
+         joués ni en essai ni en production, le chemin de l'API étant fermé aux
+         robots. `aromeSuffixe` rend la forme à deux modèles, une série par
+         entrée, la plus fine sous `fin`. */
+      if (aromeSuffixe) {
+        const noms = { fin: "meteofrance_arome_france_hd", gros: "meteofrance_arome_france" };
+        const par = { fin: aromeSuffixe.fin ? aromeSuffixe.fin(d.hourly) : d.hourly,
+                      gros: aromeSuffixe.gros ? aromeSuffixe.gros(d.hourly) : d.hourly };
+        const out = { time: d.hourly.time };
+        Object.keys(d.hourly).forEach(col => {
+          if (col === "time") return;
+          Object.keys(noms).forEach(r => { out[col + "_" + noms[r]] = par[r][col]; });
+        });
+        return rendre({ hourly: out });
+      }
       return rendre({ hourly: arome ? arome(d.hourly) : d.hourly });
     }
     if (url.includes("hourly=")) return rendre({ hourly: d.hourly });

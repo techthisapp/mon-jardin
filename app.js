@@ -143,11 +143,18 @@ const VIGI_GESTE = {
 };
 let vigilance = [];
 
-// Département d'un code postal. Outre-mer sur trois chiffres, Corse sur deux lettres.
+/* Département d'un code postal. Outre-mer sur trois chiffres. La vigilance
+   nomme la Corse 2A et 2B quand son code postal commence par 20 : les deux
+   premiers caractères rendaient « 20 », que la table ne porte pas, et la requête
+   revenait vide sans qu'aucun message ne signale l'exclusion. La borne suit
+   l'usage, Corse-du-Sud sous 20200 et Haute-Corse au-delà. Quelques communes de
+   Haute-Corse portent un code en 201xx et sont rangées en 2A ; le code INSEE de
+   la commune les trancherait, il n'est pas enregistré. */
 const departementDe = cp => {
   const v = String(cp || "");
   if (v.length < 2) return null;
   if (v.startsWith("97") || v.startsWith("98")) return v.slice(0, 3);
+  if (v.startsWith("20")) return Number(v.padEnd(5, "0")) < 20200 ? "2A" : "2B";
   return v.slice(0, 2);
 };
 
@@ -2898,8 +2905,8 @@ function ficheHTML(p, voulu) {
 }
 
 /* ================== Bandeau du jour ==================
-   Quatre tuiles lisibles d'un coup d'oeil, chacune ouvrant une feuille de
-   détail. La météo vient des modèles de Météo-France servis par Open-Meteo,
+   La pastille météo et trois tuiles, l'eau, la lumière et la saison, chacune
+   ouvrant une feuille de détail. La météo vient des modèles de Météo-France servis par Open-Meteo,
    le lieu de la Base Adresse Nationale, l'évapotranspiration est celle du
    bulletin FAO 56 calculée au point du jardin. */
 
@@ -3003,10 +3010,11 @@ let meteo = null;      // charge brute, telle que rendue par le service
 let heureCharge = null;
 
 /* Une réponse à plusieurs modèles porte ses colonnes suffixées du nom du
-   modèle, une réponse à un seul les porte nues. La fonction rend une série par
-   modèle, du plus fin au plus grossier, dans l'ordre où ils ont été demandés :
-   la superposition les applique ensuite dans l'ordre inverse, si bien que le
-   plus fin passe en dernier et l'emporte. */
+   modèle, une réponse à un seul les porte nues. Les modèles sont demandés du
+   plus fin au plus grossier ; la fonction rend les séries dans l'ordre inverse
+   de celui de la demande, du plus grossier au plus fin. La superposition les
+   applique ensuite dans l'ordre reçu, si bien que le plus fin passe en dernier
+   et l'emporte. */
 function separerModeles(brut, modeles) {
   const suffixes = modeles.map(m => "_" + m);
   const nu = Object.keys(brut).some(c => c !== "time"
@@ -3143,7 +3151,7 @@ async function lireMeteo(g) {
 const cleJour = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0")
   + "-" + String(d.getDate()).padStart(2, "0");
 
-// Index du jour dans la série, sept jours de passé précèdent aujourd'hui.
+// Index du jour dans la série, trente jours de passé précèdent aujourd'hui.
 const iJour = () => (meteo ? meteo.daily.time.indexOf(cleJour(new Date())) : -1);
 
 // Index de l'heure en cours dans la série horaire, quand elle est disponible.
@@ -3213,6 +3221,11 @@ function bilanHydrique() {
      horaire. */
   const et0Connu = d.et0_fao_evapotranspiration
     .map(v => (v === null || v === undefined ? null : Number(v)));
+  /* Sans aucune valeur connue, la plus proche n'existe pas et la reprise
+     retomberait sur zéro, c'est-à-dire sur une demande nulle : le sol ne
+     sécherait jamais et la feuille annoncerait une réserve pleine. Le bilan se
+     déclare inconnu, comme il le fait déjà sans jour de référence. */
+  if (et0Connu.every(v => v === null)) return null;
   const et0De = k => {
     if (et0Connu[k] !== null) return et0Connu[k];
     for (let e = 1; e < et0Connu.length; e++) {
@@ -3256,11 +3269,27 @@ function bilanHydrique() {
   for (let k = i + 1; k < d.time.length; k++) {
     const pl = lameModele(k) || 0;
     cumulPluie += pl;
-    if (d.et0_fao_evapotranspiration[k] === null) break;
+    /* La garde arrêtait ici la boucle au premier jour sans évapotranspiration,
+       si bien que « la réserve tient N jours » se tronquait en silence et que
+       la feuille de l'eau annonçait une échéance plus proche que la réalité.
+       La correction du passé, la valeur connue la plus proche, n'était donc
+       appliquée qu'au passé. `et0De` la rend aussi pour les jours annoncés. */
     drProj = Math.min(taw, Math.max(0, drProj - pl + et0De(k) * kcDe(d.time[k])));
     if (drProj < raw) sec++; else break;
   }
   const prevue2 = resteJ + (lameModele(i + 1) || 0) + (lameModele(i + 2) || 0);
+
+  /* Les jours annoncés, lus comme le passé. La feuille de l'eau dessinait ses
+     barres en relisant la charge quotidienne et l'évapotranspiration brutes,
+     sans la règle de source ni la reprise de la valeur connue la plus proche :
+     la jauge et les barres d'une même carte portaient deux lames et deux
+     évapotranspirations pour le même jour. */
+  const proj = [];
+  for (let k = i + 1; k < Math.min(i + 4, d.time.length); k++) {
+    const et0 = et0De(k);
+    proj.push({ jour: d.time[k], pluie: lameModele(k) || 0, arrosage: 0, mesuree: 0,
+                source: "modele", et0, etc: et0 * kcDe(d.time[k]) });
+  }
 
   // Cumuls de la semaine écoulée, pour la lecture d'ensemble.
   let pluie7 = 0, demande7 = 0, apporte7 = 0;
@@ -3272,7 +3301,7 @@ function bilanHydrique() {
   const arroser = dr >= raw;
   const attendre = arroser && prevue2 >= dose * 0.8;
   return {
-    texture, taw, raw, dr, p, etcJour, serie,
+    texture, taw, raw, dr, p, etcJour, serie, proj,
     reserve: Math.max(0, 1 - dr / taw),
     jours: arroser ? 0 : Math.max(1, sec),
     apport: Math.round(dose * 10) / 10,
@@ -3284,6 +3313,27 @@ function bilanHydrique() {
     etat: attendre ? "attendre" : arroser ? "arroser" : "confort",
   };
 }
+
+/* Deux jeux de seuils, et la règle qui les sépare.
+
+   Le bandeau interrompt : ses seuils sont des seuils de décision, il ne parle
+   que du grave. La feuille du temps détaille : les siens sont des seuils de
+   mention, plus bas, et elle annonce donc plus tôt. L'audit du 16 août pose
+   qu'un même fait n'a qu'un seuil de mention dans toute l'application, et que
+   les seuils de décision gardent leurs valeurs propres à condition que le code
+   le dise. Il le dit ici.
+
+   La règle est que le bandeau ne dise jamais l'inverse de la feuille, non qu'il
+   dise tout ce qu'elle dit. Elle impose un sens à chacun des trois écarts. Le
+   seuil de gel du bandeau est le plus large des deux : une gelée blanche se
+   forme au ras du sol pendant que le thermomètre sous abri lit deux degrés, et
+   le bandeau perdrait cette marge en descendant à un degré. Ses seuils de
+   chaleur et de vent sont les plus étroits : trente degrés et une rafale de
+   quarante kilomètres par heure sont courants et n'ont pas à interrompre.
+
+   `outils/verification.mjs` refuse un dépôt qui inverse l'un de ces trois sens. */
+const SEUILS_BANDEAU = { gel: 2, chaleur: 32, vent: 60 };
+const SEUILS_FEUILLE = { gel: 1, chaleur: 30, rafale: 40, vent: 25 };
 
 // Alertes du jour et des deux jours suivants, croisées avec le jardin.
 /* Les alertes calculées ne répètent pas ce que la vigilance annonce déjà : une
@@ -3306,7 +3356,7 @@ function alertesMeteo() {
     : new Date(d.time[k] + "T12:00").toLocaleDateString("fr-FR", { weekday: "long" });
   for (let k = i; k <= Math.min(i + 2, d.time.length - 1); k++) {
     const tmin = tMin(k), tmax = tMax(k);
-    if (tmin !== null && tmin <= 2) {
+    if (tmin !== null && tmin <= SEUILS_BANDEAU.gel) {
       const risque = [...sel].map(id => plantes.find(p => p.id === id)).filter(Boolean)
         .filter(p => p.gel !== null && p.gel !== undefined && Number(p.gel) > tmin)
         .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
@@ -3315,13 +3365,13 @@ function alertesMeteo() {
             + (risque.length > 1 ? "nt" : "") + " pas" : ", protéger les plus fragiles") });
       break;
     }
-    if (tmax !== null && tmax >= 32) {
+    if (tmax !== null && tmax >= SEUILS_BANDEAU.chaleur) {
       out.push({ ton: "chaud", texte: `${Math.round(tmax)} °C ${quand(k)}, arroser tôt et ombrer les jeunes plants` });
       break;
     }
   }
   const v = d.wind_speed_10m_max[i];
-  if (v !== null && v >= 60) out.push({ ton: "vent", texte: `Vent à ${Math.round(v)} km/h, tuteurer et rentrer les potées` });
+  if (v !== null && v >= SEUILS_BANDEAU.vent) out.push({ ton: "vent", texte: `Vent à ${Math.round(v)} km/h, tuteurer et rentrer les potées` });
   /* La pluie du jour ne décide pas de l'arrosage : le bilan du sol le fait, et
      il a déjà déduit cette lame. L'alerte énonce donc le fait quand le sol reste
      en dette malgré elle, se tait quand la pastille d'eau annonce déjà la pluie
@@ -3334,7 +3384,10 @@ function alertesMeteo() {
   const p = jour ? jour.mm - jour.passe : d.precipitation_sum[i];
   if (p !== null && p >= 15) {
     const b = meteo ? bilanHydrique() : null;
-    if (!b) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
+    /* Le bilan du sol a seul autorité sur l'arrosage. Quand il ne rend rien,
+       faute de jour de référence ou d'évapotranspiration, la lame s'énonce sans
+       conclure : « inutile d'arroser » s'écrivait ici sans qu'il ait parlé. */
+    if (!b) out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus` });
     else if (b.etat === "arroser") out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus aujourd'hui` });
     else if (b.etat === "confort") out.push({ ton: "eau", texte: `${Math.round(p)} mm attendus, inutile d'arroser` });
   }
@@ -4150,7 +4203,7 @@ function dessinMeteogramme(s) {
       if (s.pb[k] < 5) continue;
       pluie += etiq(k, yP - s.pb[k] / 100 * aP - 4, Math.round(s.pb[k]) + " %", "mg-p");
     }
-  } else if (tot >= 0.2) {
+  } else if (tot >= 0.1) {
     pluie += etiq(s.mm.indexOf(Math.max(...s.mm)),
       yP - Math.max(2, Math.max(...s.mm) / mmx * aP) - 4, nombreFr(tot) + " mm", "mg-mm");
   }
@@ -4515,18 +4568,19 @@ function jardinDuJour(s) {
             + `${dem(s.pb.indexOf(Math.max(...s.pb)))}.` : "") });
   }
 
-  const gel = plagesDe(s.n, k => s.t[k] <= 1);
+  const gel = plagesDe(s.n, k => s.t[k] <= SEUILS_FEUILLE.gel);
   if (gel.length) lignes.push({ i: "alerte", g: 6, t: `Gel probable de ${dem(gel[0][0])} `
     + `à ${fin(gel[gel.length - 1][1])}, jusqu'à ${nombreFr(Math.min(...s.t))} degrés. `
     + `Voiler ce qui craint.` });
 
-  const gv = plagesDe(s.n, k => s.raf[k] >= 40 || s.v[k] >= 25);
+  const gv = plagesDe(s.n, k => s.raf[k] >= SEUILS_FEUILLE.rafale
+      || s.v[k] >= SEUILS_FEUILLE.vent);
   if (gv.length) lignes.push({ i: "vent", g: 5, t: `Rafales à `
     + `${Math.round(Math.max(...s.raf))} km/h de ${dem(gv[0][0])} à ${fin(gv[gv.length - 1][1])}. `
     + `Pas de traitement, ni voile ni tuteur léger à poser.` });
 
   const tmax = Math.max(...s.t);
-  if (tmax >= 30) lignes.push({ i: "soleil", g: 4, t: `Jusqu'à ${Math.round(tmax)} degrés vers `
+  if (tmax >= SEUILS_FEUILLE.chaleur) lignes.push({ i: "soleil", g: 4, t: `Jusqu'à ${Math.round(tmax)} degrés vers `
     + `${dem(s.t.indexOf(tmax))}. Arroser au petit matin ou à la nuit, jamais en plein soleil.` });
 
   const mal = plagesDe(s.n, k => s.hum[k] >= 90 && s.t[k] >= 10 && s.t[k] <= 26)
@@ -4824,7 +4878,7 @@ function tableSemaine() {
     if (tx === null || tx === undefined) continue;
     const [, lib, ico] = tempsDe(hj ? hj.code : d.weather_code[k]);
     const p = hj ? hj.mm : d.precipitation_sum[k];
-    const tombe = k === i && hj && hj.passe >= 0.2 ? hj.passe : 0;
+    const tombe = k === i && hj && hj.passe >= 0.1 ? hj.passe : 0;
     /* Le risque de pluie du jour était demandé au service et n'était affiché
        nulle part, alors que les trois écritures des heures le portent. Il tient
        dans la cellule de la lame, sous elle : les deux disent la même chose du
@@ -4849,31 +4903,38 @@ function vueEau() {
   const b = bilanHydrique(), d = meteo.daily, i = iJour();
   if (!b) return { titre: "L'eau", corps: "" };
 
-  // Huit jours passés et trois annoncés, la pluie mesurée se distingue de la
-  // pluie du modèle par un aplat plein.
+  /* Huit jours passés et trois annoncés, la pluie mesurée se distingue de la
+     pluie du modèle par un aplat plein.
+
+     Les barres relisent la série que le bilan a construite. Elles la
+     recalculaient depuis la charge quotidienne : la règle de source y était
+     perdue, l'évapotranspiration inconnue y valait zéro, et le jour en cours y
+     portait la journée civile entière, orage du soir compris, que la jauge deux
+     cartes plus haut n'avait pas déduit. */
+  const passe = b.serie.slice(-8).map(x => ({ ...x, futur: false }));
+  const jours = passe.concat(b.proj.map(x => ({ ...x, futur: true })));
   const barres = [];
-  for (let k = Math.max(0, i - 7); k <= Math.min(i + 3, d.time.length - 1); k++) {
-    const l = lameDuJour(d.time[k], d.precipitation_sum[k]);
-    const pl = k > i ? (d.precipitation_sum[k] || 0) : l.pluie + l.arrosage;
-    const e = (d.et0_fao_evapotranspiration[k] || 0)
-      * (kcParQuinzaine[quinzaineDe(d.time[k])] || kcParQuinzaine[demi] || 0.85);
+  jours.forEach(x => {
+    const pl = x.pluie + x.arrosage;
+    const e = x.etc;
     const m = Math.max(8, pl, e);
-    const ton = k > i ? "" : l.source === "pluviometre" ? " mesure"
-      : l.source === "station" ? " poste" : "";
-    barres.push(`<div class="mt-col${k === i ? " ce-jour" : ""}${k > i ? " a-venir" : ""}">`
+    const ton = x.futur ? "" : x.source === "pluviometre" ? " mesure"
+      : x.source === "station" ? " poste" : "";
+    barres.push(`<div class="mt-col${x.jour === d.time[i] ? " ce-jour" : ""}${x.futur ? " a-venir" : ""}">`
       + `<span class="mt-duo">`
       + `<i class="mt-bp${ton}" style="height:${(pl / m * 46).toFixed(0)}px" `
       + `title="${nombreFr(pl)} mm"></i>`
       + `<i class="mt-be" style="height:${(e / m * 46).toFixed(0)}px" title="${nombreFr(e)} mm repris"></i>`
-      + `</span><span class="mt-j">${esc(jourCourt(d.time[k]))}</span></div>`);
-  }
+      + `</span><span class="mt-j">${esc(jourCourt(x.jour))}</span></div>`);
+  });
 
   const nbMesures = b.serie.slice(-30).filter(x => x.source === "station").length;
   const pleine = Math.round(b.reserve * 100);
   const seuil = Math.round((1 - b.raw / b.taw) * 100);
   const conseil = b.etat === "arroser"
-    ? `Le sol est sous son seuil de confort. Apporter <b>${nombreFr(b.apport)} mm</b>, `
-      + `soit ${nombreFr(b.apport)} litres par mètre carré. Au-delà, l'eau passe sous les racines.`
+    ? `Le sol est sous son seuil de confort. Apporter `
+      + `<b>${nombreFr(b.apport)} litres par mètre carré</b>, soit ${nombreFr(b.apport)} mm. `
+      + `Au-delà, l'eau passe sous les racines.`
     : b.etat === "attendre"
       ? `Le seuil est atteint, mais il est annoncé <b>${nombreFr(b.prevue)} mm</b> dans les deux jours. Attendre.`
       : `La réserve tient encore <b>${b.jours}</b> jour${b.jours > 1 ? "s" : ""} `
@@ -6624,16 +6685,16 @@ function tuileDuLieu(p, cle) {
   const t = document.createElement("div");
   t.className = "tuile-plante";
   t.dataset.plante = p.id;
-  t.innerHTML = `<button type="button" class="tp-ouvre">` + imageHTML(p, "im-t")
-    + `<span class="tp-nom">${esc(p.nom)}</span></button>`
-    + `<span class="tp-haut">`
-    + (r ? `<input class="tp-q" type="number" min="0" max="32000" step="1"`
+  t.innerHTML = `<button type="button" class="tpl-ouvre">` + imageHTML(p, "im-t")
+    + `<span class="tpl-nom">${esc(p.nom)}</span></button>`
+    + `<span class="tpl-haut">`
+    + (r ? `<input class="tpl-q" type="number" min="0" max="32000" step="1"`
          + ` value="${r.quantity == null ? "" : r.quantity}" placeholder="qté"`
          + ` aria-label="Nombre de pieds de ${esc(p.nom)}">` : "")
-    + (m ? `<i class="tp-moment" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
+    + (m ? `<i class="tpl-moment" style="background:${m.couleur}">${esc(m.nom)}</i>` : "")
     + `</span>`;
-  t.querySelector(".tp-ouvre").addEventListener("click", () => ouvrirFeuille(p, "jardin"));
-  const q = t.querySelector("input.tp-q");
+  t.querySelector(".tpl-ouvre").addEventListener("click", () => ouvrirFeuille(p, "jardin"));
+  const q = t.querySelector("input.tpl-q");
   if (q) q.addEventListener("change", ev => majAffectation(p.id, cle, ev.target.value));
   return t;
 }

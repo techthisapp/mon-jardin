@@ -381,15 +381,15 @@ export default async function essai(navigateur) {
      corriger le nombre de pieds. */
   const tuile = pg.locator(`#detailEspace .tuile-plante[data-plante="${FRAISE.id}"]`);
   j.controle("elle porte le nombre de pieds, modifiable",
-    await tuile.locator("input.tp-q").count() === 1);
-  await tuile.locator("input.tp-q").fill("9");
-  await tuile.locator("input.tp-q").dispatchEvent("change");
+    await tuile.locator("input.tpl-q").count() === 1);
+  await tuile.locator("input.tpl-q").fill("9");
+  await tuile.locator("input.tpl-q").dispatchEvent("change");
   await pg.waitForTimeout(400);
   const ecritTuile = await pg.evaluate(() => (window.__ECRITS__ || [])
     .filter(e => e.table === "garden_plant_espaces" && e.op === "update").pop());
   j.controle("la saisie sur la tuile s'enregistre",
     !!ecritTuile && ecritTuile.v.quantity === 9, JSON.stringify(ecritTuile && ecritTuile.v));
-  await tuile.locator(".tp-ouvre").click();
+  await tuile.locator(".tpl-ouvre").click();
   await pg.waitForTimeout(700);
   j.controle("la tuile ouvre la fiche sur son placement",
     await pg.locator('.f-onglets button[data-pan="jardin"][aria-selected="true"]').count() === 1);
@@ -424,7 +424,7 @@ export default async function essai(navigateur) {
     sections: [...document.querySelectorAll("#detailEspace > .tete-section-zone .nb,"
       + " #detailEspace > details.zone-espace > summary > .nb")]
       .reduce((s, n) => s + Number(n.textContent), 0),
-    pastilles: document.querySelectorAll("#detailEspace .lp-m, #detailEspace .tp-moment").length,
+    pastilles: document.querySelectorAll("#detailEspace .lp-m, #detailEspace .tpl-moment").length,
   }));
   j.controle("une seule pastille est enfoncée", sous.retenue === 1);
   j.controle("l'écran ne montre plus que les plantes de cette tâche",

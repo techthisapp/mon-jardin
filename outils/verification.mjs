@@ -293,6 +293,38 @@ for (const actif of ["app.js", "styles.css", "vendor/supabase.js"]) {
 if (CORRIGER && html !== indexHtml) writeFileSync(join(RACINE, "index.html"), html);
 
 /* ------------------------------------------------------------------ */
+/* Contrôle 5 : sens des écarts entre les deux jeux de seuils          */
+/* ------------------------------------------------------------------ */
+/* Le bandeau interrompt, la feuille du temps détaille : leurs seuils diffèrent
+   à dessein. La règle est que le bandeau ne dise jamais l'inverse de la feuille,
+   ce qui impose un sens à chacun des trois écarts. Le seuil de gel du bandeau
+   est le plus large, une gelée blanche se formant au sol pendant que l'abri lit
+   deux degrés ; ses seuils de chaleur et de vent sont les plus étroits. Une
+   inversion ne lève aucune erreur et ne se voit qu'à l'écran, sur deux blocs
+   qui se contredisent. */
+
+const tableSeuils = nom => {
+  const m = appJs.match(new RegExp(`const\\s+${nom}\\s*=\\s*\\{([^}]*)\\}`));
+  if (!m) return null;
+  const out = {};
+  for (const x of m[1].matchAll(/([a-z]+)\s*:\s*(-?[\d.]+)/g)) out[x[1]] = Number(x[2]);
+  return out;
+};
+
+const sb = tableSeuils("SEUILS_BANDEAU");
+const sf = tableSeuils("SEUILS_FEUILLE");
+if (!sb || !sf) {
+  faute("seuils", "app.js : SEUILS_BANDEAU ou SEUILS_FEUILLE introuvable");
+} else {
+  if (!(sb.gel >= sf.gel)) faute("seuils",
+    `le seuil de gel du bandeau (${sb.gel}) est plus étroit que celui de la feuille (${sf.gel}) : le bandeau se tairait sur un gel que la feuille annonce.`);
+  if (!(sb.chaleur >= sf.chaleur)) faute("seuils",
+    `le seuil de chaleur du bandeau (${sb.chaleur}) est plus bas que celui de la feuille (${sf.chaleur}) : le bandeau interromprait avant que la feuille ne mentionne.`);
+  if (!(sb.vent >= sf.rafale)) faute("seuils",
+    `le seuil de vent du bandeau (${sb.vent}) est plus bas que le seuil de rafale de la feuille (${sf.rafale}) : le bandeau interromprait avant que la feuille ne mentionne.`);
+}
+
+/* ------------------------------------------------------------------ */
 /* Restitution                                                         */
 /* ------------------------------------------------------------------ */
 

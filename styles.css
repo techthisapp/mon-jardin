@@ -2018,38 +2018,6 @@ body.fige{overflow:hidden}
 .mesure-j.mesure-agir .mj-ic{color:#48708F}
 @media (hover:hover){ .mesure-j:hover{background:#EDECE4} }
 .mesure-j:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
-/* Les trois mesures du jour, en tête de sa feuille. Chacune est une carte
-   nommée : le nom dit de quoi il s'agit, la valeur se lit sur une ligne, et la
-   carte ouvre sa propre feuille. Les pastilles du bandeau, taillées pour un
-   fond sombre, ne se lisaient plus sur le papier de la feuille. */
-.mesures{display:flex;flex-direction:column;gap:7px}
-.mesure{
-  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
-  border:0;border-radius:12px;background:var(--papier);padding:11px 13px;
-  cursor:pointer;font-family:inherit;color:inherit;
-}
-@media (hover:hover){ .mesure:hover{background:#EDECE4} }
-.mesure:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
-.mesure-ic{width:17px;height:17px;flex:0 0 auto;color:#7E8C81;stroke-width:1.7}
-.mesure-txt{flex:1;min-width:0}
-.mesure-nom{
-  display:block;margin-bottom:1px;
-  font-family:"IBM Plex Sans Condensed",sans-serif;
-  font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--encre-doux);
-}
-/* Une marque ne signale que l'exception : seule la mesure qui demande un geste
-   aujourd'hui porte le filet d'eau. */
-.mesure-agir{background:#EDF2F7}
-.mesure-agir .mesure-ic{color:#48708F}
-.mesure b{font-size:15px;font-weight:650}
-.mesure i{font-style:normal;font-size:13px;color:var(--encre-doux)}
-.mesure::after{
-  content:"";width:6px;height:6px;flex:0 0 auto;
-  border-right:1.5px solid var(--encre-doux);border-bottom:1.5px solid var(--encre-doux);
-  transform:rotate(-45deg);opacity:.4;
-}
-
 /* La synthèse perd son cadre et gagne une ombre. */
 .synthese{
   background:var(--papier-haut);border:0;border-radius:18px;padding:17px 17px 16px;
@@ -2881,36 +2849,39 @@ select:focus{
 }
 /* Le bouton couvre l'image et le nom. Le bandeau du haut, posé par-dessus,
    garde ses propres gestes. */
-.tp-ouvre{
+.tpl-ouvre{
   display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;
   font-family:inherit;color:inherit;text-align:left;
 }
-.tp-ouvre:focus-visible{outline:2px solid var(--terre);outline-offset:-2px}
+.tpl-ouvre:focus-visible{outline:2px solid var(--terre);outline-offset:-2px}
 /* Cent quatre points d'image ne laissaient voir que deux rangées de tuiles sur
    un téléphone. Quatre-vingts suffisent à reconnaître la plante, le nom étant
    juste dessous. */
 .im-t{display:block;width:100%;height:80px;object-fit:cover;background:#F7F5F0}
 .im-t.im-planche{object-fit:contain;padding:6px;background:#fff}
 .im-t.im-vide{background:rgba(22,36,30,.04)}
-.tp-nom{display:block;font-size:13.5px;font-weight:500;padding:8px 10px 9px;line-height:1.25}
-.tp-haut{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:5px;align-items:center}
+.tpl-nom{display:block;font-size:13.5px;font-weight:500;padding:8px 10px 9px;line-height:1.25}
+.tpl-haut{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:5px;align-items:center}
 /* Le nombre de pieds se corrige aussi sur la tuile, dans la pastille où il se
    lisait. Une plante sans nombre en garde une, effacée, qui dit qu'on peut
    l'écrire. */
-.tp-q{
+.tpl-q{
   width:52px;flex:0 0 auto;font-style:normal;font-size:11.5px;font-weight:600;
   background:rgba(255,255,255,.92);border:0;border-radius:999px;padding:4px 8px;
   font-family:inherit;color:var(--encre);text-align:center;
   appearance:textfield;-moz-appearance:textfield;
 }
-.tp-q::-webkit-outer-spin-button,
-.tp-q::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.tp-q::placeholder{font-weight:400;color:rgba(22,36,30,.42)}
-.tp-q:focus{outline:0;background:#fff;box-shadow:0 0 0 2px var(--terre)}
-/* La pastille du moment porte un nom qui lui est propre : `tp-m` était déjà pris
-   par les mesures de la feuille du temps, et la règle la plus tardive gagnait,
-   posant les quatre mesures en gélules calées à droite de leur colonne. */
-.tp-moment{
+.tpl-q::-webkit-outer-spin-button,
+.tpl-q::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.tpl-q::placeholder{font-weight:400;color:rgba(22,36,30,.42)}
+.tpl-q:focus{outline:0;background:#fff;box-shadow:0 0 0 2px var(--terre)}
+/* Les tuiles de plante portent le préfixe `tpl-`, les mesures de la feuille du
+   temps gardent `tp-`. Les deux jeux ont partagé ce préfixe : `tp-m` était pris
+   par les mesures, la règle la plus tardive gagnait, et les quatre mesures se
+   posaient en gélules calées à droite de leur colonne. La collision avait été
+   contournée sur ce seul nom, non résolue : tout déplacement de l'un des deux
+   jeux emportait des règles de l'autre. */
+.tpl-moment{
   font-style:normal;font-size:11px;color:#fff;border-radius:999px;padding:2px 8px;
   margin-left:auto;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;

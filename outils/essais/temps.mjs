@@ -549,6 +549,28 @@ export default async function essai(navigateur) {
     !/incertaine/.test(dvE.join(" ")), dvE[0]);
   await cE.ctx.close();
 
+  /* Deux modèles superposés dans un seul appel. Le service suffixe alors ses
+     colonnes du nom du modèle, forme que le code accepte depuis l'origine sans
+     l'avoir jamais observée : la doublure rendait des colonnes nues, la branche
+     du modèle unique était seule jouée, et le chemin de l'API est fermé aux
+     robots. Ce contrôle est donc la seule vérification que ce mécanisme
+     connaîtra. Les deux séries divergent pour que l'ordre se voie. */
+  j.section("deux modèles suffixés, la série la plus fine l'emporte");
+  const cM = await ouvrirContexte(navigateur, { aromeSuffixe: {
+    fin: h => ({ ...h, precipitation: h.precipitation.map(() => 5.5) }),
+    gros: h => ({ ...h, precipitation: h.precipitation.map(() => 1.1) }),
+  } });
+  await cM.pg.waitForTimeout(700);
+  await versListe(cM);
+  const duo = await lit(cM, 3);
+  j.controle("les colonnes suffixées sont découpées par modèle",
+    duo.every(l => /\d/.test(l.p)), JSON.stringify(duo.map(l => l.p)));
+  j.controle("la plus fine passe en dernier et l'emporte",
+    duo.every(l => l.p === "5,5"), JSON.stringify(duo.map(l => l.p)));
+  j.controle("la plus grossière ne subsiste nulle part",
+    duo.every(l => l.p !== "1,1"), JSON.stringify(duo.map(l => l.p)));
+  await cM.ctx.close();
+
   /* AROME muet, en panne ou hors de portée : l'application rend ce qu'elle
      rendait avant, sans voie vide ni ligne trouée. */
   const cB = await ouvrirContexte(navigateur, { arome: false });
