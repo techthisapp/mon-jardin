@@ -320,8 +320,16 @@ if (!sb || !sf) {
     `le seuil de gel du bandeau (${sb.gel}) est plus étroit que celui de la feuille (${sf.gel}) : le bandeau se tairait sur un gel que la feuille annonce.`);
   if (!(sb.chaleur >= sf.chaleur)) faute("seuils",
     `le seuil de chaleur du bandeau (${sb.chaleur}) est plus bas que celui de la feuille (${sf.chaleur}) : le bandeau interromprait avant que la feuille ne mentionne.`);
+  /* Le vent se compare deux fois, la feuille le mentionnant sur deux grandeurs.
+     Le rapprochement du seuil du bandeau et de la rafale de la feuille tient
+     des ordres de grandeur, non de la règle : une rafale dépasse toujours le
+     vent moyen, si bien qu'un bandeau relevé à soixante-dix passerait ce
+     contrôle alors qu'une feuille montée à quatre-vingts se tairait. C'est la
+     comparaison des deux vents moyens qui porte la règle. */
   if (!(sb.vent >= sf.rafale)) faute("seuils",
     `le seuil de vent du bandeau (${sb.vent}) est plus bas que le seuil de rafale de la feuille (${sf.rafale}) : le bandeau interromprait avant que la feuille ne mentionne.`);
+  if (!(sb.vent >= sf.vent)) faute("seuils",
+    `le seuil de vent du bandeau (${sb.vent}) est plus bas que celui de la feuille (${sf.vent}) : le bandeau interromprait sur un vent que la feuille ne mentionne pas.`);
 }
 
 /* ------------------------------------------------------------------ */
