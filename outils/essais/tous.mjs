@@ -75,18 +75,31 @@ if (!choisies.length) {
 
 /* Playwright vise un dossier de navigateur portant un numéro de version. Quand
    l'atelier en héberge un autre, la recherche évite d'avoir à le désigner à la
-   main à chaque changement de version. */
+   main à chaque changement de version.
+
+   L'ordre de préférence n'est pas indifférent. La coquille sans tête et le
+   Chromium complet ne mesurent pas le texte de la même façon : le segment de
+   bascule vaut cent vingt points sous la première et cent quatorze sous le
+   second, si bien que les trois contrôles de largeur de la suite
+   `regroupement` échouaient ou passaient selon le navigateur trouvé, sur le
+   même dépôt. La recherche prend donc le Chromium complet partout où il
+   existe, et ne retombe sur la coquille qu'à défaut. Le dossier des binaires
+   s'appelle `chrome-linux` sur les anciennes révisions et `chrome-linux64` sur
+   les récentes. */
 async function navigateurInstalle() {
   const racine = process.env.PLAYWRIGHT_BROWSERS_PATH;
   if (!racine || !existsSync(racine)) return null;
   const dossiers = (await readdir(racine)).filter(d => d.startsWith("chromium")).sort().reverse();
-  for (const d of dossiers) {
-    for (const nom of ["headless_shell", "chrome"]) {
-      const chemin = join(racine, d, "chrome-linux", nom);
-      if (existsSync(chemin)) return chemin;
+  const chercher = nom => {
+    for (const d of dossiers) {
+      for (const toit of ["chrome-linux", "chrome-linux64"]) {
+        const chemin = join(racine, d, toit, nom);
+        if (existsSync(chemin)) return chemin;
+      }
     }
-  }
-  return null;
+    return null;
+  };
+  return chercher("chrome") || chercher("headless_shell");
 }
 
 const serveur = await servir();
