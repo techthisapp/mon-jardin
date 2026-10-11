@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structure de la base, Appli Jardin</title>
+<style>
+  :root{
+    --vert:#2f6b46; --vert-clair:#e8f1eb; --vert-bord:#c3d9cc;
+    --gris:#5b6560; --gris-clair:#f6f7f6; --bord:#dde1de;
+    --ambre:#8a6d1f; --ambre-clair:#fbf5e4; --ambre-bord:#e8dcb8;
+    --bleu:#2b5878; --bleu-clair:#e7eff5; --bleu-bord:#c0d4e2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0;background:#fbfcfb;color:#1f2622;
+       font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 28px 80px}
+  h1{font-size:30px;line-height:1.25;margin:0 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--gris);margin:0 0 34px;font-size:15px}
+  h2{font-size:20px;margin:44px 0 14px;padding-bottom:8px;border-bottom:2px solid var(--vert-bord)}
+  h3{font-size:15px;margin:26px 0 10px;color:var(--vert);text-transform:uppercase;
+     letter-spacing:.06em;font-weight:700}
+  p{margin:0 0 14px}
+  code{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+       background:var(--gris-clair);border:1px solid var(--bord);border-radius:4px;padding:1px 5px}
+  table{width:100%;border-collapse:collapse;margin:0 0 18px;font-size:14px}
+  th{text-align:left;background:var(--vert-clair);color:#22402f;font-weight:600;
+     padding:8px 10px;border-bottom:2px solid var(--vert-bord);font-size:13px;
+     text-transform:uppercase;letter-spacing:.04em}
+  td{padding:8px 10px;border-bottom:1px solid var(--bord);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.c{white-space:nowrap;font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#22402f}
+  td.t{white-space:nowrap;color:var(--gris);font-size:13px}
+  .stats{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 26px}
+  .stat{flex:1 1 130px;background:#fff;border:1px solid var(--bord);border-radius:8px;padding:12px 14px}
+  .stat .n{font-size:24px;font-weight:700;color:var(--vert);line-height:1.1}
+  .stat .l{font-size:12px;color:var(--gris);margin-top:3px}
+  .note{background:var(--ambre-clair);border:1px solid var(--ambre-bord);
+        border-left:3px solid var(--ambre);border-radius:6px;padding:12px 16px;margin:0 0 18px;font-size:14.5px}
+  .note b{color:var(--ambre)}
+  .keys{background:#fff;border:1px solid var(--bord);border-radius:8px;overflow:hidden;margin-bottom:18px}
+  .krow{display:flex;gap:14px;padding:9px 14px;border-bottom:1px solid var(--bord);font-size:13.5px;align-items:baseline}
+  .krow:last-child{border-bottom:none}
+  .kdom{flex:0 0 190px;font:13px ui-monospace,Menlo,Consolas,monospace;color:var(--vert);font-weight:600}
+  .kval{color:var(--gris);font-size:13px}
+  figure{margin:0 0 22px}
+  svg{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--bord);border-radius:8px}
+  .lg{display:flex;gap:18px;flex-wrap:wrap;margin:10px 0 0;font-size:13px;color:var(--gris)}
+  .lg span{display:flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+  footer{margin-top:52px;padding-top:18px;border-top:1px solid var(--bord);
+         font-size:13px;color:var(--gris)}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Structure de la base de données</h1>
+<p class="sub">Projet Garden Calendar, schéma <code>public</code>, état au 29 juillet 2026</p>
+
+<div class="stats">
+  <div class="stat"><div class="n">19</div><div class="l">tables</div></div>
+  <div class="stat"><div class="n">320</div><div class="l">plantes, dont 315 actives</div></div>
+  <div class="stat"><div class="n">102</div><div class="l">colonnes sur <code>plants</code></div></div>
+  <div class="stat"><div class="n">24</div><div class="l">domaines de vocabulaire</div></div>
+  <div class="stat"><div class="n">131</div><div class="l">valeurs admises</div></div>
+  <div class="stat"><div class="n">1 938</div><div class="l">entrées de journal</div></div>
+</div>
+
+<h2>Vue d'ensemble</h2>
+<figure>
+<svg viewBox="0 0 1000 626" role="img" aria-label="Diagramme des relations entre tables">
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,1 L8,4.5 L0,8" fill="none" stroke="#9aa5a0" stroke-width="1.4"/>
+    </marker>
+  </defs>
+  <g font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+
+  <!-- cadres de groupe -->
+  <rect x="14" y="30" width="330" height="290" rx="10" fill="#f4f9f6" stroke="#c3d9cc" stroke-dasharray="4 3"/>
+  <text x="28" y="50" font-size="12" font-weight="700" fill="#2f6b46" letter-spacing=".06em">RÉFÉRENTIEL BOTANIQUE</text>
+
+  <rect x="380" y="30" width="290" height="290" rx="10" fill="#eff5f9" stroke="#c0d4e2" stroke-dasharray="4 3"/>
+  <text x="394" y="50" font-size="12" font-weight="700" fill="#2b5878" letter-spacing=".06em">JARDIN DE L'UTILISATEUR</text>
+
+  <rect x="706" y="30" width="280" height="290" rx="10" fill="#fdf9ef" stroke="#e8dcb8" stroke-dasharray="4 3"/>
+  <text x="720" y="50" font-size="12" font-weight="700" fill="#8a6d1f" letter-spacing=".06em">CADRAGE ET TRAÇABILITÉ</text>
+
+  <!-- plants -->
+  <rect x="36" y="70" width="150" height="52" rx="7" fill="#2f6b46"/>
+  <text x="111" y="93" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">plants</text>
+  <text x="111" y="110" font-size="11" fill="#c8e0d3" text-anchor="middle">320 lignes, 102 col.</text>
+
+  <!-- satellites de plants -->
+  <rect x="36" y="152" width="140" height="44" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="106" y="171" font-size="12.5" font-weight="600" fill="#22402f" text-anchor="middle">plant_phases</text>
+  <text x="106" y="186" font-size="10.5" fill="#7c8a84" text-anchor="middle">2 052 · calendrier</text>
+
+  <rect x="36" y="210" width="140" height="44" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="106" y="229" font-size="12.5" font-weight="600" fill="#22402f" text-anchor="middle">plant_advice</text>
+  <text x="106" y="244" font-size="10.5" fill="#7c8a84" text-anchor="middle">1 709 · conseils</text>
+
+  <rect x="36" y="268" width="140" height="44" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="106" y="287" font-size="12.5" font-weight="600" fill="#22402f" text-anchor="middle">plant_climates</text>
+  <text x="106" y="302" font-size="10.5" fill="#7c8a84" text-anchor="middle">1 580 · adaptation</text>
+
+  <rect x="204" y="152" width="126" height="44" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="267" y="171" font-size="12.5" font-weight="600" fill="#22402f" text-anchor="middle">phases</text>
+  <text x="267" y="186" font-size="10.5" fill="#7c8a84" text-anchor="middle">10 · semis, taille…</text>
+
+  <rect x="204" y="240" width="126" height="44" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="267" y="259" font-size="12.5" font-weight="600" fill="#22402f" text-anchor="middle">climates</text>
+  <text x="267" y="274" font-size="10.5" fill="#7c8a84" text-anchor="middle">5 · zones</text>
+
+  <!-- jardin -->
+  <rect x="404" y="70" width="140" height="44" rx="6" fill="#2b5878"/>
+  <text x="474" y="90" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">gardens</text>
+  <text x="474" y="105" font-size="10.5" fill="#c5dbe9" text-anchor="middle">le jardin</text>
+
+  <rect x="404" y="140" width="140" height="44" rx="6" fill="#fff" stroke="#c0d4e2"/>
+  <text x="474" y="159" font-size="12.5" font-weight="600" fill="#1f3d53" text-anchor="middle">garden_plants</text>
+  <text x="474" y="174" font-size="10.5" fill="#7c8a84" text-anchor="middle">42 · mes plantes</text>
+
+  <rect x="404" y="210" width="140" height="44" rx="6" fill="#fff" stroke="#c0d4e2"/>
+  <text x="474" y="229" font-size="12.5" font-weight="600" fill="#1f3d53" text-anchor="middle">espaces</text>
+  <text x="474" y="244" font-size="10.5" fill="#7c8a84" text-anchor="middle">3 · massifs, carrés</text>
+
+  <rect x="404" y="270" width="240" height="42" rx="6" fill="#fff" stroke="#c0d4e2"/>
+  <text x="524" y="288" font-size="12.5" font-weight="600" fill="#1f3d53" text-anchor="middle">garden_plant_espaces</text>
+  <text x="524" y="302" font-size="10.5" fill="#7c8a84" text-anchor="middle">47 · quelle plante, quel espace</text>
+
+  <rect x="566" y="140" width="80" height="44" rx="6" fill="#fff" stroke="#c0d4e2"/>
+  <text x="606" y="159" font-size="12" font-weight="600" fill="#1f3d53" text-anchor="middle">sourdines</text>
+  <text x="606" y="174" font-size="10.5" fill="#7c8a84" text-anchor="middle">rappels off</text>
+
+  <!-- cadrage -->
+  <rect x="728" y="70" width="150" height="44" rx="6" fill="#8a6d1f"/>
+  <text x="803" y="90" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">vocabulaires</text>
+  <text x="803" y="105" font-size="10.5" fill="#f0e4c4" text-anchor="middle">121 valeurs admises</text>
+
+  <rect x="728" y="134" width="150" height="44" rx="6" fill="#fff" stroke="#e8dcb8"/>
+  <text x="803" y="153" font-size="12.5" font-weight="600" fill="#5c4813" text-anchor="middle">historique</text>
+  <text x="803" y="168" font-size="10.5" fill="#7c8a84" text-anchor="middle">515 · journal</text>
+
+  <rect x="728" y="198" width="150" height="44" rx="6" fill="#fff" stroke="#e8dcb8"/>
+  <text x="803" y="217" font-size="12.5" font-weight="600" fill="#5c4813" text-anchor="middle">climate_phase_shifts</text>
+  <text x="803" y="232" font-size="10.5" fill="#7c8a84" text-anchor="middle">35 · décalages</text>
+
+  <rect x="728" y="262" width="150" height="44" rx="6" fill="#fff" stroke="#e8dcb8"/>
+  <text x="803" y="281" font-size="12.5" font-weight="600" fill="#5c4813" text-anchor="middle">reprises, tentatives</text>
+  <text x="803" y="296" font-size="10.5" fill="#7c8a84" text-anchor="middle">reprise de compte</text>
+
+  <!-- liens -->
+  <g stroke="#9aa5a0" stroke-width="1.3" fill="none" marker-end="url(#a)">
+    <path d="M106,122 L106,150"/>
+    <path d="M92,122 L92,208"/>
+    <path d="M78,122 L78,266"/>
+    <path d="M204,174 L180,174"/>
+    <path d="M204,262 L180,262"/>
+    <path d="M474,114 L474,138"/>
+    <path d="M474,184 L474,208"/>
+    <path d="M474,254 L474,268"/>
+    <path d="M566,162 L548,162"/>
+    <path d="M404,162 L190,140 L190,100 L188,96"/>
+  </g>
+  <text x="300" y="112" font-size="10.5" fill="#7c8a84">garden_plants référence plants</text>
+
+  <!-- bandeau vocabulaire -->
+  <rect x="14" y="340" width="972" height="112" rx="10" fill="#fdf9ef" stroke="#e8dcb8"/>
+  <text x="34" y="364" font-size="12" font-weight="700" fill="#8a6d1f" letter-spacing=".06em">CONTRÔLE DU VOCABULAIRE</text>
+  <text x="34" y="388" font-size="12.5" fill="#5b6560">Chaque notion à valeur unique porte une colonne générée <tspan font-family="ui-monospace,Menlo,monospace" fill="#8a6d1f">dom_xxx</tspan> constante, et une clé étrangère composite</text>
+  <text x="34" y="408" font-size="12.5" fill="#5b6560">(<tspan font-family="ui-monospace,Menlo,monospace" fill="#8a6d1f">dom_xxx</tspan>, <tspan font-family="ui-monospace,Menlo,monospace" fill="#8a6d1f">xxx</tspan>) vers <tspan font-family="ui-monospace,Menlo,monospace" fill="#8a6d1f">vocabulaires (domaine, cle)</tspan>. Les colonnes en tableau, ne pouvant porter de clé étrangère,</text>
+  <text x="34" y="428" font-size="12.5" fill="#5b6560">sont contrôlées par le déclencheur <tspan font-family="ui-monospace,Menlo,monospace" fill="#8a6d1f">valider_vocabulaire</tspan>, qui refuse toute valeur non déclarée.</text>
+
+  <!-- chaine de calcul de l'arrosage -->
+  <rect x="14" y="470" width="972" height="144" rx="10" fill="#f4f9f6" stroke="#c3d9cc" stroke-dasharray="4 3"/>
+  <text x="34" y="494" font-size="12" font-weight="700" fill="#2f6b46" letter-spacing=".06em">CALCUL DE L'ARROSAGE</text>
+
+  <rect x="34" y="506" width="146" height="50" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="107" y="525" font-size="12" font-weight="600" fill="#22402f" text-anchor="middle">et0_reference</text>
+  <text x="107" y="540" font-size="10.5" fill="#7c8a84" text-anchor="middle">120 · mm par jour</text>
+
+  <rect x="34" y="566" width="146" height="38" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="107" y="581" font-size="12" font-weight="600" fill="#22402f" text-anchor="middle">saison_vegetation</text>
+  <text x="107" y="595" font-size="10.5" fill="#7c8a84" text-anchor="middle">5 · repères par climat</text>
+
+  <rect x="222" y="524" width="146" height="50" rx="6" fill="#2f6b46"/>
+  <text x="295" y="543" font-size="12" font-weight="700" fill="#fff" text-anchor="middle">plants</text>
+  <text x="295" y="558" font-size="10.5" fill="#c8e0d3" text-anchor="middle">kc_ini, kc_mid, kc_end</text>
+
+  <rect x="410" y="524" width="170" height="50" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="495" y="543" font-size="12" font-weight="600" fill="#22402f" text-anchor="middle">plant_kc_quinzaine</text>
+  <text x="495" y="558" font-size="10.5" fill="#7c8a84" text-anchor="middle">37 800 · Kc par quinzaine</text>
+
+  <rect x="622" y="524" width="212" height="50" rx="6" fill="#e8f1eb" stroke="#2f6b46"/>
+  <text x="728" y="543" font-size="12" font-weight="700" fill="#22402f" text-anchor="middle">arrosage_plante_quinzaine</text>
+  <text x="728" y="558" font-size="10.5" fill="#5b6560" text-anchor="middle">vue, litres par jour et niveau</text>
+
+  <rect x="876" y="524" width="94" height="50" rx="6" fill="#fff" stroke="#c3d9cc"/>
+  <text x="923" y="543" font-size="11.5" font-weight="600" fill="#22402f" text-anchor="middle">litres_jour</text>
+  <text x="923" y="558" font-size="10.5" fill="#7c8a84" text-anchor="middle">date réelle</text>
+
+  <g stroke="#9aa5a0" stroke-width="1.3" fill="none" marker-end="url(#a)">
+    <path d="M180,531 L200,531 L200,543 L218,543"/>
+    <path d="M180,585 L200,585 L200,557 L218,557"/>
+    <path d="M368,549 L406,549"/>
+    <path d="M580,549 L618,549"/>
+    <path d="M834,549 L872,549"/>
+  </g>
+  </g>
+</svg>
+<div class="lg">
+  <span><i class="sw" style="background:#2f6b46"></i>table pivot</span>
+  <span><i class="sw" style="background:#fff;border:1px solid #c3d9cc"></i>table liée</span>
+  <span><i class="sw" style="background:#f4f9f6;border:1px solid #c3d9cc"></i>référentiel partagé</span>
+  <span><i class="sw" style="background:#eff5f9;border:1px solid #c0d4e2"></i>données de l'utilisateur</span>
+</div>
+</figure>
+
+<p>Le référentiel botanique est commun à tous les jardins et ne dépend d'aucun utilisateur. Les données propres à l'utilisateur pointent vers lui sans jamais le modifier. Cette séparation permet de faire évoluer le référentiel sans toucher aux jardins existants.</p>
+
+<h2>La table <code>plants</code></h2>
+<p>102 colonnes, réparties en huit ensembles. Les 20 colonnes <code>dom_</code> sont générées et servent uniquement au contrôle du vocabulaire.</p>
+
+<h3>Identité et cycle de vie de la fiche</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">id</td><td class="t">uuid</td><td>Clé primaire</td></tr>
+<tr><td class="c">slug</td><td class="t">text</td><td>Identifiant lisible et unique</td></tr>
+<tr><td class="c">name</td><td class="t">text</td><td>Nom français d'usage</td></tr>
+<tr><td class="c">category, typology</td><td class="t">text</td><td>Classement d'usage, par exemple Aromatiques, Petits fruits</td></tr>
+<tr><td class="c">is_active</td><td class="t">boolean</td><td>Faux pour une fiche retirée sans être supprimée</td></tr>
+<tr><td class="c">replaced_by</td><td class="t">uuid</td><td>Renvoi vers la fiche qui la remplace, cas des doublons</td></tr>
+<tr><td class="c">created_at, updated_at</td><td class="t">timestamptz</td><td>Horodatage, <code>updated_at</code> tenu par déclencheur</td></tr>
+</table>
+
+<h3>Nomenclature</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">latin</td><td class="t">text</td><td>Nom scientifique retenu par le référentiel</td></tr>
+<tr><td class="c">genus</td><td class="t">text</td><td>Généré, premier terme de <code>latin</code></td></tr>
+<tr><td class="c">family</td><td class="t">text</td><td>Famille botanique</td></tr>
+</table>
+
+<h3>Morphologie et cycle</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">life_cycle, conduite</td><td class="t">text</td><td>Cycle naturel, et conduite au jardin quand elle diffère</td></tr>
+<tr><td class="c">habit</td><td class="t">text</td><td>Port, de l'herbacée à l'arbre</td></tr>
+<tr><td class="c">height_min_cm, height_max_cm</td><td class="t">smallint</td><td>Hauteur en centimètres</td></tr>
+<tr><td class="c">foliage, foliage_note</td><td class="t">text</td><td>Caduc, persistant, semi-persistant, marcescent, plus la nuance</td></tr>
+<tr><td class="c">flower_colors</td><td class="t">text[]</td><td>Couleurs de floraison, valeurs multiples</td></tr>
+<tr><td class="c">flower_color_note</td><td class="t">text</td><td>Libellé d'origine, plus riche que les clés à l'affichage</td></tr>
+</table>
+
+<h3>Conduite de culture</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">exposure, exposure_note</td><td class="t">text</td><td>Exposition recherchée</td></tr>
+<tr><td class="c">soil, soil_note</td><td class="t">text</td><td>Nature de sol</td></tr>
+<tr><td class="c">water_need, water_note</td><td class="t">text</td><td>Besoin en eau</td></tr>
+<tr><td class="c">fertility_need</td><td class="t">text</td><td>Exigence en fertilisation</td></tr>
+<tr><td class="c">spacing_cm, row_cm, depth_cm</td><td class="t">smallint</td><td>Espacement sur le rang, entre rangs, profondeur de mise en place</td></tr>
+<tr><td class="c">planting_mode, propagation</td><td class="t">text</td><td>Forme de mise en place, et mode de multiplication</td></tr>
+<tr><td class="c">hardiness, frost_min_c</td><td class="t">text, smallint</td><td>Rusticité, et température de début des dégâts</td></tr>
+<tr><td class="c">wintering</td><td class="t">text</td><td>Devenir pendant les froids, nul pour une annuelle</td></tr>
+<tr><td class="c">first_harvest_year</td><td class="t">smallint</td><td>Années d'attente avant la première récolte</td></tr>
+</table>
+
+<h3>Arrosage</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">kc_ini, kc_mid, kc_end</td><td class="t">numeric</td><td>Coefficients culturaux de début, de pleine saison et de fin de cycle</td></tr>
+<tr><td class="c">kc_source</td><td class="t">text</td><td>Ligne du bulletin FAO 56 retenue, ou règle de déduction employée</td></tr>
+<tr><td class="c">kc_modele</td><td class="t">text</td><td>Mode d'application du coefficient : cycle depuis la plantation, ou saison de végétation</td></tr>
+<tr><td class="c">cycle_ini_j, cycle_dev_j,<br>cycle_mid_j, cycle_late_j</td><td class="t">smallint</td><td>Longueurs des quatre stades en jours, renseignées pour les cultures couvertes par la table 11 du bulletin</td></tr>
+<tr><td class="c">irrigation_mode</td><td class="t">text</td><td>Règle d'affichage : litrage calculé, sans arrosage, reprise seule, contenant</td></tr>
+<tr><td class="c">contenant_litres_defaut</td><td class="t">smallint</td><td>Volume de substrat proposé si la plante est déclarée en pot</td></tr>
+</table>
+
+<div class="note"><b>Deux modèles de stade.</b> Cinquante fiches suivent la courbe FAO à quatre segments à partir de la date de plantation réelle du jardin. Les 265 autres, vivaces, ligneux et légumes à récolte étalée, suivent la même courbe calée sur la saison de végétation du climat, les plantes à feuillage persistant conservant leur coefficient de fin pendant l'hiver.</div>
+
+<h3>Usages et intérêt au jardin</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">uses, uses_note</td><td class="t">text[], text</td><td>Massif, bordure, haie, verger, purin… plus le libellé d'origine</td></tr>
+<tr><td class="c">toxicity, toxicity_note</td><td class="t">text</td><td>Statut de toxicité et parties concernées</td></tr>
+<tr><td class="c">nectar</td><td class="t">text</td><td>Production de nectar, au sens strict</td></tr>
+<tr><td class="c">pollen</td><td class="t">text</td><td>Intérêt pollinifère, distinct du nectar</td></tr>
+<tr><td class="c">nectar_season</td><td class="t">text</td><td>Période de la ressource</td></tr>
+<tr><td class="c">fragrance, fragrance_organ</td><td class="t">text</td><td>Intensité du parfum, et organe porteur</td></tr>
+<tr><td class="c">pollination</td><td class="t">text</td><td>Fertilité des fruitiers : autofertile, partenaire requis, dioïque</td></tr>
+<tr><td class="c">pollination_vector</td><td class="t">text[]</td><td>Vecteur botanique : entomogame, anémogame, autogame…</td></tr>
+</table>
+
+<div class="note"><b>Ne pas confondre.</b> <code>pollination</code> répond à la question du jardinier, faut-il un second sujet pour obtenir des fruits. <code>pollination_vector</code> décrit qui transporte le pollen. De même, <code>nectar</code> et <code>pollen</code> sont deux ressources distinctes : le Coquelicot et le Noisetier n'offrent que du pollen, la Lavande et la Coriandre que du nectar.</div>
+
+<h3>Confrontation aux référentiels externes</h3>
+<table>
+<tr><th>Colonnes</th><th>Source</th><th>Portée</th></tr>
+<tr><td class="c">gbif_usage_key, gbif_status,<br>gbif_match_type, gbif_accepted_name,<br>gbif_checked_at</td><td class="t">GBIF</td><td>Backbone taxonomique mondial, 316 noms confrontés</td></tr>
+<tr><td class="c">powo_status, powo_accepted_name,<br>powo_wcvp_key, powo_note,<br>powo_checked_at</td><td class="t">POWO, Kew</td><td>Jeu WCVP, atteint via GBIF, 306 noms distincts</td></tr>
+<tr><td class="c">tela_num_nom, tela_retenu,<br>tela_accepted_name, tela_checked_at</td><td class="t">Tela Botanica</td><td>Base BDTFX, référence de la flore de France</td></tr>
+<tr><td class="c">baseflor, baseflor_checked_at</td><td class="t">Baseflor, Julve</td><td>Charge jsonb d'écologie et de biologie, 173 fiches</td></tr>
+</table>
+<p>Ces colonnes portent l'état de la dernière confrontation. Elles sont traitées en métadonnée technique et ne sont pas journalisées, à la différence des corrections de contenu.</p>
+
+<h3>Traçabilité et reste à modéliser</h3>
+<table>
+<tr><th>Colonne</th><th>Type</th><th>Rôle</th></tr>
+<tr><td class="c">source</td><td class="t">text</td><td>Sources nommées ayant servi à établir la fiche. Porte aussi la mention <code>estimation horticole non vérifiée</code> suivie des champs concernés</td></tr>
+<tr><td class="c">verified_at</td><td class="t">timestamptz</td><td>Date de relecture des champs sourcés</td></tr>
+<tr><td class="c">attributes</td><td class="t">jsonb</td><td>Notes libres pas encore modélisées, aujourd'hui rusticité et taille</td></tr>
+<tr><td class="c">spacing, depth,<br>companions, advice</td><td class="t">text</td><td>Champs texte d'origine, conservés et remplacés par les colonnes structurées</td></tr>
+</table>
+
+<h2>Tables liées à <code>plants</code></h2>
+<table>
+<tr><th>Table</th><th>Lignes</th><th>Clé</th><th>Rôle</th></tr>
+<tr><td class="c">plant_phases</td><td class="t">2 089</td><td class="t">plant_id, phase</td><td>Calendrier. Périodes en demi-mois de 1 à 24, avec un tableau de climats concernés et, depuis le complément des fenêtres de semis, une colonne <code>source</code> renseignée sur 50 lignes</td></tr>
+<tr><td class="c">plant_advice</td><td class="t">1 700</td><td class="t">plant_id, phase</td><td>Conseil par phase, avec sa source, sa date et son niveau de relecture</td></tr>
+<tr><td class="c">plant_climates</td><td class="t">1 580</td><td class="t">plant_id, climate_key</td><td>Adaptation par climat : adapté, protection, abri, déconseillé</td></tr>
+<tr><td class="c">plant_kc_quinzaine</td><td class="t">37 800</td><td class="t">plant_id, climate_key, quinzaine</td><td>Coefficient cultural par plante, climat et quinzaine, reconstruit par <code>recalculer_kc_quinzaine</code></td></tr>
+<tr><td class="c">phases</td><td class="t">10</td><td class="t">key</td><td>Semis à l'abri, plantation, floraison, récolte, taille, multiplication…</td></tr>
+<tr><td class="c">climates</td><td class="t">5</td><td class="t">key</td><td>Zones climatiques, avec décalage de printemps et d'automne</td></tr>
+<tr><td class="c">climate_phase_shifts</td><td class="t">35</td><td class="t">climate_key, phase</td><td>Décalage fin par climat et par phase</td></tr>
+</table>
+
+<h2>Tables de référence climatique</h2>
+<table>
+<tr><th>Table</th><th>Lignes</th><th>Clé</th><th>Rôle</th></tr>
+<tr><td class="c">et0_reference</td><td class="t">120</td><td class="t">climate_key, quinzaine</td><td>Évapotranspiration de référence en millimètres par jour, cinq climats et vingt-quatre quinzaines, avec la source par ligne</td></tr>
+<tr><td class="c">saison_vegetation</td><td class="t">5</td><td class="t">climate_key</td><td>Quatre repères de quinzaine par climat : départ de végétation, plein feuillage, début de sénescence, fin de saison</td></tr>
+</table>
+<p>Les valeurs proviennent des fiches climatologiques de Météo-France, statistiques 1991-2020, pour une station de référence par climat : Rennes-St-Jacques, Paris-Montsouris, Strasbourg-Entzheim, Montpellier-Aéroport et Le Puy-Loudes. Les totaux mensuels d'évapotranspiration Penman sont ventilés par quinzaine puis recalés pour reproduire le total mensuel publié. Les repères de saison sont obtenus par seuils de 10 et 16 degrés sur les normales de température moyenne des mêmes stations.</p>
+
+<h2>Tables du jardin de l'utilisateur</h2>
+<table>
+<tr><th>Table</th><th>Lignes</th><th>Rôle</th></tr>
+<tr><td class="c">gardens</td><td class="t">1</td><td>Le jardin, son climat et son altitude</td></tr>
+<tr><td class="c">garden_plants</td><td class="t">42</td><td>Les plantes retenues par l'utilisateur, avec la date d'ajout et, pour une culture en pot, le volume de substrat dans <code>contenant_litres</code></td></tr>
+<tr><td class="c">espaces</td><td class="t">3</td><td>Massifs, carrés, bacs</td></tr>
+<tr><td class="c">garden_plant_espaces</td><td class="t">47</td><td>Quelle plante dans quel espace, en quelle quantité</td></tr>
+<tr><td class="c">sourdines</td><td class="t">4</td><td>Rappels mis en sourdine, par quinzaine, période ou définitivement</td></tr>
+<tr><td class="c">reprises, tentatives</td><td class="t">1, 0</td><td>Codes de reprise de compte, et plafonnement des tentatives</td></tr>
+</table>
+
+<h2>Vocabulaire contrôlé</h2>
+<p>24 domaines, 131 valeurs admises, dans la table <code>vocabulaires</code> avec la clé composite <code>(domaine, cle)</code>.</p>
+<div class="keys">
+  <div class="krow"><span class="kdom">arrosage_niveau</span><span class="kval">faible, intermediaire, soutenu</span></div>
+  <div class="krow"><span class="kdom">conduite</span><span class="kval">annuelle, bisannuelle</span></div>
+  <div class="krow"><span class="kdom">couleur</span><span class="kval">blanc, creme, beige, jaune, orange, rouge, rose, mauve, violet, pourpre, bleu, vert, brun, noir, multicolore</span></div>
+  <div class="krow"><span class="kdom">cycle</span><span class="kval">annuelle, bisannuelle, vivace</span></div>
+  <div class="krow"><span class="kdom">eau</span><span class="kval">faible, modere, regulier, soutenu</span></div>
+  <div class="krow"><span class="kdom">exposition</span><span class="kval">soleil, soleil_mi_ombre, mi_ombre, mi_ombre_ombre, ombre</span></div>
+  <div class="krow"><span class="kdom">fertilite</span><span class="kval">aucune, faible, moyenne, forte</span></div>
+  <div class="krow"><span class="kdom">feuillage</span><span class="kval">caduc, semi_persistant, persistant, marcescent</span></div>
+  <div class="krow"><span class="kdom">hivernage</span><span class="kval">en_terre, arrache, rentre</span></div>
+  <div class="krow"><span class="kdom">irrigation</span><span class="kval">calcule, reprise_seule, contenant, sans_arrosage</span></div>
+  <div class="krow"><span class="kdom">kc_modele</span><span class="kval">cycle, saison</span></div>
+  <div class="krow"><span class="kdom">multiplication</span><span class="kval">semis, division, bouture, marcotte, greffe, tubercule, spontanee</span></div>
+  <div class="krow"><span class="kdom">nectar</span><span class="kval">nul, faible, moyen, fort</span></div>
+  <div class="krow"><span class="kdom">nectar_saison</span><span class="kval">precoce, saison, tardive, hivernale</span></div>
+  <div class="krow"><span class="kdom">parfum</span><span class="kval">nul, leger, marque, fort</span></div>
+  <div class="krow"><span class="kdom">parfum_organe</span><span class="kval">fleur, feuillage</span></div>
+  <div class="krow"><span class="kdom">plantation</span><span class="kval">semis, plant, bulbe, tubercule, rhizome, griffe, bouture, greffe</span></div>
+  <div class="krow"><span class="kdom">pollen</span><span class="kval">nul, faible, moyen, fort</span></div>
+  <div class="krow"><span class="kdom">pollinisation</span><span class="kval">autofertile, partenaire_requis, dioique</span></div>
+  <div class="krow"><span class="kdom">pollinisation_vecteur</span><span class="kval">entomogame, anemogame, autogame, hydrogame, apogame</span></div>
+  <div class="krow"><span class="kdom">port</span><span class="kval">herbacee, bulbe, graminee, sous_arbrisseau, arbuste, liane, arbre</span></div>
+  <div class="krow"><span class="kdom">sol</span><span class="kval">pauvre_draine, ordinaire, frais, riche, acide, calcaire</span></div>
+  <div class="krow"><span class="kdom">toxicite</span><span class="kval">aucune, parties_toxiques, toxique, irritante</span></div>
+  <div class="krow"><span class="kdom">usage</span><span class="kval">massif, bordure, couvre_sol, talus, rocaille, haie, ecran, grimpant, pied_de_mur, potee, suspension, fleur_coupee, bouquet_sec, verger, naturalisation, bord_eau, culinaire, infusion, purin, plante_compagne, topiaire, littoral, faune, interet_hivernal</span></div>
+</div>
+
+<h2>Restitution de l'arrosage</h2>
+<table>
+<tr><th>Objet</th><th>Nature</th><th>Rôle</th></tr>
+<tr><td class="c">arrosage_plante_quinzaine</td><td class="t">vue</td><td>Coefficient, évapotranspiration, surface occupée, litrage par plante, litrage par mètre carré, unité d'affichage, niveau, dose et intervalle de reprise</td></tr>
+<tr><td class="c">quinzaine_de</td><td class="t">fonction</td><td>Quinzaine correspondant à une date</td></tr>
+<tr><td class="c">kc_courbe</td><td class="t">fonction</td><td>Courbe à quatre segments sur l'axe des quinzaines, avec passage d'année</td></tr>
+<tr><td class="c">kc_a_date</td><td class="t">fonction</td><td>Coefficient du jour, selon le modèle porté par la fiche</td></tr>
+<tr><td class="c">litres_jour</td><td class="t">fonction</td><td>Besoin en litres par jour en pleine terre pour une plante, un climat, une date et une date de plantation</td></tr>
+<tr><td class="c">arrosage_contenant</td><td class="t">fonction</td><td>Dose et intervalle en pot, réserve utile à trente pour cent du volume de substrat et demande majorée d'un quart</td></tr>
+<tr><td class="c">reprise_dose, arrosage_reprise</td><td class="t">fonctions</td><td>Dose et intervalle de reprise d'un ligneux, calculés sur l'emprise du jeune sujet et non sur celle du sujet établi, avec un indicateur de fin de période d'installation</td></tr>
+<tr><td class="c">recalculer_kc_quinzaine</td><td class="t">fonction</td><td>Reconstruction complète de <code>plant_kc_quinzaine</code>, à lancer après toute modification des coefficients, des phases ou des repères de saison</td></tr>
+</table>
+
+<div class="note"><b>Unité d'affichage.</b> En dessous de cinq centièmes de mètre carré d'emprise, cas des semis denses comme le radis ou la mâche, le litrage par plante n'est plus lisible et la vue bascule sur le litrage par mètre carré, qui vaut l'évapotranspiration multipliée par le coefficient cultural. Les seuils du niveau affiché suivent l'unité retenue.</div>
+
+<h2>Mécanismes en place</h2>
+
+<h3>Journalisation</h3>
+<p>Le déclencheur <code>tracer</code> écrit dans <code>historique</code> l'état précédent de chaque ligne modifiée, la liste des champs touchés, l'auteur et la date. La variable de session <code>app.motif</code> permet d'y joindre la raison du changement. Ce journal compte 1 938 entrées.</p>
+<p>Les remplissages de métadonnée technique, colonnes de confrontation aux référentiels et migrations structurelles, sont réalisés déclencheurs suspendus puis réactivés, afin de garder un journal lisible. Les corrections de contenu, elles, y figurent toujours avec leur motif.</p>
+
+<h3>Contrôle du vocabulaire</h3>
+<p>Chaque notion à valeur unique porte une colonne générée <code>dom_xxx</code> de valeur constante, ce qui permet une clé étrangère composite vers <code>vocabulaires</code>. Les colonnes en tableau, <code>flower_colors</code>, <code>uses</code> et <code>pollination_vector</code>, sont contrôlées par le déclencheur <code>valider_vocabulaire</code>, qui rejette toute valeur non déclarée. Deux index GIN couvrent <code>flower_colors</code> et <code>uses</code> pour le filtrage.</p>
+
+<h3>Niveaux de confiance</h3>
+<p>Trois niveaux coexistent et restent distinguables. Les valeurs sourcées portent des sources nommées dans <code>source</code> et une date dans <code>verified_at</code>. Les valeurs estimées portent la mention <code>estimation horticole non vérifiée</code> suivie des champs concernés. Les colonnes de confrontation externe portent leur propre date de vérification par référentiel. Sur <code>plant_phases</code>, la colonne <code>source</code> distingue les fenêtres de semis déduites des durées du bulletin FAO 56 de celles déduites d'une durée estimée.</p>
+
+<footer>
+Base Supabase Garden Calendar, région eu-west-3, PostgreSQL 17. Sécurité au niveau des lignes active sur les 19 tables.
+</footer>
+
+</div></body></html>

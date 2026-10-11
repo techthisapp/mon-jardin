@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run verification)",
+      "Bash(npm run corriger)",
+      "Bash(npm run essais)",
+      "Bash(npm run essais *)",
+      "Bash(node outils/verification.mjs)",
+      "Bash(node outils/verification.mjs --corriger)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git -C \"${CLAUDE_PROJECT_DIR}\" config core.hooksPath .githooks"
+          }
+        ]
+      }
+    ]
+  }
+}
