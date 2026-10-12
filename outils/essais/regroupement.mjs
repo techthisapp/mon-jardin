@@ -10,7 +10,7 @@
    filtres sont partis, et le choix d'espace appartient au seul écran de
    l'année. Les contrôles portent sur ces trois points, et sur la tenue de la
    barre, qui porte maintenant trois éléments au lieu de deux. */
-import { ouvrirContexte, journal, net, CATALOGUE } from "./commun.mjs";
+import { ouvrirContexte, journal, net, CATALOGUE, ouvrirFrise } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
 const ESPACES = [
@@ -158,8 +158,7 @@ export default async function essai(navigateur) {
      l'autre sans le dire. */
   j.section("le filtre d'espace ne sort plus de l'écran de l'année");
   const avant = net(await pg.locator("#bilanMoment").innerText());
-  await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
-  await pg.waitForTimeout(700);
+  await ouvrirFrise(pg);
   await pg.locator("#basculeFiltres").click();
   await pg.waitForTimeout(400);
   await pg.locator("#chipsEspaceP .chip").nth(1).click();

@@ -770,6 +770,8 @@ Le regroupement par tâche ou par espace se choisit dans le panneau de filtres e
 
 **Calendrier** présente la frise annuelle. Les périodes sont empilées par remplissage, une voie accueillant plusieurs tâches tant qu'elles ne se chevauchent pas. Filtres sur l'espace, la tâche, le type et la catégorie. Mon jardin seulement est actif par défaut.
 
+Depuis le 12 octobre 2026, l'écran de l'année s'ouvre sur la quinzaine en cours, résumée par geste avec les plantes du jardin concernées. Deux flèches parcourent les vingt-quatre quinzaines, une bascule « Toute l'année » rend la frise et ses filtres. Le filtre par mois de la frise ignore encore les fenêtres à cheval sur le 1er janvier. Détail dans la note `annee-a-la-quinzaine`, qui porte aussi l'audit des écrans et les lots de simplification restants.
+
 Deux écrans de réglage, derrière le bouton de l'en-tête.
 
 **Jardin et espaces** contient le jardin actif, sa création et son renommage, le climat, les espaces avec leurs plantes, le compte et le code de reprise.

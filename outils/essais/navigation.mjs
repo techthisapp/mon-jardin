@@ -2,7 +2,7 @@
    invariants de structure, non sur des effectifs : la vue d'ensemble et le
    niveau de détail ne sont jamais visibles ensemble, le geste de retour ramène
    au niveau précédent, et l'ouverture d'une fiche ne perd pas ce niveau. */
-import { ouvrirContexte, journal } from "./commun.mjs";
+import { ouvrirContexte, journal, ouvrirFrise } from "./commun.mjs";
 
 export default async function essai(navigateur) {
   const j = journal("Navigation à deux niveaux");
@@ -128,8 +128,7 @@ export default async function essai(navigateur) {
   await pg.waitForTimeout(500);
   j.controle("la croix ferme tout d'un coup", await cache("#feuille") === 1);
 
-  await pg.locator('.onglet[data-ecran="planning"]').click();
-  await pg.waitForTimeout(900);
+  await ouvrirFrise(pg);
   j.controle("l'en-tête garde la date sur l'année", await visible("#dateJour") === 1,
     await pg.locator("#dateJour").innerText().catch(() => "absente"));
   j.controle("le bloc du jour ne suit pas, il appartient à son écran",

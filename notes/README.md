@@ -80,6 +80,7 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `organisation-des-ecrans.md` | 13 août | Refonte de la navigation en six livraisons : barre basse, en-tête, écrans Jour, Année, Jardin, Mes plantes, Catalogue et Carnet | Réalisé |
 | `feuille-de-la-saison.md` | 13 août | Contenu calculé de la feuille de la saison : temps restant, récoltes, protections | Réalisé |
 | `bords-de-la-quinzaine.md` | 15 août | Mentions de première et de dernière quinzaine à l'écran du jour, pastilles, contrôles | Réalisé |
+| `annee-a-la-quinzaine.md` | 12 octobre | Audit des écrans avant simplification, écran de l'année ouvert sur la quinzaine résumée par geste, flèches de parcours, bascule vers la frise | Réalisé, autres lots de l'audit ouverts |
 
 ## Planches et photographies
 

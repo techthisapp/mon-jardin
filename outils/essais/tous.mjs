@@ -64,6 +64,7 @@ const SUITES = [
   ["regroupement", () => import("./regroupement.mjs")],
   ["retraits", () => import("./retraits.mjs")],
   ["frise", () => import("./frise.mjs")],
+  ["annee", () => import("./annee.mjs")],
 ];
 
 const demande = process.argv[2];

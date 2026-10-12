@@ -314,3 +314,12 @@ export async function ongletIdentite(pg) {
   await pg.locator('.f-onglets button[data-pan="identite"]').dispatchEvent("click");
   await pg.waitForTimeout(350);
 }
+
+/* L'écran de l'année s'ouvre sur la quinzaine en cours. La frise et ses
+   filtres se tiennent derrière la bascule « Toute l'année ». */
+export async function ouvrirFrise(pg) {
+  await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
+  await pg.waitForTimeout(500);
+  await pg.locator('#lectureAnnee .vue[data-lecture="frise"]').click();
+  await pg.waitForTimeout(500);
+}

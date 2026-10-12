@@ -228,6 +228,10 @@ const NIVEAUX = {
 
 const auj = new Date();
 const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
+/* L'écran de l'année se lit à la quinzaine ou d'un bloc. Il s'ouvre toujours
+   sur la quinzaine en cours, les flèches en parcourent les vingt-quatre. */
+let lectureAnnee = "quinzaine";
+let quinzLue = demi;
 
 /* Repères de l'année, pour la ligne du bandeau et pour la pastille de la date.
    Les quatre saisons civiles sont bornées aux équinoxes et aux solstices,
@@ -1120,7 +1124,11 @@ function afficher(dest) {
   marquerOnglets();
   marquerLivre();
   window.scrollTo(0, 0);
-  if (section === "planning") placerMarqueur();
+  if (section === "planning") {
+    lectureAnnee = "quinzaine"; quinzLue = demi;
+    majLectureAnnee();
+    rendreQuinzaine();
+  }
   if (section === "selection") { espaceOuvert = null; rendreEspaces(); }
   if (section === "plantes") {
     /* La même liste à deux étendues : celle du jardin depuis la barre, les
@@ -5852,7 +5860,116 @@ function rendrePlanning() {
         ? "Aucune plante ne correspond à ces filtres."
         : `Aucune tâche en ${periode.nom} parmi les plantes filtrées.`);
   placerMarqueur();
+  rendreQuinzaine();
 }
+
+/* ---------- L'année lue à la quinzaine ----------
+   Les plantes du jardin, rangées par geste dans l'ordre de l'écran du jour. La
+   frise et ses filtres restent derrière la bascule : la quinzaine ne lit que le
+   jardin, sans filtre, et ne connaît que les masquages définitifs, les autres
+   portant sur la quinzaine ou la période en cours. */
+function majLectureAnnee() {
+  const frise = lectureAnnee === "frise";
+  $("vueQuinzaine").hidden = frise;
+  $("vueFrise").hidden = !frise;
+  $("lectureAnnee").querySelectorAll(".vue").forEach(b => {
+    const actif = b.dataset.lecture === lectureAnnee;
+    b.classList.toggle("active", actif);
+    b.setAttribute("aria-pressed", String(actif));
+  });
+  // Le repère du jour se mesure sur un tableau affiché.
+  if (frise) placerMarqueur();
+}
+
+function rendreQuinzaine() {
+  const z = $("gestesQuinz");
+  if (!z) return;
+  const q = quinzLue, m = Math.ceil(q / 2) - 1;
+  const finMois = new Date(auj.getFullYear(), m + 1, 0).getDate();
+  $("titreQuinz").textContent = (q % 2 ? "Première" : "Seconde") + " quinzaine " + deMois(m);
+  $("sousQuinz").textContent = (q % 2 ? `du 1er au 15 ${MOIS[m].toLowerCase()}`
+    : `du 16 au ${finMois} ${MOIS[m].toLowerCase()}`) + (q === demi ? ", en cours" : "");
+  $("quinzEnCours").hidden = q === demi;
+  z.innerHTML = "";
+
+  const mien = plantes.filter(p => sel.has(p.id));
+  if (!mien.length) {
+    z.innerHTML = '<p class="vide">Aucune plante retenue. La fente Plantes de la barre du bas ouvre vos plantes.</p>';
+    return;
+  }
+  const masquee = (p, k) => {
+    const r = sourdines.get(cleSourdine(p, k));
+    return Boolean(r && r.portee === "toujours");
+  };
+  const fenetre = (p, k) => (segsDe(p, k) || []).find(v => dansFenetre(q, v[0], v[1]));
+
+  let total = 0;
+  const concernees = new Set();
+  ORDRE_MAINTENANT.forEach(k => {
+    if (!phases[k]) return;
+    const lot = mien.filter(p => fenetre(p, k) && !masquee(p, k))
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    if (!lot.length) return;
+    total += lot.length;
+    lot.forEach(p => concernees.add(p.id));
+    const carte = document.createElement("section");
+    carte.className = "geste-quinz";
+    carte.dataset.tache = k;
+    carte.innerHTML = `<h3><span class="pt-tache" style="background:${teinteK(k)}">`
+      + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[k] || ""}</svg></span>`
+      + `<span class="nom-geste">${esc(VERBE[k] || phases[k].label)}</span>`
+      + `<span class="nb">${lot.length}</span></h3>`;
+    const liste = document.createElement("div");
+    liste.className = "plantes-quinz";
+    lot.forEach(p => {
+      const v = fenetre(p, k);
+      /* Les deux bords d'une fenêtre se disent comme sur l'écran du jour. Une
+         fenêtre d'une seule quinzaine compte pour celle qui se ferme. */
+      const bord = k === "floraison" ? ""
+        : v[1] === q ? '<span class="echeance urgente">dernière quinzaine</span>'
+        : v[0] === q ? '<span class="echeance neuve">1ère quinzaine</span>' : "";
+      // La multiplication dit le mode propre à la plante sous le verbe générique.
+      const mode = k === "multiplication" && verbeDe(p, k) !== VERBE[k]
+        ? `<small>${esc(verbeDe(p, k).toLowerCase())}</small>` : "";
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "plante-quinz";
+      b.innerHTML = vignettePlanche(p, "v-pl-s")
+        + `<span class="nom-pq">${esc(p.nom)}${mode}</span>${bord}`;
+      b.addEventListener("click", () => ouvrirFeuille(p));
+      liste.appendChild(b);
+    });
+    carte.appendChild(liste);
+    z.appendChild(carte);
+  });
+
+  if (!total) {
+    z.innerHTML = '<p class="vide">Rien à faire au jardin cette quinzaine.</p>';
+    return;
+  }
+  const bilan = document.createElement("p");
+  bilan.className = "bilan-quinz";
+  bilan.innerHTML = `<b>${total}</b> action${total > 1 ? "s" : ""} sur `
+    + `<b>${concernees.size}</b> plante${concernees.size > 1 ? "s" : ""}`;
+  z.prepend(bilan);
+  poserPlanches(z);
+}
+
+function allerQuinzaine(pas) {
+  quinzLue = (quinzLue - 1 + pas + 24) % 24 + 1;
+  rendreQuinzaine();
+}
+
+sur("quinzPrec", "click", () => allerQuinzaine(-1));
+sur("quinzSuiv", "click", () => allerQuinzaine(1));
+sur("quinzEnCours", "click", () => { quinzLue = demi; rendreQuinzaine(); });
+sur("lectureAnnee", "click", e => {
+  const b = e.target.closest(".vue");
+  if (!b || b.dataset.lecture === lectureAnnee) return;
+  lectureAnnee = b.dataset.lecture;
+  majLectureAnnee();
+  window.scrollTo(0, 0);
+});
 
 function placerMarqueur() {
   const m = $("marqueurJour");

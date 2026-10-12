@@ -8,7 +8,7 @@
    devient un bouton qui ouvre ses bornes et le conseil propre à cette fenêtre,
    qui n'est pas celui de la fenêtre en cours : sur la frise on touche une barre
    de mars au mois d'août. */
-import { ouvrirContexte, journal, net, CATALOGUE } from "./commun.mjs";
+import { ouvrirContexte, journal, net, CATALOGUE, ouvrirFrise } from "./commun.mjs";
 
 const PLANTES = JSON.parse(CATALOGUE).plants;
 const AU_JARDIN = PLANTES.slice(0, 14).map(p => p.id);
@@ -28,8 +28,7 @@ const groupe = async pg => pg.evaluate(() => ({
 }));
 
 async function versAnnee(pg) {
-  await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
-  await pg.waitForTimeout(800);
+  await ouvrirFrise(pg);
 }
 
 export default async function essai(navigateur) {

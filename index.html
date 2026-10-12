@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=63724559ca">
+<link rel="stylesheet" href="./styles.css?v=15e32bd9de">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="d04ad27dff">
+<meta name="version-appli" content="80760146f7">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -103,6 +103,29 @@
   </section>
 
   <section id="ec-planning" hidden>
+    <!-- L'année s'ouvre sur la quinzaine en cours, résumée par geste. Les
+         flèches parcourent les quinzaines, la bascule rend la frise entière. -->
+    <div class="bascule-vue lecture-annee" id="lectureAnnee" role="group" aria-label="Lecture de l'année">
+      <button class="vue active" type="button" data-lecture="quinzaine" aria-pressed="true">Quinzaine</button>
+      <button class="vue" type="button" data-lecture="frise" aria-pressed="false">Toute l'année</button>
+    </div>
+
+    <div id="vueQuinzaine">
+      <div class="nav-quinz">
+        <button class="fleche-quinz" id="quinzPrec" type="button" aria-label="Quinzaine précédente">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg></button>
+        <div class="titre-quinz">
+          <h2 id="titreQuinz"></h2>
+          <p id="sousQuinz"></p>
+        </div>
+        <button class="fleche-quinz" id="quinzSuiv" type="button" aria-label="Quinzaine suivante">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+      </div>
+      <button class="lien retour-quinz" id="quinzEnCours" type="button" hidden>Revenir à la quinzaine en cours</button>
+      <div id="gestesQuinz"></div>
+    </div>
+
+    <div id="vueFrise" hidden>
     <div class="filtres">
       <div class="barre-filtres">
         <button class="mini" id="basculeFiltres" type="button" aria-expanded="false" aria-controls="corpsFiltres">
@@ -161,6 +184,7 @@
       </div>
     </div>
     <p class="vide" id="videPlanning" hidden></p>
+    </div>
   </section>
 
   <section id="ec-selection" hidden>
@@ -316,7 +340,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=db7fe76b62"></script>
+<script type="module" src="./app.js?v=c6c312fe30"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->
