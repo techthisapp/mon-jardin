@@ -141,16 +141,24 @@ export default async function essai(navigateur) {
   j.controle("revenir à la quinzaine garde celle qu'on lisait",
     e.titre === "Seconde quinzaine de septembre", e.titre);
 
-  j.section("l'écran rouvert repart de la quinzaine en cours");
+  /* L'écran rouvert repartait de la quinzaine en cours : on préparait
+     septembre, on allait vérifier une plante, et l'on retrouvait août. Depuis
+     le 14 octobre 2026, la quinzaine lue et la lecture choisie tiennent le
+     temps de la session. */
+  j.section("l'écran rouvert garde ce qu'on lisait");
   await pg.locator('#lectureAnnee .vue[data-lecture="frise"]').click();
   await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
   await pg.waitForTimeout(400);
   await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
   await pg.waitForTimeout(500);
+  j.controle("la frise choisie est rouverte",
+    await pg.locator("#vueFrise").isVisible() && !(await pg.locator("#vueQuinzaine").isVisible()));
+  await pg.locator('#lectureAnnee .vue[data-lecture="quinzaine"]').click();
+  await pg.waitForTimeout(400);
   e = await etat(pg);
-  j.controle("la quinzaine est rouverte, non la frise",
-    await pg.locator("#vueQuinzaine").isVisible() && !(await pg.locator("#vueFrise").isVisible()));
-  j.controle("sur la quinzaine en cours", e.titre === "Première quinzaine d'août", e.titre);
+  j.controle("et la quinzaine lue avant de partir", e.titre === "Seconde quinzaine de septembre", e.titre);
+  await pg.locator("#quinzEnCours").click();
+  await pg.waitForTimeout(300);
 
   j.section("la quinzaine tient dans l'écran");
   for (const L of [320, 360, 430]) {

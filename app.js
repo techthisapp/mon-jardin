@@ -229,8 +229,9 @@ const NIVEAUX = {
 
 const auj = new Date();
 const demi = auj.getMonth() * 2 + (auj.getDate() <= 15 ? 1 : 2);
-/* L'écran de l'année se lit à la quinzaine ou d'un bloc. Il s'ouvre toujours
-   sur la quinzaine en cours, les flèches en parcourent les vingt-quatre. */
+/* L'écran de l'année se lit à la quinzaine ou d'un bloc. Il s'ouvre sur la
+   quinzaine en cours au lancement, les flèches en parcourent les vingt-quatre,
+   et la quinzaine lue tient le temps de la session. */
 let lectureAnnee = "quinzaine";
 let quinzLue = demi;
 
@@ -1139,8 +1140,11 @@ function afficher(dest) {
   marquerOnglets();
   marquerLivre();
   window.scrollTo(0, 0);
+  /* L'année s'ouvre sur la quinzaine en cours au lancement, puis garde la
+     quinzaine lue et la lecture choisie le temps de la session : on préparait
+     septembre, on allait vérifier une plante, et l'on retrouvait août.
+     Décision du 14 octobre 2026, sur l'audit par personas. */
   if (section === "planning") {
-    lectureAnnee = "quinzaine"; quinzLue = demi;
     majLectureAnnee();
     rendreQuinzaine();
   }
@@ -1839,13 +1843,13 @@ function rendreMaintenant() {
        pas qu'elle venait de s'ouvrir. Les deux paraissent, la pastille du bord
        devant la borne, qui reste dans tous les cas.
 
-       « 1ère » plutôt que « première » : les deux mentions et le nom de la
-       plante tiennent alors sur une ligne dans la plupart des cas, là où la
-       forme longue les faisait passer à la ligne presque toujours. Les phrases
-       et les titres gardent la forme pleine, ils ont la place. */
+       « Démarre » et « se termine » depuis le 14 octobre 2026 : « 1ère
+       quinzaine » et « dernière quinzaine » se lisaient comme des dates, sous
+       un écran titré « Seconde quinzaine d'août ». Relevé par les quatre
+       personas de l'audit, libellés retenus par Jérôme. */
     const pastille = e === "derniere"
-      ? '<span class="echeance urgente">dernière quinzaine</span>'
-      : e === "ouverture" ? '<span class="echeance neuve">1ère quinzaine</span>' : "";
+      ? '<span class="echeance urgente">se termine</span>'
+      : e === "ouverture" ? '<span class="echeance neuve">démarre</span>' : "";
     const borne = fin <= 24 && !muet
       ? `<span class="echeance">jusqu'à ${esc(bornePrint(fin))}</span>` : "";
     /* Pastille et borne forment un seul bloc : elles passent ensemble à la
@@ -1864,10 +1868,29 @@ function rendreMaintenant() {
       + `<b>${tete}</b>${echeance}</span>`
       + (texte ? `<span class="dit-action">${esc(texte)}</span>` : "");
     d.addEventListener("click", ev => {
-      if (ev.currentTarget.parentElement.dataset.glisse) return;
+      if (ev.currentTarget.closest(".glissiere").dataset.glisse) return;
       ouvrirFeuille(p);
     });
-    return poserRangee(d, p, k, muet);
+    /* Une case dit que la tâche est faite : elle l'écrit au carnet et retire
+       la ligne. La liste ne baissait jamais, faute de pouvoir le dire, et le
+       masquage, seul recours, ne s'ouvrait que d'un glissement que rien
+       n'annonçait. La floraison se constate, elle ne se fait pas. */
+    if (muet || k === "floraison" || !session) return poserRangee(d, p, k, muet);
+    const ligne = document.createElement("div");
+    ligne.className = "ligne-fait";
+    const f = document.createElement("button");
+    f.type = "button";
+    f.className = "fait";
+    f.setAttribute("aria-label", `${VERBE[k] || phases[k].label} ${p.nom} : fait`);
+    f.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/>'
+      + '<path d="M8 12.4l2.8 2.8L16.2 9.6"/></svg>';
+    f.addEventListener("click", ev => {
+      ev.stopPropagation();
+      if (ev.currentTarget.closest(".glissiere").dataset.glisse) return;
+      marquerFait(p, k, fin);
+    });
+    ligne.append(d, f);
+    return poserRangee(ligne, p, k, muet);
   };
 
   // Toutes les actions du moment, filtrées des masquées.
@@ -2030,7 +2053,7 @@ function rendreMaintenant() {
     const t = document.createElement("span");
     t.className = "titre-niveau";
     t.innerHTML = (vueDetail.k ? carreTache(vueDetail.k) : "")
-      + `<span class="nom-niveau">Dernière quinzaine</span>`
+      + `<span class="nom-niveau">Ce qui se termine</span>`
       + (vueDetail.k ? `<span class="sous-niveau">${esc(titreTache(vueDetail.k))}</span>` : "");
     barre.appendChild(t);
     const n = document.createElement("span");
@@ -5589,10 +5612,14 @@ function rendreSynthese(paires) {
     let reste = dit ? g.plantes.filter(p => dit.plantes.indexOf(p) === -1) : g.plantes;
     if (!reste.length) return;
     const presse = !dit && g.presse.length > 0;
+    // Le nombre de plantes que la marque concerne : elle ne vaut souvent que
+    // pour une partie de la ligne.
+    const nPresse = presse ? reste.filter(p => g.presse.indexOf(p) !== -1).length : 0;
     /* Ce qui se ferme prime sur ce qui s'ouvre : la ligne ne porte qu'une
        marque. Ce qui s'ouvre n'a plus de phrase propre depuis le 13 octobre :
        elle redisait les lignes, la marque suffit. */
     const neuve = !presse && g.neuves.length > 0;
+    const nNeuve = neuve ? reste.filter(p => g.neuves.indexOf(p) !== -1).length : 0;
     if (presse) reste = g.presse.concat(reste.filter(p => g.presse.indexOf(p) === -1));
     const deja = lignes.find(l => l.k === g.k);
     if (deja) {
@@ -5600,9 +5627,10 @@ function rendreSynthese(paires) {
       deja.total += reste.length;
       deja.presse = deja.presse || presse;
       deja.neuve = deja.neuve || neuve;
+      deja.nPresse += nPresse; deja.nNeuve += nNeuve;
     } else {
       lignes.push({ k: g.k, verbe: VERBE[g.k], parts: [{ verbe: g.verbe, plantes: reste }],
-                    total: reste.length, presse, neuve });
+                    total: reste.length, presse, neuve, nPresse, nNeuve });
     }
   });
   // Au delà de six lignes la synthèse redevient la liste. Ce qui saute est le
@@ -5635,8 +5663,10 @@ function rendreSynthese(paires) {
         )(l.parts.reduce((a, pa) => a || pa.plantes.find(aPlanche), null)))
       + `<span class="syn-txt"><span class="v">${esc(l.parts.length > 1 ? l.verbe : l.parts[0].verbe)}</span> `
       + `<span class="l">${esc(texteLigne(l))}`
-      + (l.presse ? ' <span class="fin">· dernière quinzaine</span>'
-        : l.neuve ? ' <span class="fin">· 1ère quinzaine</span>' : "")
+      + (l.presse && l.nPresse ? ` <span class="fin fin-termine">· ${l.nPresse} `
+          + `${l.nPresse > 1 ? "se terminent" : "se termine"}</span>`
+        : l.neuve && l.nNeuve ? ` <span class="fin fin-demarre">· ${l.nNeuve} `
+          + `${l.nNeuve > 1 ? "démarrent" : "démarre"}</span>` : "")
       + `</span></span><span class="syn-nb">${compteK[l.k] || l.total}</span>${CHEVRON}</button>`).join("")
       + (trop.length ? `<button type="button" class="syn-ligne syn-plus" data-tache="">`
         + `<span class="syn-pt syn-pt-vide"></span>`
@@ -5989,8 +6019,8 @@ function rendreQuinzaine() {
       /* Les deux bords d'une fenêtre se disent comme sur l'écran du jour. Une
          fenêtre d'une seule quinzaine compte pour celle qui se ferme. */
       const bord = k === "floraison" ? ""
-        : v[1] === q ? '<span class="echeance urgente">dernière quinzaine</span>'
-        : v[0] === q ? '<span class="echeance neuve">1ère quinzaine</span>' : "";
+        : v[1] === q ? '<span class="echeance urgente">se termine</span>'
+        : v[0] === q ? '<span class="echeance neuve">démarre</span>' : "";
       // La multiplication dit le mode propre à la plante sous le verbe générique.
       const mode = k === "multiplication" && verbeDe(p, k) !== VERBE[k]
         ? `<small>${esc(verbeDe(p, k).toLowerCase())}</small>` : "";
@@ -8872,6 +8902,37 @@ async function mettreEnSourdine(p, k, portee, fin) {
   rendreTout();
   const { error } = await db.from("sourdines").upsert(ligne, { onConflict: "garden_id,plant_id,phase" });
   if (error) { sourdines.delete(cleSourdine(p, k)); rendreTout(); info("Masquage non enregistré : " + error.message, true); }
+}
+
+/* La tâche faite s'écrit au carnet sous le geste qui lui répond, puis se
+   retire de la liste : pour la quinzaine quand le geste se répète, la
+   récolte, pour le reste de sa fenêtre sinon. La protection n'a pas de geste
+   au carnet, elle s'écrit en toutes lettres. Le bandeau offre de revenir en
+   arrière, ce qui efface l'entrée et rend la ligne. */
+const GESTE_DE_TACHE = { taille: "taille", fertilisation: "amendement",
+  multiplication: "multiplication", abri: "semis", terre: "semis",
+  plant: "plantation", recolte: "recolte" };
+
+async function marquerFait(p, k, fin) {
+  if (!session || !jardinId) { info("Connectez-vous pour tenir le carnet."); return; }
+  const lieux = espacesDe(p.id);
+  const geste = GESTE_DE_TACHE[k] || null;
+  const { data, error } = await db.from("observations").insert({
+    garden_id: jardinId, plant_id: p.id, espace_id: lieux.length === 1 ? lieux[0] : null,
+    jour: jourDuJour(), geste,
+    texte: geste ? null : `${VERBE[k] || phases[k].label} : fait.`,
+  }).select().single();
+  if (error) { info("Non enregistré : " + error.message, true); return; }
+  await mettreEnSourdine(p, k, k === "recolte" ? "quinzaine" : "periode", fin);
+  await chargerCarnet();
+  info(`${VERBE[k] || phases[k].label} ${nomAvecArticle(p)} : noté au carnet.`, false, {
+    libelle: "Annuler",
+    faire: async () => {
+      await db.from("observations").delete().eq("id", data.id);
+      await leverSourdine(p, k);
+      await chargerCarnet();
+    },
+  });
 }
 
 async function leverSourdine(p, k) {

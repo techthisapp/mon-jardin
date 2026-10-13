@@ -1,7 +1,10 @@
 /* Les deux bords de la quinzaine. La synthèse dit ce qui se ferme par sa
    phrase de tête, « avant la fin de la quinzaine », et par la marque
-   « · dernière quinzaine » sur les lignes. Ce qui vient de s'ouvrir se dit par
-   la marque « · 1ère quinzaine » sur chaque ligne concernée.
+   « · 2 se terminent » sur les lignes. Ce qui vient de s'ouvrir se dit par
+   la marque « · 2 démarrent » sur chaque ligne concernée, avec le nombre de
+   plantes qu'elle touche. Les libellés « 1ère quinzaine » et « dernière
+   quinzaine » se lisaient comme des dates ; ils ont cédé la place à
+   « démarre » et « se termine » le 14 octobre 2026.
 
    Une seconde phrase, « Première quinzaine pour… », redisait jusqu'au
    12 octobre 2026 ce que portaient les lignes, et ouvrait un niveau propre.
@@ -53,12 +56,12 @@ export default async function essai(navigateur) {
      qu'une marque. */
   j.section("les marques de ligne disent ce qui s'ouvre");
   const l = await lignes(pg);
-  const marquees = l.filter(t => t.includes("1ère quinzaine"));
+  const marquees = l.filter(t => /· \d+ démarre(nt)?/.test(t));
   j.controle("les trois tâches que la phrase nommait portent la marque",
     ["Tailler", "Multiplier", "Semer"].every(v =>
       marquees.some(t => t.startsWith(v))), marquees.join(" | "));
   j.controle("aucune ligne ne porte les deux marques",
-    !l.some(t => t.includes("1ère quinzaine") && t.includes("dernière quinzaine")),
+    !l.some(t => /démarre/.test(t) && /se termine/.test(t)),
     l.join(" | "));
 
   j.section("le bord qui se ferme reste un lien");
@@ -99,7 +102,7 @@ export default async function essai(navigateur) {
     })),
   }));
   j.controle("le niveau porte le nom du bord et son compte",
-    bd.titre === "Dernière quinzaine" && bd.compte === "2 actions",
+    bd.titre === "Ce qui se termine" && bd.compte === "2 actions",
     bd.titre + " " + bd.compte);
   // Le rail cède la place au titre : c'est la quinzaine qui est le sujet.
   j.controle("le rail des sections cède la place au titre", bd.rail === 0);
@@ -110,7 +113,7 @@ export default async function essai(navigateur) {
     bd.actions.length === 2 && bd.actions.every(a => a.urgente),
     `${bd.actions.filter(a => a.urgente).length} sur ${bd.actions.length}`);
   j.controle("chacune porte sa pastille et sa borne",
-    bd.actions.every(a => a.pastille === "dernière quinzaine" && /^jusqu'à /.test(a.borne)),
+    bd.actions.every(a => a.pastille === "se termine" && /^jusqu'à /.test(a.borne)),
     JSON.stringify(bd.actions.map(a => [a.pastille, a.borne])));
 
   /* Le niveau se referme comme une tâche : par le chevron de la barre et par le
@@ -142,7 +145,7 @@ export default async function essai(navigateur) {
     await e.pg.locator("button.fin[data-bord]").count() === 0);
   const lE = await lignes(e.pg);
   j.controle("les ouvertures restent marquées sur les lignes",
-    lE.some(t => t.includes("1ère quinzaine")), lE.join(" | "));
+    lE.some(t => /· \d+ démarre(nt)?/.test(t)), lE.join(" | "));
   await e.ctx.close();
 
   return j.fin(erreurs.concat(e.erreurs));

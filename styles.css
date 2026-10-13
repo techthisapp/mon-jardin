@@ -194,7 +194,7 @@ body{
 /* Ce qui fleurit se montre, en planches, au lieu de se compter. */
 .carte-fleur{
   background:var(--papier-haut);border-radius:var(--rayon);
-  padding:13px 14px 14px;margin:0 0 13px;
+  padding:13px 14px 14px;margin:16px 0 13px;
 }
 .carte-fleur[hidden]{display:none}
 .syn-sect{
@@ -1067,20 +1067,20 @@ body.fige{overflow:hidden}
 /* ---------- Lignes d'action : séparateur et confort tactile ---------- */
 /* Le séparateur se pose sur la rangée, qui ne bouge pas pendant le glissement,
    et non sur l'action, devenue enfant unique de sa glissière. */
-.glissiere > .action{border-top:0}
+.glissiere .action{border-top:0}
 .rangee-tache + .rangee-tache{border-top:1px solid var(--filet-clair)}
 
-.glissiere > .action{
+.glissiere .action{
   padding-block:14px;min-height:62px;
   display:flex;flex-direction:column;justify-content:center;gap:4px;
 }
-.glissiere > .action .ligne-nom{align-items:center}
-.glissiere > .action b{margin-bottom:0}
-.glissiere > .action .dit-action{margin:0;color:#4A463F}
+.glissiere .action .ligne-nom{align-items:center}
+.glissiere .action b{margin-bottom:0}
+.glissiere .action .dit-action{margin:0;color:#4A463F}
 
 /* ---------- Texte descriptif tronqué dans la liste ---------- */
 /* Le texte intégral reste consultable dans la feuille de détail, ouverte au clic. */
-.glissiere > .action .dit-action{
+.glissiere .action .dit-action{
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   overflow:hidden;
 }
@@ -1214,7 +1214,7 @@ body.fige{overflow:hidden}
 }
 
 /* Une action sans conseil rédigé tient sur une seule ligne */
-.glissiere > .action.sans-texte{min-height:46px;padding-block:11px}
+.glissiere .action.sans-texte{min-height:46px;padding-block:11px}
 .carte-espace .corps-tache{padding:6px 10px 12px}
 .carte-espace h2 .nb{font-size:11px}
 
@@ -1616,6 +1616,11 @@ body.fige{overflow:hidden}
 .syn-ligne .v{font-weight:700;font-size:15px;white-space:nowrap}
 .syn-ligne .l{font-size:14.5px;color:var(--encre-doux)}
 .syn-ligne .fin{font-weight:600;color:var(--encre)}
+/* Les deux marques ne se distinguaient que par le mot, au même rendu : ce qui
+   se termine prend la teinte chaude de l'échéance, ce qui démarre reste
+   neutre. */
+.syn-ligne .fin-termine{color:#8C3A2A}
+.syn-ligne .fin-demarre{font-weight:500;color:var(--encre-doux)}
 @media (hover:hover){ .syn-ligne:hover .l{color:var(--encre)} }
 .syn-pied{
   margin-top:12px;padding-top:11px;border-top:1px solid var(--filet-clair);
@@ -2159,21 +2164,21 @@ body.fige{overflow:hidden}
 #niveauDetail .rangee-tache:first-child{margin-top:0}
 #niveauDetail .rangee-tache + .rangee-tache{border-top:0}
 #niveauDetail .glissiere{background:var(--papier-haut)}
-#niveauDetail .glissiere > .action{padding:13px 14px;min-height:0;gap:3px}
-#niveauDetail .glissiere > .action b{
+#niveauDetail .glissiere .action{padding:13px 14px;min-height:0;gap:3px}
+#niveauDetail .glissiere .action b{
   font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.005em;
 }
-#niveauDetail .glissiere > .action .dit-action{font-size:13.5px;line-height:1.45;color:var(--encre-doux)}
+#niveauDetail .glissiere .action .dit-action{font-size:13.5px;line-height:1.45;color:var(--encre-doux)}
 /* Le filet de bord et son retrait servent aux listes sans carte. Ici la rangée
    porte son propre retrait : seul le filet est annulé. */
 #niveauDetail .action.a-derniere,
 #niveauDetail .action.a-ouverture{border-left:0}
 /* Ce qui se termine se lit d'un coup d'œil, sans compter les lignes. */
-#niveauDetail .glissiere > .action.a-derniere{background:#FBF1EE}
+#niveauDetail .glissiere .action.a-derniere{background:#FBF1EE}
 /* Au niveau d'une tâche la liste est courte, le conseil se lit en entier ;
    en liste complète il reste tronqué, le texte intégral est dans la fiche. */
-#niveauDetail .glissiere > .action .dit-action{-webkit-line-clamp:none;display:block}
-#niveauDetail.mode-tout .glissiere > .action .dit-action{
+#niveauDetail .glissiere .action .dit-action{-webkit-line-clamp:none;display:block}
+#niveauDetail.mode-tout .glissiere .action .dit-action{
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
 #niveauDetail .bloc-puces{padding:10px 0 2px}
@@ -3473,3 +3478,18 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
 .va-boutons{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px}
 .va-boutons .bouton{min-height:44px}
 .va-boutons .lien{min-height:44px;font-size:14px}
+
+/* ---------- Case « fait » d'une tâche ----------
+   Quarante-quatre points à droite de la rangée, hors de la zone qui ouvre la
+   fiche. Le cercle se coche au survol pour dire ce qu'il fera. */
+.ligne-fait{display:flex;align-items:stretch}
+.ligne-fait > .action{flex:1;min-width:0}
+.fait{
+  flex:0 0 44px;width:44px;min-height:44px;border:0;background:none;cursor:pointer;
+  display:grid;place-items:center;color:var(--encre-doux);padding:0;
+}
+.fait svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;
+  stroke-linecap:round;stroke-linejoin:round}
+.fait path{opacity:.35}
+@media (hover:hover){ .fait:hover{color:var(--terre)} .fait:hover path{opacity:1} }
+.fait:focus-visible{outline:2px solid var(--terre);outline-offset:-4px;border-radius:50%}

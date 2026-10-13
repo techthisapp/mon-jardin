@@ -135,11 +135,14 @@ export default async function essai(navigateur) {
     const z = document.getElementById("carteFleur");
     return { visible: !z.hidden, nb: z.querySelectorAll(".fl-i").length,
       planches: z.querySelectorAll(".fl-i .v-planche").length,
-      avant: z.compareDocumentPosition(document.getElementById("synthese"))
-             & Node.DOCUMENT_POSITION_FOLLOWING ? true : false,
+      apres: z.compareDocumentPosition(document.getElementById("synthese"))
+             & Node.DOCUMENT_POSITION_PRECEDING ? true : false,
       compte: (document.querySelector(".syn-pied") || {}).textContent || "" };
   });
-  j.controle("la bande est là, en tête de l'écran", fleur.visible && fleur.avant);
+  /* Elle suit le travail au lieu de le précéder depuis le 14 octobre 2026 :
+     posée avant la synthèse, elle repoussait la première tâche aux deux
+     tiers de l'écran. */
+  j.controle("la bande est là, sous la synthèse des tâches", fleur.visible && fleur.apres);
   j.controle("elle montre huit planches au plus", fleur.nb > 0 && fleur.nb <= 8, fleur.nb);
   j.controle("chacune porte sa planche", fleur.planches === fleur.nb, fleur.planches);
   j.controle("le compte des fleurs ne se répète pas sous la bande",

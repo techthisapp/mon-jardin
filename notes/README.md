@@ -82,8 +82,9 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `feuille-de-la-saison.md` | 13 août | Contenu calculé de la feuille de la saison : temps restant, récoltes, protections | Réalisé |
 | `bords-de-la-quinzaine.md` | 15 août | Mentions de première et de dernière quinzaine à l'écran du jour, pastilles, contrôles | Réalisé, phrase et niveau des ouvertures retirés depuis par `ecran-jour-redites.md` |
 | `annee-a-la-quinzaine.md` | 12 octobre | Audit des écrans avant simplification, écran de l'année ouvert sur la quinzaine résumée par geste, flèches de parcours, bascule vers la frise | Réalisé, autres lots de l'audit ouverts |
+| `audit-personas-arbitrages.md` | 14 octobre | Pastilles « démarre » et « se termine », fleurs sous les tâches, année qui garde la quinzaine lue, case « fait » qui écrit au carnet | Réalisé |
 | `audit-personas-premiers-correctifs.md` | 13 octobre | Tuile de l'eau qui dit la décision, un verbe par geste, saisie au carnet par la plante, contrastes, libellés, états vides avec leurs gestes, migration des gestes du carnet | Réalisé |
-| `audit-personas.md` | 13 octobre | Audit par quatre personas sur quarante-cinq étapes de parcours : vingt constats classés par effort, défaut d'historique corrigé | Points 1, 3 à 7 et 9 à 11 traités, 2, 8, 12 et 16 à arbitrer, le reste ouvert |
+| `audit-personas.md` | 13 octobre | Audit par quatre personas sur quarante-cinq étapes de parcours : vingt constats classés par effort, défaut d'historique corrigé | Points 1 à 12 et 16 traités, 13 à 15 et 17 à 20 ouverts |
 | `jardin-et-espaces-allege.md` | 13 octobre | Ajout d'un espace replié derrière son lien, tuile des non placées masquée à zéro, un seul niveau dans un espace découpé en zones, correction du comptage de l'audit | Réalisé |
 | `fiche-allegee.md` | 13 octobre | Fiche : pastille du type retirée, onglet Au jardin lu en une ligne par emplacement et déplié à la demande, eau gardée aux deux onglets | Réalisé |
 | `listes-de-plantes-un-niveau.md` | 13 octobre | Mes plantes et catalogue groupés sur le seul type, catégorie sous le nom, compte dit une fois | Réalisé |

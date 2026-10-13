@@ -15,7 +15,7 @@
    La version est réécrite par outils/verification.mjs à partir des empreintes
    des actifs. Un changement de version vide l'ancien cache à l'activation. */
 
-const VERSION = "15ac995c77";
+const VERSION = "951413a826";
 const CACHE = "monjardin-" + VERSION;
 
 const ACTIFS = [
