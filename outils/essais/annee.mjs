@@ -165,5 +165,40 @@ export default async function essai(navigateur) {
   }
 
   await ctx.close();
-  return j.fin(erreurs);
+
+  /* Le jardin vide renvoyait au bouton rond, qui n'ouvre plus les plantes
+     depuis le 13 août et reste caché sans connexion. Les trois écrans disent
+     maintenant ce qui manque : la connexion, ou des plantes à prendre au
+     catalogue. */
+  j.section("un jardin vide dit ce qui manque");
+  const vides = async pg => {
+    // Sans session, la feuille du compte s'ouvre d'elle-même au démarrage.
+    if (await pg.locator("#feuille").isVisible()) {
+      await pg.locator("#fermerFeuille").click();
+      await pg.waitForTimeout(500);
+    }
+    const lire = async sel => net(await pg.locator(sel).innerText());
+    const jour = await lire("#videMoment");
+    await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
+    await pg.waitForTimeout(500);
+    const quinz = await lire("#gestesQuinz");
+    await pg.locator('#lectureAnnee .vue[data-lecture="frise"]').click();
+    await pg.waitForTimeout(400);
+    const frise = await lire("#videPlanning");
+    return [jour, quinz, frise];
+  };
+  const sans = await ouvrirContexte(navigateur, { session: false });
+  const m1 = await vides(sans.pg);
+  j.controle("sans connexion, les trois écrans invitent à se connecter",
+    m1.every(t => t.startsWith("Connectez-vous pour retrouver votre jardin.")), m1.join(" | "));
+  j.controle("aucun ne parle plus du bouton rond", !m1.some(t => /bouton rond/.test(t)));
+  await sans.ctx.close();
+  const vide = await ouvrirContexte(navigateur, { jardin: [] });
+  const m2 = await vides(vide.pg);
+  j.controle("connecté sans plante, ils renvoient au catalogue",
+    m2.every(t => t.startsWith("Aucune plante au jardin. Le livre de l'en-tête ouvre le catalogue")),
+    m2.join(" | "));
+  await vide.ctx.close();
+
+  return j.fin(erreurs.concat(sans.erreurs, vide.erreurs));
 }

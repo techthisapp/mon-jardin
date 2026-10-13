@@ -1210,6 +1210,17 @@ function majBoutonNoter() {
   if (b) b.hidden = !session;
 }
 
+/* Ce que disent les écrans du jour et de l'année quand le jardin est vide.
+   Ils renvoyaient au bouton rond, qui ouvrait les plantes avant le 13 août et
+   ne sert plus qu'à noter ; il est caché tant qu'on n'est pas connecté. Sans
+   session, c'est la connexion qui manque ; avec, c'est le catalogue, seul
+   endroit d'où l'on ajoute. */
+function messageSansPlante() {
+  return session
+    ? "Aucune plante au jardin. Le livre de l'en-tête ouvre le catalogue, d'où l'on ajoute ses plantes."
+    : "Connectez-vous pour retrouver votre jardin. Le bouton du compte est en haut à droite de l'écran.";
+}
+
 document.querySelectorAll(".segment[data-tri]").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
   document.querySelectorAll(".segment[data-tri]").forEach(x => x.setAttribute("aria-pressed", String(x === s)));
@@ -1711,7 +1722,7 @@ function rendreMaintenant() {
     vueDetail = null; majNiveau();
     $("synthese").hidden = true;
     $("piedVue").hidden = true;
-    $("videMoment").innerHTML = '<p class="vide">Aucune plante retenue. Le bouton rond au milieu de la barre du bas ouvre vos plantes.</p>';
+    $("videMoment").innerHTML = `<p class="vide">${esc(messageSansPlante())}</p>`;
     return;
   }
   const mien = plantes.filter(p => sel.has(p.id));
@@ -1880,16 +1891,16 @@ function rendreMaintenant() {
     $("zoneMasquees").appendChild(b);
   };
 
-  /* Un niveau de bord : ce qui se ferme, ou ce qui vient de s'ouvrir, toutes
-     tâches confondues. Il emprunte le rendu de la liste complète sur un lot
-     restreint, ses sections restant celles des tâches. Vidé par un filtre, il
-     ramène à la vue d'ensemble comme le ferait une tâche vidée. */
+  /* Un niveau de bord : ce qui se ferme, toutes tâches confondues. Il emprunte
+     le rendu de la liste complète sur un lot restreint, ses sections restant
+     celles des tâches. Vidé par un filtre, il ramène à la vue d'ensemble comme
+     le ferait une tâche vidée. Le bord de ce qui s'ouvre a disparu avec sa
+     phrase, le 13 octobre. */
   const estBord = vueDetail.t === "bord";
-  const ETAT_BORD = { derniere: "derniere", premiere: "ouverture" };
-  /* Le bord se restreint à une tâche quand on y vient par son verbe : « première
-     quinzaine pour tailler » menait jusqu'ici à toutes les tailles du moment,
-     celles ouvertes depuis des mois comprises, et le mot promettait un filtre
-     qu'il ne posait pas. */
+  const ETAT_BORD = { derniere: "derniere" };
+  /* Le bord se restreint à une tâche quand on y vient par le verbe de la phrase
+     de tête : il promet les plantes dont la fenêtre se ferme, non la tâche
+     entière. */
   const vues = estBord
     ? paires.filter(x => etatFenetre(x.p, x.k) === ETAT_BORD[vueDetail.bord]
         && (!vueDetail.k || x.k === vueDetail.k)) : paires;
@@ -1972,8 +1983,7 @@ function rendreMaintenant() {
     const t = document.createElement("span");
     t.className = "titre-niveau";
     t.innerHTML = (vueDetail.k ? carreTache(vueDetail.k) : "")
-      + `<span class="nom-niveau">${vueDetail.bord === "derniere"
-        ? "Dernière quinzaine" : "Première quinzaine"}</span>`
+      + `<span class="nom-niveau">Dernière quinzaine</span>`
       + (vueDetail.k ? `<span class="sous-niveau">${esc(titreTache(vueDetail.k))}</span>` : "");
     barre.appendChild(t);
     const n = document.createElement("span");
@@ -5455,9 +5465,8 @@ function rendreSynthese(paires) {
     });
     return dits.join(", ");
   };
-  /* Les deux bords de la quinzaine mènent chacun à ses actions, toutes tâches
-     confondues : c'est la seule façon de voir d'un coup ce qui se ferme, ou ce
-     qui vient de s'ouvrir. */
+  /* Le bord de la quinzaine qui se ferme mène à ses actions, toutes tâches
+     confondues : c'est la seule façon de voir d'un coup ce qui se ferme. */
   const bord = (b, texte) => `<button type="button" class="fin" data-bord="${b}">`
     + `${esc(texte)}</button>`;
   /* Un verbe posé à côté d'un bord de quinzaine mène au bord restreint à sa
@@ -5478,39 +5487,6 @@ function rendreSynthese(paires) {
       + (tete[0].presse ? " " + bord("derniere", "avant la fin de la quinzaine") : "") + ".</p>");
   }
 
-  /* Ce qui vient de s'ouvrir se disait nulle part : une fenêtre entrée dans sa
-     première quinzaine se lisait comme toutes les autres, alors que c'est le
-     moment où le geste devient possible. */
-  /* Une tâche par entrée et non un verbe : la multiplication ouvre trois
-     fenêtres à la fois, marcotter, bouturer et greffer, qui feraient trois
-     mentions d'une seule tâche. */
-  const ouvrants = [];
-  gestes.filter(g => g.neuves.length).forEach(g => {
-    const d = ouvrants.find(o => o.k === g.k);
-    if (!d) { ouvrants.push({ k: g.k, mot: g.verbe, neuves: g.neuves.slice() }); return; }
-    d.mot = VERBE[g.k] || d.mot;
-    g.neuves.forEach(p => { if (d.neuves.indexOf(p) === -1) d.neuves.push(p); });
-  });
-  /* Trois tâches nommées au plus : au delà, la phrase redevient une liste. Les
-     autres se marquent sur leur ligne, ce qui rend le compte de la phrase
-     repérable sans le répéter. */
-  const vus = ouvrants.slice(0, 3);
-  const nommesNeuf = new Set(vus.map(o => o.k));
-  if (ouvrants.length) {
-    /* Une seule tâche s'ouvre : elle nomme ses plantes, comme la phrase de
-       tête. Plusieurs : les verbes seuls, les plantes étant portées par les
-       lignes en dessous et par le niveau qu'ouvre le lien. */
-    const reste = ouvrants.length - vus.length;
-    const parts = ouvrants.length === 1
-      ? [`${verbeOuvrant(vus[0].k, vus[0].mot, "premiere")} ${esc(bout(vus[0].neuves))}`]
-      : vus.map(o => verbeOuvrant(o.k, o.mot, "premiere"));
-    const dits = reste
-      ? parts.join(", ") + ` et ${reste} autre${reste > 1 ? "s" : ""} tâche${reste > 1 ? "s" : ""}`
-      : parts.length > 1 ? parts.slice(0, -1).join(", ") + " et " + parts[parts.length - 1]
-        : parts[0];
-    h.push(`<p class="syn-neuf">${bord("premiere", "Première quinzaine")} pour ${dits}.</p>`);
-  }
-
   // Les lignes reprennent le reste, la plante déjà nommée en tête n'y revient pas.
   // Une ligne par tâche. Quand la tâche porte plusieurs verbes, cas de la
   // multiplication, la ligne prend le verbe générique et chaque verbe exact
@@ -5522,10 +5498,9 @@ function rendreSynthese(paires) {
     if (!reste.length) return;
     const presse = !dit && g.presse.length > 0;
     /* Ce qui se ferme prime sur ce qui s'ouvre : la ligne ne porte qu'une
-       marque. Une tâche que la phrase des ouvertures a déjà nommée n'en porte
-       pas : la marque sert à retrouver celles que le compte laissait dans
-       l'ombre. */
-    const neuve = !presse && g.neuves.length > 0 && !nommesNeuf.has(g.k);
+       marque. Ce qui s'ouvre n'a plus de phrase propre depuis le 13 octobre :
+       elle redisait les lignes, la marque suffit. */
+    const neuve = !presse && g.neuves.length > 0;
     if (presse) reste = g.presse.concat(reste.filter(p => g.presse.indexOf(p) === -1));
     const deja = lignes.find(l => l.k === g.k);
     if (deja) {
@@ -5612,16 +5587,12 @@ function rendreSynthese(paires) {
     pied.push(n > 4 ? n + " plantes sont en fleur"
       : bout(g.plantes) + (n > 1 ? " sont en fleur" : " est en fleur"));
   });
-  // L'eau du pied dit la décision du jour, tirée du bilan du sol. Sans position
-  // du jardin, elle retombe sur le besoin moyen de la normale de saison.
-  const bh = meteo ? bilanHydrique() : null;
-  if (bh && bh.etat === "arroser") {
-    pied.push(`arroser environ <b>${nombreFr(bh.apport)} litres par m²</b> sur les cultures arrosées`);
-  } else if (bh && bh.etat === "attendre") {
-    pied.push(`ne pas arroser, il est annoncé <b>${nombreFr(bh.prevue)} mm</b>`);
-  } else if (bh) {
-    pied.push(`ne pas arroser, la réserve du sol tient <b>${bh.jours} jour${bh.jours > 1 ? "s" : ""}</b>`);
-  } else {
+  /* L'eau ne se dit plus ici quand la tuile de l'eau la porte en tête d'écran,
+     sa feuille gardant la décision entière : la redire au pied de la synthèse
+     faisait trois mentions de l'eau sur le même écran, l'alerte de chaleur
+     comprise. Sans météo, la tuile manque, et le pied garde le besoin moyen de
+     la normale de saison. */
+  if (!meteo) {
     const eau = besoinEauDuJour();
     if (eau) pied.push(`compter <b>${esc(eau)}</b> et par jour sur les cultures arrosées`);
   }
@@ -5855,7 +5826,7 @@ function rendrePlanning() {
   const v = $("videPlanning");
   v.hidden = lot.length > 0;
   v.textContent = (jardinSeul && !sel.size)
-    ? "Aucune plante retenue. Le bouton rond au milieu de la barre du bas ouvre vos plantes."
+    ? messageSansPlante()
     : (periode === null
         ? "Aucune plante ne correspond à ces filtres."
         : `Aucune tâche en ${periode.nom} parmi les plantes filtrées.`);
@@ -5894,7 +5865,7 @@ function rendreQuinzaine() {
 
   const mien = plantes.filter(p => sel.has(p.id));
   if (!mien.length) {
-    z.innerHTML = '<p class="vide">Aucune plante retenue. La fente Plantes de la barre du bas ouvre vos plantes.</p>';
+    z.innerHTML = `<p class="vide">${esc(messageSansPlante())}</p>`;
     return;
   }
   const masquee = (p, k) => {
