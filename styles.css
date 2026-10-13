@@ -3064,24 +3064,29 @@ input.rech-lieu:focus{background:#fff;border-style:solid}
 /* ---------- Onglet Au jardin de la fiche ---------- */
 
 .fj-corps{margin-top:6px}
-.fj-lieu{
-  display:flex;flex-wrap:wrap;align-items:center;gap:7px;
-  padding:7px 0;border-top:1px solid var(--filet-clair);font-size:13px;
-}
+.fj-lieu{padding:2px 0;border-top:1px solid var(--filet-clair);font-size:13.5px}
 .fj-corps .fj-lieu:first-child{border-top:0}
-.fj-nom{font-weight:500}
-.fj-zone{font-size:11.5px;color:var(--encre-doux)}
+/* L'emplacement se lit en une ligne, que le doigt touche pour la modifier. */
+.fj-ligne{
+  display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 0;
+  border:0;background:none;text-align:left;cursor:pointer;font:inherit;color:inherit;
+}
+.fj-ligne:focus-visible{outline:2px solid var(--terre);outline-offset:2px;border-radius:6px}
+.fj-dit{flex:1;min-width:0}
+.fj-modif{flex:none;font-size:12.5px;color:var(--encre-doux);text-decoration:underline;
+  text-underline-offset:3px}
+.fj-edition{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 0 10px}
 /* La zone se change sur la ligne du lieu occupé, Sans zone comprise. */
-.fj-lieu .sel-zone{
-  max-width:150px;font:400 12px/1.3 "IBM Plex Sans",sans-serif;padding:3px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;color:var(--encre);
+.fj-edition .sel-zone{
+  max-width:170px;font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:7px 8px;
+  border:1px solid #D5D2CB;border-radius:8px;background:#fff;color:var(--encre);
 }
-.fj-lieu .qte{
-  flex:0 0 72px;margin-left:auto;
-  font:400 12.5px/1.3 "IBM Plex Sans",sans-serif;padding:4px 6px;
-  border:1px solid #D5D2CB;border-radius:6px;background:#fff;
+.fj-edition .qte{
+  flex:0 0 80px;
+  font:400 13px/1.3 "IBM Plex Sans",sans-serif;padding:7px 8px;
+  border:1px solid #D5D2CB;border-radius:8px;background:#fff;
 }
-.fj-lieu .fj-oter{font-size:12px}
+.fj-edition .fj-oter{margin-left:auto;font-size:12.5px}
 .fj-ajout{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:9px}
 .fj-ou{
   flex:1 1 auto;max-width:220px;

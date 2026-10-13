@@ -493,6 +493,9 @@ export default async function essai(navigateur) {
   j.controle("l'onglet Au jardin est celui d'ouverture",
     await pg.locator('.f-onglets button[data-pan="jardin"][aria-selected="true"]').count() === 1
     && await pg.locator(".f-pan-jardin:not([hidden])").count() === 1);
+  // L'emplacement se lit d'abord ; le toucher déplie ce qui le modifie.
+  await pg.locator(".fj-lieu .fj-ligne").first().click();
+  await pg.waitForTimeout(300);
   const zonesOffertes = await pg.locator(".fj-lieu .sel-zone option")
     .evaluateAll(l => l.map(o => o.textContent));
   j.controle("le lieu occupé offre ses zones, Sans zone comprise",

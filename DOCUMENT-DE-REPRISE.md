@@ -780,6 +780,8 @@ Deux écrans de réglage, derrière le bouton de l'en-tête.
 
 **Mes plantes** liste le catalogue groupé par type, la catégorie se lisant sous le nom depuis le 13 octobre 2026 (note `listes-de-plantes-un-niveau`), avec recherche sur le nom commun, le nom latin et la famille, et une jauge d'adaptation au climat à quatre crans. Le bouton Adaptées à mon climat restreint la liste aux plantes de niveau adaptée sous le climat du jardin actif. Il n'apparaît que si un jardin déclare son climat.
 
+Depuis le 13 octobre 2026, l'en-tête de la fiche ne porte plus la pastille du type, et l'onglet Au jardin se lit en une ligne par emplacement, dépliée à la demande pour changer de zone, de quantité ou retirer (note `fiche-allegee`).
+
 La feuille de détail affiche hauteur, espacement, profondeur, arrosage, sol, fertilisation, couleur, feuillage, résistance au gel, organe parfumé, caractère mellifère, première récolte, pollinisation, multiplication, usage et voisinage.
 
 ### Authentification

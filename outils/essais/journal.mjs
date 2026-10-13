@@ -270,17 +270,28 @@ export default async function essai(navigateur) {
   await ouvrirDepuisLaListe(pg, "Tomate");
   await pg.locator('#feuille-corps .f-onglets button[data-pan="jardin"]').dispatchEvent("click");
   await pg.waitForTimeout(350);
-  /* La zone se nomme par la liste qui permet d'en changer, quand l'espace en
-     porte, et par un simple libellé sinon. */
-  const lieu = await pg.locator("#feuille-corps .fj-lieu").first().evaluate(e => {
-    const z = e.querySelector(".sel-zone");
-    return [e.querySelector(".fj-nom").textContent,
-      z ? z.options[z.selectedIndex].textContent
-        : ((e.querySelector(".fj-zone") || {}).textContent || ""),
-      e.querySelector(".qte").value].join(" ");
-  });
+  /* L'emplacement se lit d'abord en une ligne : l'espace, la zone et la
+     quantité. Ce qui le modifie ne paraît qu'une fois la ligne touchée. */
+  const lieu = net(await pg.locator("#feuille-corps .fj-lieu .fj-dit").first().textContent());
   j.controle("le placement nomme l'espace, la zone et la quantité",
-    net(lieu) === "Potager Carré du fond 6", net(lieu));
+    lieu === "Potager, Carré du fond, quantité 6", lieu);
+  j.controle("rien ne se modifie avant qu'on le demande",
+    await pg.locator("#feuille-corps .fj-lieu .sel-zone, #feuille-corps .fj-lieu .qte, "
+      + "#feuille-corps .fj-lieu .fj-oter, #feuille-corps .fj-ou").count() === 0);
+  await pg.locator("#feuille-corps .fj-lieu .fj-ligne").first().click();
+  await pg.waitForTimeout(300);
+  const edition = await pg.locator("#feuille-corps .fj-lieu").first().evaluate(e => {
+    const z = e.querySelector(".sel-zone");
+    return [z ? z.options[z.selectedIndex].textContent : "",
+      (e.querySelector(".qte") || {}).value, !!e.querySelector(".fj-oter"),
+      e.querySelector(".fj-ligne").getAttribute("aria-expanded")].join(" ");
+  });
+  j.controle("la ligne touchée déplie la zone, la quantité et le retrait",
+    edition === "Carré du fond 6 true true", edition);
+  await pg.locator("#feuille-corps .fj-lieu .fj-ligne").first().click();
+  await pg.waitForTimeout(300);
+  j.controle("touchée de nouveau, elle se replie",
+    await pg.locator("#feuille-corps .fj-lieu .sel-zone").count() === 0);
   const entrees = await pg.locator("#feuille-corps .f-journal-plante .entree-carnet")
     .evaluateAll(l => l.map(e => e.dataset.entree));
   j.controle("le journal ne garde que les entrées de cette plante",
@@ -317,6 +328,8 @@ export default async function essai(navigateur) {
   /* Le déplacement entre zones se fait sur la ligne du lieu occupé, Sans zone
      comprise : l'ajout n'offre plus l'espace dont une zone est déjà prise, le
      poser là aurait retiré la zone sans le dire. */
+  await pg.locator("#feuille-corps .fj-lieu .fj-ligne").first().click();
+  await pg.waitForTimeout(300);
   await pg.locator("#feuille-corps .fj-lieu .sel-zone").selectOption("e1");
   await pg.waitForTimeout(800);
   j.controle("Sans zone ramène la plante à l'espace, et à ce seul lieu",
@@ -329,6 +342,11 @@ export default async function essai(navigateur) {
     await pg.locator("#feuille-corps .fj-lieu").count() === 0
     && net(await pg.locator("#feuille-corps .f-lieux .f-vide").textContent())
        === "Pas encore placée dans un espace.");
+  j.controle("le choix d'un lieu reste replié derrière son lien",
+    await pg.locator("#feuille-corps .fj-ou").count() === 0
+    && net(await pg.locator("#feuille-corps .fj-ailleurs").textContent()) === "Placer dans un espace");
+  await pg.locator("#feuille-corps .fj-ailleurs").click();
+  await pg.waitForTimeout(300);
   const aPlacer = await pg.locator("#feuille-corps .fj-ou option")
     .evaluateAll(l => l.map(o => o.textContent));
   j.controle("sans lieu, l'ajout offre de nouveau le jardin entier",

@@ -2888,8 +2888,8 @@ function ficheHTML(p, voulu) {
   const ouvre = voulu === "jardin" && !sel.has(p.id) ? defaut : (voulu || defaut);
   return `<div class="fiche-v2">
     <div class="f-entete">${motifFiche(p)}
-      <div class="f-chips"><span class="f-chip">${esc(p.typo || p.cat)}</span>
-      ${ad ? `<span class="f-chip">${esc(NIVEAUX[ad.level].court)} sous ce climat</span>` : ""}</div>
+      ${/* Le type n'a plus de pastille : la liste d'où l'on vient le dit. */
+        ad ? `<div class="f-chips"><span class="f-chip">${esc(NIVEAUX[ad.level].court)} sous ce climat</span></div>` : ""}
       ${jaugesFiche(p)}
       ${tox ? `<p class="f-tox"><span aria-hidden="true">&#9670;</span>${esc(p.attr.toxicite)}</p>` : ""}
       ${p.conseil ? `<p class="f-intro">${marquerTermes(p.conseil)}</p>` : ""}
@@ -7432,7 +7432,16 @@ function rendrePanJardin(p) {
   poserPhotosCarnet(z);
 }
 
+/* L'onglet du jardin se lit d'abord : une ligne par emplacement, l'espace, la
+   zone et la quantité. Toucher la ligne déplie ce qui la modifie, la zone, la
+   quantité et le retrait ; le lien « Placer ailleurs » déplie le choix d'un
+   lieu. Tout était déplié en permanence, deux listes, un champ et deux boutons
+   pour un seul emplacement. L'état déplié ne survit pas au changement de
+   plante. */
+let ouvertsFiche = { plante: null, lieu: null, ajout: false };
+
 function carteLieuxDeLaPlante(p) {
+  if (ouvertsFiche.plante !== p.id) ouvertsFiche = { plante: p.id, lieu: null, ajout: false };
   const c = document.createElement("section");
   c.className = "f-bloc f-lieux";
   c.innerHTML = `<h3>Où elle est</h3><div class="fj-corps"></div>`;
@@ -7441,30 +7450,47 @@ function carteLieuxDeLaPlante(p) {
   pris.map(id => noeud(id)).filter(Boolean).forEach(n => {
     const r = (aff.get(p.id) || []).find(x => x.espace_id === n.id) || {};
     const souche = noeud(racineDe(n.id));
+    const ouvert = ouvertsFiche.lieu === n.id;
     const d = document.createElement("div");
-    d.className = "fj-lieu";
+    d.className = "fj-lieu" + (ouvert ? " ouvert" : "");
     d.dataset.lieu = n.id;
-    /* La zone se change ici, sur la ligne du lieu occupé, Sans zone comprise :
-       il fallait jusque-là retirer la plante puis la reposer ailleurs, ou
-       passer par le mode d'édition de l'espace. La liste ne paraît pas tant que
-       l'espace n'a aucune zone. */
-    const zones = choixZoneHTML(n.id);
-    d.innerHTML = `<span class="fj-nom">${esc(souche ? souche.name : n.name)}</span>`
-      + (zones || (n.parent_id ? `<span class="fj-zone">${esc(n.name)}</span>` : ""))
-      + `<input class="qte" type="number" min="0" max="32000" placeholder="qté"`
-      + ` value="${r.quantity ?? ""}" aria-label="Quantité">`
-      + `<button type="button" class="lien fj-oter">Retirer</button>`;
-    d.querySelector(".qte").addEventListener("change", ev =>
-      majAffectation(p.id, n.id, ev.target.value));
-    const sz = d.querySelector(".sel-zone");
-    if (sz) sz.addEventListener("change", async () => {
-      await deplacer(p.id, n.id, sz.value);
+    const dit = [souche ? souche.name : n.name]
+      .concat(n.parent_id ? [n.name] : [])
+      .concat(r.quantity != null && r.quantity !== "" ? ["quantité " + r.quantity] : []);
+    d.innerHTML = `<button type="button" class="fj-ligne" aria-expanded="${ouvert}">`
+      + `<span class="fj-dit">${esc(dit.join(", "))}</span>`
+      + `<span class="fj-modif">${ouvert ? "Fermer" : "Modifier"}</span></button>`;
+    d.querySelector(".fj-ligne").addEventListener("click", () => {
+      ouvertsFiche.lieu = ouvert ? null : n.id;
       rendrePanJardin(p);
     });
-    d.querySelector(".fj-oter").addEventListener("click", async () => {
-      if (!await retirerDe(p.id, n.id)) return;
-      construireChips(); rendreTout(); rendrePanJardin(p);
-    });
+    if (ouvert) {
+      /* La zone se change ici, Sans zone comprise : il fallait jusque-là
+         retirer la plante puis la reposer ailleurs. La liste ne paraît pas
+         tant que l'espace n'a aucune zone. */
+      const e = document.createElement("div");
+      e.className = "fj-edition";
+      e.innerHTML = choixZoneHTML(n.id)
+        + `<input class="qte" type="number" min="0" max="32000" placeholder="qté"`
+        + ` value="${r.quantity ?? ""}" aria-label="Quantité">`
+        + `<button type="button" class="lien fj-oter">Retirer</button>`;
+      e.querySelector(".qte").addEventListener("change", async ev => {
+        await majAffectation(p.id, n.id, ev.target.value);
+        rendrePanJardin(p);
+      });
+      const sz = e.querySelector(".sel-zone");
+      if (sz) sz.addEventListener("change", async () => {
+        await deplacer(p.id, n.id, sz.value);
+        ouvertsFiche.lieu = sz.value;
+        rendrePanJardin(p);
+      });
+      e.querySelector(".fj-oter").addEventListener("click", async () => {
+        if (!await retirerDe(p.id, n.id)) return;
+        ouvertsFiche.lieu = null;
+        construireChips(); rendreTout(); rendrePanJardin(p);
+      });
+      d.appendChild(e);
+    }
     corps.appendChild(d);
   });
   if (!pris.length) {
@@ -7483,13 +7509,28 @@ function carteLieuxDeLaPlante(p) {
   if (libres.length) {
     const a = document.createElement("div");
     a.className = "fj-ajout";
-    a.innerHTML = `<select class="fj-ou" aria-label="Espace ou zone">`
-      + libres.map(x => `<option value="${x.id}">${esc(x.nom)}</option>`).join("")
-      + `</select><button type="button" class="lien fj-placer">Placer</button>`;
-    a.querySelector(".fj-placer").addEventListener("click", async () => {
-      if (!await placerSur(p.id, a.querySelector(".fj-ou").value, true)) return;
-      construireChips(); rendreTout(); rendrePanJardin(p);
-    });
+    if (!ouvertsFiche.ajout) {
+      a.innerHTML = `<button type="button" class="lien fj-ailleurs">`
+        + `${pris.length ? "Placer ailleurs" : "Placer dans un espace"}</button>`;
+      a.querySelector(".fj-ailleurs").addEventListener("click", () => {
+        ouvertsFiche.ajout = true;
+        rendrePanJardin(p);
+      });
+    } else {
+      a.innerHTML = `<select class="fj-ou" aria-label="Espace ou zone">`
+        + libres.map(x => `<option value="${x.id}">${esc(x.nom)}</option>`).join("")
+        + `</select><button type="button" class="lien fj-placer">Placer</button>`
+        + `<button type="button" class="lien fj-annuler">Annuler</button>`;
+      a.querySelector(".fj-placer").addEventListener("click", async () => {
+        if (!await placerSur(p.id, a.querySelector(".fj-ou").value, true)) return;
+        ouvertsFiche.ajout = false;
+        construireChips(); rendreTout(); rendrePanJardin(p);
+      });
+      a.querySelector(".fj-annuler").addEventListener("click", () => {
+        ouvertsFiche.ajout = false;
+        rendrePanJardin(p);
+      });
+    }
     corps.appendChild(a);
   }
   return c;
