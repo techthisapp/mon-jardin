@@ -1,10 +1,27 @@
 /* Bilan hydrique du sol. Le relevé du jardinier remplace la lame d'eau du
    modèle, la texture du sol fixe la réserve utile, et l'effacement d'un relevé
-   ramène le bilan à son état d'origine. */
+   ramène le bilan à son état d'origine.
+
+   Depuis le 13 octobre 2026, la texture se règle dans les réglages du jardin,
+   la feuille de l'eau ne faisant que la rappeler, et les relevés d'hier et
+   d'avant-hier se replient derrière un lien. */
 import { ouvrirContexte, journal, ouvrirMesure, nombre, net, METEO } from "./commun.mjs";
 
 const pleine = async pg => nombre((await pg.locator(".js-leg b").innerText()));
-const reserve = async pg => nombre((await pg.locator("#sol-note").innerText()).match(/retient ([\d,]+) mm/)[1]);
+const reserve = async pg => nombre((await pg.locator(".sol-rappel").innerText()).match(/retient ([\d,]+) mm/)[1]);
+
+// La texture se change dans les réglages du jardin, puis la feuille se rouvre.
+async function solEn(pg, texture) {
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+  await pg.locator("#btnJardin").click();
+  await pg.waitForTimeout(500);
+  await pg.locator("#selSol").selectOption(texture);
+  await pg.waitForTimeout(600);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+  await ouvrirMesure(pg, "eau");
+}
 
 export default async function essai(navigateur) {
   const j = journal("Bilan hydrique du sol");
@@ -16,7 +33,16 @@ export default async function essai(navigateur) {
   const avant = await pleine(pg);
   const solLimoneux = await reserve(pg);
   j.controle("réserve utile du sol limoneux sur 40 cm", solLimoneux === 62, solLimoneux + " mm");
-  j.controle("trois jours de relevés proposés", await pg.locator(".rel-ligne").count() === 3);
+  j.controle("seul le relevé du jour est ouvert", await pg.locator(".rel-ligne").count() === 1);
+  j.controle("la feuille ne propose plus de choisir la texture",
+    await pg.locator(".sol-opt, .sol-choix").count() === 0);
+  j.controle("elle la rappelle, le calcul la comptant limoneuse à défaut",
+    /^Sol non renseigné, compté limoneux/.test(net(await pg.locator(".sol-rappel").innerText())),
+    net(await pg.locator(".sol-rappel").innerText()));
+  await pg.locator(".rel-precedents").click();
+  await pg.waitForTimeout(500);
+  j.controle("les jours précédents se déplient par leur lien",
+    await pg.locator(".rel-ligne").count() === 3 && await pg.locator(".rel-precedents").count() === 0);
 
   j.section("saisie d'un relevé de pluie");
   await pg.locator(".rel-ligne").first().locator(".rel-pluie").fill("35");
@@ -31,15 +57,25 @@ export default async function essai(navigateur) {
     ecrits[0] && Number(ecrits[0].v.pluie_mm) === 35, JSON.stringify(ecrits[0] && ecrits[0].v.pluie_mm));
 
   j.section("changement de texture du sol");
-  await pg.locator('.sol-opt[data-sol="sableux"]').click();
-  await pg.waitForTimeout(800);
+  await pg.locator("#eauVersSol").click();
+  await pg.waitForTimeout(500);
+  j.controle("le lien de la feuille mène au réglage du sol",
+    await pg.locator("#selSol").isVisible(), String(await pg.locator("#selSol").isVisible()));
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(400);
+  await ouvrirMesure(pg, "eau");
+  await solEn(pg, "sableux");
   const solSableux = await reserve(pg);
+  j.controle("le réglage est enregistré sur le jardin",
+    await pg.evaluate(() => (window.__ECRITS__ || []).some(x => x.table === "gardens"
+      && x.v && x.v.sol_texture === "sableux")));
+  j.controle("la feuille rappelle la texture retenue",
+    /^Sol sableux/.test(net(await pg.locator(".sol-rappel").innerText())));
   j.controle("le sol sableux retient moins", solSableux < solLimoneux, solSableux + " mm");
   j.controle("la réserve se remplit d'autant plus vite", await pleine(pg) > apres);
 
   j.section("effacement du relevé");
-  await pg.locator('.sol-opt[data-sol="limoneux"]').click();
-  await pg.waitForTimeout(700);
+  await solEn(pg, "limoneux");
   await pg.locator(".rel-ligne").first().locator(".rel-pluie").fill("");
   await pg.locator("#feuille-titre").click();
   await pg.waitForTimeout(800);

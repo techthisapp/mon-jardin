@@ -359,6 +359,10 @@ Le code postal ne suffit pas à situer un jardin : 21500 couvre huit communes, 2
 
 La pastille d'eau de l'en-tête et le pied de la synthèse portent la décision du jour, arroser tant de litres, attendre la pluie annoncée, ou ne rien faire pendant tant de jours. Le litrage par plante de la fiche reste calé sur la normale de saison, qui est une référence stable et non une prévision.
 
+### Feuilles du temps et de l'eau, 13 octobre 2026
+
+La texture du sol se règle dans les réglages du jardin et non plus dans la feuille de l'eau, qui la rappelle. Chaque espace ou zone peut la redéfinir dans ses réglages du lieu, mais le bilan hydrique ne lit encore que celle du jardin : un bilan par lieu reste à faire. Le ruban des heures replie le ciel, l'UV, l'humidité et la pression derrière un lien. Détail dans la note `feuilles-temps-et-eau`.
+
 ### Corrections du module météorologique, 19 août 2026
 
 Quatorze corrections relevées sur le commit `dc9069b`, distinctes des vingt-trois de l'audit du 16 août. Trois défauts de calcul, deux contradictions de seuil et d'unité, une exclusion silencieuse, une affirmation sans fondement, un mécanisme jamais contrôlé, deux défauts de nommage et trois commentaires faux.

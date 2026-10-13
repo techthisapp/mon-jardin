@@ -4019,6 +4019,10 @@ let mgLecture = null;
    ruban, et une heure lue avant lui doit se retrouver après. */
 const MG_Z = 2.5;
 let mgZoom = null, mgSerie = null, mgLu = -1;
+/* La température, la pluie et le vent décident d'un geste au jardin ; le ciel,
+   l'indice UV, l'humidité et la pression le précisent. Les quatre derniers se
+   replient derrière un lien, le choix tenant le temps de la session. */
+let mgAutres = false;
 
 /* Une hauteur nulle réduit la voie à sa ligne de titre, sans dessin ni commande.
    Le titre d'une voie dessinée est le bouton qui l'agrandit, et le signe qu'il
@@ -4404,7 +4408,12 @@ function dessinMeteogramme(s) {
      disait alors de quelle heure venaient les valeurs affichées. */
   const dit = `<p class="mg-sel" hidden><span></span>`
     + `<button type="button" class="mg-rendre">Revenir aux plages</button></p>`;
-  return `<div class="mg">${dit}${voies.join("")}`
+  // Une voie agrandie parmi les quatre repliées les garde ouvertes.
+  const ouvertes = mgAutres || ["ciel", "uv", "hum", "pres"].includes(mgZoom);
+  return `<div class="mg">${dit}${voies.slice(0, 3).join("")}`
+    + `<button type="button" class="lien mg-plus" aria-expanded="${ouvertes}">`
+    + `${ouvertes ? "Replier les autres mesures" : "Autres mesures : ciel, UV, humidité, pression"}</button>`
+    + `<div class="mg-autres"${ouvertes ? "" : " hidden"}>${voies.slice(3).join("")}</div>`
     + `<svg class="mg-s" viewBox="0 0 ${MG_L} 14" aria-hidden="true">${axe}</svg>`
     + dit + `</div>`;
 }
@@ -4736,7 +4745,7 @@ function brancherRuban() {
     /* La lecture s'engage sur le dessin. Les commandes et les textes qui
        l'entourent ne sont pas une abscisse : toucher l'annonce en tête aurait
        lu l'heure qui se trouve sous ce mot. */
-    if (ev.target.closest(".mg-b, .mg-sel, .mg-l")) return;
+    if (ev.target.closest(".mg-b, .mg-sel, .mg-l, .mg-plus")) return;
     glisse = true; bouge = false;
     x0 = ev.clientX; y0 = ev.clientY; depart = indice(ev);
   });
@@ -4769,6 +4778,14 @@ function brancherLectures() {
   brancherRuban();
   $("feuille-corps").querySelectorAll(".mg-b").forEach(b =>
     b.addEventListener("click", () => basculerVoie(b.dataset.voie)));
+  const plus = $("feuille-corps").querySelector(".mg-plus");
+  if (plus) plus.addEventListener("click", () => {
+    const ouvertes = plus.getAttribute("aria-expanded") === "true";
+    mgAutres = !ouvertes;
+    if (ouvertes && ["ciel", "uv", "hum", "pres"].includes(mgZoom)) mgZoom = null;
+    $("tempsCorps").innerHTML = dessinMeteogramme(mgSerie);
+    brancherLectures();
+  });
 }
 
 function vueTemps() {
@@ -4913,6 +4930,11 @@ function tableSemaine() {
   }
   return `<table class="mt-table">${lignes.join("")}</table>`;
 }
+/* Les relevés d'hier et d'avant-hier se replient derrière un lien : on note
+   d'abord ce qui tombe le jour même. Un jour déjà renseigné les garde ouverts,
+   pour qu'une valeur saisie ne disparaisse pas de la vue. */
+let relevesDeplies = false;
+
 function vueEau() {
   const b = bilanHydrique(), d = meteo.daily, i = iJour();
   if (!b) return { titre: "L'eau", corps: "" };
@@ -4955,9 +4977,20 @@ function vueEau() {
         + `avant d'atteindre le seuil. Rien à apporter.`;
 
   const lignes = [];
+  const renseigne = k => {
+    const r = releves.get(d.time[k]);
+    return Boolean(r && ((r.pluie_mm !== null && r.pluie_mm !== undefined)
+      || (r.arrosage_mm !== null && r.arrosage_mm !== undefined)));
+  };
+  const precedentsOuverts = relevesDeplies
+    || [i - 1, i - 2].some(k => k >= 0 && renseigne(k));
   for (let k = i; k >= Math.max(0, i - 2); k--) {
     const iso = d.time[k], r = releves.get(iso) || {};
     const nom = k === i ? "aujourd'hui" : k === i - 1 ? "hier" : "avant-hier";
+    if (k === i - 1 && !precedentsOuverts) {
+      lignes.push(`<button type="button" class="lien rel-precedents">Jours précédents</button>`);
+      break;
+    }
     lignes.push(`<div class="rel-ligne" data-jour="${esc(iso)}">`
       + `<span class="rel-j">${esc(nom)}<small>modèle ${nombreFr(d.precipitation_sum[k] || 0)} mm</small></span>`
       + `<label class="rel-ch"><input type="number" step="0.5" min="0" max="400" `
@@ -4969,9 +5002,13 @@ function vueEau() {
       + `</div>`);
   }
 
-  const sols = Object.keys(RESERVE_SOL).map(t =>
-    `<button type="button" class="sol-opt${t === b.texture ? " actif" : ""}" data-sol="${t}">`
-    + `${esc(SOL_LIBELLE[t])}<small>${RESERVE_SOL[t]} mm/m</small></button>`).join("");
+  /* La texture du sol est un réglage du jardin : elle s'y règle, avec le
+     climat et la commune, et chaque espace ou zone peut la redéfinir dans ses
+     réglages du lieu. La feuille ne fait que la rappeler. */
+  const g = jardinActif() || {};
+  const dite = RESERVE_SOL[g.sol_texture]
+    ? `Sol ${SOL_LIBELLE[g.sol_texture].toLowerCase()}`
+    : `Sol non renseigné, compté limoneux`;
 
   /* La jauge, le chiffre et la conclusion tiennent dans un seul bloc : c'est une
      seule et même lecture, elle n'a pas à traverser trois cadres. */
@@ -5006,15 +5043,13 @@ function vueEau() {
         : `<p class="f-note">Aucun poste de mesure rattaché à ce jardin, la pluie vient du modèle. `
           + `Renseignez la commune pour rattacher le poste le plus proche.</p>`)
       + `<div class="f-carte"><div class="f-carte-tete"><h3>Vos relevés</h3></div>`
-      + `<p class="f-note">Un millimètre vaut un litre par mètre carré. Ce que vous mesurez `
-      + `remplace la lame d'eau du modèle. Le calcul ne connaît que ce qui est enregistré, `
-      + `notez vos arrosages pour qu'il reste juste.</p>`
+      + `<p class="f-note">En millimètres, soit en litres par mètre carré : ce que vous `
+      + `mesurez remplace le modèle, et vos arrosages gardent le calcul juste.</p>`
       + `<div class="rel-table">${lignes.join("")}</div>`
       + `<p class="f-note" id="rel-note"></p></div>`
-      + `<div class="f-carte"><div class="f-carte-tete"><h3>Texture du sol</h3></div>`
-      + `<div class="sol-choix">${sols}</div>`
-      + `<p class="f-note" id="sol-note">Elle fixe la réserve utile. Sur ${esc(ZR_M * 100)} cm `
-      + `de profondeur, votre sol retient ${nombreFr(b.taw)} mm.</p></div>`
+      + `<p class="f-note sol-rappel">${esc(dite)} : sur ${esc(ZR_M * 100)} cm de profondeur, `
+      + `il retient ${nombreFr(b.taw)} mm. `
+      + `<button type="button" class="lien" id="eauVersSol">Changer la texture</button></p>`
       + `<p class="f-note">Bilan hydrique du bulletin FAO 56, chapitre 8. Évapotranspiration de `
       + `référence calculée au point du jardin, coefficient cultural moyen des plantes retenues, `
       + `seuil de confort ajusté à la demande du jour. Le litrage par plante de la fiche reste `
@@ -5022,7 +5057,7 @@ function vueEau() {
     brancher: brancherEau };
 }
 
-// Saisie des relevés et choix de la texture, dans la feuille de l'eau.
+// Saisie des relevés dans la feuille de l'eau, et renvoi au réglage du sol.
 function brancherEau() {
   const note = $("rel-note");
   const enregistrer = async ligne => {
@@ -5049,16 +5084,10 @@ function brancherEau() {
       setTimeout(() => { if (!$("feuille").hidden && document.querySelector(".rel-table")) ouvrirVue("eau"); }, 0);
     });
   }
-  document.querySelectorAll(".sol-opt").forEach(b => b.addEventListener("click", async () => {
-    const g = jardinActif();
-    if (!g || !session) { $("sol-note").textContent = "Connectez-vous pour enregistrer la texture."; return; }
-    const { error } = await db.from("gardens").update({ sol_texture: b.dataset.sol }).eq("id", g.id);
-    if (error) { $("sol-note").textContent = "Enregistrement refusé : " + error.message; return; }
-    g.sol_texture = b.dataset.sol;
-    document.querySelectorAll(".sol-opt").forEach(x => x.classList.toggle("actif", x === b));
-    rendreBandeau();
-    ouvrirVue("eau");
-  }));
+  const plus = document.querySelector(".rel-precedents");
+  if (plus) plus.addEventListener("click", () => { relevesDeplies = true; ouvrirVue("eau"); });
+  const sol = $("eauVersSol");
+  if (sol) sol.addEventListener("click", () => ouvrirVue(session ? "jardin" : "compte"));
 }
 
 /* La course du soleil, en arc au-dessus de l'horizon. La part parcourue depuis
@@ -6181,6 +6210,14 @@ function majJardinUI() {
         .map(x => `<option value="${x.key}">${esc(x.label)}</option>`).join("");
   sc.value = g && g.climate_key ? g.climate_key : "";
   $("descClimat").textContent = c ? c.description : "";
+  const ss = $("selSol");
+  ss.innerHTML = '<option value="">Non renseigné</option>'
+    + Object.keys(RESERVE_SOL).map(t =>
+        `<option value="${t}">${esc(SOL_LIBELLE[t])}, ${RESERVE_SOL[t]} mm par mètre</option>`).join("");
+  ss.value = g && RESERVE_SOL[g.sol_texture] ? g.sol_texture : "";
+  $("aideSol").textContent = (g && RESERVE_SOL[g.sol_texture] ? "" : "Le calcul de l'eau le compte limoneux. ")
+    + "La texture fixe la réserve d'eau du sol. Un espace ou une zone dont la terre "
+    + "diffère, un carré rempli de terreau ou un pot, se règle dans ses réglages du lieu.";
   $("decalClimat").textContent = c && (c.shift_spring || c.shift_autumn)
     ? `Décalage appliqué au calendrier : ${demiEnTexte(c.shift_spring)} au premier semestre, ${demiEnTexte(c.shift_autumn)} au second.`
     : "";
@@ -7740,6 +7777,16 @@ sur("selClimat", "change", async function () {
   g.climate_key = v;
   await chargerAdaptations();
   majJardinUI(); rendreTout();
+});
+
+sur("selSol", "change", async function () {
+  const g = jardinActif();
+  if (!g) return;
+  const v = this.value || null;
+  const { error } = await db.from("gardens").update({ sol_texture: v }).eq("id", g.id);
+  if (error) { info("Texture non enregistrée : " + error.message, true); return; }
+  g.sol_texture = v;
+  majJardinUI(); rendreBandeau();
 });
 
 sur("nouveauJardin", "click", async () => {

@@ -60,6 +60,7 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `vigilance-meteorologique.md` | 1er août | Collecte de la vigilance par data.gouv.fr, aléas et couleurs, affichage au bandeau | Réalisé |
 | `feuille-du-temps.md` | 14 août | Feuille météo sur vingt-quatre heures glissantes : conseils, ruban, liste, données horaires | Réalisé |
 | `source-meteo-fiabilite.md` | 16 août | Écart de pluie constaté, superposition d'AROME sur la série horaire, seuil de mention unique | Réalisé |
+| `feuilles-temps-et-eau.md` | 13 octobre | Quatre grandeurs du ruban repliées, relevés des jours précédents repliés, texture du sol déplacée dans les réglages du jardin, bilan par lieu non engagé | Réalisé |
 | `audit-meteo.md` | 16 août | Défauts du code météorologique classés par famille, correctifs et contrôles ajoutés | Réalisé, défauts mineurs listés non corrigés |
 
 ## Écrans et navigation

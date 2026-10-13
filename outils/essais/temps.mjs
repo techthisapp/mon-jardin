@@ -55,6 +55,20 @@ export default async function essai(navigateur) {
   j.controle("la première parle de la pluie", /pluie|lame/i.test(jd[0]), net(jd[0]));
   j.controle("aucune ligne ne se répète", new Set(jd).size === jd.length);
 
+  /* La température, la pluie et le vent décident d'un geste ; les quatre
+     autres grandeurs le précisent et se replient derrière un lien. */
+  j.section("quatre grandeurs se replient derrière un lien");
+  const visibles = async () => (await pg.locator(".mg-v .mg-t").evaluateAll(l =>
+    l.filter(e => e.checkVisibility()).map(e => e.innerText.split("\n")[0].trim())));
+  const avantPlus = await visibles();
+  j.controle("trois voies à l'ouverture", avantPlus.length === 3, avantPlus.join(", "));
+  const lien = net(await pg.locator(".mg-plus").innerText());
+  j.controle("le lien nomme ce qu'il replie",
+    lien === "Autres mesures : ciel, UV, humidité, pression", lien);
+  await pg.locator(".mg-plus").click();
+  await pg.waitForTimeout(400);
+  j.controle("il déplie les quatre autres", (await visibles()).length === 7);
+
   j.section("le ruban empile une voie par grandeur");
   const voies = await pg.locator(".mg-v .mg-t").allInnerTexts();
   j.controle("sept voies, une par grandeur", voies.length === 7,
