@@ -263,17 +263,43 @@ export default async function essai(navigateur) {
     await pg.locator("#corpsFiltresS #vider").count() === 1
     && await pg.locator("#corpsFiltresS #compte").count() === 1);
 
-  /* Le compte de la portée était porté par le segment qui la choisissait : il
-     revient au bilan, qui le disait déjà quand un filtre écartait quelque
-     chose et se taisait le reste du temps. */
-  j.section("le bilan porte le compte de la portée");
-  const repos = net(await pg.locator("#bilanSel").textContent());
-  j.controle("au repos, il annonce le compte du jardin",
-    repos === `${auJardin} plantes`, repos);
+  /* Les plantes se groupaient sur deux niveaux, le type puis la catégorie :
+     onze titres pour dix-sept plantes, dont cinq sur une seule. Il n'en reste
+     qu'un, le type, comme sur l'écran d'un espace ; la catégorie se lit sous
+     le nom. */
+  j.section("un seul niveau de regroupement");
+  const groupes = await pg.evaluate(() => ({
+    sous: document.querySelectorAll("#listes .groupe-titre").length,
+    types: [...document.querySelectorAll("#listes .groupe-type b")].map(b => b.textContent),
+    blocs: [...document.querySelectorAll("#listes .liste")].map(l =>
+      [...l.querySelectorAll(".item-bloc")].map(b => ({
+        nom: (b.querySelector(".nom-l") || b).textContent.trim(),
+        cat: (b.querySelector(".cat-mini") || {}).textContent || "",
+      }))),
+  }));
+  j.controle("aucun titre de catégorie", groupes.sous === 0);
+  j.controle("un bloc par type, dans l'ordre du référentiel",
+    groupes.types.length === groupes.blocs.length
+    && groupes.types.every((t, i) => !i || ["Légumes", "Fruits", "Aromatiques", "Ornement"]
+      .indexOf(t) > ["Légumes", "Fruits", "Aromatiques", "Ornement"].indexOf(groupes.types[i - 1])),
+    groupes.types.join(", "));
+  j.controle("chaque plante porte sa catégorie sous son nom, sauf à la redire",
+    groupes.blocs.every((b, i) => b.every(x => x.cat ? x.cat !== groupes.types[i] : groupes.types[i] === "Aromatiques"))
+    && groupes.blocs.flat().some(x => x.cat),
+    groupes.blocs.map((b, i) => groupes.types[i] + " : " + b.map(x => x.cat || "rien").join(", ")).join(" | "));
+
+  /* Le compte de la portée se dit une fois, dans le titre de l'écran. Le
+     bilan le redisait sous la recherche ; il ne parle plus que lorsqu'un
+     filtre écarte quelque chose. */
+  j.section("le compte se dit une fois");
+  const titre = net(await pg.locator("#teteEcranPlantes").textContent());
+  j.controle("au repos, le titre porte le compte du jardin",
+    titre.endsWith(`${auJardin} plantes au jardin`), titre);
+  j.controle("et le bilan se tait", !(await pg.locator("#bilanSel").isVisible()));
   await pg.fill("#rech", "zzz");
   await pg.waitForTimeout(300);
   const filtre = net(await pg.locator("#bilanSel").textContent());
-  j.controle("filtré, il dit ce qui reste sur ce compte",
+  j.controle("filtré, le bilan dit ce qui reste sur ce compte",
     / sur 20 affichées$/.test(filtre), filtre);
   await pg.fill("#rech", "");
   await pg.waitForTimeout(300);

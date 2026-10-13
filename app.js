@@ -181,7 +181,7 @@ let categories = [];
 let sel = new Set();
 let jardinId = null;
 let session = null;
-let tri = "categorie";
+let tri = "type";
 let jardinSeul = true;   // le jardin de la personne prime sur le catalogue
 let climatSeul = false;  // Mes plantes, restreint aux plantes adaptées au climat du jardin
 /* L'écran du bouton rond porte deux onglets. Le premier montre le jardin tel
@@ -1249,7 +1249,11 @@ function carteItem(p) {
   b.type = "button"; b.className = "item";
   b.setAttribute("aria-pressed", String(sel.has(p.id)));
   const ad = adapt[p.id];
-  const sousTitre = tri === "alpha" ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
+  /* La catégorie n'a plus de titre de section depuis le 13 octobre : elle se
+     lit sous le nom, dans les deux regroupements. Sous le titre d'un type qui
+     porte son nom, celui des aromatiques, elle se tait. */
+  const sousTitre = tri === "alpha" || p.cat !== typoDe(p.cat)
+    ? `<span class="cat-mini">${esc(p.cat)}</span>` : "";
   const lieu = lieuHTML(p);
   /* La boîte de vignette est réservée même sans planche : cent vingt-cinq
      plantes sur trois cent quinze n'en ont pas, et leur nom démarrait alors à
@@ -1466,10 +1470,10 @@ function rendreSelection() {
   /* Le compte de la portée était porté par le segment qui la choisissait : il
      revient au bilan, qui le disait déjà quand un filtre écartait quelque
      chose et se taisait le reste du temps. */
-  bs.hidden = false;
-  bs.textContent = lot.length === total
-    ? `${total} plante${total > 1 ? "s" : ""}`
-    : `${lot.length} sur ${total} affichées`;
+  /* Au repos, le titre de l'écran porte le compte : le bilan ne le redit pas
+     et ne parle que lorsqu'un filtre écarte quelque chose. */
+  bs.hidden = lot.length === total;
+  bs.textContent = lot.length === total ? "" : `${lot.length} sur ${total} affichées`;
 
   if (!lot.length) { $("videSel").hidden = false; return; }
   $("videSel").hidden = true;
@@ -1482,29 +1486,21 @@ function rendreSelection() {
     poserPlanches(zone);
     return;
   }
-  // Deux niveaux : le type d'abord, ses catégories ensuite.
+  /* Un seul niveau, le type, comme sur l'écran d'un espace. Les catégories
+     faisaient un second rang de titres, dont la plupart ne couvraient qu'une
+     plante au jardin : elles se lisent sous le nom de chaque plante. */
   ORDRE_TYPO.forEach(t => {
     const dansType = lot.filter(p => typoDe(p.cat) === t);
     if (!dansType.length) return;
-
     const tete = document.createElement("p");
     tete.className = "groupe-type";
     tete.innerHTML = `<i class="pastille" style="background:${COUL_TYPO[t]}"></i>`
       + `<b>${esc(t)}</b><span class="nb">${dansType.length}</span>`;
     zone.appendChild(tete);
-
-    categories.filter(c => typoDe(c) === t).forEach(c => {
-      const sous = dansType.filter(p => p.cat === c);
-      if (!sous.length) return;
-      const h = document.createElement("p");
-      h.className = "groupe-titre";
-      h.innerHTML = `<b>${esc(c)}</b><span class="nb">${sous.length}</span>`;
-      zone.appendChild(h);
-      const g = document.createElement("div");
-      g.className = "liste";
-      sous.forEach(p => g.appendChild(carteItem(p)));
-      zone.appendChild(g);
-    });
+    const g = document.createElement("div");
+    g.className = "liste";
+    dansType.forEach(p => g.appendChild(carteItem(p)));
+    zone.appendChild(g);
   });
   poserPlanches(zone);
 }

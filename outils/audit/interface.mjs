@@ -65,7 +65,7 @@ const mesurer = () => pg.evaluate(() => {
   const feuille = document.getElementById("feuille");
   const ouverte = feuille && !feuille.hidden;
   const racine = ouverte ? document.getElementById("feuille-corps")
-    : document.querySelector("main section:not([hidden])") || document.body;
+    : document.querySelector("main > section:not([hidden])") || document.body;
   const vis = e => e.offsetParent !== null && e.getBoundingClientRect().height > 0;
   const ctrl = [...racine.querySelectorAll("button, a[href], input, select, summary, [role=button], [role=tab]")].filter(vis);
   const texte = (racine.innerText || "").replace(/\s+/g, " ").trim();

@@ -81,6 +81,7 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `feuille-de-la-saison.md` | 13 août | Contenu calculé de la feuille de la saison : temps restant, récoltes, protections | Réalisé |
 | `bords-de-la-quinzaine.md` | 15 août | Mentions de première et de dernière quinzaine à l'écran du jour, pastilles, contrôles | Réalisé, phrase et niveau des ouvertures retirés depuis par `ecran-jour-redites.md` |
 | `annee-a-la-quinzaine.md` | 12 octobre | Audit des écrans avant simplification, écran de l'année ouvert sur la quinzaine résumée par geste, flèches de parcours, bascule vers la frise | Réalisé, autres lots de l'audit ouverts |
+| `listes-de-plantes-un-niveau.md` | 13 octobre | Mes plantes et catalogue groupés sur le seul type, catégorie sous le nom, compte dit une fois | Réalisé |
 | `ecran-jour-redites.md` | 13 octobre | Écran du jour : phrase des ouvertures et son niveau retirés, eau dite à la seule tuile, mesures avant et après | Réalisé |
 
 ## Planches et photographies
