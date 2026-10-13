@@ -249,6 +249,27 @@ export default async function essai(navigateur) {
   j.controle("il paraît quand la rangée le déclare ouvert",
     tiroir && tiroir.apres === "visible", tiroir && tiroir.apres);
 
+  /* Changer d'écran rendait la vue d'ensemble du jour, mais l'entrée
+     d'historique gardait la liste complète : fermer ensuite une feuille, qui
+     revient d'un pas, la rouvrait. Relevé par l'audit par personas du
+     13 octobre 2026. */
+  j.section("une feuille refermée ne rouvre pas un niveau quitté");
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  await pg.locator("#btnTout").click();
+  await pg.waitForTimeout(500);
+  await pg.locator('.onglet[data-ecran="planning"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  await pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await pg.waitForTimeout(400);
+  await pg.locator("#blocTemps .tm-temps").click();
+  await pg.waitForTimeout(600);
+  await pg.locator("#fermerFeuille").click();
+  await pg.waitForTimeout(600);
+  j.controle("la croix rend la vue d'ensemble du jour",
+    await pg.locator("#vueEnsemble:not([hidden])").count() === 1
+    && await pg.locator("#niveauDetail[hidden]").count() === 1);
+
   await ctx.close();
   return j.fin(erreurs);
 }

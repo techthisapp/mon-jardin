@@ -1119,6 +1119,13 @@ function afficher(dest) {
   const section = SECTION[dest] || dest;
   // Changer d'écran principal rend la vue d'ensemble, jamais une tâche ouverte.
   if (vueDetail !== null) { vueDetail = null; rendreMaintenant(); }
+  /* L'entrée d'historique du niveau quitté le portait encore : la fermeture
+     d'une feuille, qui revient d'un pas, rouvrait alors la liste complète sur
+     l'écran du jour. L'entrée courante est ramenée à la vue d'ensemble. */
+  if (history.state && history.state.detail) {
+    try { history.replaceState({ ...history.state, detail: null }, ""); }
+    catch (e) { /* historique indisponible */ }
+  }
   ECRANS.forEach(n => { $("ec-" + n).hidden = (n !== section); });
   document.body.classList.toggle("sur-carnet", section === "carnet");
   marquerOnglets();

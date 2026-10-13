@@ -896,6 +896,10 @@ La majorité du contenu jardinage francophone en ligne se recopie. Cinq sites d'
 
 Sur les référentiels ouverts : la taxonomie est bien couverte par TAXREF, la BDTFX de Tela Botanica, GBIF et POWO. Les données de culture ne le sont pas. OpenFarm, qui s'en approchait, a fermé ses serveurs en avril 2025. EcoCrop, base de la FAO en accès ouvert, couvre 133 des 288 espèces du référentiel, mais sa température létale répond à une autre question que `frost_min_c` : elle vaut en végétation, pas pour une plante dormante. Ses fourchettes de pH et ses optimums thermiques sont en revanche utilisables en recoupement.
 
+### Interface, audit par personas du 13 octobre 2026
+
+Quatre personas, une débutante, un jardinier expérimenté presbyte, une jardinière d'ornement organisée et un utilisateur pressé daltonien, ont relu quarante-cinq étapes de parcours. Vingt constats sont ouverts dans la note `audit-personas`, dont onze à effort faible : la tuile de l'eau qui ne dit pas la décision, les pastilles de quinzaine lues comme des dates, un même geste nommé de trois façons, la saisie au carnet qui impose un lieu, les textes secondaires sous le seuil de contraste. Plusieurs demandent un arbitrage de contenu ou de projet.
+
 ### Limites du modèle connues
 
 L'hysope et la valériane rouge portent une note qui dit « pauvre et calcaire », alors que la clé `soil` n'en porte qu'une. Le calcaire a été retenu, c'est l'information qui décide d'une plantation.
