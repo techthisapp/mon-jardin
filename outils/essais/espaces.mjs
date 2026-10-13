@@ -101,8 +101,20 @@ export default async function essai(navigateur) {
 
   j.section("le premier niveau ne montre que les espaces");
   const cles = await pg.locator(".tuile-espace").evaluateAll(l => l.map(b => b.dataset.espace));
-  j.controle("une tuile par espace, plus les plantes non placées",
-    JSON.stringify(cles) === JSON.stringify(["e1", "e2", "0"]), cles.join(" "));
+  /* Toutes les plantes sont placées : la tuile des non placées, vide, ne
+     paraît pas. Elle revient plus bas, quand un retrait en laisse une. */
+  j.controle("une tuile par espace, et aucune pour des non placées absentes",
+    JSON.stringify(cles) === JSON.stringify(["e1", "e2"]), cles.join(" "));
+  j.controle("le formulaire d'un nouvel espace attend derrière son lien",
+    await pg.locator("#form-espace").isHidden()
+    && await pg.locator("#ouvrirAjoutEspace").isVisible()
+    && await pg.locator(".aide-espaces").isHidden());
+  await pg.locator("#ouvrirAjoutEspace").click();
+  await pg.waitForTimeout(200);
+  j.controle("le lien l'ouvre, le champ prêt à la saisie",
+    await pg.locator("#form-espace").isVisible()
+    && await pg.locator("#ouvrirAjoutEspace").isHidden()
+    && await pg.evaluate(() => document.activeElement && document.activeElement.id === "nomEspace"));
   const nbE1 = net(await pg.locator('.tuile-espace[data-espace="e1"] .tuile-nb').textContent());
   j.controle("le compte d'un espace descend dans ses zones", nbE1 === "5", nbE1);
   const uniteE1 = net(await pg.locator('.tuile-espace[data-espace="e1"] .tuile-unite').textContent());
@@ -360,12 +372,23 @@ export default async function essai(navigateur) {
   j.controle("le caryoptéris, sans planche ni photographie, garde sa boîte",
     await sansZone(pg, CARYOPTERIS.id).locator(".im-vide").count() === 1);
 
-  j.section("les plantes se groupent par typologie");
-  const groupes = await pg.locator("#detailEspace > .corps-espace .groupe-typo")
-    .evaluateAll(l => l.map(e => e.querySelector("h3").textContent));
-  j.controle("un groupe par typologie présente, dans l'ordre de l'application",
-    JSON.stringify(groupes) === JSON.stringify(["Légumes", "Fruits", "Ornement"]),
-    groupes.join(" | "));
+  /* Dans un espace découpé en zones, la zone est le seul niveau : les titres
+     de type repris sous « Sans zone » en faisaient un second. Un espace sans
+     zone garde ses titres de type, qui sont alors son seul niveau. */
+  j.section("un seul niveau de regroupement");
+  const groupes = await pg.locator("#detailEspace .groupe-typo").count();
+  j.controle("un espace découpé en zones ne regroupe pas par type", groupes === 0, String(groupes));
+  const noms = await pg.locator("#detailEspace > .corps-espace .nom-espace")
+    .evaluateAll(l => l.map(e => e.textContent.trim()));
+  j.controle("ses plantes sans zone se suivent dans l'ordre alphabétique",
+    noms.length > 1 && noms.every((n, i) => !i || noms[i - 1].localeCompare(n, "fr") <= 0),
+    noms.join(" | "));
+  await ouvrirEspace(pg, "e2");
+  const groupesE2 = await pg.locator("#detailEspace .groupe-typo h3")
+    .evaluateAll(l => l.map(e => e.textContent));
+  j.controle("un espace sans zone garde ses titres de type",
+    JSON.stringify(groupesE2) === '["Légumes"]', groupesE2.join(" | "));
+  await ouvrirEspace(pg, "e1");
 
   j.section("liste ou mosaïque, au choix");
   j.controle("la liste est la vue d'ouverture",
@@ -433,8 +456,8 @@ export default async function essai(navigateur) {
     new RegExp(`^${annonce} plantes? sur \\d+,`).test(net(sous.mesure)), net(sous.mesure));
   j.controle("les comptes des sections suivent",
     sous.sections === annonce, `${sous.sections} pour ${annonce}`);
-  j.controle("ceux des groupes de typologie aussi",
-    sous.groupes === annonce, `${sous.groupes} pour ${annonce}`);
+  j.controle("aucun titre de type ne s'y ajoute",
+    sous.groupes === 0, `${sous.groupes} plantes sous un titre de type`);
   j.controle("aucune carte ne redit la tâche que la pastille nomme",
     sous.pastilles === 0, `${sous.pastilles} pastilles`);
   await pg.locator(`#detailEspace .ml-c[data-tache="${tache}"]`).click();

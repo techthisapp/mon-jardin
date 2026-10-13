@@ -776,6 +776,8 @@ Depuis le 12 octobre 2026, l'écran de l'année s'ouvre sur la quinzaine en cour
 
 Deux écrans de réglage, derrière le bouton de l'en-tête.
 
+Depuis le 13 octobre 2026, l'écran du jardin replie la création d'un espace derrière un lien et ne montre la tuile des plantes non placées que si elle en compte ; dans un espace découpé en zones, les plantes ne se groupent plus par type (note `jardin-et-espaces-allege`).
+
 **Jardin et espaces** contient le jardin actif, sa création et son renommage, le climat, les espaces avec leurs plantes, le compte et le code de reprise.
 
 **Mes plantes** liste le catalogue groupé par type, la catégorie se lisant sous le nom depuis le 13 octobre 2026 (note `listes-de-plantes-un-niveau`), avec recherche sur le nom commun, le nom latin et la famille, et une jauge d'adaptation au climat à quatre crans. Le bouton Adaptées à mon climat restreint la liste aux plantes de niveau adaptée sous le climat du jardin actif. Il n'apparaît que si un jardin déclare son climat.

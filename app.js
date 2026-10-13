@@ -6262,8 +6262,10 @@ function rendreEspaces() {
 
 function rendreTuilesEspaces(z) {
   z.innerHTML = "";
+  /* La tuile des plantes non placées ne paraît que lorsqu'il y en a : vide,
+     elle n'ouvrait qu'un message disant que tout est rangé. */
   const cases = racines().map(zo => ({ cle: zo.id, nom: zo.name, couleur: zo.color }))
-    .concat([{ cle: "0", nom: "Non placées", sansCouleur: true }]);
+    .concat(plantesDeLEspace("0").length ? [{ cle: "0", nom: "Non placées", sansCouleur: true }] : []);
   cases.forEach(v => {
     const n = plantesDeLEspace(v.cle).length;
     const nz = v.cle === "0" ? 0 : zonesDe(v.cle).length;
@@ -6289,6 +6291,18 @@ function rendreTuilesEspaces(z) {
     p.textContent = "Aucun espace. Ajoutez-en un pour découper ce jardin.";
     z.appendChild(p);
   }
+  majAjoutEspace(false);
+}
+
+/* Le formulaire d'un nouvel espace et son aide ne restent ouverts que pour un
+   jardin qui n'a encore aucun espace, ou quand le lien les a demandés. */
+function majAjoutEspace(demande) {
+  const vide = !racines().length;
+  const ouvert = vide || demande;
+  if ($("form-espace")) $("form-espace").hidden = !ouvert;
+  if ($("ouvrirAjoutEspace")) $("ouvrirAjoutEspace").hidden = ouvert;
+  const aide = document.querySelector(".aide-espaces");
+  if (aide) aide.hidden = !vide;
 }
 
 /* ---------------------------------------------------------------------------
@@ -6723,6 +6737,18 @@ function corpsDuLieu(cle) {
     return corps;
   }
   const mosaique = vueEspace === "mosaique" && cle !== "0";
+  /* Dans un espace découpé en zones, la zone est le seul niveau de lecture :
+     les titres de type repris sous « Sans zone » en faisaient un second, comme
+     les catégories des listes de plantes avant le 13 octobre. Un espace sans
+     zone garde ses titres de type, qui sont alors son seul niveau. */
+  if (cle !== "0" && zonesDe(racineDe(cle)).length) {
+    const b = document.createElement("div");
+    b.className = mosaique ? "mosaique-lieu" : "rangs-lieu";
+    membres.slice().sort((x, y) => x.nom.localeCompare(y.nom, "fr"))
+      .forEach(p => b.appendChild(mosaique ? tuileDuLieu(p, cle) : ligneDuLieu(p, cle)));
+    corps.appendChild(b);
+    return corps;
+  }
   ORDRE_TYPO.forEach(typo => {
     const lot = membres.filter(p => p.typo === typo);
     if (!lot.length) return;
@@ -7693,6 +7719,10 @@ sur("form-espace", "submit", e => {
   if (!n || !jardinId) return;
   $("nomEspace").value = "";
   creerEspace(n);
+});
+sur("ouvrirAjoutEspace", "click", () => {
+  majAjoutEspace(true);
+  $("nomEspace").focus();
 });
 
 sur("selJardin", "change", async function () {

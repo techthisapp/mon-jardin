@@ -66,13 +66,22 @@ const mesurer = () => pg.evaluate(() => {
   const ouverte = feuille && !feuille.hidden;
   const racine = ouverte ? document.getElementById("feuille-corps")
     : document.querySelector("main > section:not([hidden])") || document.body;
-  const vis = e => e.offsetParent !== null && e.getBoundingClientRect().height > 0;
+  /* Le contenu d'un détail replié garde ses boîtes dans Chromium : seul
+     `checkVisibility` l'écarte, avec ce que masquent l'opacité et la
+     visibilité. Sans lui, les zones repliées d'un espace comptaient. */
+  const vis = e => e.offsetParent !== null && e.getBoundingClientRect().height > 0
+    && e.checkVisibility({ opacityProperty: true, visibilityProperty: true });
   const ctrl = [...racine.querySelectorAll("button, a[href], input, select, summary, [role=button], [role=tab]")].filter(vis);
   const texte = (racine.innerText || "").replace(/\s+/g, " ").trim();
   return {
     racine: ouverte ? "feuille" : racine.id,
     hauteur: Math.round(ouverte ? racine.scrollHeight : document.documentElement.scrollHeight),
     controles: ctrl.length,
+    // Le détail des contrôles, par classe, pour savoir ce qui pèse.
+    parClasse: ctrl.reduce((a, e) => {
+      const c = e.tagName.toLowerCase() + "." + (e.className || "").toString().split(" ")[0];
+      a[c] = (a[c] || 0) + 1; return a;
+    }, {}),
     mots: texte ? texte.split(" ").length : 0,
     titres: [...racine.querySelectorAll("h2, h3, .titre-bloc, .nom-niveau")].filter(vis)
       .map(h => h.innerText.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 30),

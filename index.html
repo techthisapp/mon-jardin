@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="b1c6cd44d1">
+<meta name="version-appli" content="5ea9008910">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -195,7 +195,11 @@
          entièrement. -->
       <div id="niveauEspaces">
         <div class="tuiles-espaces" id="tuilesEspaces"></div>
-        <form class="ajout-espace" id="form-espace">
+        <!-- Créer un espace est un geste rare : il se replie derrière son lien,
+             comme l'ajout d'une plante ou d'une zone sur l'écran d'un espace.
+             Un jardin sans espace l'a ouvert, avec son aide. -->
+        <button class="lien" id="ouvrirAjoutEspace" type="button">Ajouter un espace</button>
+        <form class="ajout-espace" id="form-espace" hidden>
           <label class="etiq-filtre" for="nomEspace">Nouvel espace</label>
           <input id="nomEspace" type="text" maxlength="40" placeholder="Potager, verger, terrasse">
           <button class="lien" type="submit">Ajouter</button>
@@ -340,7 +344,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=fe781bde82"></script>
+<script type="module" src="./app.js?v=b1621d93ce"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->
