@@ -6,7 +6,7 @@
 <title>Mon jardin</title>
 <link rel="preload" href="./polices/plex-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="./polices/plex-cond-600.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="./styles.css?v=a6be096df4">
+<link rel="stylesheet" href="./styles.css?v=a6cf192885">
 <link rel="modulepreload" href="./vendor/supabase.js?v=e1ae1f6cea">
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" href="./icone.svg" type="image/svg+xml">
@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="14dcb70e48">
+<meta name="version-appli" content="15ac995c77">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -260,7 +260,7 @@
     </div>
 
     <div id="listes"></div>
-    <p class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</p>
+    <div class="vide" id="videSel" hidden>Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.</div>
     <p class="pied-plantes" id="piedPlantes" hidden>
       <button class="lien" id="versCatalogue" type="button">Chercher au catalogue</button>
     </p>
@@ -287,7 +287,11 @@
         <input id="email" type="email" required placeholder="vous@exemple.fr" aria-label="Adresse électronique">
         <button class="bouton" type="submit">Recevoir le lien</button>
       </form>
-      <form id="form-code">
+      <!-- Le second champ, code de reprise ou code reçu, faisait jeu égal avec
+           l'adresse : il se replie derrière son lien, et s'ouvre de lui-même
+           une fois le lien envoyé. -->
+      <button class="lien" id="ouvrirCode" type="button">J'ai un code de reprise ou un code reçu</button>
+      <form id="form-code" hidden>
         <input id="code" type="text" autocomplete="one-time-code" placeholder="Code de reprise, code, ou lien collé" aria-label="Lien ou code reçu par courrier électronique">
         <button class="bouton" type="submit">Valider</button>
       </form>
@@ -352,7 +356,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=8fac4dad3c"></script>
+<script type="module" src="./app.js?v=02d6ae9642"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->
@@ -371,12 +375,15 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/></svg>
     <span>Année</span>
   </button>
+  <!-- Le rond porte son mot sous lui, comme les fentes : le crayon seul ne
+       disait pas qu'il sert à noter ce qu'on vient de faire. -->
   <button class="acte-noter" id="btnNoter" type="button" hidden
-          aria-label="Noter au journal" title="Noter">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
+          aria-label="Noter au carnet">
+    <span class="acte-rond"><svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4.5 19.5h15M6 15.6l8.6-8.6 2.4 2.4-8.6 8.6H6z"/>
       <path d="M14.6 7 16.2 5.4a1.7 1.7 0 0 1 2.4 2.4L17 9.4"/>
-    </svg>
+    </svg></span>
+    <span class="acte-mot" aria-hidden="true">Noter</span>
   </button>
   <button class="onglet" role="tab" aria-selected="false" data-ecran="selection">
     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="7" height="6" rx="1.5"/>

@@ -131,10 +131,11 @@ export default async function essai(navigateur) {
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 6);
     pluieHoraire(d, 19);
   });
-  /* La tuile a le tiers de la largeur : elle porte la décision en trois mots,
-     la feuille de l'eau garde la phrase entière. */
-  j.controle("sol en dette : la tuile chiffre l'apport",
-    /L\/m²/.test(dette.eau), dette.eau);
+  /* La tuile a le tiers de la largeur : elle porte la décision, un verbe puis
+     la quantité, la feuille de l'eau garde la phrase entière. Le chiffre seul
+     ne disait pas s'il fallait agir. */
+  j.controle("sol en dette : la tuile dit d'arroser, puis chiffre l'apport",
+    /^L'eauArroser[\d,]+ L\/m²$/.test(dette.eau), dette.eau);
   j.controle("l'alerte énonce la lame sans dissuader d'arroser",
     dette.alertes.some(a => a === "19 mm attendus aujourd'hui"), JSON.stringify(dette.alertes));
   // Une marque ne signale que l'exception : seule la mesure qui demande un geste
@@ -146,6 +147,8 @@ export default async function essai(navigateur) {
     d.daily.et0_fao_evapotranspiration = d.daily.et0_fao_evapotranspiration.map(() => 1);
     pluieHoraire(d, 19);
   });
+  j.controle("sol au confort : la tuile dit qu'il n'y a pas besoin d'arroser",
+    /^L'eauPas besoinréserve \d+ jours?$/.test(confort.eau) && confort.marquee === false, confort.eau);
   j.controle("sol au confort : l'alerte peut dissuader d'arroser",
     confort.alertes.some(a => a === "19 mm attendus, inutile d'arroser"), JSON.stringify(confort.alertes));
 
@@ -156,8 +159,8 @@ export default async function essai(navigateur) {
     pluieHoraire(d, 16);
     pluieHoraire(d, 30, true);
   });
-  j.controle("pluie annoncée : la tuile chiffre la pluie plutôt que l'apport",
-    / mm$/.test(attente.eau.replace(/^L'eau/, "")), attente.eau);
+  j.controle("pluie annoncée : la tuile dit d'attendre et chiffre la pluie",
+    /^L'eauAttendrepluie [\d,]+ mm$/.test(attente.eau), attente.eau);
   j.controle("et elle ne porte plus la marque du geste", attente.marquee === false);
   j.controle("et l'alerte se tait, pour ne pas répéter la mesure",
     !attente.alertes.some(a => /mm attendus/.test(a)), JSON.stringify(attente.alertes));

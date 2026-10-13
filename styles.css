@@ -284,11 +284,12 @@ body::after{
 }
 .onglet[aria-selected="true"]{background:var(--encre);color:#EFEFE8}
 .onglet:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
-/* Sous trois cent quarante points, les quatre mots ne tiennent plus : seule la
-   fente ouverte garde le sien, les trois autres se disent par leur dessin. */
+/* Sous trois cent quarante points, les mots se resserrent au lieu de
+   disparaître : trois fentes sur quatre ne se disaient plus que par leur
+   dessin, et le jardin se confondait avec les plantes. */
 @media (max-width:339px){
-  .onglet[aria-selected="false"] span{display:none}
-  .onglet{padding:9px 3px}
+  .onglet{font-size:9px;letter-spacing:0;padding:7px 1px 6px}
+  .acte-mot{font-size:9px;letter-spacing:0}
 }
 
 /* L'acte est rond et remonte au-dessus de la barre. Il n'est pas une
@@ -296,26 +297,36 @@ body::after{
    rend. Sa couronne claire est du ton du papier, elle le détache de la barre
    translucide comme du contenu qui défile dessous. */
 .acte-noter{
-  flex:0 0 auto;width:52px;height:52px;padding:0;border:0;cursor:pointer;
-  display:grid;place-items:center;
-  align-self:flex-start;margin:-16px 4px 0;border-radius:50%;
+  flex:0 0 auto;width:60px;padding:0;border:0;cursor:pointer;background:none;
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  align-self:flex-start;margin:-16px 2px 0;color:var(--encre-doux);
+}
+.acte-rond{
+  width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
   background:var(--encre);color:#F2EFE7;
   box-shadow:0 8px 20px rgba(22,36,30,.28), 0 0 0 4px rgba(248,247,243,.80);
   transition:box-shadow .18s ease, transform .18s ease;
 }
+/* Le mot ne doit pas grandir la barre : rond et mot, moins le dépassement,
+   tiennent dans la hauteur d'une fente. */
+.acte-mot{
+  font-family:"IBM Plex Sans Condensed",sans-serif;line-height:1.1;
+  font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;
+}
 .acte-noter svg{width:24px;height:24px;fill:none;stroke:currentColor;
   stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.acte-noter:active{transform:translateY(1px)}
+.acte-noter:active .acte-rond{transform:translateY(1px)}
 /* Le carnet n'a pas de fente dans la barre : le rond qui l'ouvre porte l'anneau
    tant qu'on y est, et l'écran se nomme en tête. */
-body.sur-carnet .acte-noter{
+body.sur-carnet .acte-rond{
   box-shadow:0 8px 20px rgba(22,36,30,.34), 0 0 0 4px rgba(248,247,243,.80),
              0 0 0 6.5px var(--terre);
 }
-.acte-noter:focus-visible{outline:2px solid var(--terre);outline-offset:3px}
-@media (hover:hover){.acte-noter:hover{transform:translateY(-2px)}}
-@media (prefers-reduced-motion:reduce){.acte-noter{transition:none}
-  .acte-noter:hover{transform:none}}
+.acte-noter:focus-visible{outline:none}
+.acte-noter:focus-visible .acte-rond{outline:2px solid var(--terre);outline-offset:3px}
+@media (hover:hover){.acte-noter:hover .acte-rond{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.acte-rond{transition:none}
+  .acte-noter:hover .acte-rond{transform:none}}
 
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .barre-basse{background:rgba(248,247,243,.97)}
@@ -827,7 +838,7 @@ main{
 .version-appli{
   margin:2px 0 0;text-align:center;
   font:400 11px/1.4 "IBM Plex Mono",monospace;letter-spacing:.06em;
-  color:#9A968C;
+  color:#6B665D;
 }
 .version-maj{margin:5px 0 0;text-align:center}
 .version-maj .lien{font-size:12px}
@@ -943,9 +954,10 @@ button.action:focus-visible{outline:2px solid var(--terre);outline-offset:-2px;b
 
 /* ---------- Marqueur de toxicité ---------- */
 .losange-tox{
-  display:inline-block;margin-left:5px;font-size:8px;line-height:1;
-  color:#B03A4A;position:relative;top:-1px;cursor:help;
+  display:inline-block;margin-left:6px;font-size:11.5px;font-weight:600;line-height:1;
+  color:#A12F3E;white-space:nowrap;cursor:help;
 }
+.losange-tox > span{font-size:9px;position:relative;top:-1px}
 
 /* ---------- Noms cliquables ---------- */
 .nom-action{
@@ -1406,7 +1418,10 @@ body.fige{overflow:hidden}
 
 /* ---------- Fiche de plante, rendu détaillé ---------- */
 .fiche-v2{
-  --f-ink:var(--encre); --f-ink2:var(--encre-doux); --f-ink3:#8A9089;
+  /* Le troisième gris portait les bornes, les sources et les notes à 2,9 de
+     contraste sur le papier : ce qui fonde la confiance était le moins lisible.
+     Il passe à 5,1 sur le papier et 4,7 sur les panneaux, le 13 octobre. */
+  --f-ink:var(--encre); --f-ink2:var(--encre-doux); --f-ink3:#5F6A63;
   --f-grille:#E4E3DA; --f-carte:var(--papier); --f-plan:var(--papier); --f-filet:var(--filet-clair);
   display:flex;flex-direction:column;gap:14px;
 }
@@ -1996,9 +2011,17 @@ body.fige{overflow:hidden}
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   font-size:14px;font-weight:650;
 }
-.mesure-j.mesure-agir{background:#EDF2F7}
-.mesure-j.mesure-agir .mj-ic{color:#48708F}
-@media (hover:hover){ .mesure-j:hover{background:#EDECE4} }
+/* La tuile qui demande un geste se voit en plein soleil : un fond franc, et
+   non une teinte à peine plus bleue que le papier, d'un contraste de 1,0. */
+.mesure-j.mesure-agir{background:#24506E;color:#F4F7FA}
+.mesure-j.mesure-agir .mj-ic{color:#CFE0EC}
+.mesure-j.mesure-agir .mj-nom{color:#CFE0EC}
+.mj-detail{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-style:normal;font-size:12.5px;color:var(--encre-doux);
+}
+.mesure-agir .mj-detail{color:#E3EDF4}
+@media (hover:hover){ .mesure-j:not(.mesure-agir):hover{background:#EDECE4} }
 .mesure-j:focus-visible{outline:2px solid var(--terre);outline-offset:2px}
 /* La synthèse perd son cadre et gagne une ombre. */
 .synthese{
@@ -2074,11 +2097,11 @@ body.fige{overflow:hidden}
    et la tâche, qui la restreint. La seconde s'écrit d'un rang plus bas, faute
    de quoi le titre se lirait comme deux titres accolés. */
 .sous-niveau{
-  flex:0 1 auto;font-size:13px;color:#8A968D;
+  flex:0 1 auto;font-size:13px;color:#5F6A63;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .sous-niveau::before{content:"·";margin-right:7px}
-.nb-niveau{flex:0 0 auto;font-size:12px;color:#8A968D}
+.nb-niveau{flex:0 0 auto;font-size:12px;color:#5F6A63}
 
 /* ---------- Rail des sections, mode tout voir ---------- */
 /* Une puce tranchée net au bord du rail se lit comme un défaut d'affichage. Le
@@ -2797,7 +2820,7 @@ select:focus{
 }
 .qte-l::-webkit-outer-spin-button,
 .qte-l::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.qte-l::placeholder{color:rgba(22,36,30,.26)}
+.qte-l::placeholder{color:#6B665D}
 .qte-l:focus{outline:0;background:#fff;box-shadow:0 0 0 2px var(--terre);color:var(--encre)}
 .chev-l{display:grid;place-items:center;width:16px;color:var(--filet)}
 .chev-l svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;
@@ -3146,8 +3169,11 @@ input.rech-lieu:focus{background:#fff;border-style:solid}
   padding:5px 10px;border:1px dashed #C9C4B8;border-radius:8px;color:var(--encre-doux);
 }
 .ec-fichiers{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-.fe-pied .ec-annuler{margin-left:auto;font-size:12.5px}
-.fe-pied .ec-valider{font-size:12.5px;font-weight:600}
+/* « Enregistrer » est un bouton plein de quarante-quatre points, écarté
+   d'« Annuler » : deux liens de douze pixels côte à côte se touchaient l'un
+   pour l'autre. */
+.fe-pied .ec-annuler{margin-left:auto;margin-right:10px;font-size:13px;min-height:44px}
+.fe-pied .ec-valider{min-height:44px;padding:0 20px;font-size:14px;font-weight:600}
 .fe-pied .ec-valider[disabled]{opacity:.5}
 
 .ligne-portee{margin-bottom:10px}
@@ -3432,3 +3458,18 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
 .mg-plus{display:block;margin:6px 0 10px;font-size:13px}
 .rel-precedents{display:block;margin:10px 0 2px;font-size:13px}
 .sol-rappel .lien{font-size:inherit}
+
+/* ---------- Champs de saisie au doigt ----------
+   Safari agrandit la page au toucher d'un champ de moins de seize pixels, et
+   l'utilisateur se retrouve au milieu d'une saisie dans une page zoomée. Sur
+   un écran tactile, tout champ prend au moins seize pixels. */
+@media (pointer:coarse){
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select, textarea{font-size:max(16px, 1em)}
+}
+
+/* ---------- États vides qui portent leurs gestes ---------- */
+.vide-actions p{margin:0 0 12px}
+.va-boutons{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 16px}
+.va-boutons .bouton{min-height:44px}
+.va-boutons .lien{min-height:44px;font-size:14px}

@@ -898,7 +898,7 @@ Sur les référentiels ouverts : la taxonomie est bien couverte par TAXREF, la B
 
 ### Interface, audit par personas du 13 octobre 2026
 
-Quatre personas, une débutante, un jardinier expérimenté presbyte, une jardinière d'ornement organisée et un utilisateur pressé daltonien, ont relu quarante-cinq étapes de parcours. Vingt constats sont ouverts dans la note `audit-personas`, dont onze à effort faible : la tuile de l'eau qui ne dit pas la décision, les pastilles de quinzaine lues comme des dates, un même geste nommé de trois façons, la saisie au carnet qui impose un lieu, les textes secondaires sous le seuil de contraste. Plusieurs demandent un arbitrage de contenu ou de projet.
+Quatre personas, une débutante, un jardinier expérimenté presbyte, une jardinière d'ornement organisée et un utilisateur pressé daltonien, ont relu quarante-cinq étapes de parcours. Vingt constats sont ouverts dans la note `audit-personas`, dont onze à effort faible : la tuile de l'eau qui ne dit pas la décision, les pastilles de quinzaine lues comme des dates, un même geste nommé de trois façons, la saisie au carnet qui impose un lieu, les textes secondaires sous le seuil de contraste. Plusieurs demandent un arbitrage de contenu ou de projet. Les constats sans arbitrage ont été traités le même jour, note `audit-personas-premiers-correctifs` ; la contrainte `observations_geste` accepte depuis les gestes « amendement » et « multiplication ».
 
 ### Limites du modèle connues
 

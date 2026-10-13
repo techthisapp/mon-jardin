@@ -189,6 +189,7 @@ let climatSeul = false;  // Mes plantes, restreint aux plantes adaptées au clim
    montre les plantes, d'abord celles du jardin, le catalogue entier ensuite. */
 let espaceOuvert = null;       // null au premier niveau, sinon l'espace lu, "0" pour les non placées
 let porteeSel = "jardin";      // jardin ou tout
+let ecranCourant = "maintenant";  // la destination ouverte, catalogue compris
 let carnetContexte = null;     // le lieu ou la plante sur lequel le carnet est ouvert
 /* La période retenue sur le calendrier, en quinzaines de 1 à 24. Un mois en
    occupe deux, une quinzaine une seule : la même borne sert aux deux échelles,
@@ -1002,6 +1003,14 @@ async function basculer(plantId) {
     return;
   }
   if (present) { aff.delete(plantId); construireChips(); rendreTout(); }
+  /* Cocher une plante au catalogue ne disait rien : on ne savait ni que
+     l'ajout était fait, ni comment revenir à son jardin. */
+  if (!present && ecranCourant === "catalogue") {
+    const p = plantes.find(x => x.id === plantId);
+    const n = sel.size;
+    info(`${p ? p.nom : "La plante"} rejoint le jardin, ${n} ${n > 1 ? "plantes" : "plante"} en tout.`,
+      false, { libelle: "Voir mes plantes", faire: () => afficher("plantes") });
+  }
 }
 
 function majCompte() {
@@ -1107,7 +1116,6 @@ const SECTION = { maintenant: "maintenant", planning: "planning",
                   selection: "selection", plantes: "plantes",
                   catalogue: "plantes", carnet: "carnet" };
 const onglets = [...document.querySelectorAll(".onglet")];
-let ecranCourant = "maintenant";
 
 function marquerOnglets() {
   onglets.forEach(x => x.setAttribute("aria-selected",
@@ -1141,7 +1149,9 @@ function afficher(dest) {
     /* La même liste à deux étendues : celle du jardin depuis la barre, les
        trois cent quinze fiches depuis le livre de l'en-tête. La portée se règle
        avec la destination, le titre dit laquelle est ouverte. */
-    porteeSel = dest === "catalogue" || !session ? "tout" : "jardin";
+    /* Sans compte, « Mes plantes » montrait le catalogue entier sous le titre
+       « 0 plante au jardin » : il dit maintenant ce qui manque. */
+    porteeSel = dest === "catalogue" ? "tout" : "jardin";
     rendreSelection();
   }
   if (section === "carnet") rendreJournal();
@@ -1207,8 +1217,11 @@ sur("versCatalogue", "click", () => afficher("catalogue"));
    feuille découvre ce qui est déjà noté, le rond la rappelle : écrire et relire
    sont le même endroit. */
 sur("btnNoter", "click", () => {
-  saisiePartout = null;
+  /* Le contexte se lit avant de passer au carnet : relu ensuite, il ne voyait
+     plus l'espace ouvert, et la saisie retombait sur le premier lieu du jardin
+     qui, par chance, était souvent celui de l'écran. */
   carnetContexte = contexteNote();
+  saisiePartout = { ...carnetContexte };
   afficher("carnet");
   ouvrirVue("note");
 });
@@ -1224,9 +1237,31 @@ function majBoutonNoter() {
    endroit d'où l'on ajoute. */
 function messageSansPlante() {
   return session
-    ? "Aucune plante au jardin. Le livre de l'en-tête ouvre le catalogue, d'où l'on ajoute ses plantes."
-    : "Connectez-vous pour retrouver votre jardin. Le bouton du compte est en haut à droite de l'écran.";
+    ? "Aucune plante au jardin pour l'instant. Le catalogue, que le livre de l'en-tête ouvre aussi, les propose toutes."
+    : "Connectez-vous pour retrouver votre jardin, ou en créer un.";
 }
+
+/* L'état vide renvoyait à une icône sans libellé : il porte maintenant les
+   gestes qui le font cesser, se connecter, ajouter ses plantes, situer le
+   jardin pour que la météo et l'arrosage le concernent. */
+function videJardinHTML() {
+  const g = jardinActif() || {};
+  const actions = session
+    ? `<button type="button" class="bouton" data-va="catalogue">Ajouter mes plantes</button>`
+      + (g.code_postal ? "" : `<button type="button" class="lien" data-va="lieu">Indiquer ma commune</button>`)
+    : `<button type="button" class="bouton" data-va="compte">Se connecter</button>`
+      + `<button type="button" class="lien" data-va="catalogue">Parcourir le catalogue</button>`;
+  return `<div class="vide vide-actions"><p>${esc(messageSansPlante())}</p>`
+    + `<div class="va-boutons">${actions}</div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-va]");
+  if (!b) return;
+  const va = b.dataset.va;
+  if (va === "catalogue") afficher("catalogue");
+  else if (va === "compte") ouvrirVue("compte");
+  else if (va === "lieu") ouvrirVue("lieu");
+});
 
 document.querySelectorAll(".segment[data-tri]").forEach(s => s.addEventListener("click", () => {
   tri = s.dataset.tri;
@@ -1482,7 +1517,13 @@ function rendreSelection() {
   bs.hidden = lot.length === total;
   bs.textContent = lot.length === total ? "" : `${lot.length} sur ${total} affichées`;
 
-  if (!lot.length) { $("videSel").hidden = false; return; }
+  if (!lot.length) {
+    const vs = $("videSel");
+    vs.hidden = false;
+    vs.innerHTML = porteeSel === "jardin" && !sel.size ? videJardinHTML()
+      : "Aucune plante ne correspond. Élargissez les filtres ou effacez la recherche.";
+    return;
+  }
   $("videSel").hidden = true;
 
   if (tri === "alpha") {
@@ -1725,7 +1766,7 @@ function rendreMaintenant() {
     vueDetail = null; majNiveau();
     $("synthese").hidden = true;
     $("piedVue").hidden = true;
-    $("videMoment").innerHTML = `<p class="vide">${esc(messageSansPlante())}</p>`;
+    $("videMoment").innerHTML = videJardinHTML();
     return;
   }
   const mien = plantes.filter(p => sel.has(p.id));
@@ -1747,7 +1788,10 @@ function rendreMaintenant() {
     return "";
   };
   const losange = p => (p.attr.toxicite && !/^non toxique/i.test(p.attr.toxicite))
-    ? `<span class="losange-tox" title="${esc(p.attr.toxicite)}" aria-label="Plante toxique">&#9670;</span>` : "";
+    /* Le losange seul, de huit pixels, ne disait son sens que par une bulle
+       que le doigt ne fait jamais paraître : il porte le mot. */
+    ? `<span class="losange-tox" title="${esc(p.attr.toxicite)}">`
+      + `<span aria-hidden="true">&#9670;</span> toxique</span>` : "";
   const nomAvecMarque = p => `${esc(p.nom)}${losange(p)}`;
 
   const bouton = (classe, libelle, fn, picto) => {
@@ -3006,6 +3050,7 @@ const GM = {
   neige: '<path d="M7.4 14.6h9.2a3.8 3.8 0 0 0 .3-7.6A5.3 5.3 0 0 0 6.8 8.3a3.2 3.2 0 0 0 .6 6.3z"/>'
     + '<path d="M9 18v3.4M7.4 18.9l3.2 1.6M10.6 18.9l-3.2 1.6M16 18v3.4M14.4 18.9l3.2 1.6M17.6 18.9l-3.2 1.6"/>',
   goutte: '<path d="M12 3.4c4.2 4.8 6.6 8.2 6.6 11.2a6.6 6.6 0 0 1-13.2 0c0-3 2.4-6.4 6.6-11.2z"/>',
+  coche: '<path d="M4.6 12.6l4.6 4.6L19.4 7" stroke-linejoin="round"/>',
   arc: '<path d="M3 18h18"/><path d="M6.2 18a5.8 5.8 0 0 1 11.6 0"/><path d="M12 6.4V4M5.2 9.2L3.6 7.6M18.8 9.2l1.6-1.6"/>',
   feuille: '<path d="M20 4c0 9-5.4 14-12 14-1.4 0-2.6-.2-3.6-.6C5.6 9.6 11.4 4.6 20 4z"/>'
     + '<path d="M4 21c1.6-4.6 4.4-8.2 8.4-10.8"/>',
@@ -3434,13 +3479,21 @@ function vigilanceDuJour() {
   };
 }
 
-/* La même décision, en trois mots : la tuile du jour a le tiers de la largeur,
-   la feuille de l'eau porte la phrase entière. */
+/* La même décision, en deux lignes : la tuile du jour a le tiers de la
+   largeur, la feuille de l'eau porte la phrase entière. La tuile ne portait
+   que le chiffre : « 4 mm » de pluie attendue se lisait comme un petit
+   arrosage, et rien ne disait s'il fallait agir. Elle porte d'abord le verbe,
+   puis la quantité, et une icône par décision. */
 function eauCourte(b) {
-  if (!b) return "inconnue";
-  if (b.etat === "arroser") return nombreFr(b.apport) + " L/m²";
-  if (b.etat === "attendre") return nombreFr(b.prevue) + " mm";
-  return b.jours + (b.jours > 1 ? " jours" : " jour");
+  if (!b) return { verbe: "Inconnue", detail: "", icone: "goutte" };
+  if (b.etat === "arroser") {
+    return { verbe: "Arroser", detail: nombreFr(b.apport) + " L/m²", icone: "goutte" };
+  }
+  if (b.etat === "attendre") {
+    return { verbe: "Attendre", detail: "pluie " + nombreFr(b.prevue) + " mm", icone: "pluie" };
+  }
+  return { verbe: "Pas besoin", detail: "réserve " + b.jours + (b.jours > 1 ? " jours" : " jour"),
+           icone: "coche" };
 }
 
 // La pastille d'eau porte la décision du jour, non un écart à combler.
@@ -3496,6 +3549,11 @@ function rendreBandeau() {
     `<button type="button" class="mesure-j${ton ? " mesure-agir" : ""}" data-vue="${vue}">`
     + icoM(icone, "mj-ic") + `<span class="mj-nom">${nom}</span>`
     + `<b>${esc(val)}</b></button>`;
+  const tuileEau = (e, ton) =>
+    `<button type="button" class="mesure-j mj-eau${ton ? " mesure-agir" : ""}" data-vue="eau">`
+    + icoM(e.icone, "mj-ic") + `<span class="mj-nom">L'eau</span>`
+    + `<b>${esc(e.verbe)}</b>` + (e.detail ? `<i class="mj-detail">${esc(e.detail)}</i>` : "")
+    + `</button>`;
   /* Le bandeau nommait le ciel sans le dessiner, quand la liste, les moments et
      la semaine le dessinent tous. L'icône de l'heure en cours ouvre la ligne,
      du même dessin et à la même échelle que partout ailleurs. */
@@ -3510,7 +3568,7 @@ function rendreBandeau() {
     + `${Math.round(jourJ ? jourJ.tn : d.temperature_2m_min[i])}° la nuit, `
     + `vent ${Math.round(maintenant.vent)} km/h</small></span></button>`
     + `<div class="mesures-jour">`
-    + tuile("eau", "goutte", "L'eau", eauCourte(b), eau[2])
+    + tuileEau(eauCourte(b), eau[2])
     + tuile("lumiere", "arc", "La lumière", hhmm(dur))
     + tuile("saison", "feuille", "La saison",
             sais.court[0].toUpperCase() + sais.court.slice(1))
@@ -3690,10 +3748,12 @@ function vueNote() {
         t.textContent = p.nom;
         z.appendChild(t);
       }
-      if (!lieux.length) {
+      /* Un jardin sans espace se note par ses plantes : la saisie n'est une
+         impasse que s'il n'a ni lieu ni plante. */
+      if (!lieux.length && !sel.size) {
         const v = document.createElement("p");
         v.className = "vide";
-        v.textContent = "Aucun lieu au jardin. La note se prendra depuis un espace.";
+        v.textContent = "Aucune plante ni aucun lieu au jardin. Le livre de l'en-tête ouvre le catalogue.";
         z.appendChild(v);
         return;
       }
@@ -5897,7 +5957,7 @@ function rendreQuinzaine() {
 
   const mien = plantes.filter(p => sel.has(p.id));
   if (!mien.length) {
-    z.innerHTML = `<p class="vide">${esc(messageSansPlante())}</p>`;
+    z.innerHTML = videJardinHTML();
     return;
   }
   const masquee = (p, k) => {
@@ -6053,7 +6113,10 @@ sur("form-connexion", "submit", async e => {
   const { error } = await db.auth.signInWithOtp({
     email, options: { emailRedirectTo: window.location.href.split("#")[0] },
   });
-  if (!error) { $("aide-code").hidden = false; $("code").focus(); }
+  if (!error) {
+    $("form-code").hidden = false; $("ouvrirCode").hidden = true;
+    $("aide-code").hidden = false; $("code").focus();
+  }
   const note = $("note-connexion");
   note.hidden = false;
   note.classList.toggle("erreur", Boolean(error));
@@ -6062,6 +6125,9 @@ sur("form-connexion", "submit", async e => {
 });
 
 sur("deconnexion", "click", () => db.auth.signOut());
+sur("ouvrirCode", "click", () => {
+  $("form-code").hidden = false; $("ouvrirCode").hidden = true; $("code").focus();
+});
 sur("voirEcartees", "click", () => ouvrirVue("photosEcartees"));
 
 db.auth.onAuthStateChange((_e, s) => {
@@ -6270,7 +6336,12 @@ const VUE_ESPACE = "monjardin.vue-espace";
 let vueEspace = "liste";
 try { vueEspace = localStorage.getItem(VUE_ESPACE) === "mosaique" ? "mosaique" : "liste"; }
 catch (e) { /* stockage indisponible */ }
+/* Les gestes du carnet suivent ceux du calendrier : amender et multiplier y
+   manquaient, et ce qu'on venait de faire ne se notait pas sous le nom de la
+   tâche annoncée. La contrainte `observations_geste` les accepte depuis le
+   13 octobre 2026. */
 const GESTE_NOM = { semis: "Semis", plantation: "Plantation", taille: "Taille",
+                    amendement: "Amendement", multiplication: "Multiplication",
                     recolte: "Récolte", traitement: "Traitement", floraison: "Floraison",
                     maladie: "Maladie", note: "Note" };
 const UNITES = ["kg", "g", "pièces", "bottes", "litres"];
@@ -6408,10 +6479,16 @@ function imageHTML(p, classe) {
 /* Ce qui se passe ici aujourd'hui, tiré du même calcul que l'écran du moment.
    Les trois tâches les plus nombreuses suffisent à donner une raison d'ouvrir
    l'écran un matin d'août. */
-// « Taille, entretien » tient mal sur une pastille : le premier mot suffit.
+/* Une tâche se nomme par son verbe, comme sur l'écran du jour et sur l'année :
+   les pastilles d'un espace disaient « fertilisation » là où le reste de
+   l'application dit « Amender ». La floraison n'est pas un geste, elle se dit
+   « en fleur ». */
 function motDeLaTache(k) {
-  return String((phases[k] || {}).label || k).split(",")[0].trim().toLowerCase();
+  if (k === "floraison") return "en fleur";
+  return String(VERBE[k] || (phases[k] || {}).label || k).split(",")[0].trim().toLowerCase();
 }
+// La pastille d'un espace compte : « 7 à récolter », « 4 en fleur ».
+const motCompte = k => (k === "floraison" ? "" : "à ") + motDeLaTache(k);
 
 function momentDuLieu(cle) {
   const lot = plantesDeLEspace(cle);
@@ -6542,7 +6619,7 @@ function ligneDuMoment(cle) {
     + lot.map(x => `<button type="button" class="ml-c${filtreMoment === x.k ? " on" : ""}"`
       + ` data-tache="${x.k}" aria-pressed="${filtreMoment === x.k}">`
       + `<i style="background:${x.couleur}"></i>`
-      + `<b>${x.n}</b> ${esc(x.nom)}</button>`).join("")
+      + `<b>${x.n}</b> ${esc(motCompte(x.k))}</button>`).join("")
     + `</div><span class="ml-vue" role="group" aria-label="Affichage des plantes">`
     + boutonVue("liste", `<path d="M4 7h16M4 12h16M4 17h16"/>`)
     + boutonVue("mosaique", `<rect x="4" y="4" width="7" height="7"/><rect x="13" y="4" width="7" height="7"/>`
@@ -6774,7 +6851,7 @@ function corpsDuLieu(cle) {
   const membres = filtrerMoment(cle === "0" ? plantesDeLEspace("0") : plantesDuNoeud(cle));
   if (!membres.length) {
     corps.innerHTML = filtreMoment
-      ? `<p class="vide">Rien à ${esc(motDeLaTache(filtreMoment).toLowerCase())} ici en ce moment.</p>`
+      ? `<p class="vide">Rien ${esc(motCompte(filtreMoment))} ici en ce moment.</p>`
       : cle === "0"
       ? '<p class="vide">Toutes vos plantes sont placées dans un espace.</p>'
       : '<p class="vide">Aucune plante ici. Cherchez-la dans le catalogue, plus bas.</p>';
@@ -6873,7 +6950,7 @@ function ligneDuLieu(p, cle) {
          + ` value="${r.quantity == null ? "" : r.quantity}" placeholder="qté"`
          + ` aria-label="Nombre de pieds de ${esc(p.nom)}">`
          + `<span class="chev-l" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></span>`
-         : `<span class="hors-espace">à placer depuis l'onglet Mes plantes</span>`);
+         : `<span class="hors-espace">à placer depuis sa fiche</span>`);
   l.querySelector(".nom-espace").addEventListener("click", () => ouvrirFeuille(p, "jardin"));
   const q = l.querySelector("input.qte-l");
   if (q) q.addEventListener("change", ev => majAffectation(p.id, cle, ev.target.value));
@@ -7332,14 +7409,21 @@ function formulaireEntree(etat, lieux, fige, fermer) {
   const f = document.createElement("form");
   f.className = "form-entree";
   f.id = "formEntree";
+  /* Ouverte hors de tout lieu, la saisie ne présélectionne plus le premier
+     espace : une note sur le rosier du massif se rangeait dans le potager si
+     l'on oubliait de changer le lieu. La plante se choisit d'abord, et le lieu
+     la suit. La table accepte une entrée portée par la plante seule. */
+  const horsLieu = !fige && !etat.espace_id;
   const choisi = lieux.some(x => x.id === etat.espace_id)
-    ? etat.espace_id : (lieux[0] || {}).id;
+    ? etat.espace_id : horsLieu ? "" : (lieux[0] || {}).id;
   f.innerHTML = `<div class="fe-ligne">`
     + `<input class="ec-jour-c" type="date" value="${jourDuJour()}" aria-label="Jour">`
-    + `<select class="ec-lieu" aria-label="Lieu">` + lieux.map(x =>
+    + (fige ? "" : `<select class="ec-plantes" aria-label="Plante"></select>`)
+    + `<select class="ec-lieu" aria-label="Lieu">`
+    + (horsLieu ? `<option value="">Sans lieu précis</option>` : "")
+    + lieux.map(x =>
         `<option value="${x.id}"${x.id === choisi ? " selected" : ""}>${esc(x.nom)}</option>`).join("")
     + `</select>`
-    + (fige ? "" : `<select class="ec-plantes" aria-label="Plante"></select>`)
     + `<select class="ec-geste" aria-label="Geste"><option value="">Sans geste</option>`
     + Object.keys(GESTE_NOM).map(k => `<option value="${k}">${esc(GESTE_NOM[k])}</option>`).join("")
     + `</select></div>`
@@ -7352,23 +7436,29 @@ function formulaireEntree(etat, lieux, fige, fermer) {
     + `<label class="ec-fichiers-l"><input class="ec-fichiers" type="file" accept="image/*" multiple>`
     + `<span class="ec-fichiers-t">Photographies</span></label>`
     + `<button type="button" class="lien ec-annuler">Annuler</button>`
-    + `<button type="submit" class="lien ec-valider">Enregistrer</button></div>`;
+    + `<button type="submit" class="bouton ec-valider">Enregistrer</button></div>`;
 
   const selLieu = f.querySelector(".ec-lieu");
   const selPlante = f.querySelector(".ec-plantes");
-  const remplirPlantes = () => {
-    if (!selPlante) return;
-    const lot = plantesDuNoeud(selLieu.value);
+  /* Les plantes offertes sont celles du jardin entier hors de tout lieu, et
+     celles du lieu et de ses zones depuis un espace : la tomate du carré du
+     fond manquait quand le potager seul était choisi. */
+  const ids = new Set(lieux.map(x => x.id));
+  const offertes = plantes.filter(p => sel.has(p.id)
+    && (horsLieu || espacesDe(p.id).some(id => ids.has(id))));
+  if (selPlante) {
     selPlante.innerHTML = `<option value="">Sans plante</option>`
-      + lot.map(p => `<option value="${p.id}"${p.id === etat.plant_id ? " selected" : ""}>`
+      + offertes.map(p => `<option value="${p.id}"${p.id === etat.plant_id ? " selected" : ""}>`
         + `${esc(p.nom)}</option>`).join("");
-  };
-  remplirPlantes();
-  selLieu.addEventListener("change", () => {
-    etat.espace_id = selLieu.value;
-    if (selPlante) { etat.plant_id = ""; remplirPlantes(); }
-  });
-  if (selPlante) selPlante.addEventListener("change", () => { etat.plant_id = selPlante.value; });
+    // Choisir une plante place la note là où elle pousse, parmi les lieux offerts.
+    selPlante.addEventListener("change", () => {
+      etat.plant_id = selPlante.value;
+      const ou = selPlante.value ? espacesDe(selPlante.value).filter(id => ids.has(id)) : [];
+      if (ou.length && !ou.includes(selLieu.value)) selLieu.value = ou[0];
+      etat.espace_id = selLieu.value || null;
+    });
+  }
+  selLieu.addEventListener("change", () => { etat.espace_id = selLieu.value || null; });
   const selGeste = f.querySelector(".ec-geste");
   const recolte = f.querySelector(".fe-recolte");
   selGeste.addEventListener("change", () => { recolte.hidden = selGeste.value !== "recolte"; });
@@ -7393,14 +7483,17 @@ async function enregistrerEntree(f, fige, fermer) {
   if (!geste && !texte && !lot.length) {
     info("Une entrée demande au moins un geste, un mot ou une photographie."); return;
   }
+  const lieu = f.querySelector(".ec-lieu").value || null;
+  const plante = fige ? fige.id : (f.querySelector(".ec-plantes").value || null);
+  if (!lieu && !plante) { info("Choisissez une plante ou un lieu."); return; }
   const q = f.querySelector(".ec-qte").value.trim();
   const quantite = geste === "recolte" && q !== "" ? Number(q.replace(",", ".")) : null;
   const bouton = f.querySelector(".ec-valider");
   bouton.disabled = true;
   const { data, error } = await db.from("observations").insert({
     garden_id: jardinId,
-    espace_id: f.querySelector(".ec-lieu").value,
-    plant_id: fige ? fige.id : (f.querySelector(".ec-plantes").value || null),
+    espace_id: lieu,
+    plant_id: plante,
     jour: f.querySelector(".ec-jour-c").value || jourDuJour(),
     geste, texte, quantite,
     unite: quantite ? f.querySelector(".ec-unite").value : null,

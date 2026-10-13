@@ -360,9 +360,12 @@ export default async function essai(navigateur) {
     && await pg.locator("#detailEspace .banniere-lieu img").count() === 0);
   const taches = await pg.locator("#detailEspace .ml-c").evaluateAll(
     l => l.map(e => e.textContent.replace(/\s+/g, " ").trim()));
-  j.controle("le moment du lieu tient en trois pastilles d'un mot",
+  /* La pastille compte et nomme la tâche par son verbe, comme le jour et
+     l'année : « 3 à récolter », et « 3 en fleur » pour ce qui n'est pas un
+     geste. */
+  j.controle("le moment du lieu tient en trois pastilles, un compte et un verbe",
     taches.length > 0 && taches.length <= 3
-    && taches.every(t => t.split(" ").length === 2), taches.join(" | "));
+    && taches.every(t => /^\d+ (à [a-zéèêîôû]+|en fleur)$/.test(t)), taches.join(" | "));
 
   j.section("ma photographie, la planche, la photographie du fonds");
   j.controle("la fraise, qui a une planche, la montre",

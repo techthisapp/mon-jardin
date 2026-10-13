@@ -131,17 +131,26 @@ export default async function essai(navigateur) {
     .evaluateAll(l => l.map(o => o.textContent));
   j.controle("il propose l'espace et ses zones",
     JSON.stringify(lieux) === JSON.stringify(["Potager", "Carré du fond"]), lieux.join(" "));
+  /* La plante se choisit d'abord, parmi celles de l'espace et de ses zones :
+     la liste suivait le lieu choisi, et la tomate du carré du fond manquait
+     tant que le potager seul l'était. Choisir la plante place la note là où
+     elle pousse. Relevé par l'audit par personas du 13 octobre 2026. */
   const plantesE1 = await form(pg).locator(".ec-plantes option")
     .evaluateAll(l => l.map(o => o.textContent));
-  j.controle("les plantes sont celles du lieu choisi",
-    JSON.stringify(plantesE1) === JSON.stringify(["Sans plante", "Fraise"]), plantesE1.join(" "));
+  j.controle("les plantes sont celles de l'espace et de ses zones",
+    JSON.stringify(plantesE1) === JSON.stringify(["Sans plante", "Fraise", "Rhubarbe", "Tomate"]),
+    plantesE1.join(" "));
+  j.controle("la plante se choisit avant le lieu",
+    await form(pg).evaluate(f => f.querySelector(".ec-plantes").compareDocumentPosition(
+      f.querySelector(".ec-lieu")) === 4));
+  await form(pg).locator(".ec-plantes").selectOption({ label: "Tomate" });
+  await pg.waitForTimeout(250);
+  j.controle("choisir la plante place la note dans sa zone",
+    await form(pg).locator(".ec-lieu").inputValue() === "z1",
+    await form(pg).locator(".ec-lieu").inputValue());
+  await form(pg).locator(".ec-plantes").selectOption("");
   await form(pg).locator(".ec-lieu").selectOption("z1");
   await pg.waitForTimeout(250);
-  const plantesZ1 = await form(pg).locator(".ec-plantes option")
-    .evaluateAll(l => l.map(o => o.textContent));
-  j.controle("changer de lieu change la liste des plantes",
-    JSON.stringify(plantesZ1) === JSON.stringify(["Sans plante", "Rhubarbe", "Tomate"]),
-    plantesZ1.join(" "));
   j.controle("la quantité ne paraît pas hors récolte",
     await form(pg).locator(".fe-recolte").isHidden());
   await form(pg).locator(".ec-geste").selectOption("recolte");
@@ -382,8 +391,15 @@ export default async function essai(navigateur) {
   const offerts = await pg.locator("#corpsNote .ec-lieu option")
     .evaluateAll(l => l.map(o => o.textContent));
   j.controle("hors d'un espace, tous les lieux du jardin sont offerts",
-    JSON.stringify(offerts) === JSON.stringify(["Potager", "Potager, Carré du fond"]),
+    JSON.stringify(offerts) === JSON.stringify(["Sans lieu précis", "Potager", "Potager, Carré du fond"]),
     offerts.join(" | "));
+  /* Hors de tout lieu, aucun espace n'est présélectionné : une note sur une
+     plante se rangeait dans le premier espace si l'on oubliait d'en changer. */
+  j.controle("et aucun n'est présélectionné",
+    await pg.locator("#corpsNote .ec-lieu").inputValue() === "");
+  j.controle("toutes les plantes du jardin sont offertes",
+    await pg.locator("#corpsNote .ec-plantes option").count() === AU_JARDIN.length + 1,
+    String(await pg.locator("#corpsNote .ec-plantes option").count()));
   await pg.locator("#fermerFeuille").click();
   await pg.waitForTimeout(400);
 

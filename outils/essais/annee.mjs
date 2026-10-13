@@ -190,14 +190,39 @@ export default async function essai(navigateur) {
   const sans = await ouvrirContexte(navigateur, { session: false });
   const m1 = await vides(sans.pg);
   j.controle("sans connexion, les trois écrans invitent à se connecter",
-    m1.every(t => t.startsWith("Connectez-vous pour retrouver votre jardin.")), m1.join(" | "));
+    m1.every(t => t.startsWith("Connectez-vous pour retrouver votre jardin, ou en créer un.")), m1.join(" | "));
   j.controle("aucun ne parle plus du bouton rond", !m1.some(t => /bouton rond/.test(t)));
+  /* L'état vide porte les gestes qui le font cesser, et « Mes plantes » sans
+     compte ne montre plus le catalogue entier sous « 0 plante au jardin ». */
+  await sans.pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await sans.pg.waitForTimeout(400);
+  const gestesSans = await sans.pg.locator("#videMoment [data-va]").evaluateAll(l => l.map(b => b.textContent));
+  j.controle("sans connexion, l'écran du jour offre de se connecter ou de parcourir le catalogue",
+    JSON.stringify(gestesSans) === '["Se connecter","Parcourir le catalogue"]', JSON.stringify(gestesSans));
+  await sans.pg.locator('.onglet[data-ecran="plantes"]').dispatchEvent("click");
+  await sans.pg.waitForTimeout(500);
+  j.controle("« Mes plantes » sans compte dit ce qui manque au lieu de montrer le catalogue",
+    await sans.pg.locator("#listes .item-bloc").count() === 0
+    && /^Connectez-vous/.test(net(await sans.pg.locator("#videSel").innerText())),
+    net(await sans.pg.locator("#videSel").innerText()).slice(0, 60));
   await sans.ctx.close();
   const vide = await ouvrirContexte(navigateur, { jardin: [] });
   const m2 = await vides(vide.pg);
   j.controle("connecté sans plante, ils renvoient au catalogue",
-    m2.every(t => t.startsWith("Aucune plante au jardin. Le livre de l'en-tête ouvre le catalogue")),
-    m2.join(" | "));
+    m2.every(t => t.startsWith("Aucune plante au jardin pour l'instant.")), m2.join(" | "));
+  await vide.pg.locator('.onglet[data-ecran="maintenant"]').dispatchEvent("click");
+  await vide.pg.waitForTimeout(400);
+  await vide.pg.locator('#videMoment [data-va="catalogue"]').click();
+  await vide.pg.waitForTimeout(600);
+  j.controle("« Ajouter mes plantes » ouvre le catalogue",
+    await vide.pg.locator("#btnCatalogue[aria-pressed=\"true\"]").count() === 1);
+  /* Cocher une plante au catalogue confirme l'ajout et offre le retour au
+     jardin. */
+  await vide.pg.locator("#listes .rond").first().click();
+  await vide.pg.waitForTimeout(500);
+  const bandeau = net(await vide.pg.locator("#etat").innerText());
+  j.controle("l'ajout se confirme et mène à ses plantes",
+    /rejoint le jardin, 1 plante en tout\.\s*Voir mes plantes$/.test(bandeau), bandeau);
   await vide.ctx.close();
 
   return j.fin(erreurs.concat(sans.erreurs, vide.erreurs));
