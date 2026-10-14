@@ -609,6 +609,26 @@ export default async function essai(navigateur) {
     && !await pg.locator("#detailEspace .banniere-compacte").evaluate(
          n => n.classList.contains("visible")));
 
+  /* La rangée de « Mes plantes » ne nommait que l'espace : la zone ne se
+     lisait que dans la fiche. Elle suit l'espace, entre parenthèses. Relevé
+     par l'audit par personas du 13 octobre 2026. */
+  j.section("la rangée d'une plante nomme sa zone");
+  const zonesVues = await pg.evaluate(async () => {
+    const o = document.querySelector('.onglet[data-ecran="plantes"]');
+    o.click();
+    await new Promise(r => setTimeout(r, 600));
+    return [...document.querySelectorAll("#listes .item-bloc")].map(b => [
+      (b.querySelector(".nom-l") || {}).textContent, (b.querySelector(".lieu-item") || {}).textContent]);
+  });
+  /* En fin de parcours, la courgette a rejoint la serre et le radis la zone
+     créée dans le verger ; la fraise est restée posée sur le potager. */
+  const vu = n => (zonesVues.find(x => x[0] === n) || [])[1];
+  j.controle("une plante en zone porte l'espace puis la zone",
+    vu("Courgette") === "Potager (Serre)" && vu("Radis") === "Verger (Fond du verger)",
+    JSON.stringify(zonesVues));
+  j.controle("une plante posée sur l'espace même n'en porte que le nom",
+    vu("Fraise") === "Potager", vu("Fraise"));
+
   await ctx.close();
   return j.fin(erreurs);
 }

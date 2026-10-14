@@ -1356,8 +1356,16 @@ function carteItem(p) {
    jardin sous chacune des rangées ajoutait une ligne à toutes. */
 function lieuHTML(p) {
   if (!sel.has(p.id) || !racines().length || choixEspace.has(p.id)) return "";
+  /* La rangée nomme la zone après l'espace, « Potager (Carré du fond) » : la
+     zone ne se lisait que dans la fiche, à trois gestes de la liste. Les lieux
+     restent séparés par une virgule, la zone entre parenthèses : un lien par
+     « et » se confondait avec un nom comme « Terrasse et balcon ». */
   const prises = racinesDe(p.id);
-  const noms = racines().filter(z => prises.includes(z.id)).map(z => z.name);
+  const occupes = espacesDe(p.id);
+  const noms = racines().filter(z => prises.includes(z.id)).map(z => {
+    const zones = zonesDe(z.id).filter(x => occupes.includes(x.id)).map(x => x.name);
+    return zones.length ? `${z.name} (${zones.join(", ")})` : z.name;
+  });
   return noms.length
     ? `<span class="lieu-item">${esc(noms.join(", "))}</span>`
     : `<span class="lieu-item lieu-vide">Placer</span>`;
