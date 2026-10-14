@@ -12,6 +12,7 @@ const par = n => PLANTES.find(p => p.name === n);
 const RHUBARBE = par("Rhubarbe"), FRAISE = par("Fraise"), TOMATE = par("Tomate");
 
 const AU_JARDIN = [RHUBARBE.id, FRAISE.id, TOMATE.id];
+const TOMATE_ID = TOMATE.id;
 const ESPACES = [
   { id: "e1", name: "Potager", surface_m2: 40, exposition: "soleil" },
   { id: "z1", name: "Carré du fond", parent_id: "e1", surface_m2: 10 },
@@ -91,7 +92,7 @@ export default async function essai(navigateur) {
     [e.querySelector(".zone-nom").textContent, e.querySelector(".nb").textContent,
      e.querySelector(".zone-mesure").textContent].join(" "));
   j.controle("son entête compte les deux entrées et date la dernière",
-    net(somm) === "Journal 2 dernière le 1 août", net(somm));
+    net(somm) === "Carnet 2 dernière le 1 août", net(somm));
 
   await deplierJournal(pg);
   const ordre = await pg.locator(".entree-carnet").evaluateAll(l => l.map(e => e.dataset.entree));
@@ -100,7 +101,8 @@ export default async function essai(navigateur) {
 
   j.section("ce qu'une entrée montre");
   const haut2 = await entree(pg, "o2").locator(".ec-haut").evaluate(e =>
-    [...e.children].filter(x => x.tagName !== "BUTTON").map(x => x.textContent).join(" "));
+    [...e.children].filter(x => x.tagName !== "BUTTON" && !x.classList.contains("ec-actions"))
+      .map(x => x.textContent).join(" "));
   j.controle("le jour, le geste, la quantité, la plante et la zone",
     net(haut2) === "1 août Récolte 2,4 kg Tomate Carré du fond", net(haut2));
   const haut1 = net(await entree(pg, "o1").locator(".ec-haut").textContent());
@@ -490,6 +492,77 @@ export default async function essai(navigateur) {
   const partout = await pg.locator("#corpsJournal .entree-carnet").count();
   j.controle("le jardin entier en porte au moins autant",
     partout >= dansLeLieu, `${dansLeLieu} au lieu, ${partout} au jardin`);
+
+  /* Le carnet se relit par lieu, par geste ou par un mot. Relevé par l'audit
+     par personas : relire le carnet d'un espace passait par trois écrans, et
+     rien ne retrouvait une note. */
+  j.section("le carnet se filtre");
+  const lieuxF = await pg.locator("#filtresCarnet [data-fc-lieu]").allInnerTexts();
+  j.controle("une pastille par espace, et le jardin entier",
+    lieuxF[0] === "Tout le jardin" && lieuxF.includes("Potager"), lieuxF.join(" | "));
+  await pg.locator('#filtresCarnet [data-fc-geste="recolte"]').click();
+  await pg.waitForTimeout(400);
+  const gestesF = await pg.locator("#corpsJournal .entree-carnet .ec-geste").allInnerTexts();
+  j.controle("un geste retenu ne montre que ses entrées",
+    gestesF.length > 0 && gestesF.every(g => g === "Récolte")
+    && await pg.locator("#corpsJournal .entree-carnet").count() === gestesF.length, gestesF.join(" | "));
+  await pg.locator('#filtresCarnet [data-fc-geste="recolte"]').click();
+  await pg.waitForTimeout(300);
+  await pg.locator("#rechCarnetIn").fill("ortie");
+  await pg.waitForTimeout(400);
+  const trouvees = await pg.locator("#corpsJournal .entree-carnet").evaluateAll(l => l.map(e => e.dataset.entree));
+  j.controle("un mot retrouve la note qui le porte", JSON.stringify(trouvees) === '["o1"]',
+    JSON.stringify(trouvees));
+  j.controle("le champ garde la frappe pendant la recherche",
+    await pg.evaluate(() => document.activeElement && document.activeElement.id === "rechCarnetIn"));
+  await pg.locator("#rechCarnetIn").fill("");
+  await pg.waitForTimeout(300);
+
+  /* Une entrée se corrigeait en la supprimant puis en la ressaisissant. Elle
+     s'ouvre maintenant dans la feuille de saisie, préremplie, et la
+     correction garde son identifiant. */
+  j.section("une entrée se corrige");
+  await pg.locator('#corpsJournal .entree-carnet[data-entree="o2"]').locator(".ec-modif").click();
+  await pg.waitForTimeout(600);
+  j.controle("la feuille s'ouvre pour corriger",
+    net(await pg.locator("#feuille-titre").textContent()) === "Corriger l'entrée");
+  const pre = await pg.evaluate(() => {
+    const f = document.querySelector("#corpsNote .form-entree");
+    const v = s => (f.querySelector(s) || {}).value;
+    const t = s => { const x = f.querySelector(s); return x ? x.options[x.selectedIndex].textContent : ""; };
+    return [v(".ec-jour-c"), v(".ec-geste"), v(".ec-qte"), t(".ec-plantes"), v(".ec-lieu")].join(" ");
+  });
+  j.controle("elle reprend le jour, le geste, la quantité, la plante et le lieu",
+    pre === "2026-08-01 recolte 2.4 Tomate z1", pre);
+  await pg.locator("#corpsNote .ec-qte").fill("3");
+  await pg.locator("#corpsNote .ec-valider").click();
+  await pg.waitForTimeout(800);
+  const maj = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "observations" && e.op === "update").pop());
+  j.controle("la correction met à jour l'entrée au lieu d'en créer une",
+    !!maj && Number(maj.v.quantite) === 3 && maj.v.plant_id && maj.v.espace_id === "z1",
+    JSON.stringify(maj && maj.v));
+  j.controle("le carnet montre la valeur corrigée",
+    /3 kg/.test(net(await pg.locator('#corpsJournal .entree-carnet[data-entree="o2"]').locator(".ec-haut").textContent())),
+    net(await pg.locator('#corpsJournal .entree-carnet[data-entree="o2"]').locator(".ec-haut").textContent()));
+
+  /* La saisie ouverte avec une fiche recevait « vrai » au lieu de la plante,
+     et la note se serait enregistrée sans elle. Le cas est latent : la fiche
+     recouvre la barre, le rond ne se touche pas tant qu'elle est ouverte. Il
+     est joué ici par un clic programmé. Relevé le 14 octobre 2026. */
+  j.section("noter depuis une fiche garde sa plante");
+  await pg.locator("#fermerFeuille").click().catch(() => {});
+  await pg.waitForTimeout(300);
+  await ouvrirDepuisLaListe(pg, "Tomate");
+  await pg.locator("#btnNoter").dispatchEvent("click");
+  await pg.waitForTimeout(600);
+  await pg.locator("#corpsNote .ec-texte-c").fill("Première tomate rouge.");
+  await pg.locator("#corpsNote .ec-valider").click();
+  await pg.waitForTimeout(800);
+  const deFiche = await pg.evaluate(() => (window.__ECRITS__ || [])
+    .filter(e => e.table === "observations" && e.op === "insert").pop());
+  j.controle("l'entrée porte la plante de la fiche",
+    !!deFiche && deFiche.v.plant_id === TOMATE_ID, JSON.stringify(deFiche && deFiche.v));
 
   await ctx.close();
   return j.fin(erreurs);

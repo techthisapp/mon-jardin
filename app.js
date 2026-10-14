@@ -191,6 +191,10 @@ let espaceOuvert = null;       // null au premier niveau, sinon l'espace lu, "0"
 let porteeSel = "jardin";      // jardin ou tout
 let ecranCourant = "maintenant";  // la destination ouverte, catalogue compris
 let carnetContexte = null;     // le lieu ou la plante sur lequel le carnet est ouvert
+/* Les filtres du carnet : un geste et un mot cherché dans le texte, la plante
+   ou le lieu. Ils s'ajoutent au contexte, qu'ils ne remplacent pas. */
+let gesteCarnet = null;
+let rechCarnet = "";
 /* La période retenue sur le calendrier, en quinzaines de 1 à 24. Un mois en
    occupe deux, une quinzaine une seule : la même borne sert aux deux échelles,
    et le filtre s'affine sans code séparé. */
@@ -452,6 +456,14 @@ const VERBE = {
   abri: "Semer à l'abri", terre: "Semer", plant: "Planter",
   protection: "Protéger", protection_ete: "Ombrer", multiplication: "Multiplier",
 };
+/* Les gestes du carnet suivent ceux du calendrier : amender et multiplier y
+   manquaient, et ce qu'on venait de faire ne se notait pas sous le nom de la
+   tâche annoncée. La contrainte `observations_geste` les accepte depuis le
+   13 octobre 2026. */
+const GESTE_NOM = { semis: "Semis", plantation: "Plantation", taille: "Taille",
+                    amendement: "Amendement", multiplication: "Multiplication",
+                    recolte: "Récolte", traitement: "Traitement", floraison: "Floraison",
+                    maladie: "Maladie", note: "Note" };
 const VERBE_MULTI = {
   division: "Diviser", tubercule: "Diviser", bouture: "Bouturer",
   marcotte: "Marcotter", greffe: "Greffer", semis: "Semer",
@@ -3723,7 +3735,7 @@ function contexteNote() {
 
 /* Le carnet montre ce qui a déjà été noté là où l'on écrit : depuis un espace,
    ses entrées et celles de ses zones ; depuis une fiche, celles de la plante. */
-function entreesDuCarnet() {
+function entreesDuCarnet(sansFiltres) {
   const c = carnetContexte;
   let lot = carnet;
   if (c && c.plant_id) lot = lot.filter(e => e.plant_id === c.plant_id);
@@ -3731,7 +3743,56 @@ function entreesDuCarnet() {
     const sous = [c.espace_id].concat(zonesDe(c.espace_id).map(z => z.id));
     lot = lot.filter(e => sous.includes(e.espace_id));
   }
+  if (!sansFiltres && gesteCarnet) lot = lot.filter(e => e.geste === gesteCarnet);
+  if (!sansFiltres && rechCarnet) {
+    // Le mot se cherche dans le texte, le nom de la plante et celui du lieu.
+    const q = rechCarnet.toLowerCase();
+    lot = lot.filter(e => {
+      const p = e.plant_id ? plantes.find(x => x.id === e.plant_id) : null;
+      const l = noeud(e.espace_id);
+      return [e.texte, p && p.nom, l && l.name, GESTE_NOM[e.geste]]
+        .some(t => t && String(t).toLowerCase().includes(q));
+    });
+  }
   return lot.slice().sort((a, b) => (a.jour < b.jour ? 1 : a.jour > b.jour ? -1 : 0));
+}
+
+/* Les pastilles du carnet : le jardin entier ou l'un de ses espaces, puis les
+   gestes qui y sont notés, et une recherche. Un espace choisi remplace le
+   contexte ; une plante ouverte depuis sa fiche le reste tant qu'on ne choisit
+   pas un lieu. */
+function rendreFiltresCarnet() {
+  const z = $("filtresCarnet");
+  if (!z) return;
+  const c = carnetContexte || {};
+  const ici = c.espace_id ? racineDe(c.espace_id) : (c.plant_id ? null : "");
+  const lieux = racines();
+  const gestes = [...new Set(entreesDuCarnet(true).map(e => e.geste).filter(Boolean))]
+    .sort((a, b) => Object.keys(GESTE_NOM).indexOf(a) - Object.keys(GESTE_NOM).indexOf(b));
+  if (gesteCarnet && !gestes.includes(gesteCarnet)) gesteCarnet = null;
+  const pastille = (attr, val, lib, on) => `<button type="button" class="chip" ${attr}="${esc(val)}"`
+    + ` aria-pressed="${on}">${esc(lib)}</button>`;
+  z.innerHTML = (lieux.length ? `<div class="jeu-chips fc-lieux">`
+      + pastille("data-fc-lieu", "", "Tout le jardin", ici === "")
+      + lieux.map(r => pastille("data-fc-lieu", r.id, r.name, ici === r.id)).join("") + `</div>` : "")
+    + (gestes.length > 1 ? `<div class="jeu-chips fc-gestes">`
+      + gestes.map(g => pastille("data-fc-geste", g, GESTE_NOM[g] || g, gesteCarnet === g)).join("")
+      + `</div>` : "")
+    + `<input type="search" id="rechCarnetIn" class="fc-rech" placeholder="Chercher dans le carnet"`
+    + ` aria-label="Chercher dans le carnet" value="${esc(rechCarnet)}">`;
+  z.querySelectorAll("[data-fc-lieu]").forEach(b => b.addEventListener("click", () => {
+    carnetContexte = b.dataset.fcLieu ? { espace_id: b.dataset.fcLieu, plant_id: "" } : null;
+    rendreJournal();
+  }));
+  z.querySelectorAll("[data-fc-geste]").forEach(b => b.addEventListener("click", () => {
+    gesteCarnet = gesteCarnet === b.dataset.fcGeste ? null : b.dataset.fcGeste;
+    rendreJournal();
+  }));
+  // La recherche ne redessine que la liste : redessiner le champ perdrait la frappe.
+  z.querySelector("#rechCarnetIn").addEventListener("input", ev => {
+    rechCarnet = ev.target.value.trim();
+    rendreJournal(true);
+  });
 }
 
 function nomDuContexte() {
@@ -3760,13 +3821,15 @@ function tousLesLieux() {
 
 function vueNote() {
   return {
-    titre: "Noter", sous: "", corps: `<div id="corpsNote"></div>`,
+    titre: (saisiePartout && saisiePartout.entree) ? "Corriger l'entrée" : "Noter",
+    sous: "", corps: `<div id="corpsNote"></div>`,
     brancher: () => {
       const z = $("corpsNote");
       if (!z) return;
       const etat = saisiePartout || contexteNote();
       saisiePartout = etat;
-      const p = etat.plant_id ? plantes.find(x => x.id === etat.plant_id) : null;
+      // Une entrée corrigée laisse tout se rechoisir, plante comprise.
+      const p = !etat.entree && etat.plant_id ? plantes.find(x => x.id === etat.plant_id) : null;
       /* Le lieu se choisit parmi ceux que la plante occupe. Une plante encore
          placée nulle part n'interdit pas d'en noter quelque chose : le jardin
          entier est alors offert, faute de quoi la saisie serait une impasse. */
@@ -3790,24 +3853,27 @@ function vueNote() {
       }
       /* La feuille se ferme sur le carnet, qui l'attend derrière : l'entrée
          écrite s'y lit aussitôt. */
-      z.appendChild(formulaireEntree(etat, lieux, Boolean(p), () => {
+      z.appendChild(formulaireEntree(etat, lieux, p || null, () => {
         saisiePartout = null;
         fermerFeuille();
         rendreJournal();
+        rendreEspaces();
       }));
     },
   };
 }
 
-function rendreJournal() {
+function rendreJournal(listeSeule) {
   const z = $("corpsJournal");
   if (!z) return;
   majTeteCarnet();
+  if (listeSeule !== true) rendreFiltresCarnet();
   z.innerHTML = "";
   const lot = entreesDuCarnet();
   if (!lot.length) {
-    z.innerHTML = `<p class="vide">Rien de noté ${
-      nomDuContexte() ? "ici" : "au jardin"} pour l'instant.</p>`;
+    z.innerHTML = gesteCarnet || rechCarnet
+      ? `<p class="vide">Aucune entrée ne correspond à ce filtre.</p>`
+      : `<p class="vide">Rien de noté ${nomDuContexte() ? "ici" : "au jardin"} pour l'instant.</p>`;
     return;
   }
   /* Les entrées se rangent par mois : une saison se relit par ses mois, non par
@@ -6374,14 +6440,6 @@ const VUE_ESPACE = "monjardin.vue-espace";
 let vueEspace = "liste";
 try { vueEspace = localStorage.getItem(VUE_ESPACE) === "mosaique" ? "mosaique" : "liste"; }
 catch (e) { /* stockage indisponible */ }
-/* Les gestes du carnet suivent ceux du calendrier : amender et multiplier y
-   manquaient, et ce qu'on venait de faire ne se notait pas sous le nom de la
-   tâche annoncée. La contrainte `observations_geste` les accepte depuis le
-   13 octobre 2026. */
-const GESTE_NOM = { semis: "Semis", plantation: "Plantation", taille: "Taille",
-                    amendement: "Amendement", multiplication: "Multiplication",
-                    recolte: "Récolte", traitement: "Traitement", floraison: "Floraison",
-                    maladie: "Maladie", note: "Note" };
 const UNITES = ["kg", "g", "pièces", "bottes", "litres"];
 const PHOTOS_PAR_ENTREE = 6;
 const SUPPORT_NOM = { pleine_terre: "Pleine terre", contenant: "Contenant",
@@ -7373,7 +7431,7 @@ function sectionCarnet(zo) {
   d.open = carnetOuvert;
   const lot = entreesDuLieu(zo.id);
   const s = document.createElement("summary");
-  s.innerHTML = `<b class="zone-nom">Journal</b><span class="nb">${lot.length}</span>`
+  s.innerHTML = `<b class="zone-nom">Carnet</b><span class="nb">${lot.length}</span>`
     + `<span class="zone-mesure">${lot.length ? "dernière le " + esc(jourEnClair(lot[0].jour)) : ""}</span>`;
   d.appendChild(s);
   d.addEventListener("toggle", () => { carnetOuvert = d.open; });
@@ -7414,7 +7472,9 @@ function ligneEntree(e, opts) {
   const lieu = noeud(e.espace_id);
   const ph = photosCarnet.get(e.id) || [];
   const quantite = e.quantite
-    ? ` <span class="ec-qtte">${esc(nombreFr(Number(e.quantite)))}${e.unite ? " " + esc(e.unite) : ""}</span>` : "";
+    // Une quantité ronde se dit sans décimale : « 3 kg » et non « 3,0 kg ».
+    ? ` <span class="ec-qtte">${esc(nombreFr(Number(e.quantite)).replace(/,0$/, ""))}`
+      + `${e.unite ? " " + esc(e.unite) : ""}</span>` : "";
   l.innerHTML = `<div class="ec-haut"><span class="ec-jour">${esc(jourEnClair(e.jour))}</span>`
     + (e.geste ? `<span class="ec-geste">${esc(GESTE_NOM[e.geste] || e.geste)}</span>` : "")
     + quantite
@@ -7423,13 +7483,21 @@ function ligneEntree(e, opts) {
         ? `<span class="ec-lieu">${esc((noeud(lieu.parent_id) || {}).name || "")}</span>` : "")
     + (lieu && (opts.plante ? lieu.parent_id : true)
         ? `<span class="ec-lieu">${esc(lieu.name)}</span>` : "")
-    + `<button type="button" class="lien ec-oter">Supprimer</button></div>`
+    + `<span class="ec-actions"><button type="button" class="lien ec-modif">Modifier</button>`
+    + `<button type="button" class="lien ec-oter">Supprimer</button></span></div>`
     + (e.texte ? `<p class="ec-texte">${esc(e.texte)}</p>` : "")
     + (ph.length ? `<div class="ec-photos">` + ph.map(x =>
         `<button type="button" class="ec-vign"><img data-chemin="${esc(x.chemin)}" alt=""`
         + `${x.largeur ? ` width="${x.largeur}" height="${x.hauteur}"` : ""}></button>`).join("")
       + `</div>` : "");
   l.querySelector(".ec-oter").addEventListener("click", () => supprimerEntree(e, opts.apres));
+  /* Une entrée se corrige dans la feuille de saisie, préremplie : une faute
+     sur un poids obligeait à supprimer puis à tout ressaisir, photographies
+     comprises. */
+  l.querySelector(".ec-modif").addEventListener("click", () => {
+    saisiePartout = { entree: e, espace_id: e.espace_id || "", plant_id: e.plant_id || "" };
+    ouvrirVue("note");
+  });
   l.querySelectorAll(".ec-vign").forEach(b =>
     b.addEventListener("click", () => b.classList.toggle("ec-grande")));
   return l;
@@ -7451,11 +7519,12 @@ function formulaireEntree(etat, lieux, fige, fermer) {
      espace : une note sur le rosier du massif se rangeait dans le potager si
      l'on oubliait de changer le lieu. La plante se choisit d'abord, et le lieu
      la suit. La table accepte une entrée portée par la plante seule. */
-  const horsLieu = !fige && !etat.espace_id;
+  const edite = etat.entree || null;
+  const horsLieu = !fige && (!etat.espace_id || Boolean(edite));
   const choisi = lieux.some(x => x.id === etat.espace_id)
     ? etat.espace_id : horsLieu ? "" : (lieux[0] || {}).id;
   f.innerHTML = `<div class="fe-ligne">`
-    + `<input class="ec-jour-c" type="date" value="${jourDuJour()}" aria-label="Jour">`
+    + `<input class="ec-jour-c" type="date" value="${edite ? esc(edite.jour) : jourDuJour()}" aria-label="Jour">`
     + (fige ? "" : `<select class="ec-plantes" aria-label="Plante"></select>`)
     + `<select class="ec-lieu" aria-label="Lieu">`
     + (horsLieu ? `<option value="">Sans lieu précis</option>` : "")
@@ -7482,8 +7551,9 @@ function formulaireEntree(etat, lieux, fige, fermer) {
      celles du lieu et de ses zones depuis un espace : la tomate du carré du
      fond manquait quand le potager seul était choisi. */
   const ids = new Set(lieux.map(x => x.id));
-  const offertes = plantes.filter(p => sel.has(p.id)
-    && (horsLieu || espacesDe(p.id).some(id => ids.has(id))));
+  const offertes = plantes.filter(p => (sel.has(p.id)
+    && (horsLieu || espacesDe(p.id).some(id => ids.has(id))))
+    || (edite && p.id === edite.plant_id));
   if (selPlante) {
     selPlante.innerHTML = `<option value="">Sans plante</option>`
       + offertes.map(p => `<option value="${p.id}"${p.id === etat.plant_id ? " selected" : ""}>`
@@ -7500,6 +7570,13 @@ function formulaireEntree(etat, lieux, fige, fermer) {
   const selGeste = f.querySelector(".ec-geste");
   const recolte = f.querySelector(".fe-recolte");
   selGeste.addEventListener("change", () => { recolte.hidden = selGeste.value !== "recolte"; });
+  if (edite) {
+    selGeste.value = edite.geste || "";
+    recolte.hidden = selGeste.value !== "recolte";
+    if (edite.quantite) f.querySelector(".ec-qte").value = edite.quantite;
+    if (edite.unite) f.querySelector(".ec-unite").value = edite.unite;
+    f.querySelector(".ec-texte-c").value = edite.texte || "";
+  }
   const fichiers = f.querySelector(".ec-fichiers");
   fichiers.addEventListener("change", () => {
     const n = (fichiers.files || []).length;
@@ -7508,17 +7585,18 @@ function formulaireEntree(etat, lieux, fige, fermer) {
   });
   f.querySelector(".ec-annuler").addEventListener("click", fermer);
   f.addEventListener("submit", ev => {
-    ev.preventDefault(); enregistrerEntree(f, fige, fermer);
+    ev.preventDefault(); enregistrerEntree(f, fige, fermer, edite);
   });
   return f;
 }
 
-async function enregistrerEntree(f, fige, fermer) {
-  if (!session || !jardinId) { info("Connectez-vous pour tenir le journal."); return; }
+async function enregistrerEntree(f, fige, fermer, edite) {
+  if (!session || !jardinId) { info("Connectez-vous pour tenir le carnet."); return; }
   const geste = f.querySelector(".ec-geste").value || null;
   const texte = f.querySelector(".ec-texte-c").value.trim() || null;
   const lot = [...(f.querySelector(".ec-fichiers").files || [])].slice(0, PHOTOS_PAR_ENTREE);
-  if (!geste && !texte && !lot.length) {
+  const dejaPhotos = edite ? (photosCarnet.get(edite.id) || []).length : 0;
+  if (!geste && !texte && !lot.length && !dejaPhotos) {
     info("Une entrée demande au moins un geste, un mot ou une photographie."); return;
   }
   const lieu = f.querySelector(".ec-lieu").value || null;
@@ -7528,23 +7606,26 @@ async function enregistrerEntree(f, fige, fermer) {
   const quantite = geste === "recolte" && q !== "" ? Number(q.replace(",", ".")) : null;
   const bouton = f.querySelector(".ec-valider");
   bouton.disabled = true;
-  const { data, error } = await db.from("observations").insert({
-    garden_id: jardinId,
+  const ligne = {
     espace_id: lieu,
     plant_id: plante,
     jour: f.querySelector(".ec-jour-c").value || jourDuJour(),
     geste, texte, quantite,
     unite: quantite ? f.querySelector(".ec-unite").value : null,
-  }).select().single();
+  };
+  // Une entrée corrigée garde son identifiant et ses photographies.
+  const { data, error } = edite
+    ? await db.from("observations").update(ligne).eq("id", edite.id).select().single()
+    : await db.from("observations").insert({ garden_id: jardinId, ...ligne }).select().single();
   if (error) {
     bouton.disabled = false;
     info("Entrée non enregistrée : " + error.message, true);
     return;
   }
-  const posees = lot.length ? await deposerPhotos(data.id, lot) : 0;
+  const posees = lot.length ? await deposerPhotos(data.id, lot, dejaPhotos) : 0;
   await chargerCarnet();
-  info(posees ? `Entrée enregistrée, ${posees} ${posees > 1 ? "photographies" : "photographie"}.`
-    : "Entrée enregistrée.");
+  const dit = edite ? "Entrée corrigée" : "Entrée enregistrée";
+  info(posees ? `${dit}, ${posees} ${posees > 1 ? "photographies" : "photographie"}.` : dit + ".");
   fermer();
 }
 
@@ -7565,18 +7646,19 @@ async function reduireImage(fichier, cote = 1600, qualite = 0.82) {
   return { blob, largeur, hauteur };
 }
 
-async function deposerPhotos(entree, fichiers) {
+// Les photographies ajoutées à une entrée corrigée se rangent après les siennes.
+async function deposerPhotos(entree, fichiers, deja = 0) {
   const lignes = [];
   for (let i = 0; i < fichiers.length; i++) {
     let image;
     try { image = await reduireImage(fichiers[i]); }
     catch { info("Image illisible : " + fichiers[i].name, true); continue; }
-    const chemin = `${jardinId}/${entree}/${i + 1}-${cleCourte()}.jpg`;
+    const chemin = `${jardinId}/${entree}/${deja + i + 1}-${cleCourte()}.jpg`;
     const { error } = await db.storage.from("jardin")
       .upload(chemin, image.blob, { contentType: "image/jpeg" });
     if (error) { info("Photographie non envoyée : " + error.message, true); continue; }
     lignes.push({ observation_id: entree, chemin, largeur: image.largeur,
-                  hauteur: image.hauteur, poids: image.blob.size, position: i + 1 });
+                  hauteur: image.hauteur, poids: image.blob.size, position: deja + i + 1 });
   }
   if (lignes.length) {
     const { error } = await db.from("observation_photos").insert(lignes);
@@ -7741,7 +7823,7 @@ function carteCarnetDeLaPlante(p) {
   const c = document.createElement("section");
   c.className = "f-bloc f-journal-plante";
   const lot = carnet.filter(e => e.plant_id === p.id);
-  c.innerHTML = `<h3>Journal</h3><div class="fj-corps corps-journal"></div>`;
+  c.innerHTML = `<h3>Carnet</h3><div class="fj-corps corps-journal"></div>`;
   const corps = c.querySelector(".fj-corps");
   const fermer = () => { saisieFiche = null; rendrePanJardin(p); };
   if (saisieFiche) {
@@ -7768,7 +7850,7 @@ function carteCarnetDeLaPlante(p) {
 }
 
 async function supprimerEntree(e, apres) {
-  if (!confirm("Supprimer cette entrée du journal ?")) return;
+  if (!confirm("Supprimer cette entrée du carnet ?")) return;
   const ph = photosCarnet.get(e.id) || [];
   if (ph.length) await db.storage.from("jardin").remove(ph.map(x => x.chemin));
   const { error } = await db.from("observations").delete().eq("id", e.id);
