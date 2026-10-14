@@ -431,6 +431,14 @@ const MOTIF_TYPO = { "Ornement": "ornement", "Aromatiques": "aromatique", "Légu
 // Une fenêtre peut être à cheval sur le 1er janvier, sa borne de début dépasse
 // alors sa borne de fin. Tout test d'appartenance passe par ici.
 const dansFenetre = (q, s, e) => (s <= e ? (q >= s && q <= e) : (q >= s || q <= e));
+/* Une fenêtre touche une période de quinzaines si l'une d'elles y tombe. Le
+   test par bornes, `s <= b && e >= a`, perdait les fenêtres à cheval sur le
+   1er janvier : la multiplication du figuier, de fin novembre à début février,
+   disparaissait de la frise filtrée sur janvier. */
+const chevauche = (s, e, a, b) => {
+  for (let q = a; q <= b; q++) if (dansFenetre(q, s, e)) return true;
+  return false;
+};
 
 const demiTexte = q => (q % 2 ? "début " : "fin ") + MOIS_PLEIN[Math.ceil(q / 2) - 1];
 
@@ -2280,7 +2288,7 @@ function majMois() {
 function dansMois(p) {
   if (periode === null) return true;
   return ORDRE.some(k => etatPhase[k]
-    && (segsDe(p, k) || []).some(v => v[0] <= periode.b && v[1] >= periode.a));
+    && (segsDe(p, k) || []).some(v => chevauche(v[0], v[1], periode.a, periode.b)));
 }
 
 /* Les bornes d'une fenêtre, dites en quinzaines comme partout ailleurs. Une
@@ -2311,7 +2319,7 @@ function segs(p) {
     const seg = segsDe(p, k);
     if (!seg || !etatPhase[k] || !phases[k]) return;
     seg.forEach(v => {
-      if (periode !== null && !(v[0] <= h2 && v[1] >= h1)) return;
+      if (periode !== null && !chevauche(v[0], v[1], h1, h2)) return;
       items.push({ k, s: v[0], e: v[1], id: v[3] });
     });
   });

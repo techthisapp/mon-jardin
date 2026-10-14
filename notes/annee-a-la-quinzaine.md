@@ -77,7 +77,9 @@ de 44 points par plante et par geste.
 Le filtre par mois de la frise, `dansMois`, et le tracé filtré, `segs`, testent
 le chevauchement par `v[0] <= b && v[1] >= a`, sans le cas d'une fenêtre à
 cheval sur le 1er janvier. Une multiplication de fin novembre à début février
-disparaît donc de la frise filtrée sur janvier. Non corrigé dans ce lot.
+disparaît donc de la frise filtrée sur janvier. Corrigé le 14 octobre 2026 par
+`chevauche`, qui teste chaque quinzaine de la période avec `dansFenetre` ;
+contrôle ajouté à `outils/essais/frise.mjs`.
 
 ## Contrôles
 

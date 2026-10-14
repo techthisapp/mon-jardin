@@ -201,6 +201,26 @@ export default async function essai(navigateur) {
     JSON.stringify((await c.pg.locator("#basculeAnnee .vue").allInnerTexts()).map(net)));
   await c.ctx.close();
 
+  /* Le filtre d'un mois testait les bornes, `début <= fin du mois` et
+     `fin >= début du mois`, et perdait ainsi les fenêtres à cheval sur le
+     1er janvier. La multiplication du figuier, de fin novembre à début
+     février, disparaissait de janvier. */
+  j.section("le filtre d'un mois garde les fenêtres qui passent l'hiver");
+  await versAnnee(pg);
+  await pg.locator("#grilleMois .mois-case").first().click();
+  await pg.waitForTimeout(500);
+  const figuier = await pg.evaluate(() => {
+    const r = [...document.querySelectorAll("#rangees .rangee")].find(x =>
+      /^Figuier/.test(x.querySelector(".nom-plante-txt").textContent));
+    return r ? [...r.querySelectorAll(".seg")].map(s => s.dataset.tache) : null;
+  });
+  j.controle("en janvier, le figuier reste à la frise",
+    Array.isArray(figuier), JSON.stringify(figuier));
+  j.controle("avec sa multiplication, qui court de novembre à février",
+    Array.isArray(figuier) && figuier.includes("multiplication"), JSON.stringify(figuier));
+  await pg.locator("#grilleMois .mois-case").first().click();
+  await pg.waitForTimeout(300);
+
   await ctx.close();
   return j.fin(erreurs.concat(c.erreurs));
 }
