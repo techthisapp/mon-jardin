@@ -117,3 +117,10 @@ tâche devient une bande arrondie au-dessus d'elles ; la barre collée de la
 liste prend le verre du fond.
 
 `outils/essais/espaces.mjs` lit les plantes sans zone dans leur nouveau bloc.
+
+## Chute ralentie
+
+Jérôme a trouvé que les feuilles tombaient trop vite. Une feuille mettait de 24
+à 39 secondes à traverser l'écran, de 34 à 49 par temps de pluie ; elle en met
+désormais de 44 à 67, et de 60 à 83 par temps de pluie, soit à peu près deux
+fois moins vite. `outils/essais/ambiance.mjs` contrôle ces durées.

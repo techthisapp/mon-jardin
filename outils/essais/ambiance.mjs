@@ -23,6 +23,7 @@ const lire = pg => pg.evaluate(() => {
     base: cs.backgroundColor,
     taches: [...z.querySelectorAll(".am-tache")].map(t => getComputedStyle(t).backgroundColor),
     feuilles: z.querySelectorAll(".am-feuille").length,
+    durees: [...z.querySelectorAll(".am-feuille, .am-flocon")].map(e => parseFloat(e.style.animationDuration)),
     flocons: z.querySelectorAll(".am-flocon").length,
     couleurChute: (z.querySelector(".am-feuille, .am-flocon") || {}).style?.color || "",
     lumiere: getComputedStyle(z.querySelector(".am-lumiere")).backgroundColor,
@@ -66,6 +67,10 @@ export default async function essai(navigateur) {
   /* Les feuilles étaient trop discrètes à 20 % : elles tombent entre 55 et
      79 %, plus grandes. Relevé par Jérôme le 16 octobre 2026. */
   j.controle("les feuilles se voient", a.opacites.every(o => o >= .55), a.opacites.join(", "));
+  /* Elles tombaient trop vite à 24 secondes : chacune met au moins 44
+     secondes à traverser l'écran. Relevé par Jérôme le 16 octobre 2026. */
+  j.controle("elles tombent lentement, en trois quarts de minute au moins",
+    a.durees.length && a.durees.every(d => d >= 44 && d <= 67), a.durees.join(", "));
   /* Une seule branche, qui retombe du coin haut droit. Retournée autour de
      son bord haut, elle sortait de l'écran sans qu'aucun contrôle le voie. */
   j.controle("une seule branche, qui retombe du coin haut droit",
@@ -121,7 +126,8 @@ export default async function essai(navigateur) {
   a = await lire(pluie.pg);
   j.controle("le temps du jour est la pluie", a.meteo === "pluie", a.meteo);
   j.controle("un voile gris passe sur le fond", /120, 140, 160/.test(a.voile), a.voile);
-  j.controle("moins de feuilles tombent", a.feuilles === 7, String(a.feuilles));
+  j.controle("moins de feuilles tombent, plus lentement encore",
+    a.feuilles === 7 && a.durees.every(d => d >= 60), `${a.feuilles}, ${a.durees.join(", ")}`);
   await pluie.ctx.close();
 
   j.section("le système demande moins de mouvement");

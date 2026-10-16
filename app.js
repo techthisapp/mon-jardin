@@ -3280,7 +3280,9 @@ function appliquerAmbiance() {
   const o = [];
   for (let k = 0; k < n; k++) {
     const x = (k * 37 + 7) % 96, t = (flocons ? 6 : 18) + (k * 7) % (flocons ? 6 : 14);
-    const d = (temps === "pluie" ? 34 : 24) + (k * 5) % 16, r0 = ((k * 3.7) % d).toFixed(1);
+    /* Une feuille met de 44 à 67 secondes à traverser l'écran, de 60 à 83 par
+       temps de pluie : à 24 secondes, Jérôme les trouvait trop rapides. */
+    const d = (temps === "pluie" ? 60 : 44) + (k * 7) % 24, r0 = ((k * 3.7) % d).toFixed(1);
     // Assez présentes pour se voir sans gêner la lecture : de 55 à 79 %.
     const op = flocons ? (0.55 + (k % 3) * 0.12) : (0.55 + (k % 4) * 0.08);
     const style = `left:${x}%;width:${t}px;height:${t}px;animation-duration:${d}s;`
