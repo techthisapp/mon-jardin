@@ -52,7 +52,7 @@ const sommaireZone = (pg, id) =>
 const reglagesEspace = pg => pg.locator("#detailEspace .menu-lieu .reglages-lieu");
 const reglagesZone = (pg, id) =>
   pg.locator(`#detailEspace details.zone-espace[data-zone="${id}"] .reglages-lieu`);
-const sansZone = (pg, p) => pg.locator(`#detailEspace > .corps-espace .ligne-espace[data-plante="${p}"]`);
+const sansZone = (pg, p) => pg.locator(`:is(#detailEspace > .corps-espace, #detailEspace > .bloc-zone > .corps-espace) .ligne-espace[data-plante="${p}"]`);
 const dansZone = (pg, z, p) => pg.locator(`#detailEspace details[data-zone="${z}"] .ligne-espace[data-plante="${p}"]`);
 const partout = (pg, p) => pg.locator(`#detailEspace .ligne-espace[data-plante="${p}"]`);
 // Le nombre de plantes ouvre la ligne de mesure, sous le nom, dans la bannière.
@@ -381,7 +381,7 @@ export default async function essai(navigateur) {
   j.section("un seul niveau de regroupement");
   const groupes = await pg.locator("#detailEspace .groupe-typo").count();
   j.controle("un espace découpé en zones ne regroupe pas par type", groupes === 0, String(groupes));
-  const noms = await pg.locator("#detailEspace > .corps-espace .nom-espace")
+  const noms = await pg.locator(":is(#detailEspace > .corps-espace, #detailEspace > .bloc-zone > .corps-espace) .nom-espace")
     .evaluateAll(l => l.map(e => e.textContent.trim()));
   j.controle("ses plantes sans zone se suivent dans l'ordre alphabétique",
     noms.length > 1 && noms.every((n, i) => !i || noms[i - 1].localeCompare(n, "fr") <= 0),
@@ -447,7 +447,7 @@ export default async function essai(navigateur) {
     mesure: document.querySelector(".bl-mesure").textContent,
     groupes: [...document.querySelectorAll("#detailEspace .groupe-typo .nb")]
       .reduce((s, n) => s + Number(n.textContent), 0),
-    sections: [...document.querySelectorAll("#detailEspace > .tete-section-zone .nb,"
+    sections: [...document.querySelectorAll("#detailEspace > .bloc-zone > .tete-section-zone .nb,"
       + " #detailEspace > details.zone-espace > summary > .nb")]
       .reduce((s, n) => s + Number(n.textContent), 0),
     pastilles: document.querySelectorAll("#detailEspace .lp-m, #detailEspace .tpl-moment").length,
@@ -482,13 +482,13 @@ export default async function essai(navigateur) {
      ce qui n'est pas encore rangé vient à la fin. */
   j.section("les plantes sans zone se lisent après les zones");
   const ordre = await pg.evaluate(() => [...document.querySelectorAll(
-    "#detailEspace > details.zone-espace, #detailEspace > .tete-section-zone")]
+    "#detailEspace > details.zone-espace, #detailEspace > .bloc-zone > .tete-section-zone")]
     .map(n => n.classList.contains("tete-section-zone") ? "sans zone" : n.dataset.zone));
   j.controle("la tête Sans zone ferme la marche",
     ordre.length > 1 && ordre[ordre.length - 1] === "sans zone", ordre.join(" | "));
   j.controle("le corps sans zone la suit",
     await pg.evaluate(() => {
-      const t = document.querySelector("#detailEspace > .tete-section-zone");
+      const t = document.querySelector("#detailEspace > .bloc-zone > .tete-section-zone");
       return !!t && t.nextElementSibling.classList.contains("corps-espace");
     }));
   /* Six zones repliées ne montraient rien du jardin : le sommaire porte une
@@ -557,7 +557,7 @@ export default async function essai(navigateur) {
   await ouvrirEspace(pg, "e2");
   j.controle("sans zone, les plantes se lisent sans en-tête de section",
     await pg.locator("#detailEspace .tete-section-zone").count() === 0
-    && await pg.locator("#detailEspace > .corps-espace .ligne-espace").count() === 1);
+    && await pg.locator(":is(#detailEspace > .corps-espace, #detailEspace > .bloc-zone > .corps-espace) .ligne-espace").count() === 1);
   j.controle("les deux champs d'ajout sont repliés derrière leur nom",
     await pg.locator("#detailEspace .pied-lieu .rech-lieu").count() === 0
     && await pg.locator("#detailEspace .pied-lieu #nomZone").count() === 0
@@ -585,12 +585,12 @@ export default async function essai(navigateur) {
          .count() === 1);
 
   await ouvrirLigne(pg);
-  await pg.locator(`#detailEspace > .corps-espace .ligne-espace[data-plante="${RADIS.id}"] .sel-zone`)
+  await pg.locator(`:is(#detailEspace > .corps-espace, #detailEspace > .bloc-zone > .corps-espace) .ligne-espace[data-plante="${RADIS.id}"] .sel-zone`)
     .selectOption(zNeuve);
   await pg.waitForTimeout(800);
   j.controle("la dernière plante rangée fait disparaître la section Sans zone",
     await pg.locator("#detailEspace .tete-section-zone").count() === 0
-    && await pg.locator("#detailEspace > .corps-espace").count() === 0);
+    && await pg.locator(":is(#detailEspace > .corps-espace, #detailEspace > .bloc-zone > .corps-espace)").count() === 0);
 
   /* Une tâche retenue ne changeait que des nombres tant que les zones restaient
      repliées. */

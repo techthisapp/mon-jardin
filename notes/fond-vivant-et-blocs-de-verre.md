@@ -97,3 +97,23 @@ Résultats après correction, à chaque saison et à chaque largeur :
 - le titre de la synthèse se colle en haut de l'écran dès que la page est assez
   longue pour que le bloc passe dessous ; sur une page courte, il reste à sa
   place, le bloc ne défilant pas jusque-là.
+
+## Têtes de bloc unifiées
+
+Jérôme a relevé que les têtes des zones n'étaient pas unifiées : petites
+capitales condensées sur l'écran du jour, casse normale sur l'année et les
+plantes, compte collé au nom dans les zones d'un espace, « Sans zone » et les
+types d'un espace posés hors de leur bloc, titre de chaque tâche flottant dans
+la liste complète.
+
+Toutes suivent maintenant un seul modèle : la pastille ou le pictogramme, le
+nom en casse normale, en gras de 15,5 pixels, le compte à droite en chiffres à
+chasse fixe, sur la même bande de verre, avec le même retrait de quatorze
+points. « Sans zone » et chaque type d'un espace sans zone deviennent des
+blocs dont le titre fait la tête. Les sommaires repliables des zones et du
+carnet d'un espace prennent la même bande, le chevron suivant le compte. Dans
+la liste complète, les cartes d'action restent séparées et la tête de chaque
+tâche devient une bande arrondie au-dessus d'elles ; la barre collée de la
+liste prend le verre du fond.
+
+`outils/essais/espaces.mjs` lit les plantes sans zone dans leur nouveau bloc.

@@ -2105,7 +2105,7 @@ function rendreMaintenant() {
     const bloc = document.createElement("section");
     bloc.className = "section-liste";
     const tete = document.createElement("div");
-    tete.className = "tete-liste";
+    tete.className = "tete-liste bloc-titre";
     tete.innerHTML = (s.cle ? carreTache(s.cle)
       : `<span class="pt-tache" style="background:${s.teinte}"></span>`)
       + `<span class="nom-niveau">${esc(s.nom)}</span>`
@@ -6818,12 +6818,19 @@ function rendreDetailEspace(z) {
   const horsZone = filtrerMoment(plantesDuNoeud(zo.id));
   if (!zones.length || horsZone.length) {
     if (zones.length) {
-      const t = document.createElement("div");
-      t.className = "tete-section-zone";
+      /* Les plantes sans zone forment un bloc comme les zones, dont le titre
+         fait la tête : il était posé à part, au-dessus d'une carte blanche. */
+      const bloc = document.createElement("section");
+      bloc.className = "bloc-zone";
+      const t = document.createElement("h2");
+      t.className = "tete-section-zone bloc-titre";
       t.innerHTML = `<b>Sans zone</b><span class="nb">${horsZone.length}</span>`;
-      z.appendChild(t);
+      bloc.appendChild(t);
+      bloc.appendChild(corpsDuLieu(zo.id));
+      z.appendChild(bloc);
+    } else {
+      z.appendChild(corpsDuLieu(zo.id));
     }
-    z.appendChild(corpsDuLieu(zo.id));
   }
   z.appendChild(piedDuLieu(zo));
   z.appendChild(sectionCarnet(zo));
@@ -6999,15 +7006,19 @@ function corpsDuLieu(cle) {
   ORDRE_TYPO.forEach(typo => {
     const lot = membres.filter(p => p.typo === typo);
     if (!lot.length) return;
+    // Chaque type est un bloc dont le nom fait la tête, comme dans « Mes plantes ».
+    const bloc = document.createElement("section");
+    bloc.className = "bloc-zone";
     const t = document.createElement("div");
-    t.className = "groupe-typo";
+    t.className = "groupe-typo bloc-titre";
     t.innerHTML = `<i style="background:${COUL_TYPO[typo]}"></i><h3>${esc(typo)}</h3>`
       + `<span class="nb">${lot.length}</span>`;
-    corps.appendChild(t);
+    bloc.appendChild(t);
     const b = document.createElement("div");
     b.className = mosaique ? "mosaique-lieu" : "rangs-lieu";
     lot.forEach(p => b.appendChild(mosaique ? tuileDuLieu(p, cle) : ligneDuLieu(p, cle)));
-    corps.appendChild(b);
+    bloc.appendChild(b);
+    corps.appendChild(bloc);
   });
   const reste = membres.filter(p => ORDRE_TYPO.indexOf(p.typo) === -1);
   if (reste.length) {

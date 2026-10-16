@@ -3546,3 +3546,63 @@ main{--papier-haut:rgba(251,250,247,.72);--verre-bord:rgba(255,255,255,.62)}
 /* Le nom du jardin passe à la ligne plutôt que de se rogner. */
 .tete h1{font-size:23px}
 .titre-jardin span{white-space:normal;overflow:visible;text-overflow:clip}
+
+/* ---------- Un seul modèle de tête de bloc ----------
+   Jérôme a relevé, le 16 octobre 2026, que les têtes des zones ne se
+   ressemblaient pas : petites capitales sur l'écran du jour, casse normale sur
+   l'année et les plantes, compte collé au nom dans un espace, titres posés hors
+   de leur bloc. Toutes suivent maintenant le même modèle : la pastille ou le
+   pictogramme, le nom en casse normale et en gras, le compte à droite en
+   chiffres à chasse fixe, sur la même bande de verre. */
+.bloc-titre{
+  font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:700;
+  letter-spacing:-.005em;text-transform:none;color:var(--encre);
+}
+.bloc-titre b,.bloc-titre h3,.bloc-titre .nom-niveau{
+  font:inherit;margin:0;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.bloc-titre .nb,.bloc-titre .nb-niveau{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:400;
+  letter-spacing:0;text-transform:none;color:#3E4D45;
+}
+.bloc-titre i{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+/* Les sommaires repliables des zones et du carnet d'un espace prennent la même
+   bande et la même ligne de titre ; le chevron suit le compte. */
+.zone-espace>summary,.journal-lieu>summary{
+  background:rgba(251,250,247,.82);padding:13px 14px 10px;
+}
+.zone-espace .zone-nom,.journal-lieu .zone-nom{
+  font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;font-weight:700;letter-spacing:-.005em;
+}
+.zo-haut .nb,.journal-lieu>summary .nb{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;color:#3E4D45;
+}
+.journal-lieu>summary .zone-mesure{margin-left:0}
+.journal-lieu{
+  background:var(--papier-haut);border:1px solid var(--verre-bord);border-radius:22px;
+  box-shadow:0 10px 30px rgba(22,36,30,.07), inset 0 1px 0 rgba(255,255,255,.75);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);
+}
+.zone-espace{border-radius:22px;margin-top:12px}
+/* Un bloc de zone : les plantes sans zone, ou un type dans un espace. */
+.bloc-zone{
+  --bp:10px;padding:0 var(--bp) 10px;margin:12px 0 0;
+  background:var(--papier-haut);border:1px solid var(--verre-bord);border-radius:22px;
+  box-shadow:0 10px 30px rgba(22,36,30,.07), inset 0 1px 0 rgba(255,255,255,.75);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);
+}
+.bloc-zone h2.bloc-titre,.bloc-zone div.bloc-titre{margin:0 calc(-1 * var(--bp)) 8px}
+.bloc-zone .rangs-lieu{border-radius:14px}
+/* La liste complète garde ses cartes d'action séparées : la tête de chaque
+   tâche prend le même modèle, en bande arrondie au-dessus des cartes, sous la
+   barre collée de la liste. */
+.section-liste .bloc-titre{
+  position:static;margin:0 0 8px;border-radius:16px;padding:11px 14px;
+}
+#barreNiveau{
+  background:color-mix(in srgb, var(--am-base,#EEF1E3) 72%, transparent);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+}
+/* Toutes les têtes partent du même retrait, quatorze points, quel que soit le
+   bloc : la synthèse en prenait seize, les blocs de zone dix. */
+.synthese,.bloc-zone,.bloc-type{--bp:14px}
