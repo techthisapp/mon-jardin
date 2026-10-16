@@ -129,8 +129,10 @@ export default async function essai(navigateur) {
   });
   j.controle("elle prend toute la hauteur de la zone sûre",
     bande.hauteur === "47px", bande.hauteur);
-  j.controle("elle porte la couleur du haut de l'en-tête",
-    bande.fond === "rgb(30, 50, 42)", bande.fond);
+  /* Elle portait le vert de l'en-tête sombre, disparu le 16 octobre 2026 :
+     elle prend le ton du fond, dépoli et translucide. */
+  j.controle("elle prend le ton du fond, translucide",
+    /(\/ 0\.\d+\))|(rgba\(.*0\.\d+\))/.test(bande.fond), bande.fond);
   j.controle("elle passe sur le contenu, sous la barre du bas",
     bande.plan > 6 && bande.plan < 30, bande.plan);
   j.controle("l'en-tête réserve la même hauteur", bande.souffle === "47px", bande.souffle);

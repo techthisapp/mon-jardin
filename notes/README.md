@@ -71,8 +71,8 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `navigation-ecran-du-moment.md` | 1er août | Lecture à deux niveaux de l'écran En ce moment, arbitrages retenus | Réalisé |
 | `performance-demarrage.md` | 3 août | Mesures du démarrage, causes réseau, traitements appliqués, résultats avant et après | Réalisé |
 | `bandeau-du-jour-et-ligne-annee.md` | 4 août | Bandeau du jour, feuilles de l'eau, de la lumière et de la saison, repère du mois, unités d'arrosage | Réalisé, feuille du jour supprimée depuis par `organisation-des-ecrans.md` |
-| `ecran-du-moment-feuille-herbier.md` | 4 août | Écran En ce moment traité en page d'herbier : papier, planches, bande de fleurs, dictons | Réalisé |
-| `motif-entete-mensuel.md` | 4 août | Motifs mensuels du bandeau : grammaire graphique, sujets, animations, contrôles | Réalisé |
+| `ecran-du-moment-feuille-herbier.md` | 4 août | Écran En ce moment traité en page d'herbier : papier, planches, bande de fleurs, dictons | Papier et prairie retirés le 16 octobre par `fond-vivant-et-blocs-de-verre.md` |
+| `motif-entete-mensuel.md` | 4 août | Motifs mensuels du bandeau : grammaire graphique, sujets, animations, contrôles | Retiré le 16 octobre par `fond-vivant-et-blocs-de-verre.md` |
 | `navigation-trois-destinations.md` | 5 août | Barre basse à trois destinations, feuilles du jardin et du compte | Réalisé, repris par `organisation-des-ecrans.md` |
 | `fiche-trois-onglets.md` | 5 août | Fiche plante en trois onglets, onglet d'ouverture, bloc Identité, nom accepté | Réalisé |
 | `ecran-mes-plantes-densite.md` | 8 août | Densité de l'écran Mes plantes : mesures avant et après, compteurs par portée | Réalisé, segment de portée retiré depuis par `organisation-des-ecrans.md` |
@@ -82,6 +82,7 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `feuille-de-la-saison.md` | 13 août | Contenu calculé de la feuille de la saison : temps restant, récoltes, protections | Réalisé |
 | `bords-de-la-quinzaine.md` | 15 août | Mentions de première et de dernière quinzaine à l'écran du jour, pastilles, contrôles | Réalisé, phrase et niveau des ouvertures retirés depuis par `ecran-jour-redites.md` |
 | `annee-a-la-quinzaine.md` | 12 octobre | Audit des écrans avant simplification, écran de l'année ouvert sur la quinzaine résumée par geste, flèches de parcours, bascule vers la frise | Réalisé, autres lots de l'audit ouverts |
+| `fond-vivant-et-blocs-de-verre.md` | 16 octobre | Fond animé selon la saison, l'heure et la météo, plus d'en-tête, blocs de verre aux titres intégrés et collants | Réalisé, remplace la prairie, le papier tramé et le motif du mois |
 | `zone-dans-mes-plantes.md` | 14 octobre | La rangée de « Mes plantes » nomme la zone après l'espace, entre parenthèses | Réalisé, regroupement par espace ouvert |
 | `carnet-corriger-et-filtrer.md` | 14 octobre | Carnet : un seul nom, entrée corrigible dans la feuille de saisie, filtres par espace et par geste, recherche | Réalisé |
 | `audit-personas-arbitrages.md` | 14 octobre | Pastilles « démarre » et « se termine », fleurs sous les tâches, année qui garde la quinzaine lue, case « fait » qui écrit au carnet | Réalisé |

@@ -1,40 +1,14 @@
-/* Feuille d'herbier de l'écran du moment. Les contrôles portent sur ce qui ne
-   se voit pas au premier coup d'oeil : le fond arrive après le contenu et ne
-   coûte rien au démarrage, il se recompose quand la page grandit, il ne bouge
-   jamais, les blocs le laissent deviner sans perdre leur lisibilité, et chaque
-   ligne de geste porte la planche d'une plante qu'elle nomme. */
+/* Écran du moment. Les contrôles portent sur ce qui ne se voit pas au premier
+   coup d'oeil : rien ne dépasse de la page, les blocs laissent deviner le fond
+   sans perdre leur lisibilité, et chaque ligne de geste porte la planche d'une
+   plante qu'elle nomme. Le papier tramé et la prairie qu'on contrôlait ici ont
+   cédé la place au fond vivant le 16 octobre 2026 ; ses contrôles sont dans
+   `ambiance.mjs`. */
 import { ouvrirContexte, journal } from "./commun.mjs";
 
 export default async function essai(navigateur) {
   const j = journal("Feuille d'herbier");
   const { ctx, pg, erreurs } = await ouvrirContexte(navigateur);
-
-  j.section("le papier porte son grain et sa prairie");
-  const fond = await pg.evaluate(() => {
-    const sec = document.getElementById("ec-maintenant");
-    const av = getComputedStyle(document.body);
-    const z = document.getElementById("prairie");
-    const cadre = z.getBoundingClientRect();
-    return {
-      grain: (av.backgroundImage.match(/url\(/g) || []).length,
-      pleine: Math.round(cadre.left) <= 0 && Math.round(cadre.right) >= window.innerWidth,
-      items: z ? z.childElementCount : 0,
-      traces: z ? z.querySelectorAll("path,circle,ellipse").length : 0,
-      hauteur: sec.offsetHeight,
-      dessous: Number(getComputedStyle(z).zIndex) < Number(getComputedStyle(document.getElementById("vueEnsemble")).zIndex),
-    };
-  });
-  /* Le grain est sur le fond de la page, non sur une section : posé sur la
-     section, il s'arrêtait à ses marges et laissait un cadre blanc de seize
-     points sur trois côtés. */
-  j.controle("le papier de la page porte deux bruits, sans image à charger",
-    fond.grain === 2, fond.grain);
-  j.controle("la prairie va d'un bord à l'autre de l'écran", fond.pleine);
-  j.controle("la prairie est posée", fond.items > 0, fond.items + " dessins");
-  j.controle("elle tient la hauteur de la page",
-    fond.items >= Math.floor((fond.hauteur - 200) / 230), fond.hauteur + " px");
-  j.controle("elle est détaillée", fond.traces > 200, fond.traces + " tracés");
-  j.controle("elle passe sous le contenu", fond.dessous);
 
   /* Un dessin qui mord sur le bord droit ne doit jamais rendre la page
      glissante de côté : une gouttière apparaîtrait à droite, sur tous les
@@ -66,48 +40,7 @@ export default async function essai(navigateur) {
   j.controle("le corps non plus", debord.corps <= debord.vue, debord.corps + " px");
   j.controle("aucun élément du contenu ne sort du cadre", debord.sortis.length === 0,
     debord.sortis.join(" | "));
-  const rogne = await pg.evaluate(() => {
-    const p = getComputedStyle(document.getElementById("prairie"));
-    const sec = getComputedStyle(document.getElementById("ec-maintenant"));
-    return { chemin: p.clipPath, deborde: p.overflow, section: sec.overflow };
-  });
-  j.controle("la prairie est rognée deux fois",
-    rogne.chemin !== "none" && /hidden|clip/.test(rogne.deborde),
-    rogne.deborde + ", " + rogne.chemin);
-  j.controle("la section, elle, ne rogne rien", rogne.section === "visible", rogne.section);
-  const tourne = await pg.evaluate(() => {
-    const e = document.querySelector(".pr-i");
-    return e ? getComputedStyle(e).transform : "aucun";
-  });
-  j.controle("aucun dessin du fond n'est composé par une transformation",
-    tourne === "none" || tourne === "aucun", tourne);
-
-  j.section("le fond ne coûte rien au démarrage");
-  const appels = await pg.evaluate(() =>
-    performance.getEntriesByType("resource")
-      .filter(e => /\/motifs\/\d+\.svg$/.test(e.name))
-      .sort((a, b) => a.startTime - b.startTime)
-      .map(e => e.name.split("/").pop()));
-  const mois = await pg.evaluate(() => new Date().getMonth() + 1);
-  j.controle("le mois affiché est demandé le premier", appels[0] === `${mois}.svg`, appels[0]);
-  j.controle("les onze autres suivent, pour le fond", appels.length === 12, appels.length);
-  const retard = await pg.evaluate(() => {
-    const r = performance.getEntriesByType("resource");
-    const style = r.find(e => /styles\.css/.test(e.name));
-    const fonds = r.filter(e => /\/motifs\/\d+\.svg$/.test(e.name));
-    if (!style || !fonds.length) return null;
-    return Math.round(Math.min(...fonds.map(e => e.startTime)) - style.startTime);
-  });
-  j.controle("aucun n'est demandé avant la feuille de style", retard === null || retard > 0,
-    retard + " ms après");
-
-  j.section("le fond ne bouge pas");
-  const anime = await pg.evaluate(() => document.getAnimations()
-    .filter(a => a.effect && a.effect.target && a.effect.target.closest
-      && a.effect.target.closest("#prairie")).length);
-  j.controle("aucune animation dans la prairie", anime === 0, anime);
-
-  j.section("les blocs laissent deviner ce qui est imprimé dessous");
+  j.section("les blocs laissent deviner le fond");
   const blocs = await pg.evaluate(() => {
     const f = getComputedStyle(document.querySelector(".synthese")).backgroundColor;
     const a = f.match(/rgba?\([^)]*?([\d.]+)\)/);

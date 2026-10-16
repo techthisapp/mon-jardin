@@ -760,6 +760,8 @@ Les cartes entrent en fondu montant décalé de 45 millisecondes, plafonné à h
 
 ### Écrans
 
+Depuis le 16 octobre 2026, l'application n'a plus d'en-tête sombre : un fond vivant, fixé derrière tout l'écran, suit la saison, l'heure et la météo, et les blocs sont en verre, chacun portant son titre en tête collée. Il remplace le papier tramé, la prairie et le motif du mois. Détail dans la note `fond-vivant-et-blocs-de-verre`.
+
 Deux écrans principaux, accessibles par une barre flottante translucide en bas d'écran.
 
 **En ce moment** se lit sur deux niveaux depuis le 1er août 2026.

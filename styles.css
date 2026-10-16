@@ -38,15 +38,12 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-/* Le papier de l'application porte le grain d'un papier à main : un bruit fin
-   et des fibres longues, deux images SVG posées en ligne, environ un
-   kilo-octet, aucune requête. Il est sur le fond de la page et non sur une
-   section, sans quoi il s'arrêterait aux marges et laisserait un cadre blanc. */
+/* Le fond de la page est le calque d'ambiance, fixé derrière tout : le papier
+   tramé a cédé la place le 16 octobre 2026. Le ton de base reste sur la racine,
+   pour l'instant où le calque n'est pas encore peint. */
+html{background-color:var(--am-base, #EEF1E3)}
 body{
-  background-color:var(--papier);
-  background-image:linear-gradient(rgba(206,193,152,.13),rgba(206,193,152,.13)),
-    url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22180%22%20height%3D%22180%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.86%22%20numOctaves%3D%224%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22180%22%20height%3D%22180%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.085%22/%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22240%22%20height%3D%22240%22%3E%3Cfilter%20id%3D%22n%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%220.012%200.72%22%20numOctaves%3D%223%22%20stitchTiles%3D%22stitch%22/%3E%3CfeColorMatrix%20type%3D%22saturate%22%20values%3D%220%22/%3E%3C/filter%3E%3Crect%20width%3D%22240%22%20height%3D%22240%22%20filter%3D%22url%28%23n%29%22%20opacity%3D%220.07%22/%3E%3C/svg%3E");
-  background-size:auto, 180px 180px, 240px 240px;
+  background:transparent;
   color:var(--encre);
   font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   font-size:15px;line-height:1.5;
@@ -63,66 +60,6 @@ body{
   content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(130% 100% at 6% -10%, rgba(239,239,232,.085), transparent 62%);
 }
-/* Motif d'entête, un dessin par mois. Il occupe l'espace libre à droite du
-   bandeau et passe derrière le texte, que son z-index maintient au premier plan.
-   Le dessin du mois courant est appelé par app.js après le premier affichage. */
-/* Le bandeau a rendu ses soixante-dix points de météo à l'écran du jour : le
-   dessin est mis à sa nouvelle mesure, faute de quoi les deux tiers, animations
-   comprises, se joueraient sous la ligne de coupe. */
-.motif-mois{
-  position:absolute;top:-4px;right:max(6px, calc(50% - 524px));
-  width:111px;height:98px;pointer-events:none;z-index:0;
-}
-.motif-mois svg{display:block;width:100%;height:100%;overflow:visible}
-/* Le bandeau fait la même hauteur sur tous les écrans depuis que les trois
-   mesures sont parties : un seul cadre suffit, et rien n'est tronqué. */
-
-.motif-mois .vert{fill:#7FBF6A;opacity:.07}
-.motif-mois .masse{fill:#EFEFE8;opacity:.05}
-.motif-mois .trait{fill:none;stroke:#EFEFE8;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;opacity:.26}
-.motif-mois .trait .fin{stroke-width:.62;opacity:.74}
-.motif-mois .trait .pt{fill:#EFEFE8;stroke:none;opacity:.80}
-.motif-mois .trait .apl{fill:#EFEFE8;fill-opacity:.30}
-.motif-mois .trait .plein{fill:#EFEFE8;fill-opacity:.42;stroke:none}
-.motif-mois .trait .plein2{fill:#EFEFE8;fill-opacity:.26;stroke:none}
-.motif-mois .trait .apl2{fill:#EFEFE8;fill-opacity:.20}
-.motif-mois .pollen{fill:#EFEFE8;opacity:0;animation:mm-pollen var(--d,26s) ease-out infinite;
-  animation-delay:var(--r,0s)}
-@keyframes mm-pollen{0%{transform:translate(0,0);opacity:0}14%{opacity:.40}
-  62%{opacity:.24}100%{transform:translate(var(--dx),var(--dy));opacity:0}}
-.motif-mois .envol{opacity:0;animation:mm-envol var(--d,28s) ease-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-envol{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.92}
-  68%{opacity:.55}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot,26deg));opacity:0}}
-.motif-mois .chute{fill:#EFEFE8;opacity:0;animation:mm-chute var(--d,30s) linear infinite;animation-delay:var(--r,0s)}
-@keyframes mm-chute{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.30}
-  78%{opacity:.16}100%{transform:translate(var(--dx),var(--dy)) rotate(var(--rot,50deg));opacity:0}}
-.motif-mois .souffle{transform-box:view-box;transform-origin:var(--o);
-  animation:mm-souffle var(--d,22s) ease-in-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-souffle{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-.motif-mois .vent{transform-box:view-box;transform-origin:var(--o);
-  animation:mm-vent var(--d,20s) ease-in-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-vent{0%,100%{transform:rotate(var(--a1,-1.1deg))}50%{transform:rotate(var(--a2,1.1deg))}}
-.motif-mois .ouvre{transform-box:fill-box;transform-origin:50% 0;
-  animation:mm-ouvre var(--d,28s) ease-in-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-ouvre{0%,100%{transform:rotate(var(--a1,-5deg)) scale(.84)}46%,64%{transform:rotate(0deg) scale(1)}}
-.motif-mois .respire{transform-box:fill-box;transform-origin:50% 0;
-  animation:mm-respire var(--d,24s) ease-in-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-respire{0%,100%{transform:scale(.975)}50%{transform:scale(1.03)}}
-.motif-mois .eclot{transform-box:view-box;transform-origin:var(--o);
-  animation:mm-eclot var(--d,26s) ease-in-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-eclot{0%,100%{transform:rotate(-3deg) scale(.94)}50%{transform:rotate(0deg) scale(1)}}
-.motif-mois .spirale{transform-box:view-box;transform-origin:var(--o);
-  animation:mm-spirale var(--d,27s) ease-in-out infinite;animation-delay:var(--r,0s)}
-@keyframes mm-spirale{0%,100%{transform:rotate(-2.4deg) scale(.94)}50%{transform:rotate(2.4deg) scale(1.06)}}
-/* Le mouvement s'arrête entièrement quand le système en demande moins : les
-   particules disparaissent et les animations sont retirées, pas seulement
-   masquées, pour qu'aucune ne reste inscrite dans la page. */
-@media (prefers-reduced-motion:reduce){
-  .motif-mois .pollen,.motif-mois .chute,.motif-mois .envol{display:none}
-  .motif-mois .pollen,.motif-mois .chute,.motif-mois .envol,
-  .motif-mois .souffle,.motif-mois .vent,.motif-mois .ouvre,
-  .motif-mois .eclot,.motif-mois .spirale,.motif-mois .respire{animation:none}}
-
 .tete-corps{max-width:1060px;margin:0 auto;padding:16px 16px 0}
 .tete-haut{display:flex;align-items:baseline;justify-content:space-between;gap:14px}
 .tete h1{
@@ -140,53 +77,8 @@ body{
   cursor:pointer;text-decoration:underline;text-underline-offset:3px;
 }
 
-/* ---------- Feuille d'herbier de l'écran du moment ----------
-   Le papier prend un grain fin et des fibres longues, obtenus par deux bruits
-   SVG en ligne : aucune image à charger. Les onze autres mois de l'année sont
-   imprimés dessous en filigrane, et les blocs sont assez translucides pour
-   qu'on les devine sans qu'ils gênent la lecture. */
 #ec-maintenant{position:relative}
-/* La prairie s'étend jusqu'aux bords de l'écran, par-dessous les marges de la
-   page, et se rogne elle-même : la section, elle, ne rogne rien, pour ne pas
-   couper ce qui la traverse. */
 #vueEnsemble,#niveauDetail{position:relative;z-index:2}
-/* Les blocs de cet écran laissent voir le papier imprimé dessous. */
-#ec-maintenant{--papier-haut:rgba(251,250,247,.70)}
-
-/* Le rognage est doublé : « overflow » pour la mise en page, « clip-path »
-   pour les calques que le compositeur sort du flux. Sans lui, un dessin qui
-   mord sur le bord droit rend la page glissante de côté sur WebKit. */
-.prairie{
-  position:absolute;z-index:0;pointer-events:none;
-  top:calc(-1 * var(--marge-h, 16px));
-  bottom:calc(-1 * var(--marge-b, 96px));
-  left:calc(-1 * var(--marge-g, 16px));
-  right:calc(-1 * var(--marge-d, 16px));
-  /* Le rognage est doublé : « clip » pour la mise en page, « clip-path » pour
-     les calques que le compositeur sort du flux. */
-  overflow:hidden;overflow:clip;clip-path:inset(0);
-}
-/* Pas de rotation : elle ne se voyait qu'à peine et c'est elle qui faisait
-   composer chaque dessin dans son propre calque. */
-.pr-i{
-  position:absolute;width:calc(260px * var(--s));height:calc(220px * var(--s));
-  opacity:var(--o);
-}
-.pr-i svg{width:100%;height:100%;display:block;overflow:visible}
-.prairie .vert{fill:#4C8C3F;opacity:.20}
-.prairie .masse{fill:#16241E;opacity:.10}
-.prairie .trait{fill:none;stroke:#16241E;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
-.prairie .trait .fin{stroke-width:.62;opacity:.74}
-.prairie .trait .pt{fill:#16241E;stroke:none;opacity:.80}
-.prairie .trait .apl{fill:#16241E;fill-opacity:.30}
-.prairie .trait .plein{fill:#16241E;fill-opacity:.42;stroke:none}
-.prairie .trait .plein2{fill:#16241E;fill-opacity:.26;stroke:none}
-.prairie .trait .apl2{fill:#16241E;fill-opacity:.20}
-/* Le fond ne bouge pas : cent quarante-trois animations derrière le texte
-   coûteraient cher et distrairaient de ce qui est à lire. */
-.prairie .pollen,.prairie .chute,.prairie .envol{fill:#16241E;opacity:.45;animation:none}
-.prairie .souffle,.prairie .vent,.prairie .ouvre,
-.prairie .eclot,.prairie .spirale,.prairie .respire{animation:none}
 
 /* La planche de la première plante nommée tient lieu de vignette de ligne. */
 .v-planche.syn-pl{width:30px;height:30px;align-self:center;opacity:.66}
@@ -368,8 +260,7 @@ body.sur-carnet .acte-rond{
   outline:2px solid #E8EFE3;outline-offset:-2px;
 }
 
-/* Les marges de la page sont nommées : la prairie s'en sert pour déborder
-   jusqu'aux bords de l'écran. */
+/* Les marges de la page sont nommées. */
 main{
   --marge-h:16px; --marge-g:16px; --marge-d:16px; --marge-b:112px;
   max-width:1060px;margin:0 auto;
@@ -3503,3 +3394,150 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
 }
 .ec-actions{margin-left:auto;display:inline-flex;gap:14px}
 .ec-actions .lien{font-size:12.5px}
+
+/* ============================================================
+   Refonte du 16 octobre 2026 : fond vivant, blocs de verre, titres dans
+   les blocs, plus d'en-tête.
+   Le fond de toute l'application est un calque fixe qui vit avec la saison,
+   l'heure et la météo. L'en-tête sombre a disparu : le nom du jardin, la date,
+   le catalogue et le compte ouvrent la page et défilent avec elle. Les blocs
+   sont en verre dépoli, et le titre de chacun en est la tête, collée en haut
+   de l'écran tant que le bloc y est.
+   ============================================================ */
+
+/* ---------- Le calque d'ambiance ---------- */
+.ambiance{
+  position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+  background-color:var(--am-base,#EEF1E3);transition:background-color 3s ease;
+}
+.am-tache{
+  position:absolute;border-radius:50%;filter:blur(52px);opacity:.78;
+  animation:am-derive 34s ease-in-out infinite alternate;
+  transition:background-color 3s ease;
+}
+.am-tache:nth-child(1){left:-12vw;top:-6vh;width:min(78vw,520px);height:min(78vw,520px);background-color:var(--am-t1)}
+.am-tache:nth-child(2){right:-14vw;top:16vh;width:min(68vw,460px);height:min(68vw,460px);background-color:var(--am-t2);animation-duration:41s;animation-delay:-6s}
+.am-tache:nth-child(3){left:-16vw;top:44vh;width:min(72vw,480px);height:min(72vw,480px);background-color:var(--am-t3);animation-duration:48s;animation-delay:-12s}
+.am-tache:nth-child(4){right:-10vw;top:62vh;width:min(76vw,500px);height:min(76vw,500px);background-color:var(--am-t4);animation-duration:55s;animation-delay:-18s}
+.am-tache:nth-child(5){left:12vw;top:84vh;width:min(66vw,440px);height:min(66vw,440px);background-color:var(--am-t5);animation-duration:62s;animation-delay:-24s}
+@keyframes am-derive{
+  0%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(46px,-34px) scale(1.18)}
+  66%{transform:translate(-38px,42px) scale(.88)}
+  100%{transform:translate(18px,12px) scale(1.06)}
+}
+.am-branche{
+  position:absolute;width:150px;height:320px;fill:var(--am-branche);
+  transform-origin:50% 100%;animation:am-balance 16s ease-in-out infinite alternate;
+}
+.am-branche:nth-of-type(1){left:-20px;bottom:12vh}
+.am-branche:nth-of-type(2){right:-26px;top:26vh;width:130px;height:280px;animation-duration:21s;animation-delay:-7s}
+.am-tige{fill:none;stroke:var(--am-branche);stroke-width:2.4;stroke-linecap:round}
+@keyframes am-balance{0%{transform:rotate(-5deg);opacity:.6}100%{transform:rotate(4deg);opacity:.9}}
+.am-chute{position:absolute;inset:0}
+.am-feuille,.am-flocon{
+  position:absolute;top:-40px;animation-name:am-tombe;
+  animation-timing-function:linear;animation-iteration-count:infinite;
+}
+.am-feuille path{fill:currentColor}
+.am-flocon{border-radius:50%;background:currentColor;box-shadow:0 0 6px rgba(255,255,255,.8)}
+@keyframes am-tombe{
+  0%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(22px,27vh) rotate(70deg)}
+  50%{transform:translate(-16px,54vh) rotate(150deg)}
+  75%{transform:translate(18px,81vh) rotate(230deg)}
+  100%{transform:translate(-8px,112vh) rotate(310deg)}
+}
+.am-lumiere,.am-meteo{position:absolute;inset:0;transition:background-color 4s ease}
+.am-lumiere{background-color:var(--am-lumiere,transparent)}
+.am-meteo{background-color:var(--am-voile,transparent)}
+/* Le système demande moins de mouvement : le fond reste peint, il ne bouge
+   plus, et rien ne tombe. */
+@media (prefers-reduced-motion:reduce){
+  .am-tache,.am-branche{animation:none}
+  .am-chute{display:none}
+}
+
+/* ---------- Plus d'en-tête ---------- */
+.tete{background:transparent;box-shadow:none;color:var(--encre)}
+.tete::after{display:none}
+/* La bande sous la barre d'état prend le ton du fond, dépoli, pour que le
+   contenu qui défile dessous ne se lise pas sous l'heure. */
+body::before{
+  background:color-mix(in srgb, var(--am-base,#EEF1E3) 70%, transparent);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+}
+.tete-corps{padding-top:26px;padding-bottom:4px}
+.marque{color:var(--terre)}
+.tete h1{
+  font-family:"IBM Plex Sans",sans-serif;font-size:27px;font-weight:700;
+  letter-spacing:-.02em;text-transform:none;opacity:1;line-height:1.15;
+}
+.titre-jardin::after{width:7px;height:7px;opacity:.5}
+.date-jour{color:var(--encre-doux);font-size:13px;letter-spacing:.01em}
+.puce-climat{color:#8C3A2A}
+.puce-climat:focus-visible{outline-color:var(--terre)}
+.bouton-livre,.bouton-compte{
+  width:44px;height:44px;border:1px solid rgba(255,255,255,.7);
+  background:rgba(255,255,255,.5);color:var(--encre);box-shadow:0 4px 14px rgba(22,36,30,.08);
+  -webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);
+}
+.bouton-livre[aria-pressed="true"]{background:var(--encre);color:#EFEFE8;border-color:var(--encre)}
+@media (hover:hover){.bouton-livre:hover,.bouton-compte:hover{background:rgba(255,255,255,.75)}}
+
+/* ---------- Blocs de verre ---------- */
+main{--papier-haut:rgba(251,250,247,.72);--verre-bord:rgba(255,255,255,.62)}
+.synthese,.bloc-temps,.carte-fleur,.geste-quinz,.bloc-type,.filtres,.carte,
+.tuile-espace,.zone-espace,.carte-espace,.cadre-frise,.fleche-quinz,.lecture-annee{
+  background:var(--papier-haut);
+  border:1px solid var(--verre-bord);border-radius:22px;
+  box-shadow:0 10px 30px rgba(22,36,30,.07), inset 0 1px 0 rgba(255,255,255,.75);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);
+}
+.fleche-quinz{border-radius:50%}
+.lecture-annee{border-radius:999px}
+.item{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.6)}
+#niveauDetail .glissiere{
+  background:var(--papier-haut);border:1px solid var(--verre-bord);
+  -webkit-backdrop-filter:blur(18px) saturate(150%);backdrop-filter:blur(18px) saturate(150%);
+}
+.syn-ligne{border-top-color:rgba(22,36,30,.07)}
+
+/* ---------- Le titre fait la tête du bloc ----------
+   Il est collé en haut de l'écran tant que son bloc y est, puis part avec
+   lui : on sait toujours dans quel bloc on lit. Chaque bloc déclare son retrait
+   intérieur, que la tête déborde pour couvrir toute la largeur. */
+.synthese{--bp:16px;padding:0 var(--bp) 14px}
+.bloc-temps{--bp:14px;padding:0 var(--bp) 12px}
+.carte-fleur{--bp:14px;padding:0 var(--bp) 14px}
+.geste-quinz{--bp:14px;padding:0 var(--bp) 6px}
+.bloc-type{--bp:10px;padding:0 var(--bp) 10px;margin:0 0 14px}
+.bloc-titre{
+  position:sticky;top:var(--zone-haute,0px);z-index:3;
+  display:flex;align-items:center;gap:10px;
+  margin:0 calc(-1 * var(--bp,14px)) 8px;padding:13px var(--bp,14px) 9px;
+  border-radius:21px 21px 0 0;
+  background:rgba(251,250,247,.82);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+  font-family:"IBM Plex Sans Condensed",sans-serif;
+  font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:#2F3D35;
+}
+.bloc-titre .nb{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:400;
+  letter-spacing:0;text-transform:none;color:#3E4D45;
+}
+/* Les gestes de l'année et les types de plantes gardent leur casse : ce sont
+   des noms, non des rubriques. */
+.geste-quinz .bloc-titre,.bloc-type .bloc-titre{
+  font-family:"IBM Plex Sans",sans-serif;font-size:15.5px;letter-spacing:-.005em;
+  text-transform:none;color:var(--encre);
+}
+.bloc-type .groupe-type{border:0;margin-top:0}
+/* Une règle plus ancienne fixe la marge des titres de geste : la tête du bloc
+   reprend ici sa pleine largeur. */
+.geste-quinz h3.bloc-titre,.bloc-type h2.bloc-titre{margin:0 calc(-1 * var(--bp)) 8px}
+.carte-fleur h3.bloc-titre{margin:0 calc(-1 * var(--bp)) 9px}
+/* Le nom du jardin passe à la ligne plutôt que de se rogner. */
+.tete h1{font-size:23px}
+.titre-jardin span{white-space:normal;overflow:visible;text-overflow:clip}

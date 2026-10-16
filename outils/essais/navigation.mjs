@@ -221,15 +221,16 @@ export default async function essai(navigateur) {
              filet: cs.borderTopWidth };
   });
   j.controle("les coins sont adoucis", carte.rayon === "14px", carte.rayon);
-  /* Le fond laisse voir la trame imprimée : un aplat plein la couvrait, et la
-     rangée se détachait comme un rectangle collé. */
-  j.controle("le fond laisse passer le papier",
-    /^rgba\(.*0\.7\)$/.test(carte.fond), carte.fond);
+  /* Le fond laisse voir l'ambiance : un aplat plein la couvrait, et la rangée
+     se détachait comme un rectangle collé. Depuis le 16 octobre 2026, la carte
+     est de verre, translucide et liserée d'un trait clair. */
+  j.controle("le fond laisse passer l'ambiance",
+    /^rgba\(.*0\.\d+\)$/.test(carte.fond), carte.fond);
   j.controle("le texte se décolle du bord",
-    carte.retrait === "13px 14px" && carte.texte === 14,
+    carte.retrait === "13px 14px" && carte.texte >= 14 && carte.texte <= 15,
     `${carte.retrait}, texte à ${carte.texte} px du bord`);
-  j.controle("les cartes sont séparées, sans filet",
-    carte.ecart === "7px" && carte.filet === "0px", `${carte.ecart}, filet ${carte.filet}`);
+  j.controle("les cartes sont séparées, liserées de verre",
+    carte.ecart === "7px" && carte.filet === "1px", `${carte.ecart}, filet ${carte.filet}`);
 
   /* Le tiroir de sourdine vit sous la rangée. Un fond translucide le laissait
      lire au travers, et ses boutons restaient atteignables au doigt sans avoir

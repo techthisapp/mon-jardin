@@ -502,15 +502,6 @@ function teinte(hex, a) {
 }
 
 // Le fond de page suit la saison, à saturation très faible.
-const SAISONS = [
-  { fin: 4,  ton: "#EEF0F1" }, { fin: 10, ton: "#EFF4EA" },
-  { fin: 16, ton: "#F5F3EA" }, { fin: 22, ton: "#F5EFE7" }, { fin: 24, ton: "#EEF0F1" },
-];
-function appliquerSaison() {
-  const s = SAISONS.find(x => demi <= x.fin) || SAISONS[0];
-  document.documentElement.style.setProperty("--papier", s.ton);
-}
-
 // Un pictogramme au trait par tâche, dessiné dans la couleur de la tâche.
 const PICTOS = {
   abri:            '<path d="M4 19.5h16"/><path d="M6 19.5a6 6 0 0 1 12 0"/><path d="M12 14V9.5"/><circle cx="12" cy="7.6" r="1.7"/>',
@@ -687,51 +678,6 @@ async function lirePlanches() {
   } catch (e) { /* manifeste indisponible, aucune vignette */ }
 }
 
-/* Le motif d'entête change avec le mois affiché. Les douze dessins pèsent
-   trente-cinq kilo-octets compressés : trop pour le chemin critique, alors que
-   le motif est décoratif. Seul celui du mois est demandé, après le premier
-   rendu, et l'agent de service garde les douze pour l'usage hors ligne. */
-/* La prairie : les onze autres mois imprimés en filigrane sur toute la hauteur
-   de l'écran du moment, dans l'ordre de l'année à partir du mois prochain. Le
-   mois en cours n'y est pas, il est au bandeau en pleine encre. Les dessins
-   sont déjà déclarés dans l'agent de service, ils ne coûtent qu'un premier
-   chargement, après le rendu. */
-const PAS_PRAIRIE = 230;      // hauteur d'un intervalle, en pixels
-let prairieSvg = null;
-
-async function chargerPrairie() {
-  if (prairieSvg) return prairieSvg;
-  const ici = new Date().getMonth() + 1;
-  const mois = [];
-  for (let k = 1; k <= 11; k++) mois.push(((ici - 1 + k) % 12) + 1);
-  const rendus = await Promise.all(mois.map(async m => {
-    try { const r = await fetch(`./motifs/${m}.svg`); return r.ok ? await r.text() : ""; }
-    catch (e) { return ""; }
-  }));
-  prairieSvg = rendus.filter(Boolean);
-  return prairieSvg;
-}
-
-function poserPrairie() {
-  const z = $("prairie"), sec = $("ec-maintenant");
-  if (!z || !sec || !prairieSvg || !prairieSvg.length) return;
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { /* le fond reste, il ne bouge pas */ }
-  const haut = sec.offsetHeight;
-  const n = Math.max(0, Math.min(14, Math.ceil((haut - 200) / PAS_PRAIRIE)));
-  if (z.childElementCount === n) return;
-  const o = [];
-  for (let k = 0; k < n; k++) {
-    // Les valeurs dérivent du rang : le fond est le même d'un rendu à l'autre.
-    const gauche = k % 2 === 0;
-    const x = gauche ? -6 + (k % 3) * 2 : 30 + (k % 3) * 3;
-    const s = (1.15 + ((k * 7) % 4) * .10).toFixed(2);
-    const op = (.23 + ((k * 5) % 4) * .02).toFixed(3);
-    o.push(`<div class="pr-i" style="left:${x}%;top:${200 + k * PAS_PRAIRIE}px;`
-      + `--s:${s};--o:${op}">${prairieSvg[k % prairieSvg.length]}</div>`);
-  }
-  z.innerHTML = o.join("");
-}
-
 function poserDicton(texte) {
   const d = $("dicton");
   if (d) d.textContent = "« " + texte + " »";
@@ -749,17 +695,6 @@ async function chargerDictons() {
       + "-" + String(auj.getDate()).padStart(2, "0");
     if (t[cle]) poserDicton(t[cle]);
   } catch (e) { /* le repli de quinzaine reste en place */ }
-}
-
-async function poserMotifMois() {
-  const hote = $("motifMois");
-  if (!hote) return;
-  try {
-    const r = await fetch(`./motifs/${new Date().getMonth() + 1}.svg`);
-    if (r.ok) hote.innerHTML = await r.text();
-  } catch (e) { /* motif indisponible, le bandeau reste nu */ }
-  // Les onze autres mois suivent, pour le fond de l'écran du moment.
-  chargerPrairie().then(poserPrairie);
 }
 
 /* Les masques ne sont posés qu'à l'approche de la rangée. Sans cela, ouvrir
@@ -899,12 +834,6 @@ function apresCatalogue() {
   poserDicton(DICTONS[demi - 1]);
   chargerDictons();
   rendreTout();
-  // Le fond se recompose quand la page grandit. Son chargement, lui, part une
-  // fois le dessin du bandeau posé : c'est celui-là qui se voit.
-  poserPrairie();
-  if (typeof ResizeObserver === "function" && $("ec-maintenant")) {
-    new ResizeObserver(() => poserPrairie()).observe($("ec-maintenant"));
-  }
 }
 
 const typoDe = cat => (plantes.find(p => p.cat === cat) || {}).typo;
@@ -1572,15 +1501,19 @@ function rendreSelection() {
   ORDRE_TYPO.forEach(t => {
     const dansType = lot.filter(p => typoDe(p.cat) === t);
     if (!dansType.length) return;
-    const tete = document.createElement("p");
-    tete.className = "groupe-type";
+    // Le type est un bloc dont le nom fait la tête, collée en haut de l'écran.
+    const bloc = document.createElement("section");
+    bloc.className = "bloc-type";
+    const tete = document.createElement("h2");
+    tete.className = "groupe-type bloc-titre";
     tete.innerHTML = `<i class="pastille" style="background:${COUL_TYPO[t]}"></i>`
       + `<b>${esc(t)}</b><span class="nb">${dansType.length}</span>`;
-    zone.appendChild(tete);
+    bloc.appendChild(tete);
     const g = document.createElement("div");
     g.className = "liste";
     dansType.forEach(p => g.appendChild(carteItem(p)));
-    zone.appendChild(g);
+    bloc.appendChild(g);
+    zone.appendChild(bloc);
   });
   poserPlanches(zone);
 }
@@ -1785,7 +1718,7 @@ window.addEventListener("popstate", () => {
 });
 
 function rendreMaintenant() {
-  appliquerSaison();
+  appliquerAmbiance();
   const zone = $("maintenant");
   zone.innerHTML = "";
   $("barreNiveau").innerHTML = "";
@@ -3122,6 +3055,7 @@ const icoM = (n, cls) => `<svg class="${cls || "bd-ic"}" viewBox="0 0 24 24" ari
   + `fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${GM[n] || ""}</svg>`;
 
 let meteo = null;      // charge brute, telle que rendue par le service
+
 /* L'heure de la charge en mémoire. La feuille promet une relecture toutes les
    heures : le cache la permettait, rien ne la déclenchait. */
 let heureCharge = null;
@@ -3271,6 +3205,7 @@ const cleJour = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2
 // Index du jour dans la série, trente jours de passé précèdent aujourd'hui.
 const iJour = () => (meteo ? meteo.daily.time.indexOf(cleJour(new Date())) : -1);
 
+
 // Index de l'heure en cours dans la série horaire, quand elle est disponible.
 const iHeure = () => {
   if (!meteo || !meteo.hourly) return -1;
@@ -3278,6 +3213,84 @@ const iHeure = () => {
   return meteo.hourly.time.indexOf(
     cleJour(d) + "T" + String(d.getHours()).padStart(2, "0") + ":00");
 };
+
+/* ---------- Le fond vivant ----------
+   Trois choses le règlent. La saison donne les couleurs des taches qui
+   dérivent, le ton du fond et ce qui tombe : des feuilles tendres et des
+   pétales au printemps, des feuilles vertes en été, rousses en automne, des
+   flocons en hiver. L'heure pose une lumière, dorée le matin, rosée le soir,
+   bleutée la nuit. La météo du jour pose un voile, gris par temps de pluie,
+   blanc par gel, et la neige fait tomber des flocons en toute saison. */
+const AMBIANCES = {
+  printemps: { base: "#EEF3E6", taches: ["#CFE6B0", "#F5D3DF", "#F3E8A6", "#BFDCCF", "#E3EFC9"],
+               chute: ["#9CC77A", "#F2B8CC", "#B9D98F"], branche: "rgba(76,140,63,.18)" },
+  ete:       { base: "#EEF1E3", taches: ["#D7E6A9", "#F4DD95", "#B6D7C6", "#E9E2A8", "#A9CBA9"],
+               chute: ["#7BA05B", "#9DBB7A", "#5E8A4A"], branche: "rgba(76,140,63,.20)" },
+  automne:   { base: "#F3ECE1", taches: ["#F2C28E", "#E7A98C", "#E9D49A", "#C9B58E", "#DDB7A0"],
+               chute: ["#D9822B", "#B5542E", "#C99A35", "#8E5B2F"], branche: "rgba(120,80,50,.18)" },
+  hiver:     { base: "#EAEFF2", taches: ["#CCD9E3", "#E1E8EC", "#BFD0CC", "#E3E0EC", "#D3DFE3"],
+               chute: ["#FFFFFF", "#E8F0F5"], branche: "rgba(70,90,100,.16)", flocons: true },
+};
+// Mars à mai, juin à août, septembre à novembre, décembre à février.
+const saisonDe = q => (q >= 5 && q <= 10 ? "printemps" : q >= 11 && q <= 16 ? "ete"
+  : q >= 17 && q <= 22 ? "automne" : "hiver");
+const LUMIERES = { matin: "rgba(255,214,140,.16)", jour: "rgba(255,255,255,0)",
+                   soir: "rgba(240,150,120,.16)", nuit: "rgba(40,60,90,.18)" };
+const VOILES = { pluie: "rgba(120,140,160,.16)", gel: "rgba(232,240,248,.30)",
+                 neige: "rgba(240,244,248,.30)", couvert: "rgba(150,160,165,.08)", clair: "rgba(255,255,255,0)" };
+let ambianceDite = "";
+
+function meteoDuMoment() {
+  if (!meteo || !meteo.daily || iJour() < 0) return "clair";
+  /* Le ciel de l'heure, comme la carte du jour : le code quotidien est celui
+     de la condition la plus sévère des vingt-quatre heures. */
+  const i = iJour(), d = meteo.daily, ih = iHeure();
+  const n = tempsDe(ih >= 0 ? meteo.hourly.weather_code[ih] : d.weather_code[i])[2];
+  if (n === "neige") return "neige";
+  if (n === "pluie" || n === "averse" || n === "orage") return "pluie";
+  if (d.temperature_2m_min && d.temperature_2m_min[i] <= 0) return "gel";
+  return n === "soleil" || n === "soleil_nuage" ? "clair" : "couvert";
+}
+
+function appliquerAmbiance() {
+  const z = document.getElementById("ambiance");
+  if (!z) return;
+  const saison = saisonDe(demi), a = AMBIANCES[saison];
+  const h = new Date().getHours();
+  const heure = h >= 5 && h < 10 ? "matin" : h < 17 && h >= 10 ? "jour" : h >= 17 && h < 21 ? "soir" : "nuit";
+  const temps = meteoDuMoment();
+  const r = document.documentElement.style;
+  r.setProperty("--am-base", a.base);
+  r.setProperty("--papier", a.base);
+  a.taches.forEach((c, k) => r.setProperty("--am-t" + (k + 1), c));
+  r.setProperty("--am-branche", a.branche);
+  r.setProperty("--am-lumiere", LUMIERES[heure]);
+  r.setProperty("--am-voile", VOILES[temps]);
+  z.dataset.saison = saison; z.dataset.heure = heure; z.dataset.meteo = temps;
+  // Ce qui tombe ne se redessine que si la saison ou le temps l'ont changé.
+  const flocons = a.flocons || temps === "neige";
+  const cle = saison + (flocons ? "|f" : "") + (temps === "pluie" ? "|p" : "");
+  if (cle === ambianceDite) return;
+  ambianceDite = cle;
+  const chute = document.getElementById("amChute");
+  if (!chute) return;
+  const couleurs = flocons ? AMBIANCES.hiver.chute : a.chute;
+  // Par temps de pluie, moins de feuilles et plus lentes.
+  const n = temps === "pluie" ? 7 : 12;
+  const o = [];
+  for (let k = 0; k < n; k++) {
+    const x = (k * 37 + 7) % 96, t = (flocons ? 6 : 12) + (k * 7) % (flocons ? 6 : 14);
+    const d = (temps === "pluie" ? 34 : 24) + (k * 5) % 16, r0 = ((k * 3.7) % d).toFixed(1);
+    const op = flocons ? (0.55 + (k % 3) * 0.12) : (0.20 + (k % 4) * 0.05);
+    const style = `left:${x}%;width:${t}px;height:${t}px;animation-duration:${d}s;`
+      + `animation-delay:-${r0}s;opacity:${op.toFixed(2)};color:${couleurs[k % couleurs.length]}`;
+    o.push(flocons
+      ? `<i class="am-flocon" style="${style}"></i>`
+      : `<svg class="am-feuille" viewBox="0 0 24 24" style="${style}">`
+        + `<path d="M20 4c0 9-5.4 14-12 14-1.4 0-2.6-.2-3.6-.6C5.6 9.6 11.4 4.6 20 4z"/></svg>`);
+  }
+  chute.innerHTML = o.join("");
+}
 
 // Les nombres s'écrivent avec la virgule, et sans décimale au delà de dix.
 const nombreFr = v => (Math.abs(v) >= 10 ? Math.round(v).toString() : v.toFixed(1).replace(".", ","));
@@ -3556,6 +3569,8 @@ function mesureEau(b) {
 }
 
 function rendreBandeau() {
+  // La météo arrive après le premier rendu : le voile du fond la suit.
+  appliquerAmbiance();
   const z = $("bandeau");
   if (!z) return;
   const g = jardinActif();
@@ -3611,7 +3626,9 @@ function rendreBandeau() {
   const cielIci = ih >= 0
     ? icoCiel(meteo.hourly.weather_code[ih], meteo.hourly.is_day[ih])
     : ico;
-  t.innerHTML = `<button type="button" class="tm-temps" data-vue="temps">`
+  t.innerHTML = `<h2 class="bloc-titre">Le temps du jour`
+    + (g.commune ? `<span class="nb">${esc(g.commune)}</span>` : "") + `</h2>`
+    + `<button type="button" class="tm-temps" data-vue="temps">`
     + icoM(cielIci, "tm-ic")
     + `<span class="tm-deg">${Math.round(maintenant.deg)}°</span>`
     + `<span class="tm-etat">${esc(maintenant.lib)}<small>`
@@ -5771,7 +5788,7 @@ function rendreSynthese(paires) {
   if (zf) {
     zf.hidden = vusFleur.length === 0;
     zf.innerHTML = vusFleur.length
-      ? `<h3 class="syn-sect">En fleur en ce moment</h3><div class="fl-rail">`
+      ? `<h3 class="syn-sect bloc-titre">En fleur en ce moment</h3><div class="fl-rail">`
         + vusFleur.map(p => `<button type="button" class="fl-i" data-plante="${esc(p.id)}">`
             + vignettePlanche(p, "fl-pl") + `<span>${esc(p.nom)}</span></button>`).join("")
         + `</div>`
@@ -5805,7 +5822,11 @@ function rendreSynthese(paires) {
     h.push(`<p class="syn-pied">${t.charAt(0).toUpperCase() + t.slice(1)}.</p>`);
   }
 
-  z.innerHTML = h.join("");
+  /* Le titre fait la tête du bloc, collée en haut de l'écran tant qu'on lit
+     la synthèse. */
+  const nAud = audibles.length;
+  z.innerHTML = `<h2 class="bloc-titre">À faire cette quinzaine`
+    + `<span class="nb">${nAud} action${nAud > 1 ? "s" : ""}</span></h2>` + h.join("");
   z.hidden = false;
   poserPlanches(z);
   z.querySelectorAll(".fl-i[data-plante]").forEach(b => b.addEventListener("click", e => {
@@ -6090,7 +6111,7 @@ function rendreQuinzaine() {
     const carte = document.createElement("section");
     carte.className = "geste-quinz";
     carte.dataset.tache = k;
-    carte.innerHTML = `<h3><span class="pt-tache" style="background:${teinteK(k)}">`
+    carte.innerHTML = `<h3 class="bloc-titre"><span class="pt-tache" style="background:${teinteK(k)}">`
       + `<svg viewBox="0 0 24 24" aria-hidden="true">${PICTOS[k] || ""}</svg></span>`
       + `<span class="nom-geste">${esc(VERBE[k] || phases[k].label)}</span>`
       + `<span class="nb">${lot.length}</span></h3>`;
@@ -8074,7 +8095,9 @@ try { await chargerCatalogue(); }
 catch (e) { info("Catalogue indisponible : " + e.message, true); }
 lireGlossaire().catch(() => { /* glossaire indisponible, les textes restent bruts */ });
 lirePlanches();
-poserMotifMois();
+appliquerAmbiance();
+// L'heure change la lumière du fond : elle est relue tous les quarts d'heure.
+setInterval(appliquerAmbiance, 900000);
 const { data: { session: s0 } } = await db.auth.getSession();
 if (!s0) {
   $("zone-connexion").hidden = false;
