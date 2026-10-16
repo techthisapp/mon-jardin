@@ -17,6 +17,33 @@ Le lanceur sert le dépôt sur le port 8099, ouvre un navigateur, joue chaque
 suite dans son propre contexte, et rend un code de sortie non nul au premier
 contrôle en échec. Rien n'est écrit sur le disque, rien ne sort sur le réseau.
 
+La variable `PORT_ESSAIS` remplace le port 8099, ce qui permet de jouer deux
+copies du dépôt côte à côte :
+
+```
+PORT_ESSAIS=8111 npm run essais
+```
+
+## Navigateur perdu en cours de série
+
+Chaque suite est jouée sous une garde, et une exception n'interrompt plus la
+série. Le lanceur en distingue trois causes.
+
+| Cause | Relevé | Suite |
+|---|---|---|
+| Le navigateur a disparu sans que le lanceur l'ait fermé | Déconnexion constatée dans les trois secondes, code de sortie du processus | Rejouée une fois sur un navigateur neuf |
+| Le moteur de rendu de la page a planté | `page.on("crash")` posé par `ouvrirContexte` | Échec, sans reprise |
+| La suite a levé une exception | Message et ligne de l'essai | Échec, sans reprise |
+
+Une seconde disparition du navigateur dans la même suite compte comme un échec.
+Une suite rejouée est annoncée au moment de la perte et récapitulée en fin de
+série. Un code de sortie 143 ou 137, ou un signal `TERM` ou `KILL`, désigne un
+arrêt demandé par un autre processus, cas observé le 16 octobre 2026 et décrit
+dans `notes/essais-navigateur-arrete.md`.
+
+`node outils/essais/epreuve-arret.mjs [suite]` vérifie ce comportement : elle
+joue une suite sur le port 8098 et tue son navigateur en cours de route.
+
 ## Ce qui est simulé
 
 Le client Supabase est remplacé par `doublure.mjs`, qui sert les données de

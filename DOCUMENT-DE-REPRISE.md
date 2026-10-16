@@ -543,6 +543,8 @@ Le client Supabase est remplacé par une doublure qui sert des instantanés fig�
 
 Ces essais ont vécu dans un répertoire de travail hors dépôt pendant deux jours, ce qui les exposait à disparaître avec la session. Un essai qui n'est pas versionné n'existe pas. Ils sont désormais dans `outils/essais/` avec leurs données figées.
 
+Depuis le 16 octobre 2026, une suite dont le navigateur disparaît en cours de route est rejouée une fois sur un navigateur neuf, la cause étant écrite dans le compte rendu. Un plantage du moteur de rendu ou une exception de la suite comptent comme un échec, sans reprise. Le port se règle par `PORT_ESSAIS`. Le diagnostic est dans `notes/essais-navigateur-arrete.md`.
+
 Un essai qui n'affirme rien ne sert à rien non plus : cinq des huit harnais d'origine se contentaient d'imprimer un résultat à relire, ils ont été convertis en affirmations vérifiables. Les erreurs de page relevées par le navigateur comptent comme des échecs.
 
 ### Contrôles de contenu
@@ -831,6 +833,8 @@ Les enregistrements d'événements passent par une fonction qui ignore un élém
 **Comparer les colonnes sans comparer les clés construites.** Une vue qui fabrique un objet JSON à partir de colonnes disparues laisse des clés vides que rien ne signale : ni erreur, ni valeur nulle visible, la clé est simplement absente et la ligne ne s'affiche pas. Le premier audit avait vérifié les colonnes de `plants` une par une et manqué les trois lignes du bloc « Au jardin ». Le contrôle juste consiste à comparer les clés que l'application lit dans `attributes` à celles que la vue produit réellement, requête `jsonb_object_keys` à l'appui.
 
 **Vérifier la base sans vérifier l'écran.** Une donnée juste en base peut n'arriver nulle part, ou arriver fausse. Trois cas l'ont montré : le conseil général chargé et jamais rendu, le conseil de multiplication rattaché à une tâche sans période donc jamais parcourue, la couleur de fleur rangée dans l'ordre de la palette alors que l'écran n'en montre qu'une. Un contrôle de contenu doit lire le texte effectivement affiché, pas seulement la ligne qui l'alimente. Le fichier d'essai `ecarts.js` sert des lignes de production à la doublure et compare l'affiché à l'attendu.
+
+**Tuer les navigateurs par un motif.** Le 16 octobre 2026, trois séries d'essais indépendantes ont perdu leur Chromium à la même seconde, arrêtés de l'extérieur, sans plantage. Playwright le rapporte par « Target page, context or browser has been closed », quand un plantage du moteur de rendu donne « Page crashed ». Plusieurs sessions jouant des essais sur la même machine, un nettoyage ne vise que les descendants de son propre lanceur, jamais un motif comme `chrome` qui couvre tous les navigateurs.
 
 **GitHub Pages.** La reconstruction prend parfois plusieurs minutes, et la file peut se bloquer : une poussée est restée sans reconstruction pendant plus de quinze minutes, débloquée par un commit vide. Vérifier que le statut de la dernière publication vaut `built` sur le bon commit avant d'annoncer un déploiement.
 

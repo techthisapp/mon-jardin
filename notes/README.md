@@ -11,6 +11,12 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `procedure-ajout-d-une-plante.md` | 7 août, note d'entête du 10 août | Ordre des opérations pour ajouter une fiche : source par champ, croisements, contrôles avant activation, sources retenues et écartées | En vigueur, sixième révision, étape 5 remplacée par `adaptation-par-climat.md` |
 | `procedure-de-publication.md` | 19 août | Clone, contrôle avant dépôt, essais, poussée et publication sur GitHub Pages | En vigueur, hors passages propres aux sessions claude.ai |
 
+## Essais et outillage
+
+| Note | Date | Contenu | État |
+|---|---|---|---|
+| `essais-navigateur-arrete.md` | 16 octobre | Série d'essais interrompue par l'arrêt extérieur du navigateur : reproduction, cause, reprise d'une suite par le lanceur, épreuve | Réalisé, émetteur de l'arrêt non identifié |
+
 ## Plans et arbitrages du référentiel
 
 | Note | Date | Contenu | État |

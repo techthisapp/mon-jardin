@@ -8,7 +8,10 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 export const ICI = dirname(fileURLToPath(import.meta.url));
-export const ADRESSE = "http://127.0.0.1:8099/index.html";
+/* Le port se règle par PORT_ESSAIS, pour que deux copies du dépôt jouent leurs
+   essais côte à côte sans se disputer le 8099. */
+export const PORT = Number(process.env.PORT_ESSAIS) || 8099;
+export const ADRESSE = `http://127.0.0.1:${PORT}/index.html`;
 
 // Le 2 août 2026 à neuf heures. Toutes les fenêtres de tâches, les relevés de
 // pluie et les bulletins de vigilance des données figées sont calés sur ce jour.
@@ -191,12 +194,21 @@ export async function ouvrirContexte(navigateur, options = {}) {
     return rendre(d);
   });
   const pg = await ctx.newPage();
+  surveiller(pg);
   const erreurs = [];
   pg.on("pageerror", e => erreurs.push("exception : " + e.message));
   pg.on("console", m => { if (m.type() === "error") erreurs.push(m.text().slice(0, 170)); });
   await pg.goto(ADRESSE);
   await pg.waitForTimeout(2800);
   return { ctx, pg, erreurs };
+}
+
+/* Un moteur de rendu qui plante ferme la page sous les pieds de la suite. Le
+   lanceur lit ce relevé pour dire, quand une suite s'interrompt, si c'est la
+   page qui a planté ou le navigateur entier qui a disparu. */
+export const INCIDENTS = [];
+function surveiller(pg) {
+  pg.on("crash", () => INCIDENTS.push({ quoi: "plantage du moteur de rendu", url: pg.url() }));
 }
 
 /* Un journal par suite. Les contrôles s'écrivent au fil de l'exécution, le

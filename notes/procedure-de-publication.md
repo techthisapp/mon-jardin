@@ -55,7 +55,7 @@ npm run essais
 npm run essais -- temps
 ```
 
-Le lanceur sert l'application sur le port 8099, ouvre un navigateur, joue chaque suite dans son propre contexte et rend un code de sortie non nul au premier contrôle en échec. Un nom de suite en argument restreint l'exécution à cette suite.
+Le lanceur sert l'application sur le port 8099, ouvre un navigateur, joue chaque suite dans son propre contexte et rend un code de sortie non nul au premier contrôle en échec. Un nom de suite en argument restreint l'exécution à cette suite. Le port se règle par `PORT_ESSAIS`, et une suite dont le navigateur est arrêté de l'extérieur est rejouée une fois, comme le décrit `outils/essais/README.md`.
 
 La révision de navigateur que vise Playwright n'est pas toujours celle qui est installée sous `/opt/pw-browsers`. Le lanceur cherche alors lui-même un Chromium utilisable, et prend le navigateur complet avant la coquille sans tête : les deux ne mesurent pas le texte de la même façon, et trois contrôles de largeur de la suite `regroupement` basculent selon celui qui est trouvé. La variable `CHROMIUM` reste disponible pour désigner un binaire précis, elle n'est plus nécessaire.
 
