@@ -3223,13 +3223,13 @@ const iHeure = () => {
    blanc par gel, et la neige fait tomber des flocons en toute saison. */
 const AMBIANCES = {
   printemps: { base: "#EEF3E6", taches: ["#CFE6B0", "#F5D3DF", "#F3E8A6", "#BFDCCF", "#E3EFC9"],
-               chute: ["#9CC77A", "#F2B8CC", "#B9D98F"], branche: "rgba(76,140,63,.18)" },
+               chute: ["#9CC77A", "#F2B8CC", "#B9D98F"], branche: "rgba(76,140,63,.28)" },
   ete:       { base: "#EEF1E3", taches: ["#D7E6A9", "#F4DD95", "#B6D7C6", "#E9E2A8", "#A9CBA9"],
-               chute: ["#7BA05B", "#9DBB7A", "#5E8A4A"], branche: "rgba(76,140,63,.20)" },
+               chute: ["#7BA05B", "#9DBB7A", "#5E8A4A"], branche: "rgba(76,140,63,.30)" },
   automne:   { base: "#F3ECE1", taches: ["#F2C28E", "#E7A98C", "#E9D49A", "#C9B58E", "#DDB7A0"],
-               chute: ["#D9822B", "#B5542E", "#C99A35", "#8E5B2F"], branche: "rgba(120,80,50,.18)" },
+               chute: ["#D9822B", "#B5542E", "#C99A35", "#8E5B2F"], branche: "rgba(120,80,50,.28)" },
   hiver:     { base: "#EAEFF2", taches: ["#CCD9E3", "#E1E8EC", "#BFD0CC", "#E3E0EC", "#D3DFE3"],
-               chute: ["#FFFFFF", "#E8F0F5"], branche: "rgba(70,90,100,.16)", flocons: true },
+               chute: ["#FFFFFF", "#E8F0F5"], branche: "rgba(70,90,100,.24)", flocons: true },
 };
 // Mars à mai, juin à août, septembre à novembre, décembre à février.
 const saisonDe = q => (q >= 5 && q <= 10 ? "printemps" : q >= 11 && q <= 16 ? "ete"
@@ -3279,9 +3279,10 @@ function appliquerAmbiance() {
   const n = temps === "pluie" ? 7 : 12;
   const o = [];
   for (let k = 0; k < n; k++) {
-    const x = (k * 37 + 7) % 96, t = (flocons ? 6 : 12) + (k * 7) % (flocons ? 6 : 14);
+    const x = (k * 37 + 7) % 96, t = (flocons ? 6 : 18) + (k * 7) % (flocons ? 6 : 14);
     const d = (temps === "pluie" ? 34 : 24) + (k * 5) % 16, r0 = ((k * 3.7) % d).toFixed(1);
-    const op = flocons ? (0.55 + (k % 3) * 0.12) : (0.20 + (k % 4) * 0.05);
+    // Assez présentes pour se voir sans gêner la lecture : de 55 à 79 %.
+    const op = flocons ? (0.55 + (k % 3) * 0.12) : (0.55 + (k % 4) * 0.08);
     const style = `left:${x}%;width:${t}px;height:${t}px;animation-duration:${d}s;`
       + `animation-delay:-${r0}s;opacity:${op.toFixed(2)};color:${couleurs[k % couleurs.length]}`;
     o.push(flocons

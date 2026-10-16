@@ -71,3 +71,29 @@ titre de la synthèse collé tant que le bloc est à l'écran.
 `outils/essais/herbier.mjs` perd ses contrôles de la prairie.
 `outils/essais/navigation.mjs` et `outils/essais/reglages.mjs` mesurent le
 verre au lieu du papier opaque et de la bande verte.
+
+## Retouches et recette du 16 octobre
+
+Jérôme a trouvé les feuilles trop discrètes et demandé la branche en haut à
+droite. Les feuilles passent de 12 à 26 pixels à 18 à 32, et d'une opacité de
+20 à 35 % à une opacité de 55 à 79 %, avec une ombre légère. Les deux branches
+cèdent la place à une seule, plus grande, qui retombe du coin haut droit et se
+balance autour de sa base ; leur teinte passe de 16 à 20 % à 24 à 30 %.
+
+La recette, `outils/audit/recette-ambiance.mjs`, joue les quatre saisons à 320,
+393 et 430 points. Elle a relevé un défaut : la branche, retournée autour de
+son bord haut, sortait entièrement de l'écran, et la mesure de sa place ne le
+voyait pas. Le dessin est maintenant retourné dans son propre cadre, et la
+mesure exige une partie visible.
+
+Résultats après correction, à chaque saison et à chaque largeur :
+
+- tout ce qui tombe bouge, douze éléments, sept par temps de pluie ;
+- la cadence d'affichage reste à 61 images par seconde ;
+- rien ne déborde de côté ;
+- le contraste des textes sur le verre va de 6,2 à 14,3, au-dessus du seuil de
+  4,5 ;
+- la fiche reste opaque ;
+- le titre de la synthèse se colle en haut de l'écran dès que la page est assez
+  longue pour que le bloc passe dessous ; sur une page courte, il reste à sa
+  place, le bloc ne défilant pas jusque-là.

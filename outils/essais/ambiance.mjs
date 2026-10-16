@@ -26,6 +26,10 @@ const lire = pg => pg.evaluate(() => {
     flocons: z.querySelectorAll(".am-flocon").length,
     couleurChute: (z.querySelector(".am-feuille, .am-flocon") || {}).style?.color || "",
     lumiere: getComputedStyle(z.querySelector(".am-lumiere")).backgroundColor,
+    opacites: [...z.querySelectorAll(".am-feuille")].map(e => Number(getComputedStyle(e).opacity)),
+    branches: z.querySelectorAll(".am-branche").length,
+    branche: (() => { const b = z.querySelector(".am-branche").getBoundingClientRect();
+      return { centre: b.left + b.width / 2, haut: b.top, bas: b.bottom, droite: b.right }; })(),
     voile: getComputedStyle(z.querySelector(".am-meteo")).backgroundColor,
     animees: document.getAnimations().filter(a => a.animationName && a.effect && a.effect.target
       && a.effect.target.closest && a.effect.target.closest("#ambiance")).length,
@@ -59,7 +63,15 @@ export default async function essai(navigateur) {
   j.controle("neuf heures est le matin, d'une lumière dorée",
     a.heure === "matin" && /255, 214, 140/.test(a.lumiere), `${a.heure}, ${a.lumiere}`);
   j.controle("le ciel clair ne pose aucun voile", a.meteo === "clair", a.meteo);
-  j.controle("tout y bouge", a.animees >= 19, a.animees + " animations");
+  /* Les feuilles étaient trop discrètes à 20 % : elles tombent entre 55 et
+     79 %, plus grandes. Relevé par Jérôme le 16 octobre 2026. */
+  j.controle("les feuilles se voient", a.opacites.every(o => o >= .55), a.opacites.join(", "));
+  /* Une seule branche, qui retombe du coin haut droit. Retournée autour de
+     son bord haut, elle sortait de l'écran sans qu'aucun contrôle le voie. */
+  j.controle("une seule branche, qui retombe du coin haut droit",
+    a.branches === 1 && a.branche.centre > 393 * .6 && a.branche.haut < 0
+    && a.branche.bas > 150 && a.branche.droite > 373, JSON.stringify(a.branche));
+  j.controle("tout y bouge", a.animees >= 18, a.animees + " animations");
 
   j.section("les titres font la tête des blocs");
   const tete = await pg.evaluate(async () => {

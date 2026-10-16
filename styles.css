@@ -3426,20 +3426,25 @@ main{--marge-b:calc(128px + env(safe-area-inset-bottom))}
   66%{transform:translate(-38px,42px) scale(.88)}
   100%{transform:translate(18px,12px) scale(1.06)}
 }
+/* Une seule branche, qui retombe du coin haut droit : sa base est tenue au
+   bord haut de l'écran, et elle se balance autour de ce point. Le dessin est
+   retourné dans son propre cadre : retourner l'élément autour de son bord haut
+   l'envoyait tout entier au-dessus de l'écran. */
 .am-branche{
-  position:absolute;width:150px;height:320px;fill:var(--am-branche);
-  transform-origin:50% 100%;animation:am-balance 16s ease-in-out infinite alternate;
+  position:absolute;top:-24px;right:-28px;width:190px;height:400px;
+  fill:var(--am-branche);transform-origin:50% 0;
+  animation:am-balance 14s ease-in-out infinite alternate;
 }
-.am-branche:nth-of-type(1){left:-20px;bottom:12vh}
-.am-branche:nth-of-type(2){right:-26px;top:26vh;width:130px;height:280px;animation-duration:21s;animation-delay:-7s}
+.am-branche path{transform-box:view-box;transform-origin:50% 50%;transform:scale(-1,-1)}
 .am-tige{fill:none;stroke:var(--am-branche);stroke-width:2.4;stroke-linecap:round}
-@keyframes am-balance{0%{transform:rotate(-5deg);opacity:.6}100%{transform:rotate(4deg);opacity:.9}}
+@keyframes am-balance{0%{rotate:-6deg;opacity:.75}100%{rotate:5deg;opacity:1}}
 .am-chute{position:absolute;inset:0}
 .am-feuille,.am-flocon{
   position:absolute;top:-40px;animation-name:am-tombe;
   animation-timing-function:linear;animation-iteration-count:infinite;
 }
 .am-feuille path{fill:currentColor}
+.am-feuille{filter:drop-shadow(0 2px 3px rgba(22,36,30,.18))}
 .am-flocon{border-radius:50%;background:currentColor;box-shadow:0 0 6px rgba(255,255,255,.8)}
 @keyframes am-tombe{
   0%{transform:translate(0,0) rotate(0deg)}
