@@ -15,7 +15,7 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 
 | Note | Date | Contenu | État |
 |---|---|---|---|
-| `essais-navigateur-arrete.md` | 16 octobre | Série d'essais interrompue par l'arrêt extérieur du navigateur : reproduction, cause, reprise d'une suite par le lanceur, épreuve | Réalisé, émetteur de l'arrêt non identifié |
+| `essais-navigateur-arrete.md` | 16 octobre | Série d'essais interrompue par l'arrêt extérieur du navigateur : reproduction, cause, reprise d'une suite par le lanceur, épreuve | Réalisé, remède attendu côté ma-meteo |
 
 ## Plans et arbitrages du référentiel
 

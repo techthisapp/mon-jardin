@@ -67,15 +67,23 @@ navigateurs indépendants désigne un arrêt venu de l'extérieur, envoyé à to
 les processus Chromium de la machine à la fois. Le lanceur, dont la ligne de
 commande ne nomme pas Chromium, survit et reçoit l'exception.
 
-L'émetteur n'est pas identifié. Ni le dépôt, ni le projet voisin qui jouait
-lui aussi des contrôles sous Playwright ce soir-là ne contiennent de commande
-`pkill` ou `killall`. Le journal système de macOS et les transcriptions des
-autres sessions n'étaient pas lisibles depuis cette session. L'hypothèse la plus
-probable est une commande de nettoyage, du type `pkill -f chrome` ou
-`killall chrome-headless-shell`, lancée par une autre session de travail sur la
-même machine pour libérer des navigateurs restés ouverts. La moyenne de charge
-supérieure à 50 relevée lors d'une des interruptions va dans ce sens : c'est la
-situation où l'on cherche à tuer des navigateurs.
+L'émetteur a été identifié le même soir par une autre session de travail, qui
+l'a constaté vers 23 h 57 : la session du projet « ma-meteo », qui joue ses
+contrôles depuis une copie sous `/tmp/passe-8137` par `essais/passe.sh`, lance
+avant chacun de ses jeux d'essais la commande suivante.
+
+```
+for p in $(pgrep -f ms-playwright); do kill $p; done
+```
+
+Le motif `ms-playwright` figure dans le chemin de tous les navigateurs que
+Playwright installe, si bien que la commande arrête aussi ceux de mon-jardin,
+au milieu de n'importe quelle suite. Un `kill` sans option envoie le signal
+`TERM`, ce qui donne le code de sortie 143 et le message relevé, comme
+l'épreuve l'a reproduit. La commande ne figure pas dans les scripts copiés sous
+`/tmp/passe-8137` : elle est lancée par la session elle-même. Ce constat est
+celui de l'autre session ; il n'a pas été observé directement depuis celle-ci,
+le processus ayant disparu au moment de la vérification.
 
 La lourdeur du rendu n'est pas en cause, l'interruption existant avant le fond
 animé et la mémoire ne montant pas.
@@ -137,7 +145,9 @@ signal et de l'arrêt par un autre processus.
 
 ## Reste à faire
 
-Identifier l'émetteur de l'arrêt. Une commande de nettoyage des navigateurs,
-sur une machine où plusieurs sessions jouent des essais, doit viser ses propres
-processus, par exemple les descendants de son lanceur, et jamais un motif qui
-couvre tous les Chromium de la machine.
+Le remède est du côté de « ma-meteo », et la décision revient à Jérôme : le
+nettoyage de ses navigateurs doit viser ses propres processus, par exemple les
+descendants de son lanceur, et jamais un motif qui couvre tous les Chromium de
+la machine. Tant qu'il n'est pas corrigé, une série de mon-jardin jouée en même
+temps verra des suites rejouées, et une suite échouera si deux nettoyages
+tombent pendant elle.
