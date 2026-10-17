@@ -762,6 +762,8 @@ Les cartes entrent en fondu montant décalé de 45 millisecondes, plafonné à h
 
 Depuis le 16 octobre 2026, l'application n'a plus d'en-tête sombre : un fond vivant, fixé derrière tout l'écran, suit la saison, l'heure et la météo, et les blocs sont en verre, chacun portant son titre en tête collée. Il remplace le papier tramé, la prairie et le motif du mois. Détail dans la note `fond-vivant-et-blocs-de-verre`.
 
+Depuis le 17 octobre 2026, le fond par défaut est le jardin vivant : un paysage de jardin peint sur une toile, dont le ciel suit le soleil réel au point du jardin, la lune et le temps de l'heure, et dont le décor change avec la saison. Le feuillage du 16 octobre et un fond uni restent au choix dans les réglages du compte, pour l'appareil. Détail dans la note `jardin-vivant`.
+
 Deux écrans principaux, accessibles par une barre flottante translucide en bas d'écran.
 
 **En ce moment** se lit sur deux niveaux depuis le 1er août 2026.
@@ -817,6 +819,8 @@ Les enregistrements d'événements passent par une fonction qui ignore un élém
 **Le survol sur écran tactile.** Un état de survol qui remplace une couleur de fond persiste après l'appui et fait disparaître cette couleur. Utiliser une ombre intérieure qui se superpose, et réserver le survol aux appareils qui en disposent par `@media (hover:hover)`.
 
 **Les marges sur un conteneur à positionnement absolu.** Une marge horizontale posée sur la rangée d'un tiroir de glissement décale la glissière et découvre le tiroir en permanence. La marge doit aller sur l'élément qui glisse.
+
+**Un enfant ajouté avant des sélecteurs `nth-child`.** La toile du jardin vivant, posée en tête du calque d'ambiance, a décalé les règles `.am-tache:nth-child(n)` et privé la cinquième tache de sa couleur. Un élément nouveau se place après ceux qu'un sélecteur de rang désigne.
 
 **Les règles de zone sûre.** `padding-left: env(safe-area-inset-left)` écrase la marge définie plus haut et vaut zéro en portrait. Utiliser `calc(16px + env(...))`.
 

@@ -99,7 +99,7 @@ export async function ouvrirContexte(navigateur, options = {}) {
     glossaire = GLOSSAIRE, meteo = METEO, climat = null, photos = PHOTOS, jardin = null,
     session = true, cache = null, versionSite = null, espaces = null, placements = null,
     avis = null, sourdines = null, carnet = null, photosCarnet = null, cultures = null,
-    jour = JOUR_FIGE, arome = null, aromeSuffixe = null, horairePanne = 0,
+    jour = JOUR_FIGE, arome = null, aromeSuffixe = null, horairePanne = 0, fond = null,
   } = options;
   // L'agent de service intercepterait les réponses de la doublure d'une page à
   // l'autre : les essais s'exécutent sans lui.
@@ -127,7 +127,9 @@ export async function ouvrirContexte(navigateur, options = {}) {
     + (session ? "" : "window.__SANS_SESSION__ = 1;")
     // La clé est celle d'app.js : un cache posé ici imite une installation ancienne.
     + (cache ? `try { localStorage.setItem("monjardin.catalogue.v6", ${JSON.stringify(cache)}); } catch (e) {}` : "")
-    + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : ""));
+    + (climat ? `window.__CLIMAT__ = ${JSON.stringify(climat)};` : "")
+    // Le fond choisi sur l'appareil : le jardin vivant quand rien n'est dit.
+    + (fond ? `try { localStorage.setItem("monjardin.fond", ${JSON.stringify(fond)}); } catch (e) {}` : ""));
   await ctx.route(/vendor\/supabase\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: DOUBLURE }));
   /* Le numéro que le site sert est celui de l'agent de service. En donner un
      autre revient à mettre en ligne une version plus récente que la copie

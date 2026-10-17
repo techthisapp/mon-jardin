@@ -3606,3 +3606,31 @@ main{--papier-haut:rgba(251,250,247,.72);--verre-bord:rgba(255,255,255,.62)}
 /* Toutes les têtes partent du même retrait, quatorze points, quel que soit le
    bloc : la synthèse en prenait seize, les blocs de zone dix. */
 .synthese,.bloc-zone,.bloc-type{--bp:14px}
+
+/* ============================================================
+   Trois fonds au choix, 17 octobre 2026.
+   Le jardin vivant, par défaut, est une toile peinte à chaque image ; le
+   feuillage garde les taches, la branche et les feuilles ; le fond uni ne
+   garde que le ton de la saison, sa lumière et son voile.
+   ============================================================ */
+.am-toile{position:absolute;inset:0;width:100%;height:100%;display:none}
+.ambiance[data-fond="jardin"] .am-toile{display:block}
+.ambiance[data-fond="jardin"] > :not(.am-toile),
+.ambiance[data-fond="uni"] > :not(.am-lumiere):not(.am-meteo){display:none}
+/* La bande de la barre d'état prend le ton du ciel peint. */
+:root[data-fond="jardin"] body::before{
+  background:color-mix(in srgb, var(--am-ciel,#BFCBCC) 70%, transparent);
+}
+/* La nuit, le nom du jardin et la date, posés à même le ciel, passent en
+   clair ; les titres d'écran du carnet et du catalogue aussi. */
+:root[data-ciel="nuit"] .tete h1,:root[data-ciel="nuit"] .titre-jardin,
+:root[data-ciel="nuit"] .date-jour,:root[data-ciel="nuit"] .marque,
+:root[data-ciel="nuit"] .tete-ecran .te-nom,:root[data-ciel="nuit"] .tete-ecran .te-sous{
+  color:#F2F0EA;text-shadow:0 1px 10px rgba(10,14,24,.55);
+}
+:root[data-ciel="nuit"] .puce-climat{color:#F6C7B8}
+/* Le jour, un halo clair détache le nom et la date du ciel et de la branche. */
+:root[data-fond="jardin"]:not([data-ciel="nuit"]) .tete h1,
+:root[data-fond="jardin"]:not([data-ciel="nuit"]) .date-jour{
+  text-shadow:0 0 10px rgba(255,255,255,.9),0 0 3px rgba(255,255,255,.8);
+}

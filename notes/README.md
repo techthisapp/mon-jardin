@@ -83,6 +83,7 @@ Chaque note décrit l'état à sa date. En cas de divergence entre deux notes, l
 | `bords-de-la-quinzaine.md` | 15 août | Mentions de première et de dernière quinzaine à l'écran du jour, pastilles, contrôles | Réalisé, phrase et niveau des ouvertures retirés depuis par `ecran-jour-redites.md` |
 | `annee-a-la-quinzaine.md` | 12 octobre | Audit des écrans avant simplification, écran de l'année ouvert sur la quinzaine résumée par geste, flèches de parcours, bascule vers la frise | Réalisé, autres lots de l'audit ouverts |
 | `fond-vivant-et-blocs-de-verre.md` | 16 octobre | Fond animé selon la saison, l'heure et la météo, plus d'en-tête, blocs de verre aux titres intégrés et collants | Réalisé, remplace la prairie, le papier tramé et le motif du mois |
+| `jardin-vivant.md` | 17 octobre | Fond « Jardin vivant » dans la veine des estampes : ciel au soleil réel, lune, temps de l'heure, décor de saison ; choix du fond dans les réglages | Réalisé, devenu le fond par défaut, le feuillage reste au choix |
 | `zone-dans-mes-plantes.md` | 14 octobre | La rangée de « Mes plantes » nomme la zone après l'espace, entre parenthèses | Réalisé, regroupement par espace ouvert |
 | `carnet-corriger-et-filtrer.md` | 14 octobre | Carnet : un seul nom, entrée corrigible dans la feuille de saisie, filtres par espace et par geste, recherche | Réalisé |
 | `audit-personas-arbitrages.md` | 14 octobre | Pastilles « démarre » et « se termine », fleurs sous les tâches, année qui garde la quinzaine lue, case « fait » qui écrit au carnet | Réalisé |

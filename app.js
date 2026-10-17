@@ -3240,6 +3240,685 @@ const VOILES = { pluie: "rgba(120,140,160,.16)", gel: "rgba(232,240,248,.30)",
                  neige: "rgba(240,244,248,.30)", couvert: "rgba(150,160,165,.08)", clair: "rgba(255,255,255,0)" };
 let ambianceDite = "";
 
+/* ---------- Le jardin vivant ----------
+   Fond par défaut depuis le 17 octobre 2026 : un paysage de jardin peint sur
+   une toile, dans la veine des estampes. Le ciel suit la hauteur réelle du
+   soleil au point du jardin, la lune traverse la nuit et éclaire le décor. La
+   prévision de l'heure pose les nuages, la pluie, la neige ou le brouillard,
+   et son vent balance la végétation. La saison change l'arbre du verger, la
+   branche, le potager, le bassin et ce qui tombe. Le fond « Feuillage », celui
+   des taches et des feuilles, et un fond uni restent au choix dans les
+   réglages du compte. */
+const FOND = "monjardin.fond";
+const FONDS_ECRAN = {
+  jardin: ["Jardin vivant", "Un paysage de jardin qui suit le soleil et la lune, le temps de l'heure et la saison."],
+  feuillage: ["Feuillage", "Des taches de couleur et des feuilles qui tombent, aux teintes de la saison."],
+  uni: ["Uni", "Un fond sans mouvement, au ton de la saison."],
+};
+let choixFond = (() => {
+  try { const v = localStorage.getItem(FOND); return FONDS_ECRAN[v] ? v : "jardin"; }
+  catch (e) { return "jardin"; }
+})();
+const JV_SAISONS = {
+  printemps: { terre: "#8AAE68", buisson: "#4A7D44", herbe: "#6B9A4C", fleur: "#F4B6C6", coeur: "#C8406A",
+    feuille: null, chute: "petales", ciel: ["#9CC3DC", "#EEF0E4"], mont: "#6E93A6", azalee: "#E2668E",
+    touches: ["#F4B6C6", "#F2CF4A", "#FFFFFF", "#AE96DA", "#F08A9E"],
+    pin: "#3E7246", houppier: ["#F3BCCA", "#F8D6DF", "#EAA0B4"], potager: "salades" },
+  ete: { terre: "#6FA04A", buisson: "#2E6E36", herbe: "#4E9038", fleur: null, coeur: null,
+    feuille: ["#3E7D34", "#5DA044", "#7DB653"], chute: "aucune", ciel: ["#7FB2D8", "#E6EEE6"], mont: "#5E879C",
+    azalee: null, touches: ["#EAB02E", "#D9507A", "#7B62C0", "#EC7F32", "#FFFFFF"],
+    pin: "#2F6538", houppier: ["#4E9440", "#6BAD50", "#3E7E36"], potager: "courges" },
+  automne: { terre: "#8D7C5A", buisson: "#7B4B30", herbe: "#A18B5E", fleur: null, coeur: null,
+    feuille: ["#B2402C", "#C7783A", "#9C3326"], chute: "momiji", ciel: null, mont: "#3C4752",
+    azalee: null, touches: null, pin: "#3B5C3D", houppier: ["#D66A2E", "#E8A23C", "#B8452C"], potager: "potirons" },
+  hiver: { terre: "#B5B8B0", buisson: "#4A5550", herbe: "#998E77", fleur: null, coeur: null,
+    feuille: null, chute: "aucune", ciel: null, mont: "#3C4752", azalee: null, touches: null,
+    pin: "#34493F", houppier: null, potager: "paille" },
+};
+// Ce que chaque ciel de l'heure pose : nuages en bandes, voile couvert, pluie, neige, brume, éclairs.
+const JV_TEMPS = {
+  clair:      { cumulus: 0.2, nappe: 0, pluie: 0, neige: 0, brume: 0.15, orage: 0 },
+  nuageux:    { cumulus: 0.9, nappe: 0.15, pluie: 0, neige: 0, brume: 0.25, orage: 0 },
+  couvert:    { cumulus: 0.6, nappe: 0.9, pluie: 0, neige: 0, brume: 0.35, orage: 0 },
+  pluie:      { cumulus: 0.5, nappe: 0.85, pluie: 1, neige: 0, brume: 0.4, orage: 0 },
+  orage:      { cumulus: 0.6, nappe: 1, pluie: 1.6, neige: 0, brume: 0.2, orage: 1 },
+  neige:      { cumulus: 0.3, nappe: 0.8, pluie: 0, neige: 1, brume: 0.45, orage: 0 },
+  brouillard: { cumulus: 0, nappe: 0.35, pluie: 0, neige: 0, brume: 1, orage: 0 },
+};
+const JV_DE_TEMPS = { soleil: "clair", soleil_nuage: "nuageux", nuage: "couvert", brume: "brouillard",
+  pluie: "pluie", averse: "pluie", orage: "orage", neige: "neige" };
+// Lavis sourds, comme un papier teinté : indigo la nuit, kaki à l'aube, papier clair le jour.
+const JV_CIELS = { nuit: ["#151B2A", "#28304A"], aube: ["#56607A", "#E6C6A2"],
+  jour: ["#BFCBCC", "#ECE7DA"], soir: ["#474A66", "#DDA184"] };
+const JV_MONTS = [{ p: 0.1, h: 92, w: 0.32 }, { p: 0.47, h: 140, w: 0.38 }, { p: 0.88, h: 104, w: 0.3 }];
+const JV_SUMI = "#24282A";
+const jvHex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const jvMel = (a, b, t) => {
+  const x = jvHex(a), y = jvHex(b);
+  return "#" + x.map((v, i) => Math.round(Math.max(0, Math.min(255, v + (y[i] - v) * t)))
+    .toString(16).padStart(2, "0")).join("");
+};
+const jvBorne = (v, a, b) => Math.max(0, Math.min(1, (v - a) / (b - a)));
+const jvAlea = n => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+const jvRgba = (c, a) => { const [r, g, b] = jvHex(c); return `rgba(${r},${g},${b},${a.toFixed(3)})`; };
+// La toile, son décor tracé une fois, sa boucle et l'état du ciel relu au quart d'heure.
+const jv = { toile: null, branche: null, largeur: 0, grain: null, boucle: 0, derniere: 0, etat: null };
+
+/* La hauteur du soleil, sa course dans le jour et celle de la lune dans la
+   nuit, au point du jardin. Déclinaison par la série de Spencer, équation du
+   temps comprise. Sans commune, le centre de la France. */
+function soleilAuJardin(d, lat, lon) {
+  const r = Math.PI / 180;
+  const debut = Date.UTC(d.getUTCFullYear(), 0, 1);
+  const hu = d.getUTCHours() + d.getUTCMinutes() / 60;
+  const g = 2 * Math.PI / 365.24 * ((d.getTime() - debut) / 864e5 - 0.5);
+  const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g)
+    - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g)
+    - 0.002697 * Math.cos(3 * g) + 0.001480 * Math.sin(3 * g);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g)
+    - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const solaire = (((hu + lon / 15 + eqt / 60) % 24) + 24) % 24;
+  const ha = (solaire - 12) * 15 * r;
+  const hs = Math.asin(Math.sin(lat * r) * Math.sin(dec) + Math.cos(lat * r) * Math.cos(dec) * Math.cos(ha)) / r;
+  const c = (Math.sin(-0.833 * r) - Math.sin(lat * r) * Math.sin(dec)) / (Math.cos(lat * r) * Math.cos(dec));
+  const jour = c >= 1 ? 0 : c <= -1 ? 24 : 2 * Math.acos(c) / r / 15;
+  const lever = 12 - jour / 2;
+  return { hs, montant: solaire < 12, depuisLever: solaire - lever,
+    fr: jour ? (solaire - lever) / jour : 0,
+    fn: jour < 24 ? (((solaire - (12 + jour / 2)) % 24) + 24) % 24 / (24 - jour) : 2 };
+}
+
+function cielDuJardin(h, montant) {
+  const C = JV_CIELS, lever = montant ? C.aube : C.soir;
+  let p;
+  if (h <= -12) p = C.nuit;
+  else if (h < 2) { const t = (h + 12) / 14; p = [jvMel(C.nuit[0], lever[0], t), jvMel(C.nuit[1], lever[1], t)]; }
+  else if (h < 20) { const t = (h - 2) / 18; p = [jvMel(lever[0], C.jour[0], t), jvMel(lever[1], C.jour[1], t)]; }
+  else p = C.jour;
+  return { haut: p[0], bas: p[1], nuit: jvBorne(-h, 2, 12), jour: jvBorne(h, -4, 6),
+           chaud: jvBorne(25 - h, 0, 25) * jvBorne(h, -6, 2) };
+}
+
+// L'état du ciel de l'heure : relu par appliquerAmbiance, la toile le lit à chaque image.
+function etatDuJardin(saison) {
+  const g = jardinActif();
+  const lat = g && g.lat !== null && g.lat !== undefined ? Number(g.lat) : 46.6;
+  const lon = g && g.lon !== null && g.lon !== undefined ? Number(g.lon) : 2.4;
+  const sol = soleilAuJardin(new Date(), lat, lon);
+  let temps = "clair", vent = 8, mm = 0, gel = false;
+  if (meteo && meteo.daily && iJour() >= 0) {
+    const ih = iHeure(), h = meteo.hourly, i = iJour();
+    temps = JV_DE_TEMPS[tempsDe(ih >= 0 ? h.weather_code[ih] : meteo.daily.weather_code[i])[2]] || "couvert";
+    if (ih >= 0 && h.wind_speed_10m) vent = h.wind_speed_10m[ih] || 0;
+    if (ih >= 0 && h.precipitation) mm = h.precipitation[ih] || 0;
+    gel = !!(meteo.daily.temperature_2m_min && meteo.daily.temperature_2m_min[i] <= 0);
+  }
+  const m = Object.assign({}, JV_TEMPS[temps]);
+  // La pluie forte serre ses traits : de la moitié à une fois et demie la densité de base.
+  if (m.pluie && !m.orage) m.pluie = Math.max(0.5, Math.min(1.5, 0.6 + mm / 4));
+  const c = cielDuJardin(sol.hs, sol.montant);
+  return { saison, s: JV_SAISONS[saison], m, temps, vent: Math.min(60, vent), gel, sol, c };
+}
+
+function genBranche(W) {
+  const segs = [];
+  const pousse = (x, y, ang, len, ep, d, g) => {
+    const a = ang + (jvAlea(g) - 0.5) * 0.3;
+    const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+    const pli = (jvAlea(g + 1) - 0.5) * len * 0.25;
+    segs.push({ x, y, x2, y2, cx: (x + x2) / 2 - Math.sin(a) * pli, cy: (y + y2) / 2 + Math.cos(a) * pli, ep, d, g });
+    if (d >= 5) return;
+    pousse(x2, y2, a - 0.3 + (jvAlea(g + 2) - 0.5) * 0.3, len * 0.74, ep * 0.66, d + 1, g * 2 + 1);
+    if (d < 3 || jvAlea(g + 3) > 0.3) {
+      pousse(x2, y2, a + 0.5 + (jvAlea(g + 4) - 0.5) * 0.4, len * (0.5 + jvAlea(g + 5) * 0.2), ep * 0.55, d + 1, g * 2 + 2);
+    }
+  };
+  // Assez courte pour laisser lisibles le nom du jardin et la date.
+  pousse(W + 8, 22, Math.PI * 0.87, 74, 11, 0, 1);
+  pousse(W + 8, 96, Math.PI * 0.97, 50, 6, 1, 61);
+  return segs;
+}
+
+function jvCapsule(x, x0, y0, w, h) {
+  const r = h / 2;
+  x.beginPath(); x.moveTo(x0 + r, y0); x.lineTo(x0 + w - r, y0);
+  x.arc(x0 + w - r, y0 + r, r, -Math.PI / 2, Math.PI / 2); x.lineTo(x0 + r, y0 + h);
+  x.arc(x0 + r, y0 + r, r, Math.PI / 2, Math.PI * 1.5); x.fill();
+}
+
+function jvMomiji(x, cx, cy, r, rot) {
+  x.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const rr = k % 2 ? r * 0.42 : r, a = rot + k * Math.PI / 5 - Math.PI / 2;
+    x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  x.closePath(); x.fill();
+}
+
+/* Une image du jardin. Le décor est pensé pour un écran de 390 points sur
+   844 : la toile est mise à l'échelle sur la plus petite des deux mesures, et
+   le décor s'étend en largeur sur une tablette ou un écran couché. */
+function dessinerJardin(t) {
+  const cv = jv.toile, e = jv.etat;
+  if (!cv || !e) return;
+  const LW = innerWidth, LH = innerHeight, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const k = Math.min(LW / 390, LH / 844), W = LW / k, H = LH / k;
+  if (cv.width !== Math.round(LW * dpr) || cv.height !== Math.round(LH * dpr)) {
+    cv.width = Math.round(LW * dpr); cv.height = Math.round(LH * dpr);
+  }
+  if (jv.largeur !== W) { jv.branche = genBranche(W); jv.largeur = W; }
+  const x = cv.getContext("2d");
+  x.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
+  const nomS = e.saison, s = e.s, m = e.m, c = e.c, sol = e.sol, hs = sol.hs, vent = e.vent;
+  const souffle = 0.35 + vent / 30;
+  const gris = m.nappe * 0.65 + m.pluie * 0.15;
+  const vif = s.ciel ? c.jour * (1 - gris) * 0.85 : 0;
+  const haut = jvMel(s.ciel ? jvMel(c.haut, s.ciel[0], vif) : c.haut, "#848B90", gris * c.jour);
+  const bas = jvMel(s.ciel ? jvMel(c.bas, s.ciel[1], vif) : c.bas, "#C3C6C3", gris * c.jour);
+  const ombre = coul => jvMel(coul, "#141B2A", c.nuit * 0.6 + gris * 0.12);
+  const neigeux = nomS === "hiver" || m.neige > 0;
+  const blanc = () => ombre("#F4F3EE");
+  const HZ = H * 0.7;
+
+  // Ciel en lavis et étoiles
+  const g = x.createLinearGradient(0, 0, 0, HZ);
+  g.addColorStop(0, haut); g.addColorStop(1, bas);
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  if (c.nuit > 0.05 && m.nappe < 0.8) {
+    for (let i = 0; i < 46 * W / 390; i++) {
+      const a = c.nuit * (1 - m.nappe) * (0.35 + 0.45 * Math.abs(Math.sin(t * 0.6 + i * 1.7)));
+      x.fillStyle = `rgba(240,236,224,${a.toFixed(3)})`;
+      x.fillRect(jvAlea(i) * W, jvAlea(i + 99) * HZ * 0.6, 1.3, 1.3);
+    }
+  }
+  // Disque plat du soleil, vermillon près de l'horizon
+  const voile = Math.min(1, m.nappe * 1.1 + m.brume * 0.3);
+  if (hs > -4) {
+    const fr = Math.min(1, Math.max(0, sol.fr));
+    const sx = W * (0.14 + 0.62 * fr), sy = HZ - 90 - (hs / 70) * HZ * 0.7;
+    const teinte = jvMel("#F3ECD8", "#C4442E", c.chaud);
+    const r = x.createRadialGradient(sx, sy, 20, sx, sy, 60);
+    r.addColorStop(0, jvRgba(teinte, 0.28)); r.addColorStop(1, jvRgba(teinte, 0));
+    x.globalAlpha = 1 - voile * 0.7; x.fillStyle = r; x.fillRect(sx - 60, sy - 60, 120, 120);
+    x.globalAlpha = (1 - voile * 0.8) * jvBorne(hs, -4, 1); x.fillStyle = teinte;
+    x.beginPath(); x.arc(sx, sy, 21, 0, 7); x.fill(); x.globalAlpha = 1;
+  }
+  // La lune, qui traverse le ciel du coucher au lever, et son halo
+  const fn = Math.min(1, sol.fn);
+  const lune = sol.fn <= 1 ? (1 - m.nappe * 0.75) * jvBorne(Math.sin(Math.PI * fn), 0, 0.25) * c.nuit : 0;
+  const lx = W * (0.86 - 0.72 * fn), ly = HZ - 110 - Math.sin(Math.PI * fn) * 170;
+  if (lune > 0.01) {
+    const hl = x.createRadialGradient(lx, ly, 10, lx, ly, 170);
+    hl.addColorStop(0, `rgba(226,232,246,${(0.42 * lune).toFixed(3)})`);
+    hl.addColorStop(0.35, `rgba(200,212,236,${(0.14 * lune).toFixed(3)})`);
+    hl.addColorStop(1, "rgba(200,212,236,0)");
+    x.fillStyle = hl; x.fillRect(lx - 170, ly - 170, 340, 340);
+    x.globalAlpha = lune;
+    x.fillStyle = "#F1EEE2"; x.beginPath(); x.arc(lx, ly, 19, 0, 7); x.fill();
+    x.fillStyle = "rgba(170,170,160,.28)";
+    [[-6, -4, 4.5], [5, 3, 3.4], [-2, 8, 2.6], [7, -7, 2]].forEach(([dx, dy, rr]) => {
+      x.beginPath(); x.arc(lx + dx, ly + dy, rr, 0, 7); x.fill();
+    });
+    x.globalAlpha = 1;
+  }
+  // Bandes de nuages poussées par le vent, au bord argenté près de la lune
+  const teinte = c.nuit > 0.6 ? jvMel("#363D52", "#525C72", m.nappe)
+    : jvMel(jvMel("#F6F2E8", "#E8BFA2", c.chaud * 0.6), "#9A9D9C", gris * 0.6);
+  const derive = 3 + vent * 0.7;
+  const nb = Math.round((2 + 6 * m.cumulus) * W / 390);
+  for (let i = 0; i < nb; i++) {
+    const w = 110 + jvAlea(i + 3) * 180, hh = 9 + jvAlea(i + 5) * 6, v = 0.5 + jvAlea(i + 8) * 0.7;
+    const nx = ((jvAlea(i) * (W + w) + t * derive * v) % (W + w)) - w;
+    const ny = HZ * (0.12 + jvAlea(i + 1) * 0.5);
+    const proche = lune * jvBorne(160 - Math.hypot(nx + w / 2 - lx, ny - ly), 0, 160);
+    x.fillStyle = jvRgba(jvMel(teinte, "#C9D2E6", proche * 0.8), 0.78);
+    jvCapsule(x, nx, ny, w, hh);
+    jvCapsule(x, nx + w * 0.22, ny + hh + 3, w * 0.62, hh * 0.8);
+  }
+  if (m.nappe > 0) {
+    const ng = x.createLinearGradient(0, 0, 0, HZ * 0.8);
+    ng.addColorStop(0, jvRgba(teinte, 0.9)); ng.addColorStop(1, jvRgba(teinte, 0));
+    x.globalAlpha = m.nappe; x.fillStyle = ng; x.fillRect(0, 0, W, HZ * 0.8); x.globalAlpha = 1;
+  }
+  if (m.orage) {
+    const cy = t % 7.5;
+    const f = cy < 0.24 ? 1 - cy / 0.24 : (cy > 0.45 && cy < 0.6 ? 0.5 * (1 - (cy - 0.45) / 0.15) : 0);
+    if (f > 0) { x.fillStyle = `rgba(230,232,240,${(0.5 * f).toFixed(3)})`; x.fillRect(0, 0, W, H); }
+  }
+
+  // Monts lointains, d'autant plus pâles qu'ils sont loin, enneigés l'hiver
+  const pied = HZ - 28;
+  const mont = () => {
+    x.beginPath(); x.moveTo(0, pied + 30);
+    for (let i = 0; i <= 48; i++) {
+      const xn = i / 48;
+      let y = 0;
+      JV_MONTS.forEach(p => { y = Math.max(y, p.h * Math.pow(Math.max(0, 1 - Math.abs(xn - p.p) / (p.w / 2)), 1.3)); });
+      x.lineTo(xn * W, pied - y + jvAlea(i) * 3);
+    }
+    x.lineTo(W, pied + 30); x.closePath();
+  };
+  x.fillStyle = ombre(jvMel(bas, s.mont, s.ciel ? 0.45 : 0.3)); mont(); x.fill();
+  if (neigeux) {
+    x.save(); mont(); x.clip();
+    x.fillStyle = jvRgba(blanc(), 0.85); x.fillRect(0, 0, W, pied - 108);
+    x.restore();
+  }
+  const brume = (y, ep, a) => {
+    const bg = x.createLinearGradient(0, y - ep, 0, y + ep);
+    bg.addColorStop(0, jvRgba(bas, 0)); bg.addColorStop(0.5, jvRgba(bas, a)); bg.addColorStop(1, jvRgba(bas, 0));
+    x.fillStyle = bg; x.fillRect(0, y - ep, W, ep * 2);
+  };
+  brume(pied - 10, 40, s.ciel ? 0.55 : 0.75);
+  x.fillStyle = ombre(jvMel(bas, jvMel(s.terre, "#2D3833", s.ciel ? 0.25 : 0.45), s.ciel ? 0.72 : 0.6));
+  x.beginPath(); x.moveTo(0, HZ + 20);
+  for (let i = 0; i <= 30; i++) { const xn = i / 30; x.lineTo(xn * W, HZ - 16 - Math.sin(xn * 5 + 1) * 13 - Math.sin(xn * 11) * 4); }
+  x.lineTo(W, HZ + 20); x.fill();
+  brume(HZ - 4, 22, 0.6 + m.brume * 0.3);
+
+  // Le sol du jardin, givré par gel, enneigé l'hiver
+  const terre = e.gel && !neigeux ? jvMel(s.terre, "#E4E8EA", 0.35) : s.terre;
+  const gs = x.createLinearGradient(0, HZ, 0, H);
+  gs.addColorStop(0, ombre(terre)); gs.addColorStop(1, ombre(jvMel(terre, "#283028", 0.4)));
+  x.fillStyle = gs; x.fillRect(0, HZ + 4, W, H - HZ);
+  if (neigeux) { x.fillStyle = jvRgba(blanc(), m.neige ? 0.8 : 0.5); x.fillRect(0, HZ + 4, W, 18); }
+
+  // Pin taillé en plateaux
+  {
+    const px = 62, py = HZ + 10, bal = Math.sin(t * souffle * 0.5) * vent * 0.03;
+    x.strokeStyle = ombre("#4A3A2E"); x.lineCap = "round"; x.lineWidth = 6;
+    x.beginPath(); x.moveTo(px, py); x.bezierCurveTo(px + 16, py - 32, px - 20, py - 58, px + 6 + bal, py - 96); x.stroke();
+    x.lineWidth = 2.6;
+    const plateaux = [[-30, -42, 30, 9], [26, -64, 27, 8], [-10, -90, 23, 8], [6 + bal, -108, 14, 6]];
+    plateaux.forEach(([dx, dy]) => { x.beginPath(); x.moveTo(px + 2, py + dy + 10); x.lineTo(px + dx, py + dy + 2); x.stroke(); });
+    plateaux.forEach(([dx, dy, rx, ry]) => {
+      const cx = px + dx + bal * 0.5;
+      x.fillStyle = ombre(s.pin); x.beginPath(); x.ellipse(cx, py + dy, rx, ry, 0, 0, 7); x.fill();
+      x.fillStyle = ombre(jvMel(s.pin, "#B9D08A", 0.25));
+      x.beginPath(); x.ellipse(cx, py + dy - ry * 0.35, rx * 0.8, ry * 0.45, 0, 0, 7); x.fill();
+      if (neigeux) { x.fillStyle = jvRgba(blanc(), 0.92); x.beginPath(); x.ellipse(cx, py + dy - ry * 0.5, rx * 0.85, ry * 0.42, 0, Math.PI, 0); x.fill(); }
+    });
+  }
+  // Arbre du verger : en fleur, en feuilles et en fruits, roux, ou nu
+  {
+    const px = W * 0.8, py = HZ + 12, bal = Math.sin(t * souffle * 0.6 + 1) * vent * 0.05;
+    const branches = [[-34, -96], [30, -100], [-6, -118], [40, -78], [-40, -74]];
+    x.strokeStyle = ombre("#4E3E30"); x.lineWidth = 6; x.lineCap = "round";
+    x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px - 4, py - 40, px + bal * 0.5, py - 66); x.stroke();
+    x.lineWidth = 2.6;
+    branches.forEach(([dx, dy]) => {
+      x.beginPath(); x.moveTo(px + bal * 0.5, py - 62); x.quadraticCurveTo(px + dx * 0.4, py + dy * 0.75, px + dx + bal, py + dy); x.stroke();
+    });
+    if (s.houppier) {
+      for (let i = 0; i < 16; i++) {
+        const a = jvAlea(i * 5 + 3) * Math.PI * 2, d = 0.3 + jvAlea(i * 7) * 0.7;
+        const cx = px + bal + Math.cos(a) * 42 * d + Math.sin(t * souffle + i) * vent * 0.03, cy = py - 96 + Math.sin(a) * 26 * d;
+        x.fillStyle = ombre(s.houppier[i % s.houppier.length]);
+        x.beginPath(); x.arc(cx, cy, 13 + (i % 3) * 3, 0, 7); x.fill();
+      }
+      if (nomS === "ete") {
+        for (let i = 0; i < 6; i++) {
+          x.fillStyle = ombre("#D8452F");
+          x.beginPath(); x.arc(px + bal - 30 + jvAlea(i + 40) * 60, py - 112 + jvAlea(i + 50) * 40, 3.2, 0, 7); x.fill();
+        }
+      }
+    } else if (neigeux) {
+      x.strokeStyle = jvRgba(blanc(), 0.9); x.lineWidth = 1.6;
+      branches.slice(0, 3).forEach(([dx, dy]) => { x.beginPath(); x.moveTo(px + dx * 0.5, py - 84); x.lineTo(px + dx + bal, py + dy - 2); x.stroke(); });
+    }
+  }
+  // Massifs taillés en boule, couverts d'azalées au printemps
+  [[0.07, 44, 48], [0.29, 36, 30], [0.62, 52, 36]].forEach(([px, dy, r], j) => {
+    const mx = W * px, my = HZ + dy;
+    x.fillStyle = ombre(s.buisson);
+    x.beginPath(); x.ellipse(mx, my, r, r * 0.58, 0, Math.PI, 0); x.fill();
+    x.strokeStyle = jvRgba(ombre(jvMel(s.buisson, "#E8E4D4", 0.25)), 0.5); x.lineWidth = 1.2;
+    x.beginPath(); x.ellipse(mx, my, r * 0.8, r * 0.42, 0, Math.PI * 1.15, Math.PI * 1.75); x.stroke();
+    if (s.azalee) {
+      for (let i = 0; i < 26; i++) {
+        const a = Math.PI * (1.05 + jvAlea(j * 31 + i) * 0.9), d = 0.25 + jvAlea(i * 3 + j) * 0.7;
+        x.fillStyle = ombre(i % 4 ? s.azalee : "#F6D0DC");
+        x.beginPath(); x.arc(mx + Math.cos(a) * r * d, my + Math.sin(a) * r * 0.55 * d, 2, 0, 7); x.fill();
+      }
+    }
+    if (neigeux) { x.fillStyle = jvRgba(blanc(), 0.9); x.beginPath(); x.ellipse(mx, my - r * 0.38, r * 0.72, r * 0.22, 0, Math.PI, 0); x.fill(); }
+  });
+  // Tuteurs du potager, liés en tête, garnis l'été
+  if (nomS !== "hiver") {
+    x.strokeStyle = ombre("#6A5A44"); x.lineWidth = 1.3;
+    const grand = nomS === "ete" ? 46 : 32;
+    for (let i = 0; i < 6; i++) {
+      const px = W * 0.74 + i * 14, b = Math.sin(t * souffle + i) * vent * 0.012;
+      x.strokeStyle = ombre("#6A5A44");
+      x.beginPath(); x.moveTo(px, HZ + 72); x.lineTo(px + b + (i % 2 ? 3 : -3), HZ + 72 - grand); x.stroke();
+      if (nomS === "ete") {
+        for (let j = 0; j < 4; j++) {
+          x.fillStyle = ombre(j % 2 ? "#3F8236" : "#5DA044");
+          x.beginPath(); x.ellipse(px + (j % 2 ? 3 : -3), HZ + 66 - j * 10, 4, 2.4, j, 0, 7); x.fill();
+        }
+        if (i % 2 === 0) { x.fillStyle = ombre("#D2402E"); x.beginPath(); x.arc(px + 2, HZ + 50 - (i % 3) * 6, 2.6, 0, 7); x.fill(); }
+      }
+    }
+    x.strokeStyle = ombre("#6A5A44");
+    x.beginPath(); x.moveTo(W * 0.74 - 6, HZ + 78 - grand); x.lineTo(W * 0.74 + 76, HZ + 78 - grand); x.stroke();
+  }
+  // Petites fleurs semées au premier plan, aux couleurs de la saison
+  if (s.touches) {
+    for (let i = 0; i < 70 * W / 390; i++) {
+      const fx = jvAlea(i * 13 + 1) * W, fy = HZ + 70 + jvAlea(i * 7 + 2) * (H - HZ - 110);
+      const b = Math.sin(t * souffle * 1.4 + i) * (0.6 + vent * 0.05);
+      const r = 1.6 + (fy - HZ) / (H - HZ) * 2.4;
+      x.strokeStyle = ombre(s.herbe); x.lineWidth = 0.9;
+      x.beginPath(); x.moveTo(fx, fy + r * 3); x.lineTo(fx + b, fy); x.stroke();
+      x.fillStyle = ombre(s.touches[i % s.touches.length]);
+      x.beginPath(); x.arc(fx + b, fy, r, 0, 7); x.fill();
+    }
+  }
+  // Bassin : reflet du ciel, carpes, nénuphars, ronds dans l'eau, reflet de la lune
+  {
+    const ex = W * 0.44, ey = HZ + 116, rx = 80, ry = 19, gele = neigeux && nomS === "hiver";
+    x.fillStyle = ombre("#666A63"); x.beginPath(); x.ellipse(ex, ey + 1, rx + 7, ry + 5, 0, 0, 7); x.fill();
+    x.save(); x.beginPath(); x.ellipse(ex, ey, rx, ry, 0, 0, 7); x.clip();
+    const eau = x.createLinearGradient(0, ey - ry, 0, ey + ry);
+    eau.addColorStop(0, gele ? "#DCE2E3" : jvMel(bas, "#2E4A52", 0.25));
+    eau.addColorStop(1, gele ? "#BFC9CC" : jvMel(haut, "#1E3640", 0.35));
+    x.fillStyle = eau; x.fillRect(ex - rx, ey - ry, rx * 2, ry * 2);
+    if (!gele) {
+      if (nomS !== "hiver") {
+        ["#E8742E", "#F4F1EA", "#D9482B"].forEach((kc, i) => {
+          const a = t * 0.22 * (i % 2 ? -1 : 1) + i * 2.1;
+          const kx = ex + Math.cos(a) * rx * 0.58, ky = ey + Math.sin(a) * ry * 0.5;
+          x.fillStyle = jvRgba(kc, 0.75 * (1 - c.nuit * 0.6));
+          x.beginPath(); x.ellipse(kx, ky, 7, 2.6, Math.atan2(Math.cos(a) * ry, -Math.sin(a) * rx) * (i % 2 ? -1 : 1), 0, 7); x.fill();
+        });
+      }
+      if (nomS === "ete" || nomS === "printemps") {
+        [[-44, -4], [-30, 6], [38, -2], [52, 7], [12, 9]].forEach(([dx, dy], i) => {
+          x.fillStyle = ombre(i % 2 ? "#4C8A3E" : "#3E7634");
+          x.beginPath(); x.ellipse(ex + dx, ey + dy, 8, 3, 0, 0.3, Math.PI * 2); x.fill();
+          if (nomS === "ete" && i % 2 === 0) {
+            x.fillStyle = ombre("#F2A9C0"); x.beginPath(); x.ellipse(ex + dx + 1, ey + dy - 2, 3.2, 2.2, 0, 0, 7); x.fill();
+          }
+        });
+      }
+      const nr = m.pluie ? 14 : 2, cadence = m.pluie ? 1.4 : 0.35;
+      x.lineWidth = 0.9;
+      for (let i = 0; i < nr; i++) {
+        const u = t * cadence + jvAlea(i * 3), ph = u % 1, cyc = Math.floor(u);
+        const rxx = ex + (jvAlea(i + cyc * 7) - 0.5) * rx * 1.4, ryy = ey + (jvAlea(i * 2 + cyc) - 0.5) * ry;
+        x.strokeStyle = `rgba(240,244,248,${(0.5 * (1 - ph)).toFixed(2)})`;
+        x.beginPath(); x.ellipse(rxx, ryy, 2 + ph * 12, 0.6 + ph * 3, 0, 0, 7); x.stroke();
+      }
+      if (lune > 0.05) {
+        const rfx = ex + (lx - W / 2) * 0.35;
+        for (let i = 0; i < 7; i++) {
+          const w = 14 - i * 1.4 + Math.sin(t * 2 + i) * 3;
+          x.fillStyle = `rgba(236,238,246,${(0.55 * lune * (1 - i / 8)).toFixed(3)})`;
+          x.fillRect(rfx - w / 2 + Math.sin(t * 1.3 + i * 2) * 2, ey - ry + 3 + i * 5, w, 1.6);
+        }
+      } else if (hs > 0 && voile < 0.6) {
+        x.fillStyle = "rgba(255,250,235,.35)"; x.fillRect(ex - 30 + Math.sin(t) * 4, ey - 6, 22, 1.4);
+      }
+    }
+    x.restore();
+    x.fillStyle = ombre("#7A7C75");
+    [[-rx - 2, 2, 9], [rx - 6, -6, 7], [-20, ry + 2, 8], [34, ry, 6]].forEach(([dx, dy, r]) => {
+      x.beginPath(); x.ellipse(ex + dx, ey + dy, r, r * 0.55, 0, 0, 7); x.fill();
+    });
+  }
+  // Lanterne de pierre, allumée à la tombée du jour
+  {
+    const tx = W * 0.15, ty = HZ + 132, pierre = ombre("#8D8C84");
+    x.fillStyle = pierre;
+    x.fillRect(tx - 9, ty - 5, 18, 5); x.fillRect(tx - 3, ty - 26, 6, 21); x.fillRect(tx - 11, ty - 30, 22, 4);
+    x.fillRect(tx - 8, ty - 44, 16, 14);
+    const allume = Math.max(c.nuit, jvBorne(-hs, -2, 4) * 0.8);
+    x.fillStyle = allume > 0.05 ? jvMel(ombre("#3A3A36"), "#F4C46A", allume) : ombre("#3A3A36");
+    x.fillRect(tx - 4, ty - 41, 8, 8);
+    if (allume > 0.05) {
+      const gl = x.createRadialGradient(tx, ty - 37, 2, tx, ty - 37, 46);
+      gl.addColorStop(0, `rgba(246,196,106,${(0.45 * allume).toFixed(2)})`); gl.addColorStop(1, "rgba(246,196,106,0)");
+      x.fillStyle = gl; x.fillRect(tx - 46, ty - 83, 92, 92);
+    }
+    x.fillStyle = pierre;
+    x.beginPath(); x.moveTo(tx - 17, ty - 44); x.quadraticCurveTo(tx, ty - 50, tx + 17, ty - 44);
+    x.lineTo(tx + 8, ty - 54); x.lineTo(tx - 8, ty - 54); x.closePath(); x.fill();
+    x.beginPath(); x.arc(tx, ty - 57, 3.2, 0, 7); x.fill();
+    if (neigeux) { x.fillStyle = jvRgba(blanc(), 0.95); x.beginPath(); x.ellipse(tx, ty - 52, 13, 3, 0, Math.PI, 0); x.fill(); }
+  }
+  // Tournesols de l'été, derrière les carrés
+  if (nomS === "ete") {
+    [[W * 0.9, 112], [W * 0.96, 96], [W * 0.84, 84]].forEach(([fx, L], i) => {
+      const base = HZ + 150, b = Math.sin(t * souffle + i) * (2 + vent * 0.12);
+      x.strokeStyle = ombre("#4E7A34"); x.lineWidth = 2.2;
+      x.beginPath(); x.moveTo(fx, base); x.quadraticCurveTo(fx + b * 0.3, base - L * 0.6, fx + b, base - L); x.stroke();
+      x.fillStyle = ombre("#4E8A3A"); x.beginPath(); x.ellipse(fx + b * 0.4 - 7, base - L * 0.5, 7, 3, -0.5, 0, 7); x.fill();
+      x.fillStyle = ombre("#F2BE2C");
+      for (let p = 0; p < 12; p++) {
+        const a = p * Math.PI / 6;
+        x.beginPath(); x.ellipse(fx + b + Math.cos(a) * 8, base - L + Math.sin(a) * 8, 4.2, 1.8, a, 0, 7); x.fill();
+      }
+      x.fillStyle = ombre("#5E3B1F"); x.beginPath(); x.arc(fx + b, base - L, 5, 0, 7); x.fill();
+    });
+  }
+  // Carrés du potager et ce qui y pousse
+  [W * 0.66, W * 0.84].forEach((bx, j) => {
+    const by = HZ + 158, bw = 58;
+    x.fillStyle = ombre("#7A5A3B"); x.fillRect(bx - bw / 2, by - 10, bw, 13);
+    x.fillStyle = ombre("#946F49"); x.fillRect(bx - bw / 2, by - 10, bw, 2.4);
+    x.fillStyle = ombre("#4A382A"); x.fillRect(bx - bw / 2 + 3, by - 12, bw - 6, 3);
+    for (let i = 0; i < 4; i++) {
+      const cx = bx - bw / 2 + 9 + i * 13.5, cy = by - 14, b = Math.sin(t * souffle * 1.3 + i + j) * vent * 0.03;
+      if (s.potager === "salades") {
+        x.fillStyle = ombre(i % 2 ? "#9CCB64" : "#7DB252");
+        for (let p = 0; p < 5; p++) { x.beginPath(); x.ellipse(cx + b + Math.cos(p * 1.25) * 3, cy - 3 + Math.sin(p * 1.25) * 2, 4, 3, p, 0, 7); x.fill(); }
+      } else if (s.potager === "courges") {
+        x.fillStyle = ombre("#3F7F36"); x.beginPath(); x.ellipse(cx + b, cy - 4, 6.5, 4.5, 0, 0, 7); x.fill();
+        if (i % 2 === 0) { x.fillStyle = ombre("#F2C83A"); x.beginPath(); x.arc(cx + b + 3, cy - 7, 2.4, 0, 7); x.fill(); }
+      } else if (s.potager === "potirons") {
+        x.fillStyle = ombre("#5E7A3A"); x.beginPath(); x.ellipse(cx - 3, cy - 2, 5, 2.4, 0.4, 0, 7); x.fill();
+        if (i % 2 === 0) { x.fillStyle = ombre("#E07A24"); x.beginPath(); x.ellipse(cx + 3, cy - 3, 6, 4.6, 0, 0, 7); x.fill(); }
+      } else {
+        x.fillStyle = ombre(neigeux ? "#F1F0EA" : "#C9B47C"); x.fillRect(cx - 6, cy, 12, 2.5);
+      }
+    }
+  });
+  // Graminées du premier plan, qui ploient au vent ; en épis à l'automne
+  [[18, 1], [W - 34, -1], [W * 0.4, 1]].forEach(([bx, sens], j) => {
+    for (let i = 0; i < 10; i++) {
+      const base = bx + i * 2.6, L = 70 + jvAlea(j * 10 + i) * 50;
+      const b = Math.sin(t * souffle * 1.2 + i * 0.4 + j) * (3 + vent * 0.18) + vent * 0.35;
+      const tx = base + sens * (i - 5) * 4 + b, ty = H - 30 - L;
+      x.strokeStyle = ombre(s.herbe); x.lineWidth = 1.2;
+      x.beginPath(); x.moveTo(base, H - 30); x.quadraticCurveTo(base + b * 0.2, H - 30 - L * 0.6, tx, ty); x.stroke();
+      if (nomS === "automne" && i % 2 === 0) {
+        x.strokeStyle = jvRgba(ombre("#E6DAC0"), 0.85); x.lineWidth = 2.6;
+        x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(tx + 4 + b * 0.1, ty - 8, tx + 10 + b * 0.2, ty - 12); x.stroke();
+      }
+    }
+  });
+  // Rosée ou givre du matin, par ciel dégagé
+  if (sol.depuisLever > -0.5 && sol.depuisLever < 2.5 && m.nappe < 0.5 && nomS !== "hiver") {
+    for (let i = 0; i < 22; i++) {
+      const a = 0.6 * Math.max(0, Math.sin(t * 1.6 + i * 2.3));
+      x.fillStyle = `rgba(255,253,245,${a.toFixed(2)})`;
+      x.fillRect(jvAlea(i * 7) * W, HZ + 24 + jvAlea(i * 11) * (H - HZ - 60), 1.6, 1.6);
+    }
+  }
+  // Oiseaux de passage, d'un trait d'encre
+  if (c.jour > 0.6 && (nomS === "printemps" || nomS === "automne") && !m.pluie) {
+    x.strokeStyle = jvRgba(ombre(JV_SUMI), 0.6); x.lineWidth = 1.1;
+    for (let i = 0; i < 5; i++) {
+      const bx = ((t * 11 + i * 17) % (W + 140)) - 70, by = HZ * 0.36 + i * 7 + (i % 2) * 5 + Math.sin(t * 0.8 + i) * 3;
+      const ai = 2 + Math.sin(t * 5 + i) * 2;
+      x.beginPath(); x.moveTo(bx - 5, by - ai); x.quadraticCurveTo(bx - 2, by - 2, bx, by);
+      x.quadraticCurveTo(bx + 2, by - 2, bx + 5, by - ai); x.stroke();
+    }
+  }
+  // Lucioles des nuits d'été
+  if (c.nuit > 0.5 && nomS === "ete" && !m.pluie) {
+    for (let i = 0; i < 14; i++) {
+      const fx = jvAlea(i * 5) * W + Math.sin(t * 0.35 + i) * 18, fy = HZ + jvAlea(i * 9) * 160 + Math.cos(t * 0.45 + i) * 10;
+      const a = Math.max(0, Math.sin(t * 1.2 + i * 1.9)) * 0.8;
+      const r = x.createRadialGradient(fx, fy, 0, fx, fy, 7);
+      r.addColorStop(0, `rgba(226,240,160,${a.toFixed(2)})`); r.addColorStop(1, "rgba(226,240,160,0)");
+      x.fillStyle = r; x.fillRect(fx - 7, fy - 7, 14, 14);
+    }
+  }
+  // Papillons au printemps et en été, libellules autour du bassin
+  if (c.jour > 0.6 && (nomS === "printemps" || nomS === "ete") && !m.pluie && vent < 35) {
+    ["#FFFFFF", "#F4D35E", "#EC8A3E", "#AFCBEF"].forEach((pc, i) => {
+      const u = t * 0.05 + i * 0.27;
+      const px = W * (0.08 + 0.84 * (0.5 + 0.5 * Math.sin(u * 2.3 + i)));
+      const py = HZ + 40 + Math.sin(u * 3.1 + i * 2) * 70 + Math.sin(t * 2.2 + i) * 6;
+      const ai = 0.25 + Math.abs(Math.sin(t * 9 + i * 1.3)) * 0.75;
+      x.fillStyle = pc;
+      [[-3.6, -1.5, 4.2, 3.4, -0.5], [3.6, -1.5, 4.2, 3.4, 0.5], [-2.6, 2.4, 2.6, 2.2, -0.3], [2.6, 2.4, 2.6, 2.2, 0.3]]
+        .forEach(([dx, dy, rx, ry, a]) => { x.beginPath(); x.ellipse(px + dx * ai, py + dy, rx * ai, ry, a, 0, 7); x.fill(); });
+      x.fillStyle = "rgba(40,36,30,.7)"; x.fillRect(px - 0.5, py - 3, 1, 7);
+    });
+  }
+  if (c.jour > 0.6 && nomS === "ete" && !m.pluie) {
+    for (let i = 0; i < 2; i++) {
+      const u = t / 2.5 + i * 0.5, sauts = Math.floor(u), e2 = Math.min(1, (u % 1) * 4);
+      const ax = W * 0.44 + (jvAlea(sauts * 3 + i) - 0.5) * 160, ay = HZ + 70 + jvAlea(sauts * 5 + i) * 40;
+      const bx = W * 0.44 + (jvAlea(sauts * 3 + i + 3) - 0.5) * 160, by = HZ + 70 + jvAlea(sauts * 5 + i + 3) * 40;
+      const dx = ax + (bx - ax) * e2, dy = ay + (by - ay) * e2;
+      x.fillStyle = "rgba(235,242,250,.6)";
+      x.beginPath(); x.ellipse(dx - 2, dy - 4, 1.8, 6, 0.3, 0, 7); x.fill();
+      x.beginPath(); x.ellipse(dx + 2, dy - 4, 1.8, 6, -0.3, 0, 7); x.fill();
+      x.strokeStyle = "#2F6FA6"; x.lineWidth = 1.6; x.beginPath(); x.moveTo(dx - 6, dy); x.lineTo(dx + 8, dy); x.stroke();
+    }
+  }
+  // Clarté de la lune posée sur le paysage
+  if (lune > 0.05) {
+    const cl = x.createRadialGradient(lx, ly, 40, lx, ly, 520);
+    cl.addColorStop(0, `rgba(190,206,236,${(0.2 * lune).toFixed(3)})`); cl.addColorStop(1, "rgba(190,206,236,0)");
+    x.fillStyle = cl; x.fillRect(0, 0, W, H);
+  }
+
+  // La branche à l'encre, qui se balance autour de sa base
+  const rot = Math.sin(t * souffle * 0.55) * (0.006 + vent * 0.0007);
+  x.save(); x.translate(W + 8, 30); x.rotate(rot); x.translate(-W - 8, -30);
+  x.lineCap = "round";
+  const encre = ombre(JV_SUMI);
+  jv.branche.forEach(sg => {
+    x.strokeStyle = jvRgba(encre, 0.9); x.lineWidth = sg.ep;
+    x.beginPath(); x.moveTo(sg.x, sg.y); x.quadraticCurveTo(sg.cx, sg.cy, sg.x2, sg.y2); x.stroke();
+    x.strokeStyle = jvRgba(encre, 0.35); x.lineWidth = sg.ep * 0.5;
+    x.beginPath(); x.moveTo(sg.x, sg.y + sg.ep * 0.4); x.quadraticCurveTo(sg.cx, sg.cy + sg.ep * 0.5, sg.x2, sg.y2 + sg.ep * 0.3); x.stroke();
+    if (neigeux && sg.d <= 3) {
+      x.strokeStyle = jvRgba(ombre("#F5F4F0"), 0.92); x.lineWidth = Math.max(1.4, sg.ep * 0.45);
+      x.beginPath(); x.moveTo(sg.x, sg.y - sg.ep * 0.45); x.quadraticCurveTo(sg.cx, sg.cy - sg.ep * 0.5, sg.x2, sg.y2 - sg.ep * 0.3); x.stroke();
+    }
+  });
+  jv.branche.forEach((sg, i) => {
+    if (sg.d < 3) return;
+    const fl = Math.sin(t * souffle * 1.8 + i) * vent * 0.025;
+    for (let j = 0; j < (s.fleur ? 6 : 4); j++) {
+      const fx = sg.x2 + (jvAlea(sg.g + j) - 0.5) * 18 + fl, fy = sg.y2 + (jvAlea(sg.g + j + 7) - 0.5) * 12;
+      if (s.fleur) {
+        x.fillStyle = ombre(j % 3 ? s.fleur : "#FBE3EA");
+        for (let p = 0; p < 5; p++) { x.beginPath(); x.arc(fx + Math.cos(p * 1.257) * 2.6, fy + Math.sin(p * 1.257) * 2.6, 2.2, 0, 7); x.fill(); }
+        x.fillStyle = ombre(s.coeur); x.beginPath(); x.arc(fx, fy, 0.9, 0, 7); x.fill();
+      } else if (s.feuille) {
+        x.fillStyle = ombre(s.feuille[(i + j) % s.feuille.length]);
+        jvMomiji(x, fx, fy, 5.5, jvAlea(sg.g + j) * 2);
+      }
+    }
+  });
+  x.restore();
+
+  // Ce qui tombe : pétales, feuilles d'érable, flocons ; la pluie en traits fins
+  const pente = Math.max(-0.5, Math.min(0.5, vent / 95));
+  const chute = m.neige ? "flocons" : s.chute;
+  if (chute !== "aucune" && !m.pluie) {
+    const n = (chute === "flocons" ? 70 : 12) * W / 390;
+    for (let i = 0; i < n; i++) {
+      const v = chute === "flocons" ? 20 + jvAlea(i) * 16 : 12 + jvAlea(i) * 8;
+      const py = (jvAlea(i + 1) * H + t * v) % (H + 20) - 10;
+      const px = (jvAlea(i + 2) * W * 0.8 + W * 0.2 + Math.sin(t * 0.6 + i) * 24 - t * vent * 0.35 + W * 8) % W;
+      if (chute === "flocons") {
+        x.fillStyle = "rgba(250,250,246,.85)"; x.beginPath(); x.arc(px, py, 1.3 + jvAlea(i) * 1.6, 0, 7); x.fill();
+        continue;
+      }
+      x.save(); x.translate(px, py); x.rotate(t * (0.5 + jvAlea(i)) + i);
+      if (chute === "petales") { x.fillStyle = jvRgba(ombre(s.fleur), 0.9); x.beginPath(); x.ellipse(0, 0, 3, 1.8, 0, 0, 7); x.fill(); }
+      else { x.fillStyle = ombre(s.feuille[i % s.feuille.length]); jvMomiji(x, 0, 0, 5.5, 0); }
+      x.restore();
+    }
+  }
+  if (m.pluie) {
+    x.strokeStyle = c.nuit > 0.5 ? "rgba(200,208,222,.3)" : "rgba(56,64,74,.28)"; x.lineWidth = 0.8;
+    const n = Math.round(110 * m.pluie * W / 390);
+    for (let i = 0; i < n; i++) {
+      const v = 560 + jvAlea(i) * 240, py = (jvAlea(i + 3) * H + t * v) % H, px = (jvAlea(i + 7) * W + py * pente + W) % W;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(px + 30 * pente, py + 30); x.stroke();
+    }
+  }
+  if (m.brume > 0.5) {
+    for (let i = 0; i < 3; i++) {
+      x.fillStyle = jvRgba(bas, 0.35 * m.brume);
+      jvCapsule(x, -120 + (t * (5 + i * 3)) % 120 + i * 40, HZ - 60 + i * 60, W * 0.9, 26);
+    }
+    x.fillStyle = jvRgba(bas, 0.32 * m.brume); x.fillRect(0, 0, W, H);
+  }
+  // Grain du papier
+  if (!jv.grain) {
+    const gc = document.createElement("canvas"); gc.width = gc.height = 160;
+    const gx = gc.getContext("2d"), d = gx.createImageData(160, 160);
+    for (let i = 0; i < 160 * 160; i++) {
+      const v = jvAlea(i + 0.5) * 255;
+      d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255;
+    }
+    gx.putImageData(d, 0, 0);
+    jv.grain = x.createPattern(gc, "repeat");
+  }
+  x.globalAlpha = 0.035; x.fillStyle = jv.grain; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
+}
+
+/* La boucle tourne à trente images par seconde au plus, se suspend quand
+   l'onglet est caché et s'arrête hors du fond « Jardin vivant ». Quand le
+   système demande moins de mouvement, une seule image est peinte. */
+const JV_CALME = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+function animerJardin(actif) {
+  cancelAnimationFrame(jv.boucle);
+  jv.boucle = 0;
+  if (!actif) return;
+  if (!jv.toile) jv.toile = document.getElementById("amToile");
+  if (!jv.toile) return;
+  if (JV_CALME && JV_CALME.matches) { dessinerJardin(20); return; }
+  const pas = ms => {
+    jv.boucle = requestAnimationFrame(pas);
+    if (document.hidden || ms - jv.derniere < 33) return;
+    jv.derniere = ms;
+    dessinerJardin(ms / 1000);
+  };
+  jv.boucle = requestAnimationFrame(pas);
+}
+
+// Le choix du fond, dans les réglages du compte, vaut pour cet appareil.
+function brancherFond() {
+  const sel = $("selFond");
+  if (!sel) return;
+  sel.innerHTML = Object.entries(FONDS_ECRAN)
+    .map(([v, [nom]]) => `<option value="${v}">${nom}</option>`).join("");
+  sel.value = choixFond;
+  const aide = () => { $("aideFond").textContent = FONDS_ECRAN[choixFond][1]; };
+  aide();
+  sel.addEventListener("change", () => {
+    choixFond = FONDS_ECRAN[sel.value] ? sel.value : "jardin";
+    try { localStorage.setItem(FOND, choixFond); } catch (e) { /* stockage indisponible */ }
+    aide();
+    appliquerAmbiance();
+  });
+}
+// Une rotation ou un changement de taille repeint aussitôt la toile immobile.
+window.addEventListener("resize", () => { if (choixFond === "jardin" && JV_CALME && JV_CALME.matches) dessinerJardin(20); });
+if (JV_CALME && JV_CALME.addEventListener) {
+  JV_CALME.addEventListener("change", () => { if (choixFond === "jardin") { animerJardin(false); animerJardin(true); } });
+}
+
 function meteoDuMoment() {
   if (!meteo || !meteo.daily || iJour() < 0) return "clair";
   /* Le ciel de l'heure, comme la carte du jour : le code quotidien est celui
@@ -3267,6 +3946,25 @@ function appliquerAmbiance() {
   r.setProperty("--am-lumiere", LUMIERES[heure]);
   r.setProperty("--am-voile", VOILES[temps]);
   z.dataset.saison = saison; z.dataset.heure = heure; z.dataset.meteo = temps;
+  // Le fond choisi : la toile du jardin ne tourne que quand elle se voit.
+  z.dataset.fond = choixFond;
+  const racine = document.documentElement;
+  racine.dataset.fond = choixFond;
+  if (choixFond === "jardin") {
+    jv.etat = etatDuJardin(saison);
+    /* Le texte posé à même le ciel passe en clair dès que le haut du ciel
+       est sombre : au crépuscule, bien avant la nuit, une date foncée ne se
+       lisait plus. */
+    const [cr, cg, cb] = jvHex(jv.etat.c.haut);
+    const nuit = (0.2126 * cr + 0.7152 * cg + 0.0722 * cb) / 255 < 0.45;
+    z.dataset.ciel = nuit ? "nuit" : "jour";
+    racine.dataset.ciel = z.dataset.ciel;
+    r.setProperty("--am-ciel", jv.etat.c.haut);
+    if (!jv.boucle) animerJardin(true);
+  } else {
+    animerJardin(false);
+    delete z.dataset.ciel; delete racine.dataset.ciel;
+  }
   // Ce qui tombe ne se redessine que si la saison ou le temps l'ont changé.
   const flocons = a.flocons || temps === "neige";
   const cle = saison + (flocons ? "|f" : "") + (temps === "pluie" ? "|p" : "");
@@ -8109,6 +8807,7 @@ try { await chargerCatalogue(); }
 catch (e) { info("Catalogue indisponible : " + e.message, true); }
 lireGlossaire().catch(() => { /* glossaire indisponible, les textes restent bruts */ });
 lirePlanches();
+brancherFond();
 appliquerAmbiance();
 // L'heure change la lumière du fond : elle est relue tous les quarts d'heure.
 setInterval(appliquerAmbiance, 900000);

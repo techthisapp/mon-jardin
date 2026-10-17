@@ -8,6 +8,11 @@
    sombre a disparu, et chaque bloc porte son titre en tête, collé en haut de
    l'écran tant qu'il y est.
 
+   Depuis le 17 octobre 2026, le fond par défaut est le jardin vivant, une
+   toile peinte ; le feuillage et un fond uni restent au choix dans les
+   réglages du compte. Les premières sections jouent le feuillage, choisi
+   d'avance sur l'appareil.
+
    Les contrôles portent sur la place du calque, sur ce que chaque saison y
    pose, sur la lumière du matin, sur le voile de la pluie, sur l'arrêt du
    mouvement quand le système le demande, et sur les titres des blocs. */
@@ -39,7 +44,7 @@ const lire = pg => pg.evaluate(() => {
 
 export default async function essai(navigateur) {
   const j = journal("Fond vivant");
-  const { ctx, pg, erreurs } = await ouvrirContexte(navigateur);
+  const { ctx, pg, erreurs } = await ouvrirContexte(navigateur, { fond: "feuillage" });
   await pg.setViewportSize({ width: 393, height: 852 });
   await pg.waitForTimeout(600);
 
@@ -100,7 +105,7 @@ export default async function essai(navigateur) {
   await ctx.close();
 
   j.section("chaque saison a ses couleurs et ce qui tombe");
-  const hiver = await ouvrirContexte(navigateur, { jour: new Date("2026-01-10T15:00:00+01:00").getTime() });
+  const hiver = await ouvrirContexte(navigateur, { fond: "feuillage", jour: new Date("2026-01-10T15:00:00+01:00").getTime() });
   a = await lire(hiver.pg);
   j.controle("en janvier, l'hiver, et des flocons au lieu des feuilles",
     a.saison === "hiver" && a.flocons === 12 && a.feuilles === 0, `${a.saison}, ${a.flocons} flocons`);
@@ -108,7 +113,7 @@ export default async function essai(navigateur) {
   j.controle("quinze heures est le jour, sans lumière ajoutée",
     a.heure === "jour" && /, 0\)$/.test(a.lumiere), `${a.heure}, ${a.lumiere}`);
   await hiver.ctx.close();
-  const automne = await ouvrirContexte(navigateur, { jour: new Date("2026-10-15T19:00:00+02:00").getTime() });
+  const automne = await ouvrirContexte(navigateur, { fond: "feuillage", jour: new Date("2026-10-15T19:00:00+02:00").getTime() });
   a = await lire(automne.pg);
   j.controle("en octobre, l'automne et ses feuilles rousses",
     a.saison === "automne" && a.feuilles === 12 && /217, 130, 43|#d9822b/i.test(a.couleurChute),
@@ -121,7 +126,7 @@ export default async function essai(navigateur) {
   const d = JSON.parse(METEO);
   d.daily.weather_code = d.daily.weather_code.map(() => 63);
   d.hourly.weather_code = d.hourly.weather_code.map(() => 63);
-  const pluie = await ouvrirContexte(navigateur, { meteo: JSON.stringify(d) });
+  const pluie = await ouvrirContexte(navigateur, { fond: "feuillage", meteo: JSON.stringify(d) });
   await pluie.pg.waitForTimeout(400);
   a = await lire(pluie.pg);
   j.controle("le temps du jour est la pluie", a.meteo === "pluie", a.meteo);
@@ -131,7 +136,7 @@ export default async function essai(navigateur) {
   await pluie.ctx.close();
 
   j.section("le système demande moins de mouvement");
-  const calme = await ouvrirContexte(navigateur);
+  const calme = await ouvrirContexte(navigateur, { fond: "feuillage" });
   await calme.pg.emulateMedia({ reducedMotion: "reduce" });
   await calme.pg.waitForTimeout(400);
   a = await lire(calme.pg);
@@ -140,5 +145,90 @@ export default async function essai(navigateur) {
       getComputedStyle(document.getElementById("amChute")).display === "none"), a.animees + " animations");
   await calme.ctx.close();
 
-  return j.fin(erreurs.concat(hiver.erreurs, automne.erreurs, pluie.erreurs, calme.erreurs));
+  j.section("le jardin vivant, fond par défaut");
+  const toile = pg2 => pg2.evaluate(async () => {
+    const z = document.getElementById("ambiance"), c = document.getElementById("amToile");
+    const r = c.getBoundingClientRect();
+    const img = () => c.toDataURL();
+    const avant = img();
+    await new Promise(f => setTimeout(f, 400));
+    const x = c.getContext("2d");
+    const px = (u, v) => [...x.getImageData(Math.round(c.width * u), Math.round(c.height * v), 1, 1).data];
+    return { fond: z.dataset.fond, ciel: z.dataset.ciel, affichee: getComputedStyle(c).display,
+      couvre: r.width >= innerWidth && r.height >= innerHeight,
+      nette: c.width === Math.round(innerWidth * Math.min(2, devicePixelRatio)),
+      taches: getComputedStyle(z.querySelector(".am-tache")).display,
+      chute: getComputedStyle(document.getElementById("amChute")).display,
+      ciel0: px(0.02, 0.48), sol: px(0.5, 0.97), bouge: avant !== img(),
+      titre: getComputedStyle(document.querySelector(".tete h1")).color,
+      memoire: localStorage.getItem("monjardin.fond") };
+  });
+  const vivant = await ouvrirContexte(navigateur);
+  await vivant.pg.setViewportSize({ width: 393, height: 852 });
+  await vivant.pg.waitForTimeout(700);
+  let v = await toile(vivant.pg);
+  j.controle("sans choix sur l'appareil, le fond est le jardin vivant",
+    v.fond === "jardin" && v.affichee === "block" && v.memoire === null, `${v.fond}, ${v.affichee}`);
+  j.controle("la toile couvre l'écran, à la finesse de l'écran", v.couvre && v.nette);
+  j.controle("les taches et les feuilles du feuillage s'effacent", v.taches === "none" && v.chute === "none");
+  j.controle("un ciel bleuté en haut, un sol vert en bas, à neuf heures en été",
+    v.ciel0[2] > v.ciel0[0] && v.sol[1] > v.sol[0] && v.sol[1] > v.sol[2],
+    `ciel ${v.ciel0.slice(0, 3)}, sol ${v.sol.slice(0, 3)}`);
+  j.controle("le jardin bouge", v.bouge);
+  j.controle("de jour, le ciel est dit clair", v.ciel === "jour", v.ciel);
+
+  j.section("le choix du fond dans les réglages du compte");
+  const choisir = val => vivant.pg.evaluate(f => {
+    const s = document.getElementById("selFond");
+    s.value = f; s.dispatchEvent(new Event("change"));
+    return { options: [...s.options].map(o => o.textContent), aide: document.getElementById("aideFond").textContent };
+  }, val);
+  const o = await choisir("feuillage");
+  j.controle("trois fonds au choix", o.options.join(", ") === "Jardin vivant, Feuillage, Uni", o.options.join(", "));
+  j.controle("chacun est décrit", /taches de couleur/.test(o.aide), o.aide);
+  await vivant.pg.waitForTimeout(300);
+  a = await lire(vivant.pg);
+  v = await toile(vivant.pg);
+  j.controle("le feuillage revient, la toile s'efface",
+    v.fond === "feuillage" && v.affichee === "none" && a.animees >= 18, `${v.affichee}, ${a.animees} animations`);
+  j.controle("le choix est gardé sur l'appareil", v.memoire === "feuillage");
+  await vivant.pg.reload();
+  await vivant.pg.waitForTimeout(600);
+  v = await toile(vivant.pg);
+  j.controle("il survit au rechargement", v.fond === "feuillage", v.fond);
+  await choisir("uni");
+  await vivant.pg.waitForTimeout(300);
+  a = await lire(vivant.pg);
+  j.controle("le fond uni ne bouge plus et ne garde que le ton de la saison",
+    a.animees === 0 && a.base === "rgb(238, 241, 227)", `${a.animees} animations, ${a.base}`);
+  await vivant.ctx.close();
+
+  j.section("la nuit sous la lune");
+  const nuit = await ouvrirContexte(navigateur, { jour: new Date("2026-08-02T23:30:00+02:00").getTime() });
+  await nuit.pg.setViewportSize({ width: 393, height: 852 });
+  await nuit.pg.waitForTimeout(700);
+  v = await toile(nuit.pg);
+  const fonce = p => p[0] + p[1] + p[2] < 300;
+  j.controle("à minuit moins le quart, le ciel est sombre", v.ciel === "nuit" && fonce(v.ciel0), `${v.ciel}, ${v.ciel0.slice(0, 3)}`);
+  j.controle("le nom du jardin passe en clair", v.titre === "rgb(242, 240, 234)", v.titre);
+  await nuit.ctx.close();
+  const crepuscule = await ouvrirContexte(navigateur, { jour: new Date("2026-10-15T19:00:00+02:00").getTime() });
+  await crepuscule.pg.setViewportSize({ width: 393, height: 852 });
+  await crepuscule.pg.waitForTimeout(700);
+  v = await toile(crepuscule.pg);
+  j.controle("au crépuscule d'octobre, le ciel déjà sombre fait passer le titre en clair",
+    v.ciel === "nuit" && v.titre === "rgb(242, 240, 234)", `${v.ciel}, ${v.titre}`);
+  await crepuscule.ctx.close();
+
+  j.section("moins de mouvement, une seule image");
+  const immobile = await ouvrirContexte(navigateur);
+  await immobile.pg.emulateMedia({ reducedMotion: "reduce" });
+  await immobile.pg.reload();
+  await immobile.pg.waitForTimeout(700);
+  v = await toile(immobile.pg);
+  j.controle("le jardin est peint et ne bouge pas", !v.bouge && v.sol[3] === 255, v.sol.join(","));
+  await immobile.ctx.close();
+
+  return j.fin(erreurs.concat(hiver.erreurs, automne.erreurs, pluie.erreurs, calme.erreurs,
+    vivant.erreurs, nuit.erreurs, crepuscule.erreurs, immobile.erreurs));
 }
