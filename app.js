@@ -3374,8 +3374,8 @@ function genBranche(W) {
     }
   };
   // Assez courte pour laisser lisibles le nom du jardin et la date.
-  pousse(W + 8, 22, Math.PI * 0.87, 74, 11, 0, 1);
-  pousse(W + 8, 96, Math.PI * 0.97, 50, 6, 1, 61);
+  pousse(W + 8, 22, Math.PI * 0.87, 60, 10, 0, 1);
+  pousse(W + 8, 90, Math.PI * 0.97, 42, 5.5, 1, 61);
   return segs;
 }
 

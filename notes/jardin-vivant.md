@@ -71,8 +71,14 @@ Les blocs de verre restent posés par-dessus. Le nom du jardin et la date,
 posés à même le ciel, prennent un halo clair le jour et passent en clair la
 nuit, comme les titres du carnet et du catalogue. Le passage en clair se
 règle sur la clarté du haut du ciel, non sur la seule nuit : au crépuscule
-d'automne, le ciel déjà sombre rendait la date foncée illisible. La branche a été raccourcie
-d'un sixième par rapport à la maquette, pour laisser la date lisible.
+d'automne, le ciel déjà sombre rendait la date foncée illisible.
+
+La branche a d'abord été raccourcie d'un sixième par rapport à la maquette,
+pour laisser la date lisible. Sur l'application en ligne, ses feuilles
+passaient encore derrière « Se connecter » et le titre du catalogue : à la
+demande de Jérôme, elle a été raccourcie d'un cinquième de plus, et le halo
+clair du jour s'étend aux titres d'écran du carnet et du catalogue, à leur
+compte et à leur lien.
 
 ## Choix du fond
 

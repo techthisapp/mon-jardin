@@ -3629,8 +3629,12 @@ main{--papier-haut:rgba(251,250,247,.72);--verre-bord:rgba(255,255,255,.62)}
   color:#F2F0EA;text-shadow:0 1px 10px rgba(10,14,24,.55);
 }
 :root[data-ciel="nuit"] .puce-climat{color:#F6C7B8}
-/* Le jour, un halo clair détache le nom et la date du ciel et de la branche. */
+/* Le jour, un halo clair détache du ciel et de la branche le nom, la date et
+   les titres d'écran du carnet et du catalogue. */
 :root[data-fond="jardin"]:not([data-ciel="nuit"]) .tete h1,
-:root[data-fond="jardin"]:not([data-ciel="nuit"]) .date-jour{
+:root[data-fond="jardin"]:not([data-ciel="nuit"]) .date-jour,
+:root[data-fond="jardin"]:not([data-ciel="nuit"]) .tete-ecran .te-nom,
+:root[data-fond="jardin"]:not([data-ciel="nuit"]) .tete-ecran .te-sous,
+:root[data-fond="jardin"]:not([data-ciel="nuit"]) .tete-ecran .lien{
   text-shadow:0 0 10px rgba(255,255,255,.9),0 0 3px rgba(255,255,255,.8);
 }
