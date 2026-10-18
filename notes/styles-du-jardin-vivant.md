@@ -1,6 +1,6 @@
 # Les styles du jardin vivant
 
-Note du 18 octobre 2026. Le jardin vivant se peint désormais en quatre styles,
+Note du 18 octobre 2026. Le jardin vivant se peint désormais en huit styles,
 chacun avec son propre décor, au choix dans les réglages du compte.
 
 ## Demande et étapes
@@ -32,7 +32,29 @@ l'intégration.
    la place des fleurs devant et derrière le muret, deux pots en bas, et le
    muret à gauche du centre, comme sur la planche.
 
-## Les quatre styles
+## Quatre styles ajoutés ensuite
+
+Jérôme a fourni quatre nouvelles planches, chacune vérifiée sur le canevas et
+retouchée en plusieurs passes avant intégration :
+
+| Style | Décor | Retouches demandées |
+|---|---|---|
+| Pampas et graminées | mur de pampas et de stipas, verveine, pennisetums, olivier, bassin turquoise, village et mer ; versant d'herbes et de tamaris jusqu'à la mer | épis qui ploient par la pointe, gauras et lavande étoffés, floraisons de printemps, cyprès remplacés par herbes et tamaris |
+| Jardin naturel | branche en fleur, arbre léger, massifs fleuris, mare et sa carpe Kohaku, libellules, allée et pas japonais, fougères ; forêt au pied des collines | ramures courbes, carpe sous l'eau en allers-retours, neige sur les massifs et l'allée, cyprès remplacés par une forêt |
+| Jardin japonais | cerisier, érable penché au-dessus de l'étang, pin taillé, bambouseraie, lanterne de pierre, pas japonais, iris ; forêt au pied du mont | sans cyprès, forêt de fond, ramures et neige posée sur les branches, feuillages plus fournis |
+| Jardin anglais | arche de roses aux tiges sinueuses, chêne étalé, manoir, balustrade et escalier, bassin, plates-bandes en rangs, pivoines, digitales, delphiniums, alliums | allée en courbe dégagée, rangs de touffes structurés, escalier complet, neige sur la terrasse |
+
+Le style brutaliste a été renommé « Urbain » à la demande de Jérôme. Il garde
+la clé `brutaliste`, si bien que le choix déjà enregistré sur un appareil reste
+valable. Son fond, trop proche du moderne, est devenu une ville de béton : tour
+dans la brume, volumes en porte-à-faux aux fenêtres qui s'allument, bouleaux.
+Deux chaises longues et un parasol, ouvert l'été, sont posés au bord du bassin.
+
+Les planches comportent toutes des cyprès ; Jérôme les a fait retirer des
+styles naturel, japonais et pampas, pour réserver ce motif au méditerranéen, à
+l'anglais et au moderne.
+
+## Les quatre premiers styles
 
 | Style | Décor |
 |---|---|
@@ -79,7 +101,7 @@ Le bloc du compte porte deux lignes :
 | Ligne | Choix | Quand elle paraît |
 |---|---|---|
 | Fond | Jardin vivant, Feuillage, Uni | toujours |
-| Style | Moderne, Brutaliste, Méditerranéen, « Estampe, selon le climat du jardin », puis chacun des six décors de l'estampe | avec le jardin vivant |
+| Style | Moderne, Urbain, Méditerranéen, Pampas et graminées, Jardin naturel, Jardin japonais, Jardin anglais, « Estampe, selon le climat du jardin », puis chacun des six décors de l'estampe | avec le jardin vivant |
 
 Les choix valent pour l'appareil, sous les clés `monjardin.fond`,
 `monjardin.style` et `monjardin.decor`.
@@ -171,7 +193,7 @@ premier plan ne soient peints.
 `app.js`, section « Le jardin vivant » :
 - le moteur commun : ciel, temps, outils de dessin, branche ;
 - les six décors de l'estampe ;
-- `peindreModerne`, `peindreBrutaliste` et `peindreMediterraneen` ;
+- `peindreModerne`, `peindreBrutaliste`, `peindreMediterraneen`, `peindrePampa`, `peindreNaturel`, `peindreJaponais` et `peindreAnglais` ;
 - `peindreEnCouches` et `peindreJardin` ;
 - `soleilAuJardin` et `etatDuJardin` pour les données ;
 - `brancherFond` pour les deux lignes de réglage.
@@ -183,12 +205,12 @@ dans l'application.
 
 `outils/essais/ambiance.mjs` contrôle :
 - le moderne par défaut, son ciel bleuté au matin d'été et son mouvement ;
-- les dix styles de la liste unique, le méditerranéen à la place du décor
-  méditerranéen de l'estampe, et leur description ;
+- les quatorze entrées de la liste unique, dont les sept styles illustrés, et
+  leur description ;
 - un brutaliste qui se peint autrement que le moderne, et sa mémoire sur
   l'appareil ;
 - l'estampe qui suit le climat, son ciel bleuté et son sol vert ;
-- le méditerranéen qui se peint ;
+- chacun des styles illustrés qui se peint et bouge ;
 - un décor de l'estampe choisi directement dans la liste.
 
 `ouvrirContexte` gagne l'option `style`.

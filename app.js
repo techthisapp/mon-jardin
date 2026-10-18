@@ -3247,10 +3247,12 @@ let ambianceDite = "";
    nuages, la pluie, la neige ou le brouillard, et son vent balance la
    végétation. La saison change les arbres, les massifs, l'eau et ce qui tombe.
 
-   Depuis le 18 octobre, il se peint en quatre styles, chacun avec son propre
-   décor : le moderne, le brutaliste et le méditerranéen, redessinés d'après
+   Depuis le 18 octobre, il se peint en huit styles, chacun avec son propre
+   décor : le moderne, l'urbain, le méditerranéen, les pampas et graminées, le
+   jardin naturel, le jardin japonais et le jardin anglais, redessinés d'après
    les planches de Jérôme, et l'estampe, dont le décor suit le climat du jardin
-   ou se choisit parmi six. Le fond « Feuillage », celui des taches et des feuilles, et un
+   ou se choisit parmi six. L'urbain garde la clé « brutaliste », son premier
+   nom, pour que le choix déjà gardé sur un appareil reste valable. Le fond « Feuillage », celui des taches et des feuilles, et un
    fond uni restent au choix dans les réglages du compte. */
 const FOND = "monjardin.fond";
 const FONDS_ECRAN = {
@@ -3264,7 +3266,7 @@ let choixFond = (() => {
 })();
 const STYLE_JARDIN = "monjardin.style";
 const DECOR_JARDIN = "monjardin.decor";
-const STYLES_JARDIN = ["moderne", "brutaliste", "mediterraneen", "estampe"];
+const STYLES_JARDIN = ["moderne", "brutaliste", "mediterraneen", "pampa", "naturel", "japonais", "anglais", "estampe"];
 let choixStyle = (() => {
   try { const v = localStorage.getItem(STYLE_JARDIN); return STYLES_JARDIN.indexOf(v) !== -1 ? v : "moderne"; }
   catch (e) { return "moderne"; }
@@ -4898,31 +4900,47 @@ function peindreBrutaliste(x, W, H, t, etat, cache) {
   };
 
   if (Z.F) {
-  // Le mont et les collines
-  poly([[L, 286], [60, 276], [120, 258], [175, 236], [206, 222], [240, 238], [290, 262], [340, 270], [R, 280], [R, 360], [L, 360]], o(jvMel(P.mont[0], bas, 0.28)));
-  if (neige) poly([[178, 236], [206, 222], [232, 236], [220, 242], [206, 236], [192, 244]], jvRgba(blanc, 0.92));
-  poly([[L, 300], [80, 290], [160, 300], [240, 288], [320, 296], [R, 290], [R, 380], [L, 380]], o(jvMel(P.mont[1], bas, 0.35)));
-  { const hz = x.createLinearGradient(0, 280, 0, 340); hz.addColorStop(0, jvRgba(bas, 0)); hz.addColorStop(1, jvRgba(bas, 0.5)); x.fillStyle = hz; x.fillRect(L, 280, R - L, 60); }
-  // Arbres du fond, masses texturées
+  // Le fond : une ville de béton, propre au brutaliste. Au loin, une tour dans la brume ;
+  // devant, de grands volumes en porte-à-faux et leurs bandeaux de fenêtres.
+  const vitre = (vx, vy, vw, vh, k) => {
+    const lit = allume > 0.15 && jvAlea(k * 3.7) > 0.45;
+    rect(vx, vy, vw, vh, lit ? jvRgba("#F4C46A", 0.35 + 0.55 * allume) : o(jvMel("#4E565C", bas, 0.25)));
+  };
+  // La tour lointaine
+  { const tc = o(jvMel("#9AA0A6", bas, 0.55));
+    rect(118, 150, 34, 190, tc); rect(112, 150, 46, 10, tc); rect(124, 132, 22, 18, tc);
+    for (let k = 0; k < 14; k++) rect(120, 166 + k * 12, 30, 3, jvRgba(o("#6E767C"), 0.35)); }
+  { const hz = x.createLinearGradient(0, 200, 0, 340); hz.addColorStop(0, jvRgba(bas, 0)); hz.addColorStop(1, jvRgba(bas, 0.55)); x.fillStyle = hz; x.fillRect(L, 200, R - L, 140); }
+  // Les grands volumes
+  const volume = (vx, vy, vw, vh, ton, k) => {
+    beton([[vx, vy], [vx + vw, vy], [vx + vw, vy + vh], [vx, vy + vh]], ton, true);
+    rect(vx, vy + vh - 3, vw, 3, jvRgba(o("#2E2C28"), 0.25));
+    for (let r = 0; r < Math.floor((vh - 8) / 14); r++) {
+      rect(vx + 4, vy + 6 + r * 14, vw - 8, 6, jvRgba(o("#3A3A38"), 0.15));
+      for (let c2 = 0; c2 < Math.floor((vw - 8) / 9); c2++) vitre(vx + 5 + c2 * 9, vy + 7 + r * 14, 6, 4, k * 100 + r * 17 + c2);
+    }
+    if (neige) rect(vx - 1, vy - 3, vw + 2, 4, blanc);
+  };
+  volume(L, 230, 120 - L, 110, -0.05, 1);
+  volume(150, 262, 70, 80, 0.08, 2);
+  volume(204, 200, 92, 40, -0.02, 3);       // le porte-à-faux, au-dessus du vide
+  beton([[240, 240], [256, 240], [256, 340], [240, 340]], -0.15, false);
+  volume(290, 250, 80, 90, 0.04, 4);
+  rect(L, 336, R - L, 14, o(jvMel("#8E8E86", bas, 0.2)));
+  // Des bouleaux devant la ville : troncs blancs tachés de noir, feuillage léger
   rect(L, 330, R - L, 120, o(jvMel(P.bosquet[0], "#24402A", 0.45)));
+  [[24, 250], [70, 236], [184, 262], [232, 244], [300, 270]].forEach(([bx, top], i) => {
+    const base = 360, b = Math.sin(t * souffle * 0.6 + i) * Math.min(vent, 60) * 0.03;
+    x.strokeStyle = o("#EDEAE2"); x.lineWidth = 4; x.lineCap = "round"; jvTrait(x, bx, base, bx + b, top);
+    x.fillStyle = o("#2E2C28"); for (let k = 0; k < 6; k++) x.fillRect(bx - 2 + b * (k / 6), base - 14 - k * (base - top) / 7, 3, 1.4);
+    if (P.rameau !== "nu") couronne(bx + b, top + 22, 18, 30, P.bosquet.map(cc => jvMel(cc, "#C4D08A", 0.25)), 40, 3.4, 600 + i);
+    else { x.strokeStyle = o("#6E5E4E"); x.lineWidth = 0.8; for (let k = 0; k < 6; k++) jvTrait(x, bx + b, top + 10 + k * 6, bx + b + (k % 2 ? 12 : -12), top + 18 + k * 6); }
+  });
   for (let i = 0; i < Math.ceil((R - L) / 40); i++) {
-    const bx = L + i * 40 + jvAlea(i + 2) * 16, by = 318 + jvAlea(i + 6) * 20;
-    couronne(bx, by, 24 + jvAlea(i) * 12, 20 + jvAlea(i + 1) * 8, P.bosquet.map(cc => jvMel(cc, bas, 0.15)), 20, 6, 300 + i);
-    if (neige) { x.fillStyle = jvRgba(blanc, 0.85); jvOvale(x, bx, by - 15, 15, 5); }
+    const bx = L + i * 40 + jvAlea(i + 2) * 16, by = 342 + jvAlea(i + 6) * 12;
+    couronne(bx, by, 22 + jvAlea(i) * 10, 14, P.bosquet.map(cc => jvMel(cc, bas, 0.1)), 16, 5, 300 + i);
+    if (neige) { x.fillStyle = jvRgba(blanc, 0.85); jvOvale(x, bx, by - 10, 14, 4); }
   }
-  // Grands arbres derrière le mur de droite
-  [[330, 210, 46, 60], [420, 140, 60, 70], [460, 230, 40, 50]].forEach(([cx, cy, rx, ry], i) => {
-    if (nomS === "hiver") { arbre(cx, cy + ry * 1.6, ry * 2.2, 4, 0.75, (bx, by, a, g) => { x.fillStyle = jvRgba(blanc, 0.9); jvOvale(x, bx, by - 2, 5, 2.4, a); }, 40 + i, 4); return; }
-    couronne(cx, cy, rx, ry, P.bosquet, 50, 7, 500 + i);
-  });
-  // Les cyprès
-  [[236, 262, 336, 7], [254, 258, 336, 7], [278, 230, 336, 8]].forEach(([cx, top, base, w], i) => {
-    const b = Math.sin(t * souffle * 0.8 + i) * Math.min(vent, 60) * 0.04;
-    x.fillStyle = o("#2C4A38");
-    x.beginPath(); x.moveTo(cx - w, base); x.quadraticCurveTo(cx - w * 1.15, (top + base) / 2, cx + b, top); x.quadraticCurveTo(cx + w * 1.15, (top + base) / 2, cx + w, base); x.fill();
-    x.fillStyle = o("#406A48"); x.beginPath(); x.moveTo(cx - w * 0.9, base); x.quadraticCurveTo(cx - w, (top + base) / 2, cx + b, top + 4); x.quadraticCurveTo(cx - w * 0.15, (top + base) / 2, cx - w * 0.1, base); x.fill();
-    if (neige) { x.fillStyle = jvRgba(blanc, 0.8); for (let k2 = 0; k2 < 4; k2++) jvOvale(x, cx - 2 + (k2 % 2) * 4, top + 18 + k2 * 18, w * 0.4, 2); }
-  });
   // Les nuages de buis : un tronc torse, des plateaux taillés
   {
     const bal = Math.sin(t * souffle * 0.4) * Math.min(vent, 60) * 0.015;
@@ -5001,6 +5019,54 @@ function peindreBrutaliste(x, W, H, t, etat, cache) {
     if (neige) rect(a, b - 3, R - a, 6, blanc);
   });
   boite(268, 690, 122, 54, 10);
+  // Deux chaises longues sur la plage de béton, à droite du bassin, et un parasol replié
+  { const fer = o("#3A3E42"), toile = nomS === "hiver" ? o("#9AA0A6") : o("#ECE6DA"), ombreT = o("#C8C0B0");
+    const longue = (x0, y0, k = 1.6) => {
+      x.save(); x.translate(x0, y0); x.scale(k, k); x.translate(-x0, -y0);
+      x.fillStyle = jvRgba(o("#2E2C28"), 0.22 * (1 - voile)); jvOvale(x, x0 + 30, y0 + 3, 36, 3.5);
+      // le cadre et ses pieds
+      x.strokeStyle = fer; x.lineWidth = 1.2; x.lineCap = "round";
+      jvTrait(x, x0, y0 - 6, x0 + 44, y0 - 6); jvTrait(x, x0 + 2, y0 - 6, x0 + 2, y0); jvTrait(x, x0 + 40, y0 - 6, x0 + 40, y0);
+      jvTrait(x, x0 + 44, y0 - 6, x0 + 56, y0 - 22); jvTrait(x, x0 + 46, y0 - 6, x0 + 48, y0);
+      // le matelas et le dossier relevé
+      x.fillStyle = ombreT; x.beginPath(); x.moveTo(x0 - 1, y0 - 7); x.lineTo(x0 + 44, y0 - 7); x.lineTo(x0 + 57, y0 - 24); x.lineTo(x0 + 53, y0 - 26); x.lineTo(x0 + 41, y0 - 10); x.lineTo(x0 - 1, y0 - 10); x.closePath(); x.fill();
+      x.fillStyle = toile; x.beginPath(); x.moveTo(x0, y0 - 9); x.lineTo(x0 + 42, y0 - 9); x.lineTo(x0 + 54, y0 - 25); x.lineTo(x0 + 51, y0 - 27); x.lineTo(x0 + 40, y0 - 12); x.lineTo(x0, y0 - 12); x.closePath(); x.fill();
+      x.strokeStyle = jvRgba(o("#B0A898"), 0.6); x.lineWidth = 0.6; for (let k = 1; k < 4; k++) jvTrait(x, x0 + k * 10, y0 - 12, x0 + k * 10, y0 - 9);
+      // une serviette pliée, colorée selon la saison
+      if (nomS !== "hiver") { x.fillStyle = o(nomS === "automne" ? "#C8762E" : "#3E86B8"); x.fillRect(x0 + 6, y0 - 13, 10, 3); }
+      if (neige) { x.fillStyle = blanc; x.fillRect(x0, y0 - 14, 42, 3); x.beginPath(); x.moveTo(x0 + 41, y0 - 14); x.lineTo(x0 + 51, y0 - 29); x.lineTo(x0 + 54, y0 - 27); x.lineTo(x0 + 43, y0 - 12); x.fill(); }
+      x.restore();
+    };
+    // Le parasol entre les deux chaises : ouvert l'été, replié les autres saisons.
+    const parasol = () => {
+      const px = 354, base = 470, haut = 118, ouvert = nomS === "ete";
+      const tc = o(nomS === "hiver" ? "#8E949A" : "#E2DACA"), tcO = o(nomS === "hiver" ? "#767C82" : "#C4BAA6");
+      if (ouvert && hs > 0) { x.fillStyle = jvRgba(o("#2E2C28"), 0.18 * (1 - voile)); jvOvale(x, px + 22, base + 2, 52, 9); }
+      x.fillStyle = fer; x.fillRect(px - 9, base - 3, 18, 4);
+      x.strokeStyle = fer; x.lineWidth = 2; jvTrait(x, px, base - 2, px, base - haut);
+      if (ouvert) {
+        const top = base - haut, rx = 58, b2 = Math.sin(t * souffle * 0.8) * Math.min(vent, 60) * 0.02;
+        // la toile : un dôme aplati, son dessous ombré, ses pans festonnés
+        x.fillStyle = tcO; x.beginPath(); x.ellipse(px + b2, top + 10, rx, 9, 0, 0, Math.PI); x.fill();
+        x.fillStyle = tc; x.beginPath(); x.moveTo(px - rx + b2, top + 10); x.quadraticCurveTo(px - rx * 0.5 + b2, top - 14, px + b2, top - 18); x.quadraticCurveTo(px + rx * 0.5 + b2, top - 14, px + rx + b2, top + 10);
+        for (let k = 6; k >= 0; k--) { const xx = px - rx + k * rx / 3 + b2; x.quadraticCurveTo(xx + rx / 6, top + 15, xx, top + 10); }
+        x.closePath(); x.fill();
+        // les baleines et l'ombre de chaque pan
+        x.strokeStyle = jvRgba(o("#A89E8A"), 0.7); x.lineWidth = 0.8;
+        for (let k = 0; k <= 6; k++) { const xx = px - rx + k * rx / 3 + b2; jvTrait(x, px + b2, top - 18, xx, top + 10); }
+        x.fillStyle = jvRgba(o("#9A907C"), 0.25); x.beginPath(); x.moveTo(px + b2, top - 18); x.quadraticCurveTo(px + rx * 0.5 + b2, top - 14, px + rx + b2, top + 10); x.lineTo(px + b2, top + 10); x.closePath(); x.fill();
+        x.fillStyle = fer; jvRond(x, px + b2, top - 20, 2.2);
+      } else {
+        x.fillStyle = tc; x.beginPath(); x.moveTo(px, base - haut - 4); x.quadraticCurveTo(px - 10, base - haut + 30, px - 5, base - haut + 66); x.lineTo(px + 5, base - haut + 66); x.quadraticCurveTo(px + 10, base - haut + 30, px, base - haut - 4); x.fill();
+        x.fillStyle = tcO; x.beginPath(); x.moveTo(px, base - haut - 4); x.quadraticCurveTo(px + 10, base - haut + 30, px + 5, base - haut + 66); x.lineTo(px + 1, base - haut + 66); x.quadraticCurveTo(px + 4, base - haut + 30, px, base - haut - 4); x.fill();
+        x.strokeStyle = fer; x.lineWidth = 1; jvTrait(x, px - 6, base - haut + 40, px + 6, base - haut + 40);
+        x.fillStyle = fer; jvRond(x, px, base - haut - 5, 2);
+        if (neige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(px, base - haut, 5, 3, 0, Math.PI, 0); x.fill(); }
+      }
+    };
+    // dans l'ordre de la profondeur : la chaise du fond, le parasol, la chaise de devant
+    longue(286, 458); parasol(); longue(362, 480);
+  }
   // Feuilles et pétales tombés sur le dallage et les marches
   if (P.chute && !neige) for (let i = 0; i < 26; i++) {
     x.fillStyle = o(P.chute[i % P.chute.length]);
@@ -5484,6 +5550,1431 @@ function jvBrancheMediterraneenne(x, Z, segs) {
   x.restore();
 }
 
+/* ---------- Le style pampas et graminées ----------
+   D'après la quatrième planche de Jérôme : un mur de pampas et de stipas à
+   gauche, la verveine de Buenos Aires, des pennisetums roses au premier plan ;
+   la couronne d'un olivier en haut à droite ; des cyprès, un village perché, la
+   mer et les monts au fond ; un bassin turquoise, ses marches et une terrasse ;
+   une boule de buis, des gauras, de la lavande et une allée de gravier. */
+const JPA = {
+  printemps: { ciel: ["#8EC0EA", "#DDEAF2"], mont: "#8A94C0", colline: "#7EA058", bosquet: ["#7EA650", "#9CC066", "#6A9246"],
+    plume: ["#E4DAC2", "#D6CAAE", "#EEE6D2"], nPlume: 0.35, herbe: ["#7E9E4C", "#92AE5E", "#8A9E9A", "#A6B872", "#9AAEA8"], stipa: "#D8D8B4",
+    penni: null, verveine: null, lavande: ["#8E9A7A", "#A2AE8C"], gaura: "#FFFFFF", buis: ["#5E8E3E", "#76A64C", "#4E7E34"],
+    olivier: ["#7E9A5E", "#A6B886", "#62804A", "#C2CCA8"], olive: null, fleurOlivier: true, eau: ["#5EB4D2", "#9AD8E6"], sol: "#E8E0CE", chute: ["#FFFFFF", "#F2EEDC"] },
+  ete: { ciel: ["#6EAAE6", "#D6E8F2"], mont: "#7A7EB8", colline: "#6E9A4C", bosquet: ["#6E9A46", "#8AB45A", "#5A8A3C"],
+    plume: ["#E2CC9C", "#D6BE8A", "#F2E4C2"], nPlume: 1, herbe: ["#8E9E46", "#AAAE5C", "#6E7E36", "#C4BC74", "#7E8A3E"], stipa: "#E6D6A8",
+    penni: ["#DEB8A6", "#ECD0BE", "#C89A88"], verveine: ["#7E5AB8", "#9A72CC", "#6A4AA8"], lavande: ["#7A62C0", "#9680D2"], gaura: "#FFFFFF", buis: ["#4E7E30", "#6A9A40", "#3E6A28"],
+    olivier: ["#7E965A", "#A4B482", "#62784A", "#BCC89C"], olive: null, eau: ["#4EB8D6", "#8ADAE8"], sol: "#E8E0CE" },
+  automne: { ciel: ["#E6C49A", "#F4E4CC"], mont: "#9A8CA8", colline: "#A08A4E", bosquet: ["#B08A44", "#C8A456", "#8E7036"],
+    plume: ["#E6C88E", "#D4AE70", "#F0DCAE"], nPlume: 1, herbe: ["#C8A060", "#B88A4A", "#D8B474", "#A87A3A"], stipa: "#E2C88E",
+    penni: ["#C89A6E", "#D8B08A", "#B88A5E"], verveine: ["#6E5040", "#8A6A52", "#5A4234"], lavande: ["#8A7E9A", "#9E94AC"], gaura: "#F2E8DC", buis: ["#4E7030", "#62843E", "#3E5E28"],
+    olivier: ["#7A8A5A", "#9AA67E", "#5E6E46", "#B4BC98"], olive: "#4A3A4A", eau: ["#6AA6BE", "#A8CCD6"], sol: "#E8DECA", chute: ["#C8A060", "#B88A4A", "#D8B474"] },
+  hiver: { ciel: ["#A8C2DC", "#E4EAF0"], mont: "#9AA2BC", colline: "#8E9A86", bosquet: ["#8E9A86", "#A6B09E", "#76826E"],
+    plume: ["#ECE8DE", "#DCD6C8", "#F6F4EE"], nPlume: 0.8, herbe: ["#C9B48A", "#B8A276", "#D8C69E", "#A8946A"], stipa: "#E2DCCC",
+    penni: ["#D6C8B4", "#E4D8C8", "#C4B6A2"], verveine: ["#4E443C", "#5E5248", "#3E362E"], lavande: ["#9AA096", "#AEB4AA"], gaura: null, buis: ["#3E5E30", "#4E6E3C", "#2E4E24"],
+    olivier: ["#8A9682", "#A6B09E", "#6E7A68", "#C2CABC"], olive: "#2E2830", eau: ["#5E8EAE", "#94B6CC"], sol: "#ECE8DE" },
+};
+function peindrePampa(x, W, H, t, etat, cache) {
+  const Z = jvScene(x, W, H, t, etat, JPA[etat.saison]);
+  const { nomS, P, sol, hs, c, m, vent, souffle, o, allume, L, R, blanc, haut, bas, voile, lune, lx } = Z;
+  const { rect, poly, couronne } = Z.outils;
+  const vt = Math.min(vent, 60), givre = nomS === "hiver" && etat.gel;
+  if (!cache.gravierPa) {
+    const cg = document.createElement("canvas"); cg.width = cg.height = 80;
+    const g = cg.getContext("2d");
+    for (let i = 0; i < 420; i++) {
+      g.fillStyle = ["rgba(255,255,255,.75)", "rgba(150,140,120,.45)", "rgba(214,204,186,.6)"][i % 3];
+      g.beginPath(); g.ellipse(jvAlea(i) * 80, jvAlea(i + 0.3) * 80, 0.8 + jvAlea(i * 3) * 1.3, 0.6 + jvAlea(i * 5) * 0.8, jvAlea(i * 7) * 3, 0, 7); g.fill();
+    }
+    cache.gravierPa = cg;
+  }
+  const ombreSol = (cx, cy, rx, ry, a = 0.2) => { x.fillStyle = jvRgba(o("#4A4234"), a * (1 - voile)); jvOvale(x, cx, cy, rx, ry); };
+  // Une boule taillée : ombre, masse sombre, puis petites feuilles éclairées en haut à gauche.
+  const boule = (cx, cy, r, g0) => {
+    ombreSol(cx + r * 0.4, cy + r * 0.9, r * 1.1, r * 0.25, 0.25);
+    const gb = x.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+    gb.addColorStop(0, o(jvMel(P.buis[1], "#F4F2C8", 0.25))); gb.addColorStop(0.6, o(P.buis[0])); gb.addColorStop(1, o(P.buis[2]));
+    x.fillStyle = gb; jvRond(x, cx, cy, r);
+    for (let i = 0; i < r * 5; i++) {
+      const a = jvAlea(i + g0) * 6.28, d = Math.sqrt(jvAlea(i * 3 + g0)) * r * 0.95, px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d;
+      const lum = (cy - py) / r * 0.5 + (cx - px) / r * 0.3;
+      x.fillStyle = o(jvMel(P.buis[i % 3], lum > 0 ? "#F4F2C8" : "#10241A", Math.min(0.4, Math.abs(lum) * 0.5)));
+      jvRond(x, px, py, 1.4 + jvAlea(i + g0 + 0.5) * 1.2);
+    }
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.6); x.beginPath(); x.arc(cx, cy, r, Math.PI * 1.05, Math.PI * 1.95); x.fill(); }
+  };
+  // Une touffe de feuilles fines qui ploient au vent. Un long tracé unique se
+  // peignait plus lentement que des traits séparés : chaque brin a le sien.
+  const brins = (cx, base, L0, n, cols, ep, ouv = 2.4, g0 = 0) => {
+    x.lineWidth = ep;
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1) - 0.5, a = -Math.PI / 2 + u * ouv + (jvAlea(i + g0) - 0.5) * 0.25, Ln = L0 * (0.55 + jvAlea(i * 3 + g0) * 0.5);
+      const b = Math.sin(t * souffle * 1.1 + i * 0.1 + g0) * (2 + vt * 0.18) * (Ln / L0);
+      const tx = cx + Math.cos(a) * Ln * 1.05 + b, ty = base + Math.sin(a) * Ln * 0.92 + Math.abs(Math.cos(a)) * Ln * 0.3;
+      x.strokeStyle = o(cols[i % cols.length]);
+      x.beginPath(); x.moveTo(cx + u * 16, base); x.quadraticCurveTo(cx + Math.cos(a) * Ln * 0.7 + u * 10, base + Math.sin(a) * Ln, tx, ty); x.stroke();
+    }
+  };
+  // Un plumet de pampa : une grande plume en fuseau, arquée, faite de barbules qui
+  // partent de l'axe vers la pointe et retombent ; claire d'un côté, ombrée de l'autre.
+  const plumet = (bx, by, tx, ty, larg, cols, g0) => {
+    const b = Math.sin(t * souffle * 0.7 + g0 * 1.7) * (3 + vt * 0.22);
+    // La tige monte presque droit puis s'arque : la plume penche et sa pointe retombe.
+    const cx = bx + (tx - bx) * 0.15, cy = ty - (by - ty) * 0.05;
+    const fx = tx + b, fy = ty + Math.abs(b) * 0.2;
+    x.strokeStyle = o("#B8AE84"); x.lineWidth = 1.6;
+    x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(cx, cy, fx, fy); x.stroke();
+    const pt = u => { const it = 1 - u; return [it * it * bx + 2 * it * u * cx + u * u * fx, it * it * by + 2 * it * u * cy + u * u * fy,
+      2 * it * (cx - bx) + 2 * u * (fx - cx), 2 * it * (cy - by) + 2 * u * (fy - cy)]; };
+    const u0 = 0.45;
+    // Le corps, un fuseau translucide qui donne la masse
+    const g = [], d = [];
+    for (let k = 0; k <= 16; k++) {
+      const u = u0 + k / 16 * (1 - u0), [px, py, dx, dy] = pt(u), dl = Math.hypot(dx, dy) || 1, w = larg * Math.pow(Math.sin(Math.PI * Math.min(0.98, (k + 0.5) / 16.5)), 0.8);
+      g.push([px - dy / dl * w, py + dx / dl * w]); d.push([px + dy / dl * w, py - dx / dl * w]);
+    }
+    x.fillStyle = jvRgba(o(cols[1]), 0.78); x.beginPath(); g.forEach(([a1, b1], i) => i ? x.lineTo(a1, b1) : x.moveTo(a1, b1)); for (let i = 16; i >= 0; i--) x.lineTo(...d[i]); x.closePath(); x.fill();
+    // Les barbules, des deux côtés, inclinées vers la pointe et qui retombent
+    x.lineWidth = 1;
+    [-1, 1].forEach(sgn => {
+      x.strokeStyle = jvRgba(o(cols[sgn > 0 ? 2 : 0]), 0.8); x.beginPath();
+      for (let k = sgn > 0 ? 1 : 0; k < 120; k += 2) {
+        const u = u0 + (k / 120) * (1 - u0) * 0.98, [px, py, dx, dy] = pt(u), dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl;
+        const env = Math.pow(Math.sin(Math.PI * Math.min(0.98, (u - u0) / (1 - u0) + 0.02)), 0.8);
+        const w = larg * env * (0.85 + jvAlea(k + g0) * 0.4), lg = w * 1.5;
+        const ex = px - sgn * uy * w + ux * lg, ey = py + sgn * ux * w + uy * lg + w * 0.25;
+        x.moveTo(px, py); x.quadraticCurveTo(px - sgn * uy * w * 0.5 + ux * lg * 0.6, py + sgn * ux * w * 0.5 + uy * lg * 0.6, ex, ey);
+      }
+      x.stroke();
+    });
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.5); jvOvale(x, fx, fy + 6, larg * 0.4, 4, Math.atan2(fy - cy, fx - cx)); }
+  };
+  // Un épi de pennisetum : une tige arquée, une tête cylindrique et duveteuse. La tête
+  // suit la courbe de la tige : le vent déplace chaque point d'autant plus qu'il est haut.
+  const epi = (bx, by, Ln, ang, cols, g0) => {
+    const b = Math.sin(t * souffle * 0.9 + g0 * 1.3) * (2 + vt * 0.16);
+    const tx = bx + Math.cos(ang) * Ln + b, ty = by + Math.sin(ang) * Ln + Ln * 0.15;
+    const mx = bx + Math.cos(ang) * Ln * 0.6 + b * 0.3, my = by + Math.sin(ang) * Ln * 0.8;
+    const pt = u => { const it = 1 - u; return [it * it * bx + 2 * it * u * mx + u * u * tx, it * it * by + 2 * it * u * my + u * u * ty,
+      2 * it * (mx - bx) + 2 * u * (tx - mx), 2 * it * (my - by) + 2 * u * (ty - my)]; };
+    x.strokeStyle = o("#8E9A52"); x.lineWidth = 1.3; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(mx, my, tx, ty); x.stroke();
+    const u0 = 0.62;
+    // Le corps de la tête, en deux passes
+    [[5.5, 0, 0.85], [2.4, 1, 0.9]].forEach(([w, ci, al]) => {
+      x.strokeStyle = jvRgba(o(cols[ci]), al); x.lineWidth = w * 2; x.lineCap = "round";
+      x.beginPath(); for (let k = 0; k <= 10; k++) { const [px, py] = pt(u0 + k / 10 * (1 - u0) * 0.97); k ? x.lineTo(px, py) : x.moveTo(px, py); } x.stroke();
+    });
+    x.lineCap = "butt"; x.lineWidth = 0.8;
+    for (let c3 = 0; c3 < 3; c3++) {
+      x.strokeStyle = jvRgba(o(cols[c3]), 0.65); x.beginPath();
+      for (let k = c3; k < 40; k += 3) {
+        const [px, py, dx, dy] = pt(u0 + jvAlea(k + g0) * (1 - u0)), dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl;
+        const sg = k % 2 ? 1 : -1, w = 7 + jvAlea(k * 3 + g0) * 4;
+        x.moveTo(px, py); x.lineTo(px - uy * w * sg + ux * 3, py + ux * w * sg + uy * 3);
+      }
+      x.stroke();
+    }
+  };
+  // Une verveine de Buenos Aires : tiges raides et ramifiées, bouquets de petites fleurs violettes.
+  const verveine = (bx, by, h, g0) => {
+    const b = Math.sin(t * souffle + g0) * (2 + vt * 0.14);
+    x.strokeStyle = o(nomS === "printemps" ? "#6E9A4A" : "#5E6E44"); x.lineWidth = 1.2;
+    jvTrait(x, bx, by, bx + b, by - h);
+    jvTrait(x, bx + b * 0.7, by - h * 0.7, bx + b * 0.9 - 14, by - h * 0.92); jvTrait(x, bx + b * 0.7, by - h * 0.72, bx + b + 12, by - h * 0.9);
+    if (!P.verveine) return;
+    [[bx + b, by - h], [bx + b * 0.9 - 14, by - h * 0.92], [bx + b + 12, by - h * 0.9]].forEach(([fx, fy], j) => {
+      for (let k = 0; k < 10; k++) { x.fillStyle = o(P.verveine[(k + j) % 3]); jvRond(x, fx + (jvAlea(k + g0 + j) - 0.5) * 9, fy + (jvAlea(k * 3 + g0 + j) - 0.5) * 6, 1.8); }
+    });
+  };
+  // Des gauras : une touffe de feuillage, des tiges fines et ramifiées, et un nuage de
+  // fleurs blanches comme des papillons, rosées à la pointe des tiges.
+  const gaura = (cx, base, larg, haut, n, g0) => {
+    couronne(cx, base - 8, larg * 0.45, 14, ["#5E7A44", "#6E8A50", "#4E6A3A"], 30, 4, g0 + 0.5);
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (jvAlea(i + g0) - 0.5) * 1.5, Ln = haut * (0.55 + jvAlea(i * 3 + g0) * 0.45);
+      const b = Math.sin(t * souffle * 1.2 + i * 0.4 + g0) * (1.5 + vt * 0.14);
+      const sx = cx + (jvAlea(i * 5 + g0) - 0.5) * larg * 0.6, tx = sx + Math.cos(a) * Ln + b, ty = base + Math.sin(a) * Ln;
+      const mx = sx + Math.cos(a) * Ln * 0.5 + b * 0.3, my = base + Math.sin(a) * Ln * 0.55;
+      x.strokeStyle = o("#7E8E5A"); x.lineWidth = 0.8;
+      x.beginPath(); x.moveTo(sx, base); x.quadraticCurveTo(mx, my, tx, ty); x.stroke();
+      if (!P.gaura) continue;
+      for (let k = 0; k < 7; k++) {
+        const u = 0.45 + k * 0.08, it = 1 - u;
+        const px = it * it * sx + 2 * it * u * mx + u * u * tx + (k % 2 ? 4 : -4), py = it * it * base + 2 * it * u * my + u * u * ty;
+        const fl = Math.sin(t * 2.4 + i + k) * 0.6;
+        x.fillStyle = o(k > 5 ? "#F2D6DE" : P.gaura);
+        for (let p2 = 0; p2 < 4; p2++) { const ap = p2 * 1.57 + k + fl * 0.2; jvOvale(x, px + Math.cos(ap) * 2.6, py + Math.sin(ap) * 2.6 + fl, 2.6, 1.6, ap); }
+        x.fillStyle = o("#E8C8D0"); jvRond(x, px, py + fl, 0.9);
+      }
+    }
+  };
+  // La lavande : un coussin de feuillage gris-vert, d'où partent en éventail des tiges
+  // fines portant chacune son épi, qui se balance par la pointe.
+  const lavande = (cx, base, w, n, g0, hh = 1) => {
+    couronne(cx, base - 8 * Math.sqrt(hh), w * 0.42, 12 * Math.sqrt(hh), ["#6E8460", "#7E9470", "#5E7452"], Math.round(n / 2), 4, g0);
+    for (let i = 0; i < n; i++) {
+      const u = jvAlea(i + g0) - 0.5, sx = cx + u * w * 0.55, a = -Math.PI / 2 + u * 1.3;
+      const h2 = (22 + jvAlea(i * 3 + g0) * 22) * hh, bb = Math.sin(t * souffle * 1.3 + i * 0.4) * (1 + vt * 0.08);
+      const tx = sx + Math.cos(a) * h2 + bb, ty = base + Math.sin(a) * h2;
+      x.strokeStyle = o("#7E9466"); x.lineWidth = 0.9;
+      x.beginPath(); x.moveTo(sx, base - 4); x.quadraticCurveTo(sx + Math.cos(a) * h2 * 0.5, base + Math.sin(a) * h2 * 0.55, tx, ty); x.stroke();
+      const ea = Math.atan2(ty - base, tx - sx);
+      for (let k = 0; k < 7; k++) { x.fillStyle = o(P.lavande[(k + i) % 2]); jvOvale(x, tx - Math.cos(ea) * k * 3.2, ty - Math.sin(ea) * k * 3.2, 1.9, 2.6, ea + Math.PI / 2); }
+    }
+  };
+
+  if (Z.F) {
+  // Les monts, le village perché, la mer et les collines
+  poly([[L, 300], [120, 296], [170, 284], [240, 272], [280, 276], [330, 268], [380, 280], [R, 286], [R, 340], [L, 340]], o(jvMel(P.mont, bas, 0.3)));
+  if (nomS === "hiver" || etat.temps === "neige") poly([[230, 274], [240, 272], [262, 276], [250, 280]], jvRgba(blanc, 0.85));
+  poly([[L, 330], [150, 322], [220, 318], [280, 314], [360, 316], [R, 322], [R, 345], [L, 345]], o(jvMel(P.colline, bas, 0.35)));
+  for (let i = 0; i < 14; i++) {
+    const hx = 276 + (i % 7) * 11 + jvAlea(i) * 4, hy = 318 - Math.floor(i / 7) * 8 - Math.sin((i % 7) / 6 * Math.PI) * 8, w = 10 + jvAlea(i + 3) * 5, h = 7 + jvAlea(i + 5) * 4;
+    rect(hx, hy - h, w, h, o(jvMel(["#EBD6B0", "#DEC296", "#F2E0C0"][i % 3], bas, 0.2)));
+    rect(hx - 1, hy - h - 2, w + 2, 2.5, o(jvMel("#C8865A", bas, 0.2)));
+    if (allume > 0.3 && jvAlea(i * 7) > 0.4) { x.fillStyle = `rgba(255,206,120,${(0.8 * allume).toFixed(2)})`; x.fillRect(hx + 3, hy - h + 2, 2, 2); }
+  }
+  rect(318, 280, 7, 28, o(jvMel("#E6CCA4", bas, 0.2))); poly([[317, 280], [321.5, 272], [326, 280]], o(jvMel("#C8865A", bas, 0.2)));
+  const gm = x.createLinearGradient(0, 330, 0, 348); gm.addColorStop(0, o(jvMel("#3E86B8", bas, 0.3))); gm.addColorStop(1, o("#3A7AB0"));
+  x.fillStyle = gm; x.fillRect(L, 332, R - L, 14);
+  poly([[L, 352], [120, 344], [220, 348], [320, 342], [R, 346], [R, 420], [L, 420]], o(P.colline));
+  // Le versant jusqu'à la mer : des herbes folles et des tamaris, sans cyprès.
+  { const tam = nomS === "hiver" ? ["#8A7E70", "#9A8E7E", "#7A7064"] : nomS === "automne" ? ["#A8A060", "#B8A868", "#8E8A50"]
+      : ["#8EA878", "#A4B88A", "#7A9466"];
+    const plume = nomS === "printemps" || nomS === "ete" ? ["#E8A8C2", "#F2C4D6", "#DA90AE"] : null;
+    // les herbes, en traits fins qui ondulent au vent, de plus en plus hautes vers le bas
+    x.lineWidth = 0.8;
+    for (let i = 0; i < 1100; i++) {
+      const gx = L + jvAlea(i + 2900) * (R - L), gy = 346 + jvAlea(i + 2901) * 60, h = 5 + (gy - 346) * 0.18 + jvAlea(i + 2902) * 5;
+      const b2 = Math.sin(t * souffle + i * 0.2) * (0.5 + vt * 0.04) * (h / 10);
+      x.strokeStyle = o(jvMel(i % 5 === 0 ? P.stipa : P.herbe[i % P.herbe.length], bas, Math.max(0, 0.3 - (gy - 346) / 200)));
+      jvTrait(x, gx, gy, gx + b2 + 1, gy - h);
+    }
+    // les tamaris : des touffes plumeuses, plus petites près de la mer
+    for (let i = 0; i < 14; i++) {
+      const cx = L + jvAlea(i + 2950) * (R - L), cy = 360 + jvAlea(i + 2951) * 44, k = 0.9 + (cy - 360) / 60, b2 = Math.sin(t * souffle * 0.6 + i) * vt * 0.03;
+      x.strokeStyle = o(jvMel("#6E5A44", bas, 0.25)); x.lineWidth = 1.6 * k; jvTrait(x, cx, cy + 10 * k, cx + b2, cy - 6 * k);
+      for (let j = 0; j < 60; j++) {
+        const a = jvAlea(j + i * 31) * 6.28, d = Math.sqrt(jvAlea(j * 3 + i)), px = cx + b2 + Math.cos(a) * 20 * k * d, py = cy - 10 * k + Math.sin(a) * 12 * k * d;
+        x.fillStyle = o(jvMel((plume && j % 2) ? plume[j % 3] : tam[j % 3], bas, Math.max(0, 0.3 - (cy - 356) / 300)));
+        jvOvale(x, px, py, 4 * k, 1.6 * k, a);
+      }
+      if (Z.neige) { x.fillStyle = jvRgba(blanc, 0.85); x.beginPath(); x.ellipse(cx + b2, cy - 14 * k, 16 * k, 5 * k, 0, Math.PI, 0); x.fill(); }
+    }
+  }
+  // Les massifs du fond et le sol du jardin, jusqu'à l'allée
+  rect(L, 400, R - L, 170, o(jvMel(P.herbe[0], "#2E3E24", 0.18)));
+  for (let i = 0; i < 50; i++) couronne(L + jvAlea(i + 2050) * (R - L), 440 + jvAlea(i + 2051) * 120, 16, 10, P.bosquet, 10, 4, 2060 + i);
+  for (let i = 0; i < Math.ceil((R - L) / 32); i++) couronne(L + i * 32 + jvAlea(i) * 12, 396 + jvAlea(i + 3) * 18, 20, 14, P.bosquet, 16, 5, 2000 + i);
+  // L'olivier en jarre, à droite de la terrasse
+  {
+    const jx = 444, jy = 432;
+    ombreSol(jx + 18, jy + 2, 28, 5, 0.25);
+    const gj = x.createLinearGradient(jx - 24, 0, jx + 24, 0); gj.addColorStop(0, o("#EAD6B8")); gj.addColorStop(0.6, o("#D8BE98")); gj.addColorStop(1, o("#B89A76"));
+    x.fillStyle = gj; x.beginPath(); x.moveTo(jx - 18, jy - 40); x.quadraticCurveTo(jx - 30, jy - 18, jx - 14, jy); x.lineTo(jx + 14, jy); x.quadraticCurveTo(jx + 30, jy - 18, jx + 18, jy - 40); x.fill();
+    rect(jx - 20, jy - 44, 40, 5, o("#F0E0C4"));
+    x.strokeStyle = o("#5A4A3A"); x.lineWidth = 2.5; jvTrait(x, jx, jy - 44, jx - 2, jy - 86);
+    couronne(jx - 4, jy - 104, 34, 26, P.olivier, 60, 3.2, 2100);
+  }
+  // Le massif du milieu : pampas, agave, lavande, boule de buis, fleurs blanches
+  for (let i = 0; i < 6; i++) plumet(360 + i * 9, 432, 344 + i * 12, 368 + (i % 3) * 8, 9, P.plume, 2200 + i);
+  brins(370, 434, 44, 22, P.herbe, 1.2, 2.4, 2210);
+  {
+    for (let i = 0; i < 11; i++) {
+      const a = -Math.PI / 2 + (i / 10 - 0.5) * 2.4, Ln = 34 + jvAlea(i) * 14, cx = 246, base = 436;
+      x.fillStyle = o(i % 2 ? "#7E9AA2" : "#5E7A86");
+      x.beginPath(); x.moveTo(cx - 5, base); x.quadraticCurveTo(cx + Math.cos(a) * Ln * 0.5 - 3, base + Math.sin(a) * Ln * 0.5, cx + Math.cos(a) * Ln, base + Math.sin(a) * Ln); x.quadraticCurveTo(cx + Math.cos(a) * Ln * 0.5 + 3, base + Math.sin(a) * Ln * 0.5, cx + 5, base); x.fill();
+    }
+  }
+  lavande(285, 452, 56, 44, 2220, 1.3);
+  boule(352, 430, 20, 2230);
+  // La terrasse et ses marches à droite, le bassin turquoise, les marches qui en descendent
+  poly([[296, 432], [R, 432], [R, 470], [296, 470]], o("#EEE6D4"));
+  for (let i = 0; i < 3; i++) { rect(380 - i * 6, 436 + i * 9, R - 380 + i * 6, 6, o("#F4EEE0")); rect(380 - i * 6, 442 + i * 9, R - 380 + i * 6, 3, o("#D2C6AC")); }
+  poly([[150, 452], [422, 452], [436, 462], [436, 562], [150, 562]], o("#EEE6D4"));
+  const bassin = [[162, 460], [412, 460], [426, 470], [426, 552], [162, 552]];
+  const ge = x.createLinearGradient(0, 460, 0, 552); ge.addColorStop(0, o(jvMel(P.eau[0], haut, 0.1))); ge.addColorStop(1, o(P.eau[1]));
+  x.fillStyle = ge; x.beginPath(); bassin.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill();
+  x.save(); x.beginPath(); bassin.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+  {
+    const T = x.getTransform(), p0 = T.transformPoint({ x: L, y: 220 }), p1 = T.transformPoint({ x: R, y: 452 }), q = T.transformPoint({ x: L, y: 460 }), q1 = T.transformPoint({ x: L, y: 552 });
+    const sx = Math.max(0, p0.x), sw = Math.min(x.canvas.width, p1.x) - sx, sh = p1.y - p0.y, n = 14, hb = sh / n, hd = (q1.y - q.y) / n;
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 0.42;
+    for (let i = 0; i < n; i++) { x.save(); x.translate(0, q.y + (i + 1) * hd); x.scale(1, -1); x.drawImage(x.canvas, sx, p1.y - (i + 1) * hb, sw, hb, sx, 0, sw, hd + 0.5); x.restore(); }
+    x.restore();
+    x.fillStyle = jvRgba(o(P.eau[0]), 0.4); x.fillRect(L, 455, R - L, 100);
+    const go = x.createLinearGradient(0, 460, 0, 474); go.addColorStop(0, jvRgba(o("#0E3A5A"), 0.35 * (1 - voile))); go.addColorStop(1, "rgba(0,0,0,0)");
+    x.fillStyle = go; x.fillRect(162, 460, 264, 14);
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.22); x.fillRect(L, 455, R - L, 100); }
+  }
+  x.restore();
+  rect(162, 459, 250, 2, o("#FAF6EC"));
+  for (let i = 0; i < 4; i++) { const a = 200 + i * 3, b = 562 + i * 16, w = 140 - i * 6; ombreSol(a + w / 2 + 8, b + 14, w * 0.5, 3, 0.16); rect(a, b, w, 11, o("#F2ECDE")); rect(a, b + 11, w, 4, o("#CEC2A8")); }
+  // L'allée de gravier et ses dalles
+  poly([[L, 560], [R, 560], [R, Z.B], [L, Z.B]], o(P.sol));
+  x.save(); x.globalAlpha = 0.8 * (1 - Z.nuit * 0.6); x.fillStyle = x.createPattern(cache.gravierPa, "repeat");
+  x.fillRect(L, 560, R - L, Z.B - 560); x.restore();
+  [[250, 640, 90, 14], [270, 690, 110, 16], [300, 748, 130, 18], [330, 806, 140, 20]].forEach(([a, b, w, h]) => { ombreSol(a + w / 2 + 6, b + h + 2, w * 0.5, 3, 0.16); rect(a, b, w, h, o("#F2ECDE")); rect(a, b + h, w, 3, o("#D4C8AE")); });
+  // Ombres de l'olivier sur le gravier
+  if (hs > 0 && voile < 0.6) for (let i = 0; i < 30; i++) ombreSol(240 + jvAlea(i + 70) * 220, 600 + jvAlea(i + 72) * 200, 16 + jvAlea(i + 74) * 18, 3.2, 0.1);
+  boule(404, 584, 58, 2240);
+  // Le grand massif de gauche, immobile : son feuillage et la brume des stipas
+  brins(30, 640, 360, 110, P.herbe, 2, 1.7, 2400);
+  brins(110, 640, 320, 100, P.herbe, 1.9, 1.9, 2401);
+  brins(190, 640, 240, 70, P.herbe, 1.7, 2.1, 2403);
+  brins(170, 520, 120, 40, P.herbe, 1.3, 2.2, 2402);
+  // La brume légère des stipas, au-dessus de la verveine
+  x.strokeStyle = jvRgba(o(P.stipa), 0.6); x.lineWidth = 0.8;
+  for (let i = 0; i < 300; i++) {
+    const bx = 40 + jvAlea(i + 2600) * 220, by = 620, L2 = 120 + jvAlea(i + 2610) * 180, a = -Math.PI / 2 + (jvAlea(i + 2620) - 0.4) * 1.3;
+    const b = Math.sin(t * souffle * 1.2 + i * 0.07) * (3 + vt * 0.2);
+    x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(bx + Math.cos(a) * L2 * 0.6, by + Math.sin(a) * L2 * 0.7, bx + Math.cos(a) * L2 + b, by + Math.sin(a) * L2 + L2 * 0.25); x.stroke();
+  }
+  if (allume > 0.2) [[200, 566], [300, 640], [404, 652], [440, 466]].forEach(([a, b]) => {
+    const g = x.createRadialGradient(a, b, 1, a, b, 26); g.addColorStop(0, `rgba(255,214,140,${(0.6 * allume).toFixed(2)})`); g.addColorStop(1, "rgba(255,214,140,0)");
+    x.fillStyle = g; x.fillRect(a - 26, b - 26, 52, 52);
+  });
+  }
+  if (Z.D) {
+  // Ce qui bouge sur l'eau
+  x.save(); x.beginPath(); x.rect(162, 460, 264, 92); x.clip();
+  for (let i = 0; i < 14; i++) {
+    const px = 162 + ((jvAlea(i) * 264 + t * (3 + (i % 4))) % 264), py = 466 + jvAlea(i + 3) * 82;
+    x.fillStyle = `rgba(255,255,255,${(0.2 + 0.2 * Math.sin(t * 1.6 + i)).toFixed(2)})`; x.fillRect(px, py, 8 + jvAlea(i) * 12, 1.1);
+  }
+  if (lune > 0.05) for (let i = 0; i < 6; i++) { x.fillStyle = `rgba(236,238,246,${(0.5 * lune * (1 - i / 7)).toFixed(2)})`; x.fillRect(Math.max(180, Math.min(400, lx)) - 7 + Math.sin(t * 1.3 + i) * 2, 470 + i * 12, 14 - i, 1.5); }
+  if (m.pluie) jvRonds(x, { m, t }, 294, 506, 130, 40);
+  x.restore();
+  // À droite, devant la boule : un nuage de gauras, des graminées, une grande touffe de lavande
+  gaura(410, 680, 130, 150, 60, 2310);
+  brins(400, 740, 80, 30, P.herbe, 1.2, 1.8, 2300);
+  lavande(410, 830, 150, 110, 2320, 2.6);
+  // Les plumets des pampas, qui se balancent
+  const nP = Math.max(3, Math.round(11 * P.nPlume));
+  [[10, 600, 10, 150], [26, 600, 70, 90], [50, 600, 130, 110], [74, 600, 190, 150], [96, 610, 236, 220], [116, 620, 262, 300], [36, 610, 100, 210], [64, 620, 170, 250], [6, 620, 30, 260], [136, 640, 280, 370], [86, 640, 210, 330]]
+    .slice(0, nP).forEach(([bx, by, tx, ty], i) => plumet(bx, by, tx, ty, 22 - (i % 3) * 3, P.plume, 2500 + i));
+  // Le printemps du massif : alliums, sauges et érigérons
+  if (nomS === "printemps") {
+    for (let i = 0; i < 26; i++) {
+      const sx = 14 + jvAlea(i + 3100) * 210, h = 70 + jvAlea(i + 3110) * 110, b = Math.sin(t * souffle * 1.2 + i) * (2 + vt * 0.14);
+      x.strokeStyle = o("#6E8E4A"); x.lineWidth = 1.2; x.beginPath(); x.moveTo(sx, 680); x.quadraticCurveTo(sx + b * 0.3, 680 - h * 0.6, sx + b, 680 - h); x.stroke();
+      for (let k = 0; k < 9; k++) { x.fillStyle = o(["#6E58C0", "#8A70D6", "#5E4AA8"][k % 3]); jvOvale(x, sx + b, 680 - h - 4 - k * 3.4, 2.2, 2.8); }
+    }
+    for (let i = 0; i < 9; i++) {
+      const sx = 30 + jvAlea(i + 3200) * 200, h = 160 + jvAlea(i + 3210) * 90, b = Math.sin(t * souffle * 0.9 + i * 2) * (2.5 + vt * 0.16);
+      x.strokeStyle = o("#6E8A4A"); x.lineWidth = 1.4; x.beginPath(); x.moveTo(sx, 680); x.quadraticCurveTo(sx + b * 0.3, 680 - h * 0.6, sx + b, 680 - h); x.stroke();
+      const r = 11 + jvAlea(i + 3220) * 4;
+      x.fillStyle = o("#7A4AB0"); jvRond(x, sx + b, 680 - h, r);
+      for (let k = 0; k < 30; k++) { const a = jvAlea(k + i * 31) * 6.28, d = Math.sqrt(jvAlea(k * 3 + i)) * r;
+        x.fillStyle = o(jvMel(k % 2 ? "#B48AE2" : "#9A6ACE", "#FFFFFF", Math.max(0, -Math.sin(a)) * 0.25)); jvRond(x, sx + b + Math.cos(a) * d, 680 - h + Math.sin(a) * d, 1.8); }
+    }
+  }
+  for (let i = 0; i < 16; i++) verveine(10 + i * 13 + jvAlea(i + 2700) * 8, 660, 120 + jvAlea(i + 2710) * 110, 2720 + i);
+  // Le premier plan : un massif de feuilles fines et les épis roses des pennisetums
+  brins(60, Z.B, 300, 100, P.herbe, 2, 2, 2800);
+  brins(180, Z.B, 260, 80, P.herbe, 1.8, 2.2, 2801);
+  if (P.penni) for (let i = 0; i < 16; i++) epi(10 + i * 17 + jvAlea(i + 2900) * 10, Z.B, 200 + jvAlea(i + 2910) * 120, -Math.PI / 2 + (i / 15 - 0.45) * 0.7, P.penni, 2920 + i);
+  else brins(220, Z.B, 220, 50, P.herbe, 1.6, 2, 2950);
+  if (nomS === "printemps") for (let i = 0; i < 70; i++) {
+    const fx = jvAlea(i + 3300) * 300, fy = 700 + jvAlea(i + 3310) * (Z.B - 720), b = Math.sin(t * souffle * 1.4 + i) * (1 + vt * 0.06);
+    x.strokeStyle = o("#6E8E4A"); x.lineWidth = 0.7; jvTrait(x, fx, fy + 10, fx + b, fy);
+    jvFleur(x, fx + b, fy, 2.4, o(i % 3 ? "#FFFFFF" : "#F2C8D6"), o("#F2C83A"));
+  }
+  if (P.chute) for (let i = 0; i < 18; i++) { x.fillStyle = o(P.chute[i % P.chute.length]); jvOvale(x, 250 + jvAlea(i * 7 + 1) * 210, 620 + jvAlea(i * 5 + 2) * 200, 2.6, 1.4, i); }
+  // La couronne de l'olivier, en haut à droite : tronc, charpente, rameaux de feuilles étroites
+  {
+    const bal = Math.sin(t * souffle * 0.4) * (0.004 + vt * 0.0004);
+    x.save(); x.translate(R + 10, 320); x.rotate(bal); x.translate(-R - 10, -320);
+    x.strokeStyle = o("#6A5440"); x.lineCap = "round";
+    x.lineWidth = 16; x.beginPath(); x.moveTo(R + 10, 330); x.bezierCurveTo(R - 20, 260, R - 50, 200, R - 110, 150); x.stroke();
+    x.lineWidth = 9; x.beginPath(); x.moveTo(R - 70, 186); x.bezierCurveTo(R - 150, 140, R - 230, 90, R - 330, 40); x.stroke();
+    x.lineWidth = 7; x.beginPath(); x.moveTo(R - 110, 150); x.bezierCurveTo(R - 150, 90, R - 180, 40, R - 210, 0); x.stroke();
+    x.lineWidth = 5; jvTrait(x, R - 30, 230, R - 60, 300); jvTrait(x, R - 160, 110, R - 120, 60); jvTrait(x, R - 250, 70, R - 300, 110);
+    const rameaux = [];
+    for (let i = 0; i < 44; i++) {
+      const u = jvAlea(i + 3000), v = jvAlea(i + 3001);
+      rameaux.push([R - 340 + u * 350, -10 + v * (60 + u * 230)]);
+    }
+    rameaux.forEach(([rx, ry], i) => {
+      const fl = Math.sin(t * souffle * 1.4 + i) * (1 + vt * 0.06);
+      for (let k = 0; k < 7; k++) {
+        const a = jvAlea(i * 11 + k) * 6.28, d = 6 + jvAlea(i * 7 + k) * 22, px = rx + Math.cos(a) * d + fl, py = ry + Math.sin(a) * d * 0.7;
+        x.strokeStyle = o("#7A6450"); x.lineWidth = 0.9; jvTrait(x, rx, ry, px, py);
+        for (let f = 0; f < 5; f++) {
+          const af = a + (f - 2) * 0.55 + 0.4, fx = px - Math.cos(a) * f * 3.4 + Math.cos(af) * 5, fy = py - Math.sin(a) * f * 3.4 + Math.sin(af) * 5;
+          x.fillStyle = o(P.olivier[(f + k + i) % 4]); jvOvale(x, fx, fy, 6.5, 1.7, af);
+        }
+        if (P.olive && k % 4 === 0) { x.fillStyle = o(P.olive); jvOvale(x, px, py + 4, 2.6, 3.4); }
+        if (P.fleurOlivier && k % 3 === 0) { x.fillStyle = o("#F4F0D8"); jvRond(x, px + 2, py + 2, 1.6); }
+      }
+    });
+    x.restore();
+  }
+  jvFinScene(x, Z);
+  } else x.restore();
+  return c;
+}
+
+/* ---------- Le style jardin naturel ----------
+   D'après la cinquième planche de Jérôme : une branche en fleur aux feuilles
+   lustrées en haut à droite, un arbre léger à gauche, des collines et des
+   cyprès au fond ; des massifs fleuris de blanc, de la lavande et des rochers ;
+   une mare, ses nénuphars et ses joncs ; une allée de gravier en courbe et ses
+   pas japonais ; des fougères au premier plan. */
+const JNA = {
+  printemps: { ciel: ["#7EB6E8", "#D4E6F2"], mont: "#8A9CC6", feuillage: ["#5E9440", "#76AA50", "#4A7E34", "#8CBC62"],
+    fleur: "#FFFFFF", coeur: "#F2D04A", tauxFleur: 1, lavande: ["#9AA6C8", "#B4BEDA"], fougere: ["#5E9A3E", "#78B04E"],
+    arbre: ["#8EAE6A", "#A8C482", "#749456"], nenuphar: false, sol: "#E6DCC4", chute: ["#FFFFFF", "#F6F2E8"] },
+  ete: { ciel: ["#6AAAE6", "#CFE3F2"], mont: "#7E90BE", feuillage: ["#4E8836", "#68A048", "#3E7228", "#7EB25A"],
+    fleur: "#FFFFFF", coeur: "#F2C83A", tauxFleur: 0.8, lavande: ["#8A7ECC", "#A69AD8", "#7466BC"], fougere: ["#4E9036", "#6AA846"],
+    arbre: ["#88A866", "#A2BE7E", "#6E8E52"], nenuphar: true, sol: "#E6DCC4", chute: ["#FFFFFF"] },
+  automne: { ciel: ["#E4C49C", "#F2E2CC"], mont: "#9A92AC", feuillage: ["#7A8A3E", "#A08A3E", "#C8762E", "#5E7032"],
+    fleur: null, coeur: null, tauxFleur: 0, baies: "#C83A2E", lavande: ["#9A9AA4", "#ADADB6"], fougere: ["#B8762E", "#D09A46"],
+    arbre: ["#C8A040", "#D8B456", "#A88232"], nenuphar: false, sol: "#E4D8C0", chute: ["#C8A040", "#D08A3A", "#B8762E"] },
+  hiver: { ciel: ["#A6C0DA", "#E2E8EE"], mont: "#9AA4BC", feuillage: ["#4E6A44", "#5E7A52", "#3E5A38", "#6E8A62"],
+    fleur: null, coeur: null, tauxFleur: 0, lavande: ["#9AA096", "#AEB4AA"], fougere: ["#8A6A44", "#A4845A"],
+    arbre: null, nenuphar: false, sol: "#E8E4DA" },
+};
+function peindreNaturel(x, W, H, t, etat, cache) {
+  const Z = jvScene(x, W, H, t, etat, JNA[etat.saison]);
+  const { nomS, P, hs, c, m, vent, souffle, o, allume, L, R, blanc, haut, bas, voile, lune, lx } = Z;
+  const { rect, poly, couronne } = Z.outils;
+  // givre : l'eau gèle par temps de gel ; enneige : l'hiver ou la neige blanchissent le jardin.
+  const vt = Math.min(vent, 60), givre = nomS === "hiver" && etat.gel, enneige = Z.neige;
+  // La ramure : courbes de bois avec leur côté ombré, la neige posée sur le dessus, des rameaux fourchus.
+  const trace = c => { x.beginPath(); x.moveTo(c[0], c[1]); if (c.length === 4) x.lineTo(c[2], c[3]); else if (c.length === 6) x.quadraticCurveTo(c[2], c[3], c[4], c[5]); else x.bezierCurveTo(c[2], c[3], c[4], c[5], c[6], c[7]); };
+  const ramure = (courbes, col) => {
+    x.lineCap = "round";
+    courbes.forEach(([c, w]) => { x.strokeStyle = o(col); x.lineWidth = w; trace(c); x.stroke(); });
+    courbes.forEach(([c, w]) => { if (w < 2) return; x.save(); x.translate(w * 0.18, w * 0.22); x.strokeStyle = jvRgba(o("#24140C"), 0.35); x.lineWidth = w * 0.4; trace(c); x.stroke(); x.restore(); });
+    if (!enneige) return;
+    courbes.forEach(([c, w]) => {
+      // La neige tient sur le bois couché, pas sur le bois dressé.
+      const dx = c[c.length - 2] - c[0], dy = c[c.length - 1] - c[1], couche = Math.abs(dx) / (Math.hypot(dx, dy) || 1);
+      if (w < 1.4 || couche < 0.4) return;
+      x.save(); x.translate(0, -w * 0.42); x.strokeStyle = jvRgba(blanc, 0.96); x.lineWidth = w * 0.6 * Math.min(1, couche * 1.3); trace(c); x.stroke(); x.restore();
+      if (w >= 3) { x.fillStyle = jvRgba(blanc, 0.96); jvOvale(x, c[0], c[1] - w * 0.5, w * 0.9, w * 0.45); }
+    });
+  };
+  const rameaux = (x0, y0, ang, len, ep, g, out, prof = 3, d = 0) => {
+    const a = ang + (jvAlea(g) - 0.5) * 0.45, x1 = x0 + Math.cos(a) * len, y1 = y0 + Math.sin(a) * len, pli = (jvAlea(g + 0.5) - 0.5) * len * 0.3;
+    out.push([[x0, y0, (x0 + x1) / 2 - Math.sin(a) * pli, (y0 + y1) / 2 + Math.cos(a) * pli, x1, y1], ep]);
+    if (d >= prof) return;
+    rameaux(x1, y1, a - 0.42, len * 0.72, ep * 0.66, g * 2 + 1, out, prof, d + 1);
+    rameaux(x1, y1, a + 0.38, len * 0.68, ep * 0.62, g * 2 + 2, out, prof, d + 1);
+  };
+  if (!cache.gravierNa) {
+    const cg = document.createElement("canvas"); cg.width = cg.height = 80;
+    const g = cg.getContext("2d");
+    for (let i = 0; i < 380; i++) {
+      g.fillStyle = ["rgba(255,255,255,.7)", "rgba(160,146,120,.4)", "rgba(220,206,180,.6)"][i % 3];
+      g.beginPath(); g.ellipse(jvAlea(i) * 80, jvAlea(i + 0.3) * 80, 0.8 + jvAlea(i * 3) * 1.3, 0.6 + jvAlea(i * 5) * 0.8, jvAlea(i * 7) * 3, 0, 7); g.fill();
+    }
+    cache.gravierNa = cg;
+  }
+  const ombreSol = (cx, cy, rx, ry, a = 0.2) => { x.fillStyle = jvRgba(o("#3E3A2A"), a * (1 - voile)); jvOvale(x, cx, cy, rx, ry); };
+  // Un massif arrondi : masse sombre, feuilles éclairées en haut à gauche, fleurs blanches semées.
+  const massif = (cx, cy, rx, ry, n, g0, fleurs = 1) => {
+    ombreSol(cx + rx * 0.2, cy + ry * 0.85, rx * 1.05, ry * 0.25, 0.18);
+    // Chaque buisson a sa teinte, plus jaune ou plus bleue, sa texture, fine ou large,
+    // et pâlit vers le ciel à mesure qu'il s'éloigne.
+    const vers = jvAlea(g0 + 0.11) > 0.5 ? "#C4CC5A" : "#4E8A7E", dose = jvAlea(g0 + 0.13) * 0.28;
+    const loin = Math.max(0, Math.min(0.4, (500 - cy) / 300)), fin = jvAlea(g0 + 0.17) < 0.45;
+    const tf = col => jvMel(jvMel(col, vers, dose), bas, loin);
+    // Une silhouette irrégulière, de plusieurs bosses, plutôt qu'un ovale
+    x.fillStyle = o(tf(jvMel(P.feuillage[2], "#10200E", 0.15)));
+    const bosses = [];
+    for (let k = 0; k < 5; k++) bosses.push([cx + (jvAlea(k + g0 + 0.1) - 0.5) * rx * 0.9, cy + (jvAlea(k + g0 + 0.2) - 0.4) * ry * 0.6, rx * (0.45 + jvAlea(k + g0) * 0.3), ry * (0.5 + jvAlea(k + g0 + 0.4) * 0.3)]);
+    bosses.forEach(([bx, by, brx, bry]) => jvOvale(x, bx, by, brx, bry));
+    for (let i = 0; i < n * (fin ? 2.4 : 1.4); i++) {
+      const a = jvAlea(i + g0) * 6.28, d = Math.sqrt(jvAlea(i * 3 + g0)), px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d;
+      const lum = (cy - py) / ry * 0.55 + (cx - px) / rx * 0.3;
+      x.fillStyle = o(tf(jvMel(P.feuillage[i % 4], lum > 0 ? "#F6F4C4" : "#10200E", Math.min(0.42, Math.abs(lum) * 0.5))));
+      if (fin) jvOvale(x, px, py, 2.8, 1.5, a); else jvOvale(x, px, py, 5.4, 2.8, a);
+    }
+    // Les fleurs, en petits bouquets
+    const nf = Math.round(n * 0.12 * P.tauxFleur * fleurs);
+    for (let i = 0; i < nf; i++) {
+      const a = jvAlea(i + g0 + 0.5) * 6.28, d = Math.sqrt(jvAlea(i * 7 + g0)) * 0.9, bx2 = cx + Math.cos(a) * rx * d, by2 = cy + Math.sin(a) * ry * d - 2;
+      for (let k = 0; k < 3; k++) jvFleur(x, bx2 + (jvAlea(i + k + g0) - 0.5) * 9, by2 + (jvAlea(i * 2 + k + g0) - 0.5) * 6, fin ? 1.6 : 2.1, o(jvMel(P.fleur || "#FFFFFF", bas, loin * 0.6)), o(P.coeur));
+    }
+    if (P.baies) for (let i = 0; i < n * 0.08; i++) { x.fillStyle = o(P.baies); jvRond(x, cx + (jvAlea(i + g0 + 0.7) - 0.5) * rx * 1.6, cy + (jvAlea(i + g0 + 0.9) - 0.5) * ry * 1.4, 1.6); }
+    // La neige : une calotte sur chaque bosse, ombrée de bleu dessous, percée de quelques feuilles
+    if (enneige) {
+      bosses.slice().sort((a1, b1) => a1[1] - b1[1]).forEach(([bx, by, brx, bry], k) => {
+        x.fillStyle = jvRgba(o("#B8C8DA"), 0.8); x.beginPath(); x.ellipse(bx, by - bry * 0.18, brx * 0.94, bry * 0.66, 0, Math.PI, 0); x.fill();
+        x.fillStyle = jvRgba(blanc, 0.97); x.beginPath(); x.ellipse(bx, by - bry * 0.26, brx * 0.9, bry * 0.62, 0, Math.PI, 0); x.fill();
+        for (let i = 0; i < 6; i++) { x.fillStyle = o(tf(P.feuillage[2])); jvOvale(x, bx - brx * 0.8 + jvAlea(i + g0 + k) * brx * 1.6, by - bry * 0.26 + jvAlea(i * 3 + g0 + k) * 3, 2.4, 1.3, i); }
+      });
+    }
+  };
+  // Un rocher clair : face éclairée, flanc d'ombre, son ombre au sol.
+  const rocher = (cx, cy, w, h, g0) => {
+    ombreSol(cx + w * 0.3, cy + h * 0.5, w * 0.8, h * 0.2, 0.25);
+    const pts = []; for (let i = 0; i < 9; i++) { const a = Math.PI + i / 8 * Math.PI; pts.push([cx + Math.cos(a) * w * (0.85 + jvAlea(i + g0) * 0.2), cy + Math.sin(a) * h * (0.8 + jvAlea(i + g0 + 0.3) * 0.25)]); }
+    pts.push([cx + w, cy + h * 0.45], [cx - w, cy + h * 0.45]);
+    poly(pts, o("#C8C2B4"));
+    x.fillStyle = o("#E2DDD2"); x.beginPath(); x.moveTo(cx - w * 0.8, cy - h * 0.2); x.lineTo(cx - w * 0.1, cy - h * 0.9); x.lineTo(cx + w * 0.25, cy - h * 0.75); x.lineTo(cx - w * 0.3, cy + h * 0.1); x.fill();
+    x.fillStyle = jvRgba(o("#7E786A"), 0.35); x.beginPath(); x.moveTo(cx + w * 0.4, cy - h * 0.6); x.lineTo(cx + w, cy); x.lineTo(cx + w, cy + h * 0.45); x.lineTo(cx + w * 0.3, cy + h * 0.45); x.fill();
+    if (enneige) { x.fillStyle = jvRgba(blanc, 0.95); x.beginPath(); x.ellipse(cx - w * 0.15, cy - h * 0.62, w * 0.62, h * 0.3, -0.1, Math.PI, 0); x.fill(); }
+  };
+  // La lavande : coussin et tiges en éventail portant leurs épis, qui bougent par la pointe.
+  const lavande = (cx, base, w, n, g0, hh = 1) => {
+    couronne(cx, base - 8 * Math.sqrt(hh), w * 0.42, 12 * Math.sqrt(hh), ["#6E8460", "#7E9470", "#5E7452"], Math.round(n / 2), 4, g0);
+    for (let i = 0; i < n; i++) {
+      const u = jvAlea(i + g0) - 0.5, sx = cx + u * w * 0.55, a = -Math.PI / 2 + u * 1.3;
+      const h2 = (22 + jvAlea(i * 3 + g0) * 22) * hh, bb = Math.sin(t * souffle * 1.3 + i * 0.4) * (1 + vt * 0.08);
+      const tx = sx + Math.cos(a) * h2 + bb, ty = base + Math.sin(a) * h2;
+      x.strokeStyle = o("#7E9466"); x.lineWidth = 0.9;
+      x.beginPath(); x.moveTo(sx, base - 4); x.quadraticCurveTo(sx + Math.cos(a) * h2 * 0.5, base + Math.sin(a) * h2 * 0.55, tx, ty); x.stroke();
+      const ea = Math.atan2(ty - base, tx - sx);
+      for (let k = 0; k < 7; k++) { x.fillStyle = o(P.lavande[(k + i) % P.lavande.length]); jvOvale(x, tx - Math.cos(ea) * k * 3.2, ty - Math.sin(ea) * k * 3.2, 1.9, 2.6, ea + Math.PI / 2); }
+    }
+  };
+  // Une fronde de fougère : un rachis arqué, des pinnules décroissantes, la pointe libre au vent.
+  const fronde = (bx, by, Ln, ang, cols, g0) => {
+    const b = Math.sin(t * souffle * 0.8 + g0 * 1.3) * (2 + vt * 0.14);
+    const tx = bx + Math.cos(ang) * Ln + b, ty = by + Math.sin(ang) * Ln + Ln * 0.2;
+    const mx = bx + Math.cos(ang) * Ln * 0.55 + b * 0.3, my = by + Math.sin(ang) * Ln * 0.6;
+    x.strokeStyle = o("#4E7A32"); x.lineWidth = 1.4; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(mx, my, tx, ty); x.stroke();
+    for (let k = 1; k < 22; k++) {
+      const u = k / 22, it = 1 - u, px = it * it * bx + 2 * it * u * mx + u * u * tx, py = it * it * by + 2 * it * u * my + u * u * ty;
+      const dx = 2 * it * (mx - bx) + 2 * u * (tx - mx), dy = 2 * it * (my - by) + 2 * u * (ty - my), dl = Math.hypot(dx, dy) || 1;
+      const lp = 24 * Math.sin(Math.PI * (u * 0.85 + 0.1));
+      x.fillStyle = o(cols[k % 2]);
+      [-1, 1].forEach(sg => jvOvale(x, px - dy / dl * lp * 0.5 * sg + dx / dl * 2, py + dx / dl * lp * 0.5 * sg + dy / dl * 2, lp * 0.55, 3.2, Math.atan2(dy, dx) + sg * 1.1));
+    }
+  };
+
+  if (Z.F) {
+  // Les collines, la forêt à leur pied, la masse boisée du fond
+  poly([[L, 340], [80, 330], [160, 318], [240, 312], [320, 322], [380, 316], [R, 324], [R, 380], [L, 380]], o(jvMel(P.mont, bas, 0.3)));
+  rect(L, 350, R - L, 120, o(jvMel(P.feuillage[1], bas, 0.25)));
+  { const gs = x.createLinearGradient(0, 430, 0, 830); gs.addColorStop(0, o(jvMel(P.feuillage[1], "#1E3018", 0.1))); gs.addColorStop(1, o(jvMel(P.feuillage[0], "#1E3018", 0.25)));
+    x.fillStyle = gs; x.fillRect(L, 430, R - L, Z.B - 430);
+    if (enneige) { x.fillStyle = jvRgba(blanc, 0.82); x.fillRect(L, 430, R - L, Z.B - 430);
+      for (let i = 0; i < 40; i++) { x.fillStyle = jvRgba(o("#B8C8DA"), 0.35); jvOvale(x, L + jvAlea(i + 4900) * (R - L), 440 + jvAlea(i + 4901) * (Z.B - 440), 14 + jvAlea(i + 4902) * 20, 3); } } }
+  // La forêt au pied des collines : deux plans de feuillus ronds mêlés de quelques conifères,
+  // voilés par la distance ; elle s'éclaircit au printemps, roussit à l'automne, se dénude l'hiver.
+  { const cols = nomS === "automne" ? ["#C8762E", "#D8A040", "#A8502A", "#6E7A44"] : nomS === "hiver" ? ["#8A8478", "#9A9488", "#5E6E58", "#7A7466"]
+      : nomS === "printemps" ? ["#7EAA54", "#96BE66", "#6A9646", "#E8E4D2"] : ["#4E7E3E", "#5E8E48", "#3E6E34", "#6A9A50"];
+    [[350, 0.4, 24, 4700], [370, 0.18, 32, 4750]].forEach(([base, voileF, taille, g0]) => {
+      const n = Math.ceil((R - L) / (taille * 0.5));
+      for (let i = 0; i < n; i++) {
+        const tx = L + i * taille * 0.5 + (jvAlea(i + g0) - 0.5) * 8, h = taille * (0.75 + jvAlea(i + g0 + 0.3) * 0.5), by = base + jvAlea(i + g0 + 0.6) * 8;
+        x.fillStyle = o(jvMel(cols[i % cols.length], bas, voileF));
+        if (jvAlea(i + g0 + 0.9) < 0.2) { x.beginPath(); x.moveTo(tx - h * 0.3, by + 4); x.quadraticCurveTo(tx - h * 0.28, by - h * 0.5, tx, by - h * 1.05); x.quadraticCurveTo(tx + h * 0.28, by - h * 0.5, tx + h * 0.3, by + 4); x.fill(); }
+        else { for (let k = 0; k < 3; k++) jvRond(x, tx + (k - 1) * h * 0.24, by - h * 0.42 - (k === 1 ? h * 0.16 : 0), h * 0.34); jvOvale(x, tx, by - h * 0.12, h * 0.5, h * 0.3); }
+        if (Z.neige) { x.fillStyle = jvRgba(blanc, 0.5); jvOvale(x, tx, by - h * 0.62, h * 0.22, h * 0.08); }
+      }
+      const gb = x.createLinearGradient(0, base - taille, 0, base + 10); gb.addColorStop(0, jvRgba(bas, 0)); gb.addColorStop(1, jvRgba(bas, 0.25));
+      x.fillStyle = gb; x.fillRect(L, base - taille, R - L, taille + 10);
+    }); }
+  for (let i = 0; i < Math.ceil((R - L) / 36); i++) couronne(L + i * 36 + jvAlea(i + 4000) * 14, 370 + jvAlea(i + 4001) * 16, 28, 20, P.feuillage.map(cc => jvMel(cc, bas, 0.28)), 24, 5, 4010 + i);
+  massif(300, 350, 50, 34, 120, 4050, 0.4);
+  if (P.arbre) couronne(340, 372, 40, 30, ["#B4C0A4", "#C8D2BA", "#9AA88C"], 40, 4, 4060);
+  // L'arbre léger de gauche : charpente fine, couronne aérée
+  {
+    const bois = [
+      [[52, 380, 60, 330, 74, 300, 70, 250], 9], [[66, 300, 90, 280, 110, 262, 130, 250], 5], [[70, 270, 52, 248, 40, 226, 30, 210], 5],
+      [[70, 250, 80, 214, 92, 190, 104, 170], 4.5], [[120, 255, 140, 246, 156, 244, 170, 240], 3.6], [[70, 250, 64, 226, 60, 210, 58, 196], 3.4],
+    ];
+    [[130, 250, -0.6, 20], [30, 210, -2.2, 20], [104, 170, -1.3, 20], [170, 240, -0.2, 18], [58, 196, -1.7, 18], [90, 282, -0.9, 14]]
+      .forEach(([px, py, a, l], i) => rameaux(px, py, a, l, 2.2, 4040 + i * 13, bois, 3));
+    ramure(bois, "#6E5440");
+    // Les touffes de feuilles, plus une au bout de chaque rameau
+    const touffes = [[40, 190, 46, 36], [100, 160, 52, 40], [150, 220, 44, 34], [70, 240, 50, 30], [10, 240, 30, 30]];
+    bois.forEach(([c, w], j) => { if (w < 1.2 && j % 2 === 0) touffes.push([c[c.length - 2], c[c.length - 1], 14, 10]); });
+    if (P.arbre) touffes.forEach(([cx, cy, rx, ry], i) => {
+      for (let k = 0; k < (rx > 20 ? 380 : 50); k++) {
+        const a = jvAlea(k + i * 97) * 6.28, d = Math.sqrt(jvAlea(k * 3 + i * 97)), px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d;
+        const lum = (cy - py) / ry * 0.5 + (cx - px) / rx * 0.3;
+        x.fillStyle = o(jvMel(P.arbre[k % 3], lum > 0 ? "#F4F2D8" : "#1E2A14", Math.min(0.4, Math.abs(lum) * 0.5)));
+        jvOvale(x, px, py, 4.6, 1.5, jvAlea(k * 7 + i) * 6.28);
+      }
+    });
+  }
+  // Les massifs fleuris du milieu
+  massif(150, 400, 70, 40, 180, 4100); massif(40, 430, 60, 50, 150, 4110); massif(420, 410, 60, 46, 150, 4120);
+  massif(110, 470, 60, 40, 140, 4101, 0.3); massif(430, 480, 50, 40, 120, 4121);
+  massif(240, 410, 46, 30, 90, 4130, 0.6);
+  lavande(130, 470, 90, 50, 4140, 1.6); lavande(250, 430, 60, 30, 4150, 1.2); lavande(350, 400, 50, 24, 4160, 1.1);
+  massif(360, 450, 52, 40, 140, 4170);
+  // Le cœur du jardin, autour de la mare
+  massif(200, 470, 56, 30, 140, 4171, 0.8); massif(300, 476, 70, 28, 160, 4172, 0.5); massif(380, 500, 46, 34, 120, 4173);
+  massif(160, 520, 50, 34, 120, 4174); massif(220, 556, 44, 22, 90, 4175, 0.4);
+  // La mare : son eau, ses rochers
+  const mare = [];
+  for (let i = 0; i <= 24; i++) { const a = i / 24 * 6.28; mare.push([280 + Math.cos(a) * 92 * (1 + Math.sin(a * 3) * 0.06), 528 + Math.sin(a) * 34 * (1 + Math.cos(a * 2) * 0.08)]); }
+  const ge = x.createLinearGradient(0, 494, 0, 562); ge.addColorStop(0, o(jvMel("#3E9AAE", haut, 0.15))); ge.addColorStop(1, o("#2E7E8E"));
+  x.fillStyle = ge; x.beginPath(); mare.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill();
+  x.save(); x.beginPath(); mare.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+  {
+    const T = x.getTransform(), p0 = T.transformPoint({ x: L, y: 360 }), p1 = T.transformPoint({ x: R, y: 494 }), q = T.transformPoint({ x: L, y: 494 }), q1 = T.transformPoint({ x: L, y: 562 });
+    const sx = Math.max(0, p0.x), sw = Math.min(x.canvas.width, p1.x) - sx, sh = p1.y - p0.y, n = 12, hb = sh / n, hd = (q1.y - q.y) / n;
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 0.35;
+    for (let i = 0; i < n; i++) { x.save(); x.translate(0, q.y + (i + 1) * hd); x.scale(1, -1); x.drawImage(x.canvas, sx, p1.y - (i + 1) * hb, sw, hb, sx, 0, sw, hd + 0.5); x.restore(); }
+    x.restore();
+    x.fillStyle = jvRgba(o("#3E9AAE"), 0.35); x.fillRect(L, 490, R - L, 80);
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.3); x.fillRect(L, 490, R - L, 80); }
+  }
+  x.restore();
+  x.strokeStyle = jvRgba(o("#5E6A4A"), 0.6); x.lineWidth = 2; x.beginPath(); mare.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.stroke();
+  rocher(212, 462, 28, 22, 4200); rocher(226, 500, 26, 18, 4210); rocher(396, 520, 20, 32, 4220);
+  // L'allée de gravier, en courbe depuis le bas, et ses pas japonais
+  const allee = [[160, Z.B], [196, 760], [190, 690], [166, 640], [186, 590], [230, 566], [330, 562], [340, 580], [270, 600], [256, 650], [290, 700], [330, 760], [380, Z.B]];
+  poly(allee, o(P.sol));
+  x.save(); x.beginPath(); allee.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+  x.globalAlpha = 0.8 * (1 - Z.nuit * 0.6); x.fillStyle = x.createPattern(cache.gravierNa, "repeat"); x.fillRect(L, 540, R - L, Z.B - 540); x.globalAlpha = 1;
+  [[256, 584, 30, 8], [222, 620, 34, 9], [236, 668, 38, 10], [266, 720, 44, 11], [262, 784, 50, 12]].forEach(([cx, cy, rx, ry]) => {
+    x.fillStyle = jvRgba(o("#6E6656"), 0.2 * (1 - voile)); jvOvale(x, cx + 3, cy + 3, rx, ry);
+    x.fillStyle = o("#C8C2B2"); jvOvale(x, cx, cy, rx, ry);
+    x.fillStyle = o("#DAD4C6"); jvOvale(x, cx - rx * 0.15, cy - ry * 0.2, rx * 0.75, ry * 0.6);
+  });
+  if (hs > 0 && voile < 0.6) for (let i = 0; i < 30; i++) ombreSol(170 + jvAlea(i + 4300) * 190, 580 + jvAlea(i + 4310) * 240, 12 + jvAlea(i + 4320) * 16, 3, 0.16);
+  // La neige couvre l'allée, sauf une trace piétinée au milieu
+  if (enneige) {
+    x.fillStyle = jvRgba(blanc, 0.9); x.fillRect(L, 540, R - L, Z.B - 540);
+    x.strokeStyle = jvRgba(o(P.sol), 0.75); x.lineWidth = 16; x.lineCap = "round";
+    x.beginPath(); x.moveTo(270, Z.B); x.bezierCurveTo(240, 740, 220, 660, 260, 590); x.stroke();
+    for (let i = 0; i < 14; i++) { x.fillStyle = jvRgba(o("#9AA8B8"), 0.35); jvOvale(x, 248 + (i % 2) * 14 - i * 1.2, 800 - i * 16, 3, 5); }
+  }
+  x.restore();
+  // Les bords de l'allée, adoucis par de petites touffes d'herbe et de fleurs
+  for (let i = 0; i < allee.length - 1; i++) {
+    const [a1, b1] = allee[i], [a2, b2] = allee[i + 1];
+    for (let k = 0; k < 5; k++) {
+      const u = (k + jvAlea(i * 7 + k)) / 5, px = a1 + (a2 - a1) * u, py = b1 + (b2 - b1) * u;
+      couronne(px, py, 9, 5, P.feuillage, 10, 2.4, 4380 + i * 7 + k);
+      if (P.fleur && k % 2) jvFleur(x, px, py - 3, 1.4, o(P.fleur), o(P.coeur));
+    }
+  }
+  // Les massifs de bordure de l'allée
+  massif(40, 520, 70, 50, 180, 4401, 0.7);
+  massif(60, 590, 80, 64, 220, 4400); rocher(132, 590, 30, 26, 4410);
+  massif(80, 700, 90, 60, 220, 4402, 0.5);
+  massif(390, 600, 90, 70, 240, 4420); massif(440, 700, 70, 80, 200, 4421, 0.6);
+  massif(320, 600, 56, 34, 120, 4430, 0.8); massif(330, 680, 40, 30, 90, 4431, 0.6); massif(150, 650, 30, 26, 70, 4432, 0.5);
+  if (allume > 0.2) [[210, 470], [380, 520], [240, 600], [290, 700]].forEach(([a, b]) => {
+    const g = x.createRadialGradient(a, b, 1, a, b, 24); g.addColorStop(0, `rgba(255,214,140,${(0.55 * allume).toFixed(2)})`); g.addColorStop(1, "rgba(255,214,140,0)");
+    x.fillStyle = g; x.fillRect(a - 24, b - 24, 48, 48);
+  });
+  }
+  if (Z.D) {
+  // Ce qui vit sur la mare : scintillements, nénuphars, joncs, ronds de pluie
+  x.save(); x.beginPath(); x.ellipse(280, 528, 90, 33, 0, 0, 7); x.clip();
+  // Une carpe rouge, sous la surface : elle fait des allers-retours en ligne droite,
+  // ralentit au bout et fait demi-tour. L'eau la floute et éteint ses couleurs.
+  if (!givre) {
+    const u = t * 0.12, kx = 280 + Math.cos(u) * 52, ky = 534;
+    const sens = Math.max(-1, Math.min(1, -Math.sin(u) * 4)), q = Math.sin(t * 4) * 0.3 * Math.abs(Math.sin(u));
+    const eau = c2 => jvMel(c2, "#2E7E8E", 0.22);
+    x.save(); x.translate(kx, ky); x.scale(1.4 * sens, 1.4);
+    if ("filter" in x) x.filter = "blur(1.1px)";
+    x.globalAlpha = 0.85 * (1 - Z.nuit * 0.5);
+    // Une Kohaku : robe blanche, grandes taches rouges irrégulières, tête rouge, nageoires translucides
+    const corps = () => { x.beginPath(); x.moveTo(12, 0); x.quadraticCurveTo(8, -5.5, -2, -4.5); x.quadraticCurveTo(-10, -3, -12, 0); x.quadraticCurveTo(-10, 3, -2, 4.5); x.quadraticCurveTo(8, 5.5, 12, 0); x.closePath(); };
+    x.fillStyle = jvRgba(o(eau("#F4F0E8")), 0.55);
+    jvOvale(x, 2, -6.2, 3.6, 1.6, -0.6); jvOvale(x, 2, 6.2, 3.6, 1.6, 0.6); jvOvale(x, -5, -4.4, 2.2, 1.2, -0.3); jvOvale(x, -5, 4.4, 2.2, 1.2, 0.3);
+    x.save(); x.translate(-11, 0); x.rotate(q);
+    x.fillStyle = jvRgba(o(eau("#F4F0E8")), 0.75);
+    x.beginPath(); x.moveTo(0, 0); x.quadraticCurveTo(-6, -6, -11, -7); x.quadraticCurveTo(-7, 0, -11, 7); x.quadraticCurveTo(-6, 6, 0, 0); x.fill();
+    x.fillStyle = jvRgba(o(eau("#E2482A")), 0.35); jvOvale(x, -3, -1.5, 2.5, 1.5, -0.4);
+    x.restore();
+    x.fillStyle = o(eau("#F6F2EC")); corps(); x.fill();
+    x.save(); corps(); x.clip();
+    x.fillStyle = o(eau("#E8401E"));
+    jvOvale(x, 8.2, -0.3, 4.4, 3.8, 0.1); jvOvale(x, 1, -1.6, 5.6, 3.4, 0.3); jvOvale(x, -6.5, 1.4, 4, 3, -0.4); jvOvale(x, -2, 2.8, 2.4, 1.6, 0.2);
+    x.fillStyle = jvRgba(o(eau("#B8301A")), 0.55); jvOvale(x, 1.5, -2.6, 4, 1.4, 0.3);
+    x.fillStyle = jvRgba("#FFFFFF", 0.35); jvOvale(x, 2, -3.4, 7, 1.1, 0.05);
+    x.restore();
+    x.fillStyle = o(eau("#1E1E1E")); jvRond(x, 10, -1.8, 0.7); jvRond(x, 10, 1.8, 0.7);
+    if ("filter" in x) x.filter = "none";
+    x.restore();
+  }
+  for (let i = 0; i < 12; i++) {
+    const px = 190 + ((jvAlea(i + 4500) * 180 + t * (2 + (i % 3))) % 180), py = 504 + jvAlea(i + 4503) * 50;
+    x.fillStyle = `rgba(255,255,255,${(0.2 + 0.2 * Math.sin(t * 1.6 + i)).toFixed(2)})`; x.fillRect(px, py, 8 + jvAlea(i) * 10, 1.1);
+  }
+  if (lune > 0.05) for (let i = 0; i < 5; i++) { x.fillStyle = `rgba(236,238,246,${(0.5 * lune * (1 - i / 6)).toFixed(2)})`; x.fillRect(Math.max(210, Math.min(350, lx)) - 6 + Math.sin(t * 1.3 + i) * 2, 506 + i * 10, 12 - i, 1.5); }
+  if (m.pluie) jvRonds(x, { m, t }, 280, 528, 80, 28);
+  if (!givre && nomS !== "hiver") [[230, 520], [262, 540], [300, 512], [326, 540], [246, 504]].forEach(([nx, ny], i) => {
+    const d = Math.sin(t * 0.3 + i) * 1.2;
+    x.fillStyle = o(i % 2 ? "#4E8A3E" : "#5E9A48"); x.beginPath(); x.ellipse(nx + d, ny, 13, 4.5, 0, 0.3, Math.PI * 2); x.lineTo(nx + d, ny); x.fill();
+    if (P.nenuphar && i % 2 === 0) { x.fillStyle = o("#FFFFFF"); for (let p2 = 0; p2 < 6; p2++) jvOvale(x, nx + d + Math.cos(p2 * 1.05) * 3, ny - 3 + Math.sin(p2 * 1.05) * 1.6, 2.6, 1.6, p2 * 1.05); x.fillStyle = o("#F2D04A"); jvRond(x, nx + d, ny - 3, 1); }
+  });
+  x.restore();
+  for (let i = 0; i < 22; i++) {
+    const bx = 300 + jvAlea(i + 4600) * 26, b = Math.sin(t * souffle * 1.1 + i * 0.3) * (1.5 + vt * 0.12), h = 30 + jvAlea(i + 4610) * 30;
+    x.strokeStyle = o(nomS === "automne" ? (i % 2 ? "#A89A4A" : "#8A8A3E") : nomS === "hiver" ? "#9A8A6A" : (i % 2 ? "#4E8A3A" : "#6AA04A")); x.lineWidth = 1.4;
+    x.beginPath(); x.moveTo(bx, 512); x.quadraticCurveTo(bx + b * 0.3, 512 - h * 0.6, bx + b, 512 - h); x.stroke();
+  }
+  // Des libellules : elles se posent, puis filent d'un bond vers un autre point de la mare
+  if (c.jour > 0.6 && (nomS === "ete" || nomS === "printemps") && !m.pluie && vt < 40) {
+    [["#2E6FB6", "#5E9AD6"], ["#C83A2E", "#E0603E"], ["#3E8A6E", "#6AAE8A"]].forEach(([c1, c2], i) => {
+      const u = t / 3.2 + i * 0.37, n = Math.floor(u), f = u - n, e2 = f < 0.22 ? (1 - Math.cos(Math.PI * f / 0.22)) / 2 : 1;
+      const pt = k => [190 + jvAlea(k * 3 + i * 17 + 5000) * 190, 440 + jvAlea(k * 5 + i * 17 + 5001) * 120];
+      const [ax, ay] = pt(n), [bx, by] = pt(n + 1), px = ax + (bx - ax) * e2 + Math.sin(t * 3 + i) * 1.2, py = ay + (by - ay) * e2 + Math.cos(t * 2.6 + i) * 1;
+      const dir = Math.atan2(by - ay, bx - ax), bat = f < 0.22 ? 0.4 + 0.6 * Math.abs(Math.sin(t * 40)) : 0.85 + 0.15 * Math.sin(t * 9 + i);
+      x.save(); x.translate(px, py); x.rotate(dir);
+      x.fillStyle = "rgba(225,238,250,.55)"; x.strokeStyle = "rgba(150,170,190,.4)"; x.lineWidth = 0.4;
+      [[-1.5, -1, 0.35], [-1.5, 1, -0.35], [1, -1, 0.25], [1, 1, -0.25]].forEach(([dx, sg, a]) => {
+        x.save(); x.translate(dx, 0); x.rotate(sg * (Math.PI / 2 - a)); x.scale(1, bat);
+        x.beginPath(); x.ellipse(0, -6.5, 1.8, 6.5, 0, 0, 7); x.fill(); x.stroke(); x.restore();
+      });
+      x.strokeStyle = c1; x.lineWidth = 1.6; x.lineCap = "round"; jvTrait(x, -2, 0, -15, 0);
+      x.fillStyle = c2; jvOvale(x, 0.5, 0, 3, 1.8); x.fillStyle = c1; jvRond(x, 3.4, 0, 1.6);
+      x.restore();
+    });
+  }
+  // Le premier plan : lavande à gauche, fougères à droite, massifs fleuris dans les coins
+  lavande(80, 800, 210, 150, 4700, 3.6);
+  massif(40, 820, 70, 34, 140, 4710);
+  for (let i = 0; i < 12; i++) fronde(380 + jvAlea(i + 4800) * 40, Z.B, 210 + jvAlea(i + 4810) * 90, -Math.PI / 2 - 1.1 + i * 0.17, P.fougere, 4820 + i);
+  massif(450, 760, 50, 90, 160, 4830);
+  if (P.chute) for (let i = 0; i < 14; i++) { x.fillStyle = o(P.chute[i % P.chute.length]); jvOvale(x, 200 + jvAlea(i * 7 + 4900) * 150, 600 + jvAlea(i * 5 + 4901) * 200, 2.6, 1.5, i); }
+  // La branche en fleur du coin haut droit : feuilles lustrées, fleurs étoilées
+  {
+    const bal = Math.sin(t * souffle * 0.45) * (0.006 + vt * 0.0005);
+    x.save(); x.translate(R + 10, 120); x.rotate(bal); x.translate(-R - 10, -120);
+    const boisN = [
+      [[R + 10, 40, R - 60, 50, R - 120, 30, R - 190, 10], 7], [[R - 60, 48, R - 48, 90, R - 44, 124, R - 40, 160], 4.4],
+      [[R - 120, 34, R - 130, 56, R - 140, 72, R - 150, 90], 3.6], [[R - 40, 140, R - 50, 170, R - 60, 200, R - 70, 230], 3.6],
+      [[R - 30, 130, R - 16, 152, R - 4, 176, R + 10, 200], 3.2],
+    ];
+    [[R - 190, 10, -2.8, 20], [R - 150, 90, 2.0, 18], [R - 70, 230, 1.9, 18], [R + 10, 200, 1.1, 14], [R - 40, 160, 2.3, 16], [R - 100, 36, -2.2, 14]]
+      .forEach(([px, py, a, l], i) => rameaux(px, py, a, l, 2, 5040 + i * 13, boisN, 3));
+    ramure(boisN, "#6A5040");
+    // Les pousses : au bout de chaque rameau, et semées le long de la ramure
+    const pousses = [];
+    boisN.forEach(([c, w]) => { if (w < 2) pousses.push([c[c.length - 2], c[c.length - 1]]); });
+    for (let i = 0; i < 40; i++) { const u = jvAlea(i + 5000), v = jvAlea(i + 5001); pousses.push([R - 230 + u * 240, -10 + v * (60 + u * 230)]); }
+    pousses.forEach(([px, py], i) => {
+      const fl = Math.sin(t * souffle * 1.4 + i) * (1 + vt * 0.06);
+      for (let k = 0; k < (nomS === "hiver" ? 2 : 4); k++) {
+        const a = jvAlea(i * 11 + k) * 6.28, fx = px + Math.cos(a) * 12 + fl, fy = py + Math.sin(a) * 9;
+        const coul = nomS === "automne" ? ["#C89A3A", "#D8B456", "#8A9A44", "#B8762E"][k] : nomS === "hiver" ? ["#3E5A34", "#4E6A3E"][k % 2] : ["#3E7A34", "#4E8E3E", "#2E6228", "#5E9A48"][k];
+        x.fillStyle = o(coul); jvOvale(x, fx + Math.cos(a) * 4, fy + Math.sin(a) * 4, 16, 6.5, a);
+        x.fillStyle = jvRgba(o("#E8F2D8"), 0.3); jvOvale(x, fx + Math.cos(a) * 2, fy + Math.sin(a) * 2 - 1.5, 9, 1.8, a);
+      }
+      if (P.fleur && i % 2 === 0) {
+        const fx = px + fl, fy = py;
+        // Une fleur étoilée : cinq pétales en pointe, ombrés au centre, et ses étamines
+        for (let p2 = 0; p2 < 5; p2++) {
+          const ap = p2 * 1.257 + i * 0.7, cs = Math.cos(ap), sn = Math.sin(ap);
+          x.fillStyle = o(P.fleur);
+          x.beginPath(); x.moveTo(fx, fy); x.quadraticCurveTo(fx + cs * 8 - sn * 5.5, fy + sn * 8 + cs * 5.5, fx + cs * 14, fy + sn * 14);
+          x.quadraticCurveTo(fx + cs * 8 + sn * 5.5, fy + sn * 8 - cs * 5.5, fx, fy); x.fill();
+          x.strokeStyle = jvRgba(o("#D8D2C0"), 0.7); x.lineWidth = 0.7; jvTrait(x, fx, fy, fx + cs * 9, fy + sn * 9);
+        }
+        x.fillStyle = o(P.coeur); jvRond(x, fx, fy, 2.6);
+        x.fillStyle = o("#E8B02E"); for (let e2 = 0; e2 < 6; e2++) jvRond(x, fx + Math.cos(e2) * 3.6, fy + Math.sin(e2) * 3.6, 0.9);
+      }
+      if (P.baies && i % 3 === 0) { x.fillStyle = o(P.baies); jvRond(x, px + fl + 4, py + 6, 2.6); jvRond(x, px + fl - 2, py + 9, 2.4); }
+      if (enneige && i % 2) { x.fillStyle = jvRgba(blanc, 0.92); x.beginPath(); x.ellipse(px + fl, py - 2, 11, 4, 0, Math.PI, 0); x.fill(); }
+    });
+    x.restore();
+  }
+  jvFinScene(x, Z);
+  } else x.restore();
+  return c;
+}
+
+/* ---------- Le style jardin japonais ----------
+   D'après la sixième planche de Jérôme, sans ses cyprès : un bosquet de
+   bambous et de petits pins taillés en nuages les remplacent. Une branche de
+   cerisier en haut à droite, un érable rouge à gauche, un grand pin taillé en
+   plateaux à droite ; le mont et la mer ; une lanterne de pierre, un étang et
+   ses pas japonais, des rochers moussus, des iris au premier plan. */
+const JJA = {
+  printemps: { ciel: ["#8EC2EA", "#D8E8F2"], mont: "#7E8EBE", erable: ["#E84A3A", "#F2644A", "#C8342A", "#F07C5A"], pin: ["#4E8A3A", "#6AA048", "#3E7230"],
+    bambou: ["#7AA650", "#92BA62", "#5E8C3E"], mousse: ["#7AAE4A", "#8EC05A", "#6A9A3E"], buis: ["#5E9A42", "#76AE52", "#4A8236"],
+    rameau: "fleur", fleur: ["#F6C4D2", "#FAD8E2", "#EEA8BE"], fleurette: "#FFFFFF", iris: ["#6A5ACC", "#8A7CDC", "#4E40A8"], irisFleur: true,
+    eau: ["#6AB4D2", "#A2D2E2"], sol: "#E6E2D6", chute: ["#F6C4D2", "#FAD8E2"] },
+  ete: { ciel: ["#74B0E6", "#D2E4F2"], mont: "#7488B8", erable: ["#6AA03E", "#82B44E", "#548A32", "#94C25E"], pin: ["#3E7A30", "#5A9440", "#2E6226"],
+    bambou: ["#6A9A44", "#84B056", "#507E34"], mousse: ["#6AA03E", "#7EB24E", "#5A8E34"], buis: ["#4E8A36", "#66A046", "#3E7228"],
+    rameau: "feuille", feuille: ["#5E9A42", "#76AE52", "#4A8236"], fleurette: "#FFFFFF", iris: ["#5A4AC0", "#7A6CD4", "#40329C"], irisFleur: true,
+    eau: ["#5AAED2", "#96CEE2"], sol: "#E6E2D6" },
+  automne: { ciel: ["#E6C6A0", "#F4E4CE"], mont: "#9A90AC", erable: ["#E23A22", "#F05A2A", "#C8281A", "#F2862E"], pin: ["#4A7A36", "#5E8E44", "#3A6A2C"],
+    bambou: ["#9AA44E", "#B0B460", "#7E8A3E"], mousse: ["#9A9A4A", "#B0A858", "#82843E"], buis: ["#5E7E3A", "#76904A", "#4A6A2E"],
+    rameau: "feuille", feuille: ["#E06A2A", "#F08A34", "#C8461E", "#D8A03A"], fleurette: null, iris: ["#B8A060", "#C8B070"], irisFleur: false,
+    eau: ["#7AA8C0", "#B0CCD8"], sol: "#E4DED0", chute: ["#E23A22", "#F05A2A", "#F2862E"] },
+  hiver: { ciel: ["#A8C2DC", "#E2E8EE"], mont: "#98A2BC", erable: null, pin: ["#3A5E36", "#4A7042", "#2E4E2A"],
+    bambou: ["#6E8A56", "#82A066", "#5A7446"], mousse: ["#7E8E6A", "#8E9E7A", "#6E7E5E"], buis: ["#4A6A40", "#5A7A4E", "#3A5A34"],
+    rameau: "nu", fleurette: null, iris: ["#8A8A70", "#9A9A80"], irisFleur: false, eau: ["#6E94B0", "#A2BCCE"], sol: "#ECEAE4" },
+};
+function peindreJaponais(x, W, H, t, etat, cache) {
+  const Z = jvScene(x, W, H, t, etat, JJA[etat.saison]);
+  const { nomS, P, hs, c, m, vent, souffle, o, allume, L, R, blanc, haut, bas, voile, lune, lx, neige } = Z;
+  const { rect, poly, couronne } = Z.outils;
+  const vt = Math.min(vent, 60), givre = nomS === "hiver" && (etat.gel || neige);
+  const ombreSol = (cx, cy, rx, ry, a = 0.2) => { x.fillStyle = jvRgba(o("#2E3A2A"), a * (1 - voile)); jvOvale(x, cx, cy, rx, ry); };
+  // Un dôme de mousse ou de buis taillé : ombre, masse, petites feuilles éclairées, fleurettes.
+  const dome = (cx, cy, rx, ry, cols, n, g0, fleurs = 0) => {
+    ombreSol(cx + rx * 0.2, cy + ry * 0.8, rx * 1.05, ry * 0.25, 0.2);
+    const gd = x.createRadialGradient(cx - rx * 0.3, cy - ry * 0.5, 2, cx, cy, Math.max(rx, ry));
+    gd.addColorStop(0, o(jvMel(cols[1], "#F6F4C8", 0.25))); gd.addColorStop(0.7, o(cols[0])); gd.addColorStop(1, o(cols[2]));
+    x.fillStyle = gd; x.beginPath(); x.ellipse(cx, cy, rx, ry, 0, Math.PI, 0); x.lineTo(cx + rx, cy + ry * 0.35); x.lineTo(cx - rx, cy + ry * 0.35); x.closePath(); x.fill();
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI + jvAlea(i + g0) * Math.PI, d = Math.sqrt(jvAlea(i * 3 + g0)), px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d;
+      x.fillStyle = o(jvMel(cols[i % 3], (cy - py) / ry > 0.4 ? "#F6F4C8" : "#1E2A14", 0.2)); jvRond(x, px, py, 1.5);
+    }
+    if (fleurs && P.fleurette) for (let i = 0; i < fleurs; i++) { const a = Math.PI + jvAlea(i + g0 + 0.5) * Math.PI, d = Math.sqrt(jvAlea(i * 7 + g0)) * 0.9; jvFleur(x, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d, 1.5, o(P.fleurette), o("#F2D04A")); }
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.9); x.beginPath(); x.ellipse(cx, cy - ry * 0.15, rx * 0.95, ry * 0.85, 0, Math.PI, 0); x.fill(); }
+  };
+  // Un rocher gris, arrondi, sa face claire et sa mousse.
+  const rocher = (cx, cy, w, h, g0, mousse = true) => {
+    ombreSol(cx + w * 0.25, cy + h * 0.45, w * 0.9, h * 0.22, 0.25);
+    const gr = x.createLinearGradient(cx - w, cy - h, cx + w, cy + h); gr.addColorStop(0, o("#C8C6BE")); gr.addColorStop(1, o("#8E8C84"));
+    x.fillStyle = gr; x.beginPath();
+    for (let i = 0; i <= 12; i++) { const a = Math.PI + i / 12 * Math.PI; x.lineTo(cx + Math.cos(a) * w * (0.9 + jvAlea(i + g0) * 0.15), cy + Math.sin(a) * h * (0.85 + jvAlea(i + g0 + 0.3) * 0.2)); }
+    x.lineTo(cx + w, cy + h * 0.4); x.lineTo(cx - w, cy + h * 0.4); x.closePath(); x.fill();
+    for (let i = 0; i < w * h / 20; i++) { x.fillStyle = jvRgba(o(i % 2 ? "#E2E0D8" : "#76746C"), 0.4); jvRond(x, cx + (jvAlea(i + g0) - 0.5) * w * 1.6, cy - jvAlea(i * 3 + g0) * h * 0.8, 0.9); }
+    if (mousse) { x.fillStyle = o(P.mousse[0]); x.beginPath(); x.ellipse(cx - w * 0.1, cy + h * 0.25, w * 0.85, h * 0.25, 0, Math.PI, 0); x.fill(); }
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.9); jvOvale(x, cx - w * 0.1, cy - h * 0.75, w * 0.6, h * 0.2); }
+  };
+  // Un pied de bambou : chaume à nœuds, plumets de feuilles fines, qui se balance par le haut.
+  const bambou = (bx, by, h, g0, loin = 0) => {
+    const P0 = P; const Pb = loin ? { bambou: P.bambou.map(cc => jvMel(cc, bas, loin)) } : P;
+    const b = Math.sin(t * souffle * 0.6 + g0) * (3 + vt * 0.25), tx = bx + b, ty = by - h, mx = bx + b * 0.3, my = by - h * 0.55;
+    x.strokeStyle = o(Pb.bambou[2]); x.lineWidth = 3.2; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(mx, my, tx, ty); x.stroke();
+    x.strokeStyle = o(jvMel(Pb.bambou[2], "#1E2A14", 0.3)); x.lineWidth = 3.6;
+    for (let k = 1; k < 8; k++) { const u = k / 8, it = 1 - u, px = it * it * bx + 2 * it * u * mx + u * u * tx, py = it * it * by + 2 * it * u * my + u * u * ty; jvTrait(x, px - 2, py, px + 2, py); }
+    for (let k = 3; k < 9; k++) {
+      const u = k / 9, it = 1 - u, px = it * it * bx + 2 * it * u * mx + u * u * tx, py = it * it * by + 2 * it * u * my + u * u * ty, sg = k % 2 ? 1 : -1;
+      for (let f = 0; f < 4; f++) { const a = (sg > 0 ? 0.2 : Math.PI - 0.2) + (f - 1.5) * 0.25 * sg + 0.5; x.fillStyle = o(Pb.bambou[(f + k) % 2]); jvOvale(x, px + Math.cos(a) * 9, py + Math.sin(a) * 6, 9, 1.8, a); }
+    }
+  };
+  // Un plateau de pin taillé : nuage aplati de touffes d'aiguilles.
+  const plateau = (cx, cy, rx, ry, g0) => {
+    x.fillStyle = o(jvMel(P.pin[2], "#10200E", 0.25)); jvOvale(x, cx, cy + ry * 0.2, rx, ry * 0.8);
+    for (let i = 0; i < rx * 2.4; i++) {
+      const a = jvAlea(i + g0) * 6.28, d = Math.sqrt(jvAlea(i * 3 + g0)), px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d * 0.9;
+      x.fillStyle = o(jvMel(P.pin[i % 3], py < cy ? "#F2F4C8" : "#10200E", Math.min(0.35, Math.abs(py - cy) / ry * 0.35))); jvOvale(x, px, py, 4, 2.4, a * 0.2);
+    }
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.92); x.beginPath(); x.ellipse(cx, cy - ry * 0.2, rx * 0.95, ry * 0.75, 0, Math.PI, 0); x.fill(); }
+  };
+
+  /* La ramure : des courbes de bois, chacune avec son côté ombré, puis, s'il a
+     neigé, une couche de neige posée sur le dessus de chaque courbe et de petits
+     amas aux fourches. Une courbe vaut [points, épaisseur] : quatre points pour un
+     segment, six pour une courbe simple, huit pour une courbe double. */
+  const trace = c => { x.beginPath(); x.moveTo(c[0], c[1]); if (c.length === 4) x.lineTo(c[2], c[3]); else if (c.length === 6) x.quadraticCurveTo(c[2], c[3], c[4], c[5]); else x.bezierCurveTo(c[2], c[3], c[4], c[5], c[6], c[7]); };
+  const ramure = (courbes, col) => {
+    x.lineCap = "round";
+    courbes.forEach(([c, w]) => { x.strokeStyle = o(col); x.lineWidth = w; trace(c); x.stroke(); });
+    courbes.forEach(([c, w]) => { if (w < 2) return; x.save(); x.translate(w * 0.18, w * 0.22); x.strokeStyle = jvRgba(o("#24140C"), 0.35); x.lineWidth = w * 0.4; trace(c); x.stroke(); x.restore(); });
+    if (!givre) return;
+    courbes.forEach(([c, w]) => {
+      // Les brindilles trop fines ne portent pas de neige : elles en paraîtraient toutes blanches.
+      // La neige tient sur le bois couché, pas sur le bois dressé.
+      const dx = c[c.length - 2] - c[0], dy = c[c.length - 1] - c[1], couche = Math.abs(dx) / (Math.hypot(dx, dy) || 1);
+      if (w < 1.4 || couche < 0.4) return;
+      x.save(); x.translate(0, -w * 0.42); x.strokeStyle = jvRgba(blanc, 0.96); x.lineWidth = w * 0.6 * Math.min(1, couche * 1.3); trace(c); x.stroke(); x.restore();
+      if (w >= 3) { x.fillStyle = jvRgba(blanc, 0.96); jvOvale(x, c[0], c[1] - w * 0.5, w * 0.9, w * 0.45); }
+    });
+  };
+  // Des rameaux fourchus au bout d'une branche, de plus en plus fins.
+  const rameaux = (x0, y0, ang, len, ep, g, out, prof = 3, d = 0) => {
+    const a = ang + (jvAlea(g) - 0.5) * 0.45, x1 = x0 + Math.cos(a) * len, y1 = y0 + Math.sin(a) * len;
+    const pli = (jvAlea(g + 0.5) - 0.5) * len * 0.3;
+    out.push([[x0, y0, (x0 + x1) / 2 - Math.sin(a) * pli, (y0 + y1) / 2 + Math.cos(a) * pli, x1, y1], ep]);
+    if (d >= prof) return;
+    rameaux(x1, y1, a - 0.42, len * 0.72, ep * 0.66, g * 2 + 1, out, prof, d + 1);
+    rameaux(x1, y1, a + 0.38, len * 0.68, ep * 0.62, g * 2 + 2, out, prof, d + 1);
+  };
+
+  if (Z.F) {
+  // Le mont et la mer
+  poly([[L, 392], [120, 380], [180, 340], [226, 308], [262, 334], [300, 352], [360, 362], [R, 372], [R, 420], [L, 420]], o(jvMel(P.mont, bas, 0.2)));
+  if (nomS === "hiver" || etat.temps === "neige") poly([[206, 322], [226, 308], [244, 320], [234, 326], [222, 318], [212, 328]], jvRgba(blanc, 0.92));
+  poly([[L, 400], [140, 386], [220, 380], [300, 384], [R, 388], [R, 430], [L, 430]], o(jvMel(P.mont, bas, 0.45)));
+  // La forêt au pied du mont : deux plans de cèdres en pointe et de feuillus ronds,
+  // voilés par la distance ; elle rougit à l'automne et se givre l'hiver.
+  {
+    const vert = ["#3E6A40", "#4E7A48", "#2E5A36", "#5E8A50"], roux = ["#C8642E", "#D8943A", "#A8502A", "#4E6A40"];
+    const cols = nomS === "automne" ? roux : nomS === "printemps" ? ["#5E8E48", "#76A456", "#4A7A3E", "#E2B8C8"] : vert;
+    [[376, 0.38, 30, 7000], [400, 0.16, 38, 7100]].forEach(([base, voileF, taille, g0]) => {
+      const n = Math.ceil((R - L) / (taille * 0.55));
+      for (let i = 0; i < n; i++) {
+        const tx = L + i * taille * 0.55 + (jvAlea(i + g0) - 0.5) * 8, h = taille * (0.8 + jvAlea(i + g0 + 0.3) * 0.6), by = base + jvAlea(i + g0 + 0.6) * 8;
+        const col = o(jvMel(jvMel(cols[i % cols.length], cols[0], nomS === "automne" ? 0 : 0.0), bas, voileF));
+        x.fillStyle = col;
+        if (jvAlea(i + g0 + 0.9) < 0.55) {
+          // Un cèdre : une flèche aux flancs légèrement bombés
+          x.beginPath(); x.moveTo(tx - h * 0.32, by + 4); x.quadraticCurveTo(tx - h * 0.3, by - h * 0.5, tx, by - h * 1.1); x.quadraticCurveTo(tx + h * 0.3, by - h * 0.5, tx + h * 0.32, by + 4); x.fill();
+        } else {
+          // Un feuillu : une couronne de bosses
+          for (let k2 = 0; k2 < 3; k2++) jvRond(x, tx + (k2 - 1) * h * 0.22, by - h * 0.45 - (k2 === 1 ? h * 0.15 : 0), h * 0.32);
+          jvOvale(x, tx, by - h * 0.15, h * 0.48, h * 0.3);
+        }
+        if (nomS === "hiver") { x.fillStyle = jvRgba(blanc, 0.55); jvOvale(x, tx, by - h * 0.8, h * 0.14, h * 0.08); }
+      }
+      // Une brume légère entre les deux plans
+      const gb = x.createLinearGradient(0, base - taille, 0, base + 10); gb.addColorStop(0, jvRgba(bas, 0)); gb.addColorStop(1, jvRgba(bas, 0.22));
+      x.fillStyle = gb; x.fillRect(L, base - taille, R - L, taille + 10);
+    });
+  }
+  const gm = x.createLinearGradient(0, 408, 0, 430); gm.addColorStop(0, o(jvMel("#4E86C4", bas, 0.3))); gm.addColorStop(1, o("#3E78B8"));
+  x.fillStyle = gm; x.fillRect(L, 408, R - L, 22);
+  // Les massifs du fond, de petits pins taillés au loin à la place des cyprès
+  rect(L, 420, R - L, 80, o(jvMel(P.buis[0], bas, 0.2)));
+  // Le sol du jardin, sous tout le reste : une pelouse de mousse
+  rect(L, 486, R - L, Z.B - 486, o(jvMel(P.mousse[0], "#1E3018", 0.12)));
+  for (let i = 0; i < Math.ceil((R - L) / 34); i++) couronne(L + i * 34 + jvAlea(i + 6000) * 12, 430 + jvAlea(i + 6001) * 16, 24, 16, P.buis.map(cc => jvMel(cc, bas, 0.22)), 18, 5, 6010 + i);
+  [[150, 412], [118, 424], [300, 418]].forEach(([cx, cy], i) => {
+    x.strokeStyle = o(jvMel("#6E4E36", bas, 0.25)); x.lineWidth = 2; jvTrait(x, cx, cy + 18, cx, cy - 14);
+    [[0, -14, 12], [-8, -2, 9], [8, 2, 9]].forEach(([dx, dy, r]) => { x.fillStyle = o(jvMel(P.pin[0], bas, 0.25)); jvOvale(x, cx + dx, cy + dy, r, r * 0.45); });
+  });
+  // Le muret de pierre et la terrasse du fond
+  rect(124, 452, 132, 26, o("#DCD8CE")); rect(124, 452, 132, 3, o("#F2F0EA")); rect(124, 478, 200, 10, o("#E8E4D8"));
+  if (givre) rect(124, 448, 132, 5, blanc);
+  // Le grand pin taillé de droite
+  {
+    x.strokeStyle = o("#6E4A32"); x.lineCap = "round";
+    x.lineWidth = 10; x.beginPath(); x.moveTo(392, 470); x.bezierCurveTo(400, 430, 380, 400, 392, 340); x.stroke();
+    x.lineWidth = 5; jvTrait(x, 390, 420, 330, 400); jvTrait(x, 392, 400, 440, 386); jvTrait(x, 388, 370, 352, 364); jvTrait(x, 392, 360, 420, 340);
+    [[392, 330, 44, 14], [348, 360, 42, 13], [430, 346, 34, 12], [322, 400, 44, 14], [448, 388, 38, 13], [384, 410, 34, 12]].forEach(([cx, cy, rx, ry], i) => plateau(cx, cy, rx, ry, 6100 + i));
+  }
+  // Les buissons du milieu
+  dome(30, 500, 46, 30, P.buis, 160, 6200, 6); dome(186, 498, 48, 26, P.buis, 140, 6210, 10); dome(330, 492, 40, 24, P.buis, 120, 6220, 8);
+  dome(240, 500, 30, 18, P.buis, 80, 6230, 6);
+  // L'étang : son eau et le reflet du fond
+  const etang = [[L, 512], [80, 508], [200, 514], [300, 506], [380, 512], [R, 520], [R, 700], [380, 708], [280, 690], [180, 670], [80, 640], [L, 620]];
+  const ge = x.createLinearGradient(0, 506, 0, 700); ge.addColorStop(0, o(jvMel(P.eau[0], haut, 0.15))); ge.addColorStop(1, o(P.eau[1]));
+  x.fillStyle = ge; x.beginPath(); etang.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill();
+  x.save(); x.beginPath(); etang.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+  {
+    const T = x.getTransform(), p0 = T.transformPoint({ x: L, y: 300 }), p1 = T.transformPoint({ x: R, y: 508 }), q = T.transformPoint({ x: L, y: 508 }), q1 = T.transformPoint({ x: L, y: 680 });
+    const sx = Math.max(0, p0.x), sw = Math.min(x.canvas.width, p1.x) - sx, sh = p1.y - p0.y, n = 16, hb = sh / n, hd = (q1.y - q.y) / n;
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = givre ? 0.3 : 0.45;
+    for (let i = 0; i < n; i++) { x.save(); x.translate(0, q.y + (i + 1) * hd); x.scale(1, -1); x.drawImage(x.canvas, sx, p1.y - (i + 1) * hb, sw, hb, sx, 0, sw, hd + 0.5); x.restore(); }
+    x.restore();
+    x.fillStyle = jvRgba(o(P.eau[0]), 0.3); x.fillRect(L, 500, R - L, 210);
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.3); x.fillRect(L, 500, R - L, 210); }
+  }
+  x.restore();
+  // Les rochers de la rive
+  rocher(56, 508, 32, 24, 6300); rocher(120, 516, 22, 10, 6310, false); rocher(186, 512, 26, 18, 6320); rocher(206, 520, 26, 8, 6330, false);
+  rocher(372, 512, 30, 24, 6340); rocher(300, 518, 22, 10, 6350, false);
+  // La lanterne de pierre
+  x.save(); x.translate(420, 560); x.scale(1.35, 1.35); x.translate(-420, -560);
+  {
+    const tx = 420, ty = 560, p = o("#BEBAB0"), pc = o("#D8D4CA");
+    ombreSol(tx + 16, ty + 4, 26, 5, 0.25);
+    rocher(tx - 4, ty + 4, 24, 14, 6360);
+    x.fillStyle = p; x.fillRect(tx - 9, ty - 50, 18, 46); x.fillStyle = pc; x.fillRect(tx - 9, ty - 50, 7, 46);
+    x.fillStyle = p; x.fillRect(tx - 18, ty - 58, 36, 8);
+    x.fillStyle = pc; x.fillRect(tx - 15, ty - 86, 30, 28); x.fillStyle = o(jvMel("#3A3A36", "#F4C46A", allume)); x.fillRect(tx - 7, ty - 80, 14, 14);
+    if (allume > 0.05) { const gl = x.createRadialGradient(tx, ty - 73, 2, tx, ty - 73, 44); gl.addColorStop(0, `rgba(246,196,106,${(0.5 * allume).toFixed(2)})`); gl.addColorStop(1, "rgba(246,196,106,0)"); x.fillStyle = gl; x.fillRect(tx - 44, ty - 117, 88, 88); }
+    x.fillStyle = p; x.beginPath(); x.moveTo(tx - 30, ty - 86); x.quadraticCurveTo(tx, ty - 94, tx + 30, ty - 86); x.lineTo(tx + 12, ty - 104); x.lineTo(tx - 12, ty - 104); x.closePath(); x.fill();
+    x.fillStyle = pc; jvRond(x, tx, ty - 108, 6);
+    if (givre) { x.fillStyle = blanc; x.beginPath(); x.ellipse(tx, ty - 98, 26, 7, 0, Math.PI, 0); x.fill(); }
+  }
+  x.restore();
+  dome(440, 600, 44, 44, P.buis, 180, 6370, 14); dome(396, 642, 36, 24, P.mousse, 90, 6380, 6);
+  // Le gravier ratissé en bas à droite, et la rive moussue
+  poly([[300, 720], [R, 700], [R, Z.B], [300, Z.B]], o(P.sol));
+  x.strokeStyle = jvRgba(o("#C8C2B4"), 0.7); x.lineWidth = 1; for (let k = 0; k < 10; k++) jvTrait(x, 300, 726 + k * 10, R, 706 + k * 10);
+  poly([[L, 640], [80, 660], [200, 690], [300, 724], [300, Z.B], [L, Z.B]], o(jvMel(P.mousse[0], "#1E3018", 0.1)));
+  // Les pas japonais, en diagonale à travers l'étang
+  [[262, 568, 50, 10], [304, 598, 56, 11], [372, 630, 60, 13], [390, 662, 66, 14], [334, 700, 62, 14]].forEach(([cx, cy, rx, ry], i) => {
+    x.fillStyle = jvRgba(o("#1E4A5A"), 0.3); jvOvale(x, cx + 3, cy + ry * 0.8, rx * 1.02, ry * 0.7);
+    x.fillStyle = o("#9A988E"); jvOvale(x, cx, cy + 3, rx, ry);
+    x.fillStyle = o("#C2C0B6"); jvOvale(x, cx, cy, rx, ry);
+    x.fillStyle = jvRgba(o(P.mousse[0]), 0.7); jvOvale(x, cx - rx * 0.4, cy + ry * 0.2, rx * 0.35, ry * 0.4);
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.9); jvOvale(x, cx, cy - 1, rx * 0.85, ry * 0.7); }
+  });
+  // Les dômes de mousse et le grand rocher du premier plan
+  dome(200, 740, 80, 46, P.mousse, 220, 6400, 18); dome(330, 790, 70, 44, P.mousse, 200, 6410); rocher(250, 820, 100, 46, 6420);
+  if (hs > 0 && voile < 0.6) for (let i = 0; i < 16; i++) ombreSol(320 + jvAlea(i + 6500) * 140, 712 + jvAlea(i + 6510) * 80, 12 + jvAlea(i + 6520) * 14, 3, 0.12);
+  }
+  if (Z.D) {
+  // Ce qui vit sur l'étang : scintillements, ronds, pétales ou feuilles qui flottent
+  x.save(); x.beginPath(); x.rect(L, 512, R - L, 190); x.clip();
+  for (let i = 0; i < 18; i++) {
+    const px = L + ((jvAlea(i + 6600) * (R - L) + t * (2 + (i % 3))) % (R - L)), py = 520 + jvAlea(i + 6603) * 170;
+    x.fillStyle = `rgba(255,255,255,${(0.22 + 0.2 * Math.sin(t * 1.6 + i)).toFixed(2)})`; x.fillRect(px, py, 10 + jvAlea(i) * 12, 1.1);
+  }
+  if (lune > 0.05) for (let i = 0; i < 7; i++) { x.fillStyle = `rgba(236,238,246,${(0.5 * lune * (1 - i / 8)).toFixed(2)})`; x.fillRect(Math.max(40, Math.min(420, lx)) - 7 + Math.sin(t * 1.3 + i) * 2, 524 + i * 12, 14 - i, 1.5); }
+  if (m.pluie) jvRonds(x, { m, t }, 180, 600, 160, 60);
+  if (P.chute && !givre) for (let i = 0; i < 26; i++) {
+    const fx = (jvAlea(i + 6700) * 360 + Math.sin(t * 0.15 + i) * 8 + t * 1.5) % 360, fy = 530 + jvAlea(i + 6701) * 150;
+    x.fillStyle = o(P.chute[i % P.chute.length]); if (nomS === "automne") jvMomiji(x, fx, fy, 3.6, i); else jvOvale(x, fx, fy, 2.6, 1.5, i);
+  }
+  x.restore();
+  // Les bambous, au fond à gauche, à la place des cyprès de la planche
+  for (let i = 0; i < 18; i++) bambou(-14 + i * 10 + jvAlea(i + 6840) * 8, 478, 200 + jvAlea(i + 6841) * 110, 6845 + i, 0.4);
+  for (let i = 0; i < 16; i++) bambou(-10 + i * 11 + jvAlea(i + 6850) * 8, 490, 180 + jvAlea(i + 6851) * 120, 6860 + i, 0);
+  // L'érable du Japon, à gauche : tronc souple, étages de feuilles étoilées
+  {
+    const bal = Math.sin(t * souffle * 0.4) * (0.004 + vt * 0.0005);
+    x.save(); x.translate(30, 506); x.rotate(bal); x.translate(-30, -506);
+    // Un tronc qui se couche vers l'étang, des branches presque horizontales au-dessus de l'eau,
+    // qui se divisent en rameaux puis en brindilles
+    const bois = [
+      [[30, 506, 50, 480, 80, 466, 120, 464], 10], [[110, 466, 160, 466, 210, 486, 262, 520], 6.5],
+      [[70, 474, 60, 456, 62, 430], 4.5], [[130, 466, 150, 452, 172, 444], 4.2], [[190, 482, 216, 506, 236, 540], 4],
+      [[50, 486, 26, 476, 0, 468], 4], [[160, 470, 170, 456, 184, 440], 3], [[226, 500, 246, 492, 266, 486], 3],
+    ];
+    [[62, 430, -1.75, 22], [172, 444, -0.5, 22], [262, 520, 0.45, 20], [236, 540, 1.1, 16], [0, 468, -2.8, 18], [184, 440, -1.3, 16], [266, 486, -0.3, 16], [96, 466, -1.9, 16]]
+      .forEach(([px, py, a, l], i) => rameaux(px, py, a, l, 2.4, 7400 + i * 13, bois, 3));
+    ramure(bois, "#5A3E2E");
+    // Les étages de feuilles, plus des bouquets au bout de chaque rameau
+    const etages = [[60, 438, 70, 30], [146, 448, 70, 28], [236, 504, 56, 24], [10, 462, 44, 24], [104, 472, 60, 22], [196, 530, 44, 18]];
+    bois.forEach(([c, w], j) => { if (w < 1.2 && j % 2 === 0) etages.push([c[c.length - 2], c[c.length - 1], 18, 11]); });
+    if (P.erable) etages.forEach(([cx, cy, rx, ry], i) => {
+      for (let k = 0; k < (rx > 30 ? 230 : 34); k++) {
+        const a = jvAlea(k + i * 71 + 6800) * 6.28, d = Math.sqrt(jvAlea(k * 3 + i * 71 + 6800)), px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d;
+        const fl = Math.sin(t * souffle * 1.3 + k * 0.3 + i) * (0.6 + vt * 0.04);
+        x.fillStyle = o(jvMel(P.erable[k % 4], py < cy ? "#FFE8C8" : "#3A0A06", Math.min(0.3, Math.abs(py - cy) / ry * 0.3))); jvMomiji(x, px + fl, py, 6, jvAlea(k + i) * 2);
+      }
+    });
+    x.restore();
+  }
+  // Les iris du premier plan : feuilles en lames, fleurs violettes au cœur jaune
+  for (let i = 0; i < 26; i++) {
+    const bx = 10 + jvAlea(i + 6900) * 160, a = -Math.PI / 2 + (jvAlea(i + 6901) - 0.5) * 0.9, Ln = 120 + jvAlea(i + 6902) * 110;
+    const b = Math.sin(t * souffle + i * 0.3) * (2 + vt * 0.14), tx = bx + Math.cos(a) * Ln + b, ty = Z.B + Math.sin(a) * Ln;
+    x.fillStyle = o(i % 3 ? "#4E8A36" : "#6AA046");
+    x.beginPath(); x.moveTo(bx - 4, Z.B); x.quadraticCurveTo(bx + Math.cos(a) * Ln * 0.5 - 3, Z.B + Math.sin(a) * Ln * 0.5, tx, ty); x.quadraticCurveTo(bx + Math.cos(a) * Ln * 0.5 + 3, Z.B + Math.sin(a) * Ln * 0.5, bx + 4, Z.B); x.fill();
+  }
+  if (P.irisFleur) [[24, 650], [70, 640], [56, 690], [118, 700], [30, 720], [150, 660]].forEach(([fx, fy], i) => {
+    const b = Math.sin(t * souffle * 1.1 + i) * (2 + vt * 0.14);
+    x.strokeStyle = o("#4E8A36"); x.lineWidth = 2; jvTrait(x, fx, Z.B, fx + b, fy + 10);
+    const cx = fx + b, cy = fy;
+    x.save(); x.translate(cx, cy); x.scale(1.45, 1.45); x.translate(-cx, -cy);
+    x.fillStyle = o(P.iris[0]); jvOvale(x, cx - 9, cy + 6, 6, 11, 0.6); jvOvale(x, cx + 9, cy + 6, 6, 11, -0.6); jvOvale(x, cx, cy + 10, 6, 11);
+    x.fillStyle = o(P.iris[1]); jvOvale(x, cx - 4, cy - 6, 4, 9, -0.3); jvOvale(x, cx + 4, cy - 6, 4, 9, 0.3);
+    x.fillStyle = o("#FFFFFF"); jvOvale(x, cx, cy + 6, 2, 5); x.fillStyle = o("#F2C83A"); jvOvale(x, cx, cy + 9, 1.4, 3.5);
+    x.restore();
+  });
+  // La branche du coin haut droit : cerisier en fleur, en feuilles, roux, ou nu
+  {
+    const bal = Math.sin(t * souffle * 0.45) * (0.006 + vt * 0.0005);
+    x.save(); x.translate(R + 10, 40); x.rotate(bal); x.translate(-R - 10, -40);
+    const boisC = [
+      [[R + 10, 60, R - 40, 70, R - 80, 40, R - 140, 30], 8], [[R - 20, 64, R - 40, 120, R - 60, 160, R - 70, 240], 5],
+      [[R - 90, 44, R - 130, 46, R - 180, 60], 3.2], [[R - 50, 150, R - 80, 166, R - 110, 190], 3], [[R - 40, 110, R - 20, 136, R - 10, 170], 3],
+      [[R - 140, 30, R - 170, 22, R - 200, 10], 3.4],
+    ];
+    [[R - 200, 10, -2.9, 18], [R - 180, 60, 2.9, 16], [R - 110, 190, 2.4, 16], [R - 10, 170, 1.2, 14], [R - 70, 240, 1.9, 16], [R - 60, 196, 2.6, 12]]
+      .forEach(([px, py, a, l], i) => rameaux(px, py, a, l, 2, 7600 + i * 13, boisC, 3));
+    ramure(boisC, "#5A3A2E");
+    // Les grappes : au bout de chaque rameau, et semées le long de la ramure
+    const amas = [];
+    boisC.forEach(([c, w]) => { if (w < 2) amas.push([c[c.length - 2], c[c.length - 1]]); });
+    for (let i = 0; i < 70; i++) { const u = jvAlea(i + 7000), v = jvAlea(i + 7001); amas.push([R - 220 + u * 230, -6 + v * (40 + u * 240)]); }
+    amas.forEach(([px, py], i) => {
+      const fl = Math.sin(t * souffle * 1.4 + i) * (1 + vt * 0.06);
+      if (P.rameau === "fleur") for (let k = 0; k < 5; k++) {
+        const fx = px + (jvAlea(i * 7 + k) - 0.5) * 22 + fl, fy = py + (jvAlea(i * 9 + k) - 0.5) * 16;
+        for (let p2 = 0; p2 < 5; p2++) { const ap = p2 * 1.257 + k + i; x.fillStyle = o(P.fleur[(p2 + k) % 3]); jvOvale(x, fx + Math.cos(ap) * 4.4, fy + Math.sin(ap) * 4.4, 4.4, 3, ap); }
+        x.fillStyle = o("#C83A5E"); jvRond(x, fx, fy, 1.4);
+      }
+      else if (P.rameau === "feuille") for (let k = 0; k < 5; k++) {
+        const a = jvAlea(i * 11 + k) * 6.28; x.fillStyle = o(P.feuille[(i + k) % P.feuille.length]);
+        jvOvale(x, px + Math.cos(a) * 9 + fl, py + Math.sin(a) * 7, 10, 4, a);
+      }
+    });
+    x.restore();
+  }
+  jvFinScene(x, Z);
+  } else x.restore();
+  return c;
+}
+
+/* ---------- Le style jardin anglais ----------
+   D'après la septième planche de Jérôme : une arche de roses grimpantes sur un
+   pilier de pierre à droite, un grand chêne à gauche ; des collines, un manoir
+   et des cyprès au fond ; une balustrade, ses vasques fleuries et ses marches ;
+   un bassin aux nénuphars ; des boules de buis et des haies taillées ; une
+   allée de gravier en courbe, bordée de pivoines, de digitales, de
+   delphiniums, d'alliums, de lavande et de marguerites. */
+const JAN = {
+  printemps: { ciel: ["#7EB8EA", "#D6E8F4"], colline: ["#8EB466", "#A6C47A", "#7AA456"], chene: ["#7EAA4E", "#96BE5E", "#6A9640"],
+    rose: ["#F4C4CE", "#FADCE2", "#E89AAE"], roseOn: 0.5, pivoine: null, digitale: ["#E88AB4", "#F2A8C8"], delphinium: null, allium: ["#9A5EC8", "#B47AD8"],
+    lavande: null, marguerite: true, tulipe: ["#E84A5A", "#F2C83A", "#F49AB0"], vasque: "#FFFFFF", feuille: ["#4E8A3A", "#66A04A", "#3E7230"], nenuphar: false,
+    sol: "#E8DCC4", chute: ["#F6D0DA", "#FFFFFF"] },
+  ete: { ciel: ["#68AAE8", "#D0E4F4"], colline: ["#86AE5A", "#9EC06C", "#6E984A"], chene: ["#5E9440", "#76AA50", "#4A7E34"],
+    rose: ["#F4B4C4", "#FAD2DC", "#E0889E", "#FFFFFF"], roseOn: 1, pivoine: ["#F07AA0", "#F8B8CC", "#FFF0F2", "#E8507A"], digitale: ["#E878AC", "#F4A4C6"],
+    delphinium: ["#3E5AC8", "#5E7ADC", "#2E44A8"], allium: ["#8A4EC0", "#A86ED4"], lavande: ["#7A62C0", "#9680D2"], marguerite: true, tulipe: null,
+    vasque: "#FFFFFF", feuille: ["#4E8A3A", "#66A04A", "#3E7230"], nenuphar: true, sol: "#E8DCC4", chute: ["#F6C4D2", "#FAD8E2"] },
+  automne: { ciel: ["#E2C29C", "#F2E2CC"], colline: ["#A89A56", "#C0A860", "#8E8444"], chene: ["#C88E36", "#D8A848", "#A87028"],
+    rose: ["#E89AAE", "#F2C4CE"], roseOn: 0.3, cynorhodon: "#C8341E", pivoine: null, digitale: null, delphinium: null, allium: null,
+    aster: ["#8A6ACC", "#A88ADA", "#C878B8"], sedum: ["#B8485A", "#D06A6E"], lavande: null, marguerite: false, tulipe: null,
+    vasque: "#F2E2C8", feuille: ["#7A8A3E", "#A08A3E", "#5E7032"], nenuphar: false, sol: "#E6D8BE", chute: ["#C88E36", "#D8A848", "#B8762E"] },
+  hiver: { ciel: ["#A8C2DC", "#E2E8EE"], colline: ["#A8B0A2", "#BEC4B6", "#929C8E"], chene: null,
+    rose: null, roseOn: 0, cynorhodon: "#A8281A", pivoine: null, digitale: null, delphinium: null, allium: null, lavande: null, marguerite: false, tulipe: null,
+    vasque: null, feuille: ["#4A6A40", "#5A7A4E", "#3A5A34"], nenuphar: false, sol: "#ECE8E0" },
+};
+function peindreAnglais(x, W, H, t, etat, cache) {
+  const Z = jvScene(x, W, H, t, etat, JAN[etat.saison]);
+  const { nomS, P, hs, c, m, vent, souffle, o, allume, L, R, blanc, haut, bas, voile, lune, lx } = Z;
+  const { rect, poly, couronne } = Z.outils;
+  const vt = Math.min(vent, 60), givre = nomS === "hiver" && etat.gel, enneige = Z.neige;
+  const ombreSol = (cx, cy, rx, ry, a = 0.2) => { x.fillStyle = jvRgba(o("#3E3A2A"), a * (1 - voile)); jvOvale(x, cx, cy, rx, ry); };
+  const trace = cc => { x.beginPath(); x.moveTo(cc[0], cc[1]); if (cc.length === 4) x.lineTo(cc[2], cc[3]); else if (cc.length === 6) x.quadraticCurveTo(cc[2], cc[3], cc[4], cc[5]); else x.bezierCurveTo(cc[2], cc[3], cc[4], cc[5], cc[6], cc[7]); };
+  const ramure = (courbes, col) => {
+    x.lineCap = "round";
+    courbes.forEach(([cc, w]) => { x.strokeStyle = o(col); x.lineWidth = w; trace(cc); x.stroke(); });
+    courbes.forEach(([cc, w]) => { if (w < 2) return; x.save(); x.translate(w * 0.18, w * 0.22); x.strokeStyle = jvRgba(o("#24140C"), 0.35); x.lineWidth = w * 0.4; trace(cc); x.stroke(); x.restore(); });
+    if (!enneige) return;
+    courbes.forEach(([cc, w]) => {
+      const dx = cc[cc.length - 2] - cc[0], dy = cc[cc.length - 1] - cc[1], couche = Math.abs(dx) / (Math.hypot(dx, dy) || 1);
+      if (w < 1.4 || couche < 0.4) return;
+      x.save(); x.translate(0, -w * 0.42); x.strokeStyle = jvRgba(blanc, 0.96); x.lineWidth = w * 0.6 * Math.min(1, couche * 1.3); trace(cc); x.stroke(); x.restore();
+    });
+  };
+  const rameaux = (x0, y0, ang, len, ep, g, out, prof = 3, d = 0) => {
+    const a = ang + (jvAlea(g) - 0.5) * 0.45, x1 = x0 + Math.cos(a) * len, y1 = y0 + Math.sin(a) * len, pli = (jvAlea(g + 0.5) - 0.5) * len * 0.3;
+    out.push([[x0, y0, (x0 + x1) / 2 - Math.sin(a) * pli, (y0 + y1) / 2 + Math.cos(a) * pli, x1, y1], ep]);
+    if (d >= prof) return;
+    rameaux(x1, y1, a - 0.42, len * 0.72, ep * 0.66, g * 2 + 1, out, prof, d + 1);
+    rameaux(x1, y1, a + 0.38, len * 0.68, ep * 0.62, g * 2 + 2, out, prof, d + 1);
+  };
+  // Une boule ou une haie de buis taillé : dégradé, petites feuilles, neige sur le dessus.
+  const buis = (cx, cy, rx, ry, g0, haie = false) => {
+    ombreSol(cx + rx * 0.3, cy + ry * 0.9, rx * 1.05, ry * 0.25, 0.25);
+    const gb = x.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry);
+    gb.addColorStop(0, o("#7EAA52")); gb.addColorStop(0.55, o("#4E7E34")); gb.addColorStop(1, o("#2E5A22"));
+    x.fillStyle = gb;
+    if (haie) { x.beginPath(); x.moveTo(cx - rx, cy + ry); x.lineTo(cx - rx, cy - ry + 4); x.quadraticCurveTo(cx - rx, cy - ry, cx - rx + 4, cy - ry); x.lineTo(cx + rx - 4, cy - ry); x.quadraticCurveTo(cx + rx, cy - ry, cx + rx, cy - ry + 4); x.lineTo(cx + rx, cy + ry); x.fill(); }
+    else jvOvale(x, cx, cy, rx, ry);
+    for (let i = 0; i < rx * ry * 0.5; i++) {
+      const px = cx + (jvAlea(i + g0) - 0.5) * rx * 1.9, py = cy + (jvAlea(i * 3 + g0) - 0.5) * ry * 1.9;
+      if (!haie && ((px - cx) / rx) ** 2 + ((py - cy) / ry) ** 2 > 0.9) continue;
+      x.fillStyle = o(["#8AB45E", "#5E8E40", "#3E6A2E"][i % 3]); jvRond(x, px, py, 1.1);
+    }
+    if (enneige) { x.fillStyle = jvRgba(blanc, 0.95); if (haie) { rect(cx - rx, cy - ry - 2, rx * 2, 6, blanc); } else { x.beginPath(); x.ellipse(cx, cy - ry * 0.2, rx * 0.95, ry * 0.8, 0, Math.PI, 0); x.fill(); } }
+  };
+  // Un épi fleuri dressé (digitale, delphinium, lupin) qui ploie par la pointe.
+  const epi = (bx, by, h, cols, g0, forme) => {
+    const b = Math.sin(t * souffle * 1.1 + g0) * (2 + vt * 0.14), tx = bx + b, ty = by - h, mx = bx + b * 0.25, my = by - h * 0.5;
+    x.strokeStyle = o("#4E7A34"); x.lineWidth = 2; x.beginPath(); x.moveTo(bx, by); x.quadraticCurveTo(mx, my, tx, ty); x.stroke();
+    for (let k = 0; k < 4; k++) { x.fillStyle = o(P.feuille[k % 3]); jvOvale(x, bx + (k % 2 ? 6 : -6), by - 6 - k * 8, 8, 3, k % 2 ? -0.5 : 0.5); }
+    const n = Math.round(h / 7);
+    for (let k = 0; k < n; k++) {
+      const u = 0.45 + k / n * 0.55, it = 1 - u, px = it * it * bx + 2 * it * u * mx + u * u * tx, py = it * it * by + 2 * it * u * my + u * u * ty;
+      const r = (1 - (u - 0.45) / 0.55 * 0.6);
+      x.fillStyle = o(cols[k % cols.length]);
+      if (forme === "cloche") { jvOvale(x, px - 3.5 * r, py, 4 * r, 3.2 * r, 0.4); jvOvale(x, px + 3.5 * r, py + 2, 4 * r, 3.2 * r, -0.4); x.fillStyle = jvRgba("#FFFFFF", 0.5); jvRond(x, px - 3 * r, py + 1, 1); }
+      else { jvRond(x, px - 3 * r, py, 3.2 * r); jvRond(x, px + 3 * r, py + 1.5, 3.2 * r); x.fillStyle = jvRgba("#FFFFFF", 0.5); jvRond(x, px, py, 0.9); }
+    }
+  };
+  // Une pivoine : une coupe de pétales froncés, plus pâles au cœur, ombrés à la base.
+  const pivoine = (cx, cy, r, col, g0) => {
+    const b = Math.sin(t * souffle * 0.9 + g0) * (1 + vt * 0.06), px = cx + b;
+    x.fillStyle = o(jvMel(col, "#5A1A2E", 0.35)); jvOvale(x, px, cy + r * 0.12, r * 1.02, r * 0.78);
+    for (let k = 0; k < 4; k++) {
+      const rr = r * (1 - k * 0.22), n = 9 - k;
+      for (let p2 = 0; p2 < n; p2++) {
+        const a = p2 / n * 6.28 + k * 0.5 + jvAlea(g0 + p2) * 0.3, ex = px + Math.cos(a) * rr * 0.5, ey = cy + Math.sin(a) * rr * 0.38 - k * r * 0.06;
+        x.fillStyle = o(jvMel(col, k > 1 ? "#FFF6F8" : "#8A2A4A", k > 1 ? (k - 1) * 0.22 : 0.12 - k * 0.08));
+        x.beginPath(); x.ellipse(ex, ey, rr * 0.48, rr * 0.36, a, 0, 7); x.fill();
+        if (k < 2) { x.strokeStyle = jvRgba(o(jvMel(col, "#8A2A4A", 0.4)), 0.35); x.lineWidth = 0.6; x.beginPath(); x.ellipse(ex, ey, rr * 0.48, rr * 0.36, a, 0.3, 2.6); x.stroke(); }
+      }
+    }
+    x.fillStyle = o("#F2C83A"); for (let k = 0; k < 8; k++) jvRond(x, px + Math.cos(k) * r * 0.1, cy - r * 0.2 + Math.sin(k) * r * 0.06, r * 0.05);
+  };
+  // Un coussin de plate-bande : feuillage dense semé de fleurs de plusieurs couleurs.
+  const platebande = (cx, cy, rx, ry, cols, n, g0) => {
+    ombreSol(cx + rx * 0.2, cy + ry * 0.8, rx, ry * 0.25, 0.18);
+    couronne(cx, cy, rx, ry, P.feuille, Math.round(n * 0.7), 4, g0);
+    if (cols) {
+      // Quelques épis dressés au cœur, puis des fleurs ouvertes semées dessus
+      for (let i = 0; i < Math.round(rx / 8); i++) {
+        const sx = cx + (jvAlea(i + g0 + 0.3) - 0.5) * rx * 1.2, h = ry * (0.9 + jvAlea(i + g0 + 0.4) * 0.9), col = cols[(i + 2) % cols.length];
+        x.strokeStyle = o("#4E7A34"); x.lineWidth = 1; jvTrait(x, sx, cy, sx, cy - h);
+        for (let k = 0; k < 6; k++) { x.fillStyle = o(jvMel(col, "#FFFFFF", k * 0.06)); jvOvale(x, sx, cy - h * 0.45 - k * h * 0.09, 2.2, 2.6); }
+      }
+      for (let i = 0; i < n * 0.45; i++) {
+        const a = jvAlea(i + g0 + 0.5) * 6.28, d = Math.sqrt(jvAlea(i * 7 + g0)) * 0.92;
+        jvFleur(x, cx + Math.cos(a) * rx * d, cy + Math.sin(a) * ry * d - 3, 1.5 + jvAlea(i + g0) * 0.9, o(cols[i % cols.length]), o("#F2D04A"));
+      }
+    }
+    if (enneige) { x.fillStyle = jvRgba(blanc, 0.92); x.beginPath(); x.ellipse(cx, cy - ry * 0.2, rx * 0.95, ry * 0.75, 0, Math.PI, 0); x.fill(); }
+  };
+  // Une touffe de plate-bande d'une seule couleur : un dôme de feuillage, les fleurs sur le
+  // dessus, quelques épis ; l'hiver, une touffe sèche et sa calotte de neige.
+  const touffe = (cx, cy, r, col, forme, g0) => {
+    ombreSol(cx + r * 0.25, cy + r * 0.35, r * 1.05, r * 0.22, 0.2);
+    if (!col) {
+      x.fillStyle = o("#8A7A5E"); x.beginPath(); x.ellipse(cx, cy, r, r * 0.6, 0, Math.PI, 0); x.fill();
+      x.strokeStyle = o("#7A6A4E"); x.lineWidth = 0.9;
+      for (let i = 0; i < (jvAlea(g0 + 0.9) < 0.5 ? 3 : 0); i++) { const a = -Math.PI / 2 + (jvAlea(i + g0) - 0.5) * 1.6, h = r * (0.9 + jvAlea(i + g0 + 0.5) * 0.8), ex = cx + Math.cos(a) * h * 0.6, ey = cy - r * 0.3 + Math.sin(a) * h;
+        jvTrait(x, cx + (i - 3) * r * 0.12, cy - r * 0.3, ex, ey); x.fillStyle = o("#6E5A3E"); jvRond(x, ex, ey, 1.6); if (enneige) { x.fillStyle = jvRgba(blanc, 0.95); jvOvale(x, ex, ey - 1.6, 2.2, 1.1); } }
+      if (enneige) { x.fillStyle = jvRgba(o("#B8C8DA"), 0.85); x.beginPath(); x.ellipse(cx, cy - r * 0.04, r * 0.98, r * 0.5, 0, Math.PI, 0); x.fill();
+        x.fillStyle = jvRgba(blanc, 0.97); x.beginPath(); x.ellipse(cx, cy - r * 0.1, r * 0.94, r * 0.48, 0, Math.PI, 0); x.fill(); }
+      return;
+    }
+    x.fillStyle = o(jvMel(P.feuille[2], "#10200E", 0.25)); x.beginPath(); x.ellipse(cx, cy, r, r * 0.62, 0, Math.PI, 0); x.lineTo(cx + r, cy + 2); x.lineTo(cx - r, cy + 2); x.fill();
+    for (let i = 0; i < r * 3; i++) { const a = Math.PI + jvAlea(i + g0) * Math.PI, d = Math.sqrt(jvAlea(i * 3 + g0)); x.fillStyle = o(P.feuille[i % 3]); jvOvale(x, cx + Math.cos(a) * r * d, cy + Math.sin(a) * r * 0.62 * d, 3.2, 1.8, a); }
+    if (forme === "epi") for (let i = 0; i < Math.max(2, r / 5); i++) {
+      const sx = cx + (jvAlea(i + g0 + 0.3) - 0.5) * r * 1.3, h = r * (0.8 + jvAlea(i + g0 + 0.4) * 0.7), b = Math.sin(t * souffle * 1.1 + i + g0) * (1 + vt * 0.08);
+      x.strokeStyle = o("#4E7A34"); x.lineWidth = 1; jvTrait(x, sx, cy - r * 0.3, sx + b, cy - r * 0.3 - h);
+      for (let k = 0; k < 7; k++) { x.fillStyle = o(jvMel(col, "#FFFFFF", k * 0.05)); jvOvale(x, sx + b * (0.5 + k * 0.07), cy - r * 0.3 - h * 0.4 - k * h * 0.085, 2, 2.6); }
+    } else for (let i = 0; i < r * 1.6; i++) {
+      const a = Math.PI + 0.15 + jvAlea(i + g0 + 0.5) * (Math.PI - 0.3), d = 0.35 + Math.sqrt(jvAlea(i * 7 + g0)) * 0.62;
+      jvFleur(x, cx + Math.cos(a) * r * d, cy + Math.sin(a) * r * 0.62 * d, 1.5 + jvAlea(i + g0) * 0.8, o(jvMel(col, i % 4 ? col : "#FFFFFF", 0.3)), o("#F2D04A"));
+    }
+  };
+  // Une rose ancienne : une coupe ombrée, des pétales enroulés vers le cœur.
+  const rose = (cx, cy, r, col) => {
+    x.fillStyle = o(jvMel(col, "#8A2A4A", 0.25)); jvRond(x, cx, cy + r * 0.1, r);
+    x.fillStyle = o(col); jvRond(x, cx, cy, r * 0.92);
+    for (let k = 0; k < 3; k++) {
+      const rr = r * (0.75 - k * 0.2);
+      x.strokeStyle = jvRgba(o(jvMel(col, "#8A2A4A", 0.4)), 0.7); x.lineWidth = 0.9;
+      x.beginPath(); x.arc(cx + k * 0.4, cy - k * 0.6, rr, 0.6 + k, 4.6 + k); x.stroke();
+    }
+    x.fillStyle = jvRgba("#FFFFFF", 0.4); jvOvale(x, cx - r * 0.38, cy - r * 0.42, r * 0.36, r * 0.2, -0.5);
+    x.fillStyle = o(jvMel(col, "#C83A5E", 0.3)); jvRond(x, cx + 0.5, cy - 0.5, r * 0.18);
+  };
+
+  if (Z.F) {
+  // Les collines, le manoir, les cyprès
+  poly([[L, 300], [100, 290], [180, 296], [260, 284], [340, 292], [R, 286], [R, 340], [L, 340]], o(jvMel("#8C9CC4", bas, 0.35)));
+  poly([[L, 320], [90, 312], [170, 318], [250, 306], [330, 314], [R, 308], [R, 400], [L, 400]], o(jvMel(P.colline[0], bas, 0.3)));
+  for (let i = 0; i < 14; i++) { x.fillStyle = o(jvMel(P.colline[i % 3], bas, 0.2 + (i % 2) * 0.1)); x.beginPath(); const fx = L + jvAlea(i + 8050) * (R - L), fy = 324 + jvAlea(i + 8051) * 50; x.moveTo(fx - 40, fy + 8); x.lineTo(fx - 10, fy - 6); x.lineTo(fx + 40, fy - 4); x.lineTo(fx + 30, fy + 10); x.fill(); }
+  for (let i = 0; i < 110; i++) { x.fillStyle = o(jvMel(["#4E7A3A", "#5E8A44", "#3E6A30"][i % 3], bas, 0.3)); jvRond(x, L + jvAlea(i + 8000) * (R - L), 318 + jvAlea(i + 8001) * 70, 3 + jvAlea(i + 8002) * 4); }
+  if (enneige) { x.fillStyle = jvRgba(blanc, 0.6); x.fillRect(L, 318, R - L, 80); }
+  { const mx = 232, my = 324, mc = o(jvMel("#EAD8B4", bas, 0.15));
+    rect(mx, my - 22, 60, 22, mc); rect(mx + 18, my - 34, 24, 12, mc); rect(mx - 6, my - 26, 10, 26, mc);
+    rect(mx - 2, my - 24, 66, 2.5, o(jvMel("#C8865A", bas, 0.15))); rect(mx + 16, my - 36, 28, 2.5, o(jvMel("#C8865A", bas, 0.15)));
+    for (let k = 0; k < 7; k++) { rect(mx + 4 + k * 8, my - 16, 3, 5, allume > 0.2 && k % 2 ? jvRgba("#F4C46A", 0.9) : o(jvMel("#7A6E5E", bas, 0.2))); } }
+  [[214, 300, 354, 5], [226, 306, 354, 4], [300, 276, 356, 7], [318, 290, 356, 6], [386, 250, 380, 9], [406, 270, 380, 7]].forEach(([cx, top, base, w], i) => {
+    const b = Math.sin(t * souffle * 0.8 + i) * vt * 0.04;
+    x.fillStyle = o("#2A5434"); x.beginPath(); x.moveTo(cx - w, base); x.quadraticCurveTo(cx - w * 1.15, (top + base) / 2, cx + b, top); x.quadraticCurveTo(cx + w * 1.15, (top + base) / 2, cx + w, base); x.fill();
+    x.fillStyle = o("#40704A"); x.beginPath(); x.moveTo(cx - w * 0.9, base); x.quadraticCurveTo(cx - w, (top + base) / 2, cx + b, top + 4); x.quadraticCurveTo(cx - w * 0.15, (top + base) / 2, cx - w * 0.1, base); x.fill();
+  });
+  // Le sol du jardin, les massifs du fond
+  { const gs = x.createLinearGradient(0, 380, 0, 830); gs.addColorStop(0, o("#76A04E")); gs.addColorStop(1, o("#4E7A34")); x.fillStyle = gs; x.fillRect(L, 380, R - L, Z.B - 380);
+    if (enneige) { x.fillStyle = jvRgba(blanc, 0.85); x.fillRect(L, 380, R - L, Z.B - 380); } }
+  for (let i = 0; i < Math.ceil((R - L) / 30); i++) couronne(L + i * 30 + jvAlea(i + 8100) * 10, 400 + jvAlea(i + 8101) * 10, 20, 14, P.feuille, 16, 4, 8110 + i);
+  // La terrasse : une balustrade à gauche, un escalier encadré de ses murets qui descend
+  // jusqu'à l'allée, puis la balustrade qui reprend à droite.
+  { const by2 = 430, pc = o("#E6D8BC");
+    const balustres = (x0, x1, y) => {
+      rect(x0, y, x1 - x0, 6, o("#F0E6D0")); rect(x0, y + 6, x1 - x0, 1.5, o("#C8B898"));
+      for (let bx = x0 + 4; bx < x1 - 2; bx += 8) { x.fillStyle = pc; jvOvale(x, bx, y + 13, 2.2, 6); x.fillStyle = o("#D2C2A2"); jvOvale(x, bx + 1, y + 14, 0.8, 5); }
+      rect(x0, y + 20, x1 - x0, 5, o("#D6C8AC"));
+      if (enneige) { x.fillStyle = blanc; x.fillRect(x0 - 1, y - 3, x1 - x0 + 2, 4); for (let bx = x0; bx < x1; bx += 14) jvOvale(x, bx + 6, y - 2, 6, 2.2); }
+    };
+    balustres(60, 296, by2); balustres(392, R - 46, by2);
+    // l'escalier : six marches qui s'élargissent en descendant, chacune son giron clair et sa contremarche
+    const n = 6, haut = 456, bas2 = 512;
+    for (let k = 0; k < n; k++) {
+      const y = haut + k * (bas2 - haut) / n, h = (bas2 - haut) / n, x0 = 300 - k * 3, x1 = 388 + k * 3;
+      rect(x0, y, x1 - x0, h * 0.45, o("#F2EAD6")); rect(x0, y + h * 0.45, x1 - x0, h * 0.55, o("#D2C4A6"));
+      rect(x0, y + h * 0.45, x1 - x0, 1, jvRgba(o("#8A7A5A"), 0.4));
+      if (enneige) { x.fillStyle = blanc; x.fillRect(x0 + 3, y - 1, x1 - x0 - 6, h * 0.5); }
+    }
+    // les murets latéraux, en rampe, et leurs piliers en tête et au pied
+    const limon = (xa, xb, sens) => {
+      x.fillStyle = o("#E2D4B6"); x.beginPath(); x.moveTo(xa, haut - 4); x.lineTo(xa + sens * 4, haut - 4); x.lineTo(xb + sens * 4, bas2 + 4); x.lineTo(xb, bas2 + 4); x.closePath(); x.fill();
+      x.strokeStyle = o("#F4ECDA"); x.lineWidth = 2.4; jvTrait(x, xa, haut - 5, xb, bas2 + 3);
+      if (enneige) { x.strokeStyle = blanc; x.lineWidth = 3; jvTrait(x, xa, haut - 7, xb, bas2 + 1); }
+    };
+    limon(296, 280, -1); limon(392, 408, 1);
+    [[290, 420, 1], [398, 420, 1], [276, 498, 0], [412, 498, 0]].forEach(([px, py, vasque], i) => {
+      rect(px - 10, py, 20, 36 - (vasque ? 0 : 14), o("#E8DCC0")); rect(px - 12, py - 4, 24, 5, o("#F2EAD6")); rect(px + 4, py, 6, 36 - (vasque ? 0 : 14), o("#CEBE9E"));
+      if (!vasque) { x.fillStyle = o("#EDE4D0"); jvRond(x, px, py - 8, 6); if (enneige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(px, py - 10, 7, 4, 0, Math.PI, 0); x.fill(); } return; }
+    });
+    [[150, 420], [290, 420], [398, 420]].forEach(([px, py], i) => {
+      if (i === 0) { rect(px - 10, py, 20, 36, o("#E8DCC0")); rect(px - 12, py - 4, 24, 5, o("#F2EAD6")); rect(px + 4, py, 6, 36, o("#CEBE9E")); }
+      x.fillStyle = o("#EDE4D0"); x.beginPath(); x.moveTo(px - 14, py - 16); x.quadraticCurveTo(px, py + 2, px + 14, py - 16); x.closePath(); x.fill(); rect(px - 3, py - 6, 6, 4, o("#D6C8AC"));
+      if (P.vasque) couronne(px, py - 24, 18, 12, ["#4E8A3A", "#66A04A"], 30, 3.5, 8200 + i);
+      if (P.vasque) for (let k = 0; k < 14; k++) jvFleur(x, px - 14 + jvAlea(k + i * 9) * 28, py - 32 + jvAlea(k * 3 + i) * 14, 2.2, o(P.vasque), o("#F2D04A"));
+      if (enneige) { x.fillStyle = jvRgba(blanc, 0.95); x.beginPath(); x.ellipse(px, py - 18, 15, 6, 0, Math.PI, 0); x.fill(); x.fillRect(px - 12, py - 6, 24, 3); }
+    }); }
+  // Le bassin, sa margelle, ses nénuphars
+  { const bas2 = [[50, 470], [250, 468], [262, 478], [262, 520], [50, 520]];
+    poly([[40, 462], [272, 460], [272, 528], [40, 528]], o("#E8DCC0"));
+    const ge = x.createLinearGradient(0, 470, 0, 520); ge.addColorStop(0, o(jvMel("#5EA6CE", haut, 0.15))); ge.addColorStop(1, o("#8AC2DE"));
+    x.fillStyle = ge; x.beginPath(); bas2.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill();
+    x.save(); x.beginPath(); bas2.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+    const T = x.getTransform(), p0 = T.transformPoint({ x: L, y: 300 }), p1 = T.transformPoint({ x: R, y: 462 }), q = T.transformPoint({ x: L, y: 470 }), q1 = T.transformPoint({ x: L, y: 520 });
+    const sx = Math.max(0, p0.x), sw = Math.min(x.canvas.width, p1.x) - sx, n = 10, hb = (p1.y - p0.y) / n, hd = (q1.y - q.y) / n;
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 0.4;
+    for (let i = 0; i < n; i++) { x.save(); x.translate(0, q.y + (i + 1) * hd); x.scale(1, -1); x.drawImage(x.canvas, sx, p1.y - (i + 1) * hb, sw, hb, sx, 0, sw, hd + 0.5); x.restore(); }
+    x.restore();
+    if (givre) { x.fillStyle = jvRgba(blanc, 0.35); x.fillRect(40, 460, 240, 70); }
+    if (P.nenuphar || nomS === "printemps") [[90, 498], [130, 508], [176, 492], [220, 506]].forEach(([nx, ny], i) => {
+      x.fillStyle = o(i % 2 ? "#4E8A3E" : "#5E9A48"); x.beginPath(); x.ellipse(nx, ny, 12, 4, 0, 0.3, Math.PI * 2); x.lineTo(nx, ny); x.fill();
+      if (P.nenuphar && i % 2 === 0) { x.fillStyle = o("#F8D4DE"); for (let p2 = 0; p2 < 6; p2++) jvOvale(x, nx + Math.cos(p2 * 1.05) * 3, ny - 3 + Math.sin(p2 * 1.05) * 1.6, 2.8, 1.6, p2 * 1.05); }
+    });
+    x.restore(); }
+  // Les plates-bandes du milieu, de part et d'autre de l'allée
+  const melange = nomS === "hiver" ? null : nomS === "automne" ? ["#8A6ACC", "#B8485A", "#D8A848", "#C878B8"]
+    : nomS === "printemps" ? ["#E84A5A", "#F2C83A", "#F49AB0", "#FFFFFF", "#9A5EC8"] : ["#F07AA0", "#FFFFFF", "#8A6ACC", "#E8507A", "#5E7ADC", "#F4C4CE"];
+  // Un tapis bas fleuri sur toute la pelouse, sous les plates-bandes
+  if (melange) for (let i = 0; i < 260; i++) { const fx = L + jvAlea(i + 8200) * (300 - L), fy = 540 + jvAlea(i + 8201) * 300; x.fillStyle = o(P.feuille[i % 3]); jvOvale(x, fx, fy, 5, 3, i); if (i % 2) jvFleur(x, fx, fy - 2, 1.4, o(melange[i % melange.length]), o("#F2D04A")); }
+  // Les plates-bandes en rangs serrés : touffes plus petites au fond, plus grosses devant,
+  // chacune d'une couleur, en dérives qui se répètent pour structurer la masse.
+  { const gamme = melange ? melange : [null];
+    const lit = (x0, x1, y0, y1, g0) => {
+      for (let y = y0, rang = 0; y <= y1; rang++) {
+        const r = 10 + (y - 520) * 0.07;
+        for (let xx = x0 + (rang % 2) * r * 0.7; xx < x1; xx += r * (1.25 + jvAlea(rang * 31 + xx + g0) * 0.35)) {
+          const k = Math.floor((xx / (r * 2.6) + rang * 0.5)) % gamme.length, rr = r * (0.75 + jvAlea(xx + rang + g0) * 0.5);
+          touffe(xx, y + (jvAlea(xx * 3 + rang) - 0.5) * 4, rr, gamme[(k + gamme.length) % gamme.length], (k + rang) % 3 === 0 ? "epi" : "fleurs", g0 + rang * 97 + Math.round(xx));
+        }
+        y += r * 0.72;
+      }
+    };
+    lit(L + 4, 278, 536, 700, 8250);
+    lit(412, R - 50, 560, 690, 8290); }
+  // Buis et haies
+  buis(200, 456, 18, 18, 8300); buis(440, 478, 20, 18, 8310); buis(440, 520, 28, 14, 8320, true); buis(232, 720, 50, 14, 8330, true); buis(430, 700, 26, 12, 8331, true);
+  // L'allée de gravier, en courbe vers la droite
+  { // L'allée : deux bords en courbes douces, qui partent du bas et remontent vers la terrasse
+    const gauche = [[296, Z.B], [330, 740], [286, 660], [296, 590], [300, 540], [296, 514]];
+    const droite = [[390, 514], [394, 548], [380, 590], [376, 640], [416, 720], [452, Z.B]];
+    const bord = pts => { x.moveTo(pts[0][0], pts[0][1]); for (let i = 1; i < pts.length - 1; i++) { const mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2; x.quadraticCurveTo(pts[i][0], pts[i][1], mx, my); } x.lineTo(...pts[pts.length - 1]); };
+    const chemin = () => { x.beginPath(); bord(gauche); const d = droite; x.lineTo(d[0][0], d[0][1]); for (let i = 1; i < d.length - 1; i++) { const mx = (d[i][0] + d[i + 1][0]) / 2, my = (d[i][1] + d[i + 1][1]) / 2; x.quadraticCurveTo(d[i][0], d[i][1], mx, my); } x.lineTo(...d[d.length - 1]); x.closePath(); };
+    const allee = gauche.concat(droite);
+    x.fillStyle = o(P.sol); chemin(); x.fill();
+    if (!cache.gravierAn) { const cg = document.createElement("canvas"); cg.width = cg.height = 80; const g = cg.getContext("2d");
+      for (let i = 0; i < 380; i++) { g.fillStyle = ["rgba(255,255,255,.7)", "rgba(160,146,120,.4)", "rgba(220,206,180,.6)"][i % 3]; g.beginPath(); g.ellipse(jvAlea(i) * 80, jvAlea(i + 0.3) * 80, 0.8 + jvAlea(i * 3) * 1.3, 0.6 + jvAlea(i * 5) * 0.8, jvAlea(i * 7) * 3, 0, 7); g.fill(); }
+      cache.gravierAn = cg; }
+    x.save(); chemin(); x.clip();
+    x.globalAlpha = 0.8 * (1 - Z.nuit * 0.6); x.fillStyle = x.createPattern(cache.gravierAn, "repeat"); x.fillRect(L, 490, R - L, Z.B - 490); x.globalAlpha = 1;
+    if (enneige) { x.fillStyle = jvRgba(blanc, 0.9); x.fillRect(L, 490, R - L, Z.B - 490);
+      x.strokeStyle = jvRgba(o(P.sol), 0.8); x.lineWidth = 18; x.lineCap = "round"; x.beginPath(); x.moveTo(370, Z.B); x.bezierCurveTo(320, 700, 340, 600, 344, 516); x.stroke();
+      for (let i = 0; i < 16; i++) { x.fillStyle = jvRgba(o("#9AA8B8"), 0.35); jvOvale(x, 350 + (i % 2) * 12 - i * 0.8, 800 - i * 18, 3, 5); } }
+    if (hs > 0 && voile < 0.6) for (let i = 0; i < 24; i++) ombreSol(300 + jvAlea(i + 8400) * 150, 560 + jvAlea(i + 8410) * 240, 12 + jvAlea(i + 8420) * 14, 3, 0.15);
+    if (P.chute && !enneige) for (let i = 0; i < 26; i++) { x.fillStyle = o(P.chute[i % P.chute.length]); jvOvale(x, 300 + jvAlea(i * 7 + 8500) * 140, 560 + jvAlea(i * 5 + 8501) * 260, 2.6, 1.5, i); }
+    x.restore();
+    // Les bordures fleuries qui débordent sur le gravier
+    // Les bordures fleuries, posées hors du gravier : à gauche du bord gauche, à droite du bord droit
+    if (melange) [[gauche, -1], [droite, 1]].forEach(([bordPts, sens], j) => bordPts.forEach(([a, b], i) => {
+      if (b < 520) return;
+      for (let k = 0; k < 2; k++) platebande(a + sens * (20 + jvAlea(i * 3 + k + j) * 10), b + (jvAlea(i * 5 + k + j) - 0.5) * 20, 14, 8, melange, 22, 8450 + j * 40 + i * 3 + k);
+    })); }
+  // Le grand chêne de gauche
+  { // Un chêne étalé : tronc court et noueux, charpentières presque horizontales
+    const bois = [[[34, 410, 44, 370, 30, 340, 44, 300], 14], [[44, 304, 84, 290, 120, 270, 168, 262], 7], [[40, 310, 14, 296, -10, 290, -30, 280], 6],
+      [[44, 300, 50, 260, 64, 230, 74, 196], 6], [[100, 284, 120, 250, 140, 230, 156, 210], 4.4], [[60, 240, 30, 220, 10, 200, -6, 186], 4]];
+    [[168, 262, -0.3, 24], [-30, 280, -2.9, 22], [74, 196, -1.4, 24], [156, 210, -0.9, 20], [-6, 186, -2.4, 18], [120, 272, -1.8, 16]].forEach(([px, py, a, l], i) => rameaux(px, py, a, l, 2.6, 8600 + i * 13, bois, 3));
+    ramure(bois, "#5E4A36");
+    if (P.chene) {
+      // Des nuages de feuillage séparés, entre lesquels passe le ciel
+      const touffes = [[60, 176, 50, 32], [130, 196, 46, 30], [-6, 200, 40, 30], [180, 246, 34, 24], [20, 256, 40, 24], [96, 240, 40, 22], [-30, 262, 30, 22], [150, 150, 30, 20], [40, 130, 34, 20]];
+      // Le volume de l'arbre : des masses sombres d'abord, la lumière viendra des feuilles
+      touffes.forEach(([cx, cy, rx, ry], i) => { x.fillStyle = o(jvMel(P.chene[2], "#10200E", 0.35)); jvOvale(x, cx + 4, cy + 6, rx * 0.85, ry * 0.8); });
+      bois.forEach(([cc, w], j) => { if (w < 1.2 && j % 2 === 0) touffes.push([cc[cc.length - 2], cc[cc.length - 1], 14, 10]); });
+      touffes.forEach(([cx, cy, rx, ry], i) => {
+        for (let k = 0; k < (rx > 20 ? 420 : 50); k++) {
+          const a = jvAlea(k + i * 97 + 8700) * 6.28, d = Math.sqrt(jvAlea(k * 3 + i * 97 + 8700)), px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d;
+          const lum = (cy - py) / ry * 0.5 + (cx - px) / rx * 0.3;
+          x.fillStyle = o(jvMel(P.chene[k % 3], lum > 0 ? "#F4F2D8" : "#1E2A14", Math.min(0.4, Math.abs(lum) * 0.5)));
+          // Une feuille de chêne, lobée : deux ovales décalés
+          const af = jvAlea(k * 7 + i) * 6.28; jvOvale(x, px, py, 4.4, 2.6, af); jvOvale(x, px + Math.cos(af) * 3, py + Math.sin(af) * 3, 3, 2, af + 0.8);
+        }
+      });
+      // Les branches qui traversent la couronne, visibles par endroits entre les feuilles
+      x.save(); x.globalAlpha = 0.75; x.lineCap = "round";
+      bois.forEach(([cc, w], j) => { if (w < 1.5 || w > 6 || j % 3 === 1) return; x.strokeStyle = o("#4E3A2A"); x.lineWidth = w * 0.7; x.setLineDash([10 + j % 5 * 3, 8 + j % 4 * 3]); trace(cc); x.stroke(); });
+      x.setLineDash([]); x.restore();
+    } }
+  }
+  if (Z.D) {
+  // Le pilier de pierre et l'arche de roses du coin haut droit
+  { rect(R - 46, 250, 62, Z.B - 250, o("#E6D8BC")); rect(R - 46, 250, 9, Z.B - 250, o("#F2EAD6")); for (let k = 0; k < 24; k++) rect(R - 46, 260 + k * 26, 62, 1.2, jvRgba(o("#B8A888"), 0.6));
+    if (enneige) rect(R - 48, 246, 66, 5, blanc);
+    const bal = Math.sin(t * souffle * 0.45) * (0.005 + vt * 0.0005);
+    x.save(); x.translate(R, 0); x.rotate(bal); x.translate(-R, 0);
+    // Des tiges sinueuses : chaque tige est une suite de courbes qui ondulent de part et d'autre
+    const boisR = [];
+    const sinueux = (x0, y0, x1, y1, amp, n, ep, g) => {
+      let px = x0, py = y0; const dx = (x1 - x0) / n, dy = (y1 - y0) / n, l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l;
+      for (let i = 0; i < n; i++) {
+        const qx = x0 + dx * (i + 1), qy = y0 + dy * (i + 1), s2 = (i % 2 ? 1 : -1) * amp * (0.7 + jvAlea(g + i) * 0.6);
+        boisR.push([[px, py, px + dx * 0.33 + nx * s2, py + dy * 0.33 + ny * s2, px + dx * 0.66 + nx * s2, py + dy * 0.66 + ny * s2, qx, qy], ep * (1 - i / n * 0.5)]);
+        px = qx; py = qy;
+      }
+    };
+    sinueux(R + 10, 18, R - 240, 96, 12, 6, 5, 8800); sinueux(R + 6, 50, R - 14, 300, 10, 6, 4.2, 8810);
+    sinueux(R - 90, 34, R - 170, 150, 9, 4, 3, 8820); sinueux(R - 150, 50, R - 250, 40, 8, 3, 2.6, 8830);
+    sinueux(R - 40, 120, R - 120, 220, 8, 4, 2.6, 8840); sinueux(R - 200, 76, R - 230, 170, 7, 3, 2.2, 8850);
+    // Des vrilles fines qui retombent
+    [[R - 240, 96], [R - 170, 150], [R - 120, 220], [R - 230, 170], [R - 250, 40]].forEach(([px, py], i) => sinueux(px, py, px - 14 + i * 4, py + 40, 6, 3, 1.2, 8860 + i));
+    ramure(boisR, "#5A4A34");
+    const amas = []; boisR.forEach(([cc, w]) => { if (w < 2) amas.push([cc[cc.length - 2], cc[cc.length - 1]]); });
+    for (let i = 0; i < 110; i++) { const u = jvAlea(i + 8900), v = jvAlea(i + 8901); amas.push([R - 260 + u * 270, 10 + v * (50 + u * 300)]); }
+    amas.forEach(([px, py], i) => {
+      const fl = Math.sin(t * souffle * 1.4 + i) * (1 + vt * 0.06);
+      if (nomS !== "hiver") for (let k = 0; k < 4; k++) { const a = jvAlea(i * 11 + k) * 6.28; x.fillStyle = o(P.feuille[(i + k) % 3]); jvOvale(x, px + Math.cos(a) * 10 + fl, py + Math.sin(a) * 8, 8, 3.8, a); }
+      if (P.rose && jvAlea(i + 8950) < P.roseOn) rose(px + fl, py, 7 + jvAlea(i) * 4, P.rose[i % P.rose.length]);
+      if (P.cynorhodon && i % 3 === 0) { x.fillStyle = o(P.cynorhodon); jvOvale(x, px + fl + 3, py + 5, 2.2, 3); }
+    });
+    x.restore();
+    // les roses qui grimpent le long du pilier
+    for (let i = 0; i < 40; i++) { const py = 260 + i * 14, px = R - 48 + Math.sin(i * 1.3) * 8;
+      if (nomS !== "hiver") for (let k = 0; k < 2; k++) { x.fillStyle = o(P.feuille[(i + k) % 3]); jvOvale(x, px - 6 + k * 10, py + 4, 8, 3.6, k ? -0.6 : 0.6); }
+      if (P.rose && jvAlea(i + 8990) < P.roseOn) rose(px, py, 7 + jvAlea(i) * 3, P.rose[i % P.rose.length]); } }
+  // Le premier plan selon la saison : la grande plate-bande de gauche et la bordure de droite
+  if (nomS === "ete") {
+    for (let i = 0; i < 8; i++) epi(4 + i * 9, 620, 200 + jvAlea(i + 9000) * 70, P.delphinium, 9010 + i, "rond");
+    for (let i = 0; i < 6; i++) epi(20 + i * 24, 760, 190 + jvAlea(i + 9020) * 60, P.digitale, 9030 + i, "cloche");
+    couronne(110, 800, 130, 60, P.feuille, 220, 7, 9200);
+    // Les alliums : une boule violette ombrée dessous, piquée de petites étoiles claires
+    for (let i = 0; i < 4; i++) { const bx = 130 + i * 30, h = 170 + (i % 2) * 34, b = Math.sin(t * souffle + i) * (2 + vt * 0.12), cx = bx + b, cy = 770 - h, r = 22;
+      x.strokeStyle = o("#5E8A40"); x.lineWidth = 2; jvTrait(x, bx, 770, cx, cy + r * 0.6);
+      const ga = x.createRadialGradient(cx - r * 0.35, cy - r * 0.35, 2, cx, cy, r); ga.addColorStop(0, o("#C49AE8")); ga.addColorStop(0.6, o(P.allium[0])); ga.addColorStop(1, o("#5E2E8A"));
+      x.fillStyle = ga; jvRond(x, cx, cy, r);
+      for (let k = 0; k < 60; k++) { const a = jvAlea(k + i * 61) * 6.28, d = Math.sqrt(jvAlea(k * 3 + i)) * r * 0.95; x.fillStyle = o(k % 3 ? "#D2B4F0" : "#7A40B0"); jvRond(x, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 1.3); } }
+    // Les feuilles des pivoines, découpées, autour de chaque fleur
+    [[30, 750], [100, 736], [170, 764], [66, 806], [146, 822], [222, 800], [16, 830], [240, 744]].forEach(([px, py], i) => {
+      for (let k = 0; k < 7; k++) { const a = k * 0.9 + i; x.fillStyle = o(P.feuille[k % 3]); jvOvale(x, px + Math.cos(a) * 28, py + 10 + Math.sin(a) * 14, 13, 5, a); }
+    });
+    [[30, 750, 30, 0], [100, 736, 28, 1], [170, 764, 30, 2], [66, 806, 34, 3], [146, 822, 30, 0], [222, 800, 26, 2], [16, 830, 28, 1], [240, 744, 24, 3]].forEach(([px, py, r, k], i) => pivoine(px, py, r, P.pivoine[k], 9300 + i));
+    // La lavande en trois touffes, chacune un éventail de tiges qui partent d'un pied commun
+    [[214, Z.B - 24], [252, Z.B - 14], [236, Z.B - 54]].forEach(([tx0, ty0], j) => {
+      couronne(tx0, ty0 - 4, 26, 10, ["#7E9470", "#8EA480", "#6E8460"], 30, 3.6, 9150 + j);
+      for (let i = 0; i < 34; i++) {
+        const u = jvAlea(i + j * 41 + 9100) - 0.5, a = -Math.PI / 2 + u * 1.2, h2 = 60 + jvAlea(i * 3 + j) * 50;
+        const b = Math.sin(t * souffle * 1.3 + i * 0.4 + j) * (1 + vt * 0.08), sx = tx0 + u * 20, ex = sx + Math.cos(a) * h2 + b, ey = ty0 + Math.sin(a) * h2;
+        x.strokeStyle = o("#7E9466"); x.lineWidth = 0.9; x.beginPath(); x.moveTo(sx, ty0); x.quadraticCurveTo(sx + Math.cos(a) * h2 * 0.5, ty0 + Math.sin(a) * h2 * 0.55, ex, ey); x.stroke();
+        const ea = Math.atan2(ey - ty0, ex - sx);
+        for (let k = 0; k < 8; k++) { x.fillStyle = o(P.lavande[(k + i) % 2]); jvOvale(x, ex - Math.cos(ea) * k * 3.2, ey - Math.sin(ea) * k * 3.2, 1.9, 2.6, ea + Math.PI / 2); }
+      }
+    });
+    for (let i = 0; i < 26; i++) jvFleur(x, 170 + jvAlea(i + 9400) * 100, 806 + jvAlea(i + 9401) * 30, 4.2, o("#FFFFFF"), o("#F2C83A"));
+    for (let i = 0; i < 4; i++) epi(R - 64 + i * 7, 640, 150 + jvAlea(i + 9500) * 50, P.digitale, 9510 + i, "cloche");
+  } else if (nomS === "printemps") {
+    couronne(110, 790, 120, 70, P.feuille, 200, 7, 9200);
+    for (let i = 0; i < 26; i++) { const bx = 10 + jvAlea(i + 9600) * 260, by = 720 + jvAlea(i + 9601) * 100, b = Math.sin(t * souffle + i) * (1 + vt * 0.08);
+      x.strokeStyle = o("#5E8A40"); x.lineWidth = 1.6; jvTrait(x, bx, by + 30, bx + b, by);
+      x.fillStyle = o(P.tulipe[i % 3]); x.beginPath(); x.moveTo(bx + b - 6, by - 2); x.quadraticCurveTo(bx + b - 6, by + 10, bx + b, by + 10); x.quadraticCurveTo(bx + b + 6, by + 10, bx + b + 6, by - 2); x.lineTo(bx + b + 3, by - 8); x.lineTo(bx + b, by - 2); x.lineTo(bx + b - 3, by - 8); x.closePath(); x.fill(); }
+    for (let i = 0; i < 3; i++) epi(30 + i * 30, 700, 140 + jvAlea(i + 9020) * 50, P.digitale, 9030 + i, "cloche");
+    for (let i = 0; i < 2; i++) { const bx = 190 + i * 50, h = 140, b = Math.sin(t * souffle + i) * 2; x.strokeStyle = o("#5E8A40"); x.lineWidth = 1.6; jvTrait(x, bx, 760, bx + b, 760 - h);
+      for (let k = 0; k < 40; k++) { const a = jvAlea(k + i * 41) * 6.28, d = Math.sqrt(jvAlea(k * 3 + i)) * 18; x.fillStyle = o(P.allium[k % 2]); jvRond(x, bx + b + Math.cos(a) * d, 760 - h + Math.sin(a) * d, 2.2); } }
+    for (let i = 0; i < 26; i++) jvFleur(x, 200 + jvAlea(i + 9400) * 120, 780 + jvAlea(i + 9401) * 50, 3.6, o("#FFFFFF"), o("#F2C83A"));
+  } else if (nomS === "automne") {
+    couronne(110, 790, 120, 70, P.feuille, 200, 7, 9200);
+    for (let i = 0; i < 4; i++) couronne(20 + i * 60, 720 + (i % 2) * 30, 40, 30, P.aster, 90, 2.8, 9700 + i);
+    for (let i = 0; i < 4; i++) couronne(60 + i * 60, 800, 30, 16, P.sedum, 60, 3, 9710 + i);
+    couronne(R - 70, 720, 50, 40, P.aster, 90, 2.8, 9720);
+  } else {
+    // L'hiver au premier plan : les grandes touffes sèches, leurs tiges d'alliums et de graminées, sous la neige
+    [[40, 770, 46], [130, 790, 50], [220, 800, 40], [70, 830, 54], [190, 840, 46]].forEach(([cx, cy, r], i) => touffe(cx, cy, r, null, "", 9800 + i * 7));
+    for (let i = 0; i < 9; i++) { const bx = 20 + i * 28, h = 90 + jvAlea(i + 9801) * 70; x.strokeStyle = o("#8A7A5A"); x.lineWidth = 1.4; jvTrait(x, bx, 800, bx + (jvAlea(i) - 0.5) * 12, 800 - h);
+      x.fillStyle = o("#7A6A50"); jvRond(x, bx + (jvAlea(i) - 0.5) * 12, 800 - h, 5); if (enneige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(bx + (jvAlea(i) - 0.5) * 12, 800 - h - 2, 6, 3.4, 0, Math.PI, 0); x.fill(); } }
+    buis(430, 760, 30, 16, 9810, true);
+  }
+  // Ce qui bouge sur le bassin
+  x.save(); x.beginPath(); x.rect(50, 470, 212, 50); x.clip();
+  for (let i = 0; i < 10; i++) { const px = 50 + ((jvAlea(i + 9900) * 212 + t * (2 + (i % 3))) % 212), py = 474 + jvAlea(i + 9901) * 44;
+    x.fillStyle = `rgba(255,255,255,${(0.2 + 0.2 * Math.sin(t * 1.6 + i)).toFixed(2)})`; x.fillRect(px, py, 8 + jvAlea(i) * 10, 1.1); }
+  if (m.pluie) jvRonds(x, { m, t }, 156, 495, 90, 20);
+  x.restore();
+  jvFinScene(x, Z);
+  } else x.restore();
+  return c;
+}
+
 /* Une scène illustrée en deux couches. Le fond immobile est peint dans une
    image gardée en mémoire, et repeint seulement quand le soleil, la lune, le
    temps ou la taille changent ; ce qui vit est peint par-dessus à chaque
@@ -5515,10 +7006,18 @@ const JV_STYLES = {
   estampe: { nom: "Estampe", texte: "Lavis sourds, grain de papier, monts dans la brume, branche à l'encre ; un décor par climat." },
   moderne: { nom: "Moderne", texte: "Villa blanche, bassin miroir et marches flottantes, terrasses, haies taillées, cyprès devant les monts.",
     peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreModerne, x, W, H, t, e, c) },
-  brutaliste: { nom: "Brutaliste", texte: "Béton brut, grand mur et grimpante, murets étagés, bassin sombre, grands bacs plantés, nuages de buis.",
+  brutaliste: { nom: "Urbain", texte: "Béton brut et ville au loin, grand mur et grimpante, murets étagés, bassin sombre, grands bacs plantés, chaises longues au bord de l'eau.",
     peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreBrutaliste, x, W, H, t, e, c) },
   mediterraneen: { nom: "Méditerranéen", texte: "Mer et village perché, grand olivier, cyprès, bassin bleu et gravier, lavande, agave, romarin, arbre en jarre.",
     peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreMediterraneen, x, W, H, t, e, c) },
+  pampa: { nom: "Pampas et graminées", texte: "Un mur de pampas, de stipas et de verveines, des pennisetums roses, un olivier, des cyprès, un bassin turquoise et une allée de gravier.",
+    peindre: (x, W, H, t, e, c) => peindreEnCouches(peindrePampa, x, W, H, t, e, c) },
+  naturel: { nom: "Jardin naturel", texte: "Une branche en fleur, un arbre léger, des massifs fleuris de blanc, de la lavande, une mare et ses nénuphars, une allée de gravier, des fougères.",
+    peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreNaturel, x, W, H, t, e, c) },
+  japonais: { nom: "Jardin japonais", texte: "Une branche de cerisier, un érable rouge, un pin taillé, des bambous, une lanterne de pierre, un étang et ses pas japonais, des iris.",
+    peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreJaponais, x, W, H, t, e, c) },
+  anglais: { nom: "Jardin anglais", texte: "Une arche de roses, un grand chêne, un manoir, une balustrade et ses vasques, un bassin, des buis, et des plates-bandes de pivoines, digitales, delphiniums et alliums.",
+    peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreAnglais, x, W, H, t, e, c) },
 };
 /* Une image du jardin.
    etat : { theme, saison, temps, vent, gel, sol: { hs, fr, fn, montant, depuisLever } }
@@ -5765,7 +7264,8 @@ function animerJardin(actif) {
 // Le choix du fond, dans les réglages du compte, vaut pour cet appareil.
 // Les styles publiés, dans l'ordre de la liste : une valeur « style|décor » pour chacun.
 const choixStylesPublies = () => [["moderne|", JV_STYLES.moderne.nom], ["brutaliste|", JV_STYLES.brutaliste.nom],
-  ["mediterraneen|", JV_STYLES.mediterraneen.nom],
+  ["mediterraneen|", JV_STYLES.mediterraneen.nom], ["pampa|", JV_STYLES.pampa.nom], ["naturel|", JV_STYLES.naturel.nom],
+  ["japonais|", JV_STYLES.japonais.nom], ["anglais|", JV_STYLES.anglais.nom],
   ["estampe|climat", "Estampe, selon le climat du jardin"]]
   .concat(Object.entries(JV_THEMES).map(([v, th]) => ["estampe|" + v, "Estampe, " + th.nom.charAt(0).toLowerCase() + th.nom.slice(1)]));
 function brancherFond() {

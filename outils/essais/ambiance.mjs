@@ -184,9 +184,9 @@ export default async function essai(navigateur) {
       style: !document.getElementById("ligneStyle").hidden };
   }, [id, val]);
   let st = await regler("selStyle", "brutaliste|");
-  j.controle("moderne, brutaliste, méditerranéen, l'estampe selon le climat et ses six décors",
-    st.options.length === 10 && st.options[1] === "Brutaliste" && st.options[2] === "Méditerranéen"
-    && st.options[3] === "Estampe, selon le climat du jardin" && st.options[9] === "Estampe, jardin de ville"
+  j.controle("sept styles illustrés, puis l'estampe selon le climat et ses six décors",
+    st.options.slice(0, 7).join(", ") === "Moderne, Urbain, Méditerranéen, Pampas et graminées, Jardin naturel, Jardin japonais, Jardin anglais"
+    && st.options.length === 14 && st.options[7] === "Estampe, selon le climat du jardin" && st.options[13] === "Estampe, jardin de ville"
     && !st.options.includes("Estampe, jardin méditerranéen"), st.options.join(", "));
   j.controle("la liste se règle avec le jardin vivant", st.style);
   j.controle("chaque style est décrit", /Béton brut/.test(st.aide), st.aide);
@@ -204,6 +204,12 @@ export default async function essai(navigateur) {
   await vivant.pg.waitForTimeout(300);
   const vme = await toile(vivant.pg);
   j.controle("le méditerranéen se peint", vme.style === "mediterraneen" && vme.bouge && vme.image !== vb.image, vme.style);
+  for (const nom of ["pampa", "naturel", "japonais", "anglais"]) {
+    await regler("selStyle", nom + "|");
+    await vivant.pg.waitForTimeout(300);
+    const vs = await toile(vivant.pg);
+    j.controle(`le style ${nom} se peint et bouge`, vs.style === nom && vs.bouge, vs.style);
+  }
   await regler("selStyle", "estampe|montagne");
   await vivant.pg.waitForTimeout(200);
   const vm = await toile(vivant.pg);
