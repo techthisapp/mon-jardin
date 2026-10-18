@@ -1,6 +1,6 @@
 # Les styles du jardin vivant
 
-Note du 18 octobre 2026. Le jardin vivant se peint désormais en trois styles,
+Note du 18 octobre 2026. Le jardin vivant se peint désormais en quatre styles,
 chacun avec son propre décor, au choix dans les réglages du compte.
 
 ## Demande et étapes
@@ -24,24 +24,33 @@ Les deux planches ont été redessinées en vectoriel, comparées scène par sc�
 aux originaux, puis affinées en plusieurs passes. Jérôme a validé
 l'intégration.
 
-## Les trois styles
+5. **Planche méditerranéenne.** Jérôme a ensuite fourni une troisième planche,
+   méditerranéenne, pour remplacer le décor méditerranéen de l'estampe. Elle a
+   été redessinée de la même façon. Il a demandé de la voir avant intégration,
+   puis trois retouches : les plantes du premier plan, les murets, la place des
+   pots et du bassin, les arbres, la zone intermédiaire et les ombres ; enfin
+   la place des fleurs devant et derrière le muret, deux pots en bas, et le
+   muret à gauche du centre, comme sur la planche.
+
+## Les quatre styles
 
 | Style | Décor |
 |---|---|
 | Moderne, par défaut | villa blanche au bardage de bois, mur, haies taillées, terrasses et bandes de gazon, bassin miroir et trois marches flottantes, monts et cyprès |
 | Brutaliste | béton brut piqueté, grand mur d'où retombe une grimpante, murets étagés et escalier, bassin sombre en perspective, grands bacs plantés, nuage de buis, mont et cyprès |
-| Estampe | le décor du 17 octobre, dans sept variantes : jardin japonais, potager de campagne, bord de mer, méditerranéen, montagne, verger de l'Est, jardin de ville |
+| Méditerranéen | mer, côte et îles, village perché et son clocher, cyprès ; grand olivier au tronc tordu ; mur de pierre ; grande et petite jarre ; bassin bleu, marches, gravier ; muret de calcaire en L ; lavande, agave, romarin, santolines, deux pots en bas |
+| Estampe | le décor du 17 octobre, dans six variantes : jardin japonais, potager de campagne, bord de mer, montagne, verger de l'Est, jardin de ville |
 
-Les deux premiers styles changent avec la saison :
+Les trois styles illustrés changent avec la saison :
 
-| Saison | Moderne | Brutaliste |
-|---|---|---|
-| Printemps | branche de cerisier, arbre en fleur, iris blancs | bacs fleuris de blanc et de rose |
-| Été | branche d'érable verte, pin parasol, agapanthes, lavande | lavande dans les bacs, grimpante fleurie |
-| Automne | érable roux, grand érable rouge, pampas | buissons rouges, graminées, grimpante rousse |
-| Hiver | branche nue enneigée, bassin gelé | neige sur les blocs et les bacs, baies rouges, bassin gelé |
+| Saison | Moderne | Brutaliste | Méditerranéen |
+|---|---|---|---|
+| Printemps | branche de cerisier, arbre en fleur, iris blancs | bacs fleuris de blanc et de rose | branche d'amandier, cistes derrière le muret, iris devant, citronnier en jarre |
+| Été | branche d'érable verte, pin parasol, agapanthes, lavande | lavande dans les bacs, grimpante fleurie | olives vertes, nappe de lavande derrière et devant le muret, agave, citronnier |
+| Automne | érable roux, grand érable rouge, pampas | buissons rouges, graminées, grimpante rousse | branche de chêne roux, graminées dorées, vigne rouge sur le mur, grenadier en jarre |
+| Hiver | branche nue enneigée, bassin gelé | neige sur les blocs et les bacs, baies rouges, bassin gelé | olives noires, tons argentés, colline givrée, petit olivier en jarre |
 
-Les deux styles partagent le reste :
+Les trois styles partagent le reste :
 - le ciel au soleil réel, la lune et sa clarté ;
 - les nuages, la pluie, la neige, le brouillard et les éclairs de l'heure ;
 - le vent ;
@@ -58,7 +67,7 @@ Pour l'estampe, le décor suit par défaut le climat du jardin actif :
 | Océanique | bord de mer |
 | Océanique dégradé | campagne |
 | Semi-continental | Est |
-| Méditerranéen | méditerranéen |
+| Méditerranéen | le style méditerranéen, qui a remplacé ce décor de l'estampe |
 | Montagnard | montagne |
 
 Le japonais et la ville se choisissent seulement à la main.
@@ -70,7 +79,7 @@ Le bloc du compte porte deux lignes :
 | Ligne | Choix | Quand elle paraît |
 |---|---|---|
 | Fond | Jardin vivant, Feuillage, Uni | toujours |
-| Style | Moderne, Brutaliste, « Estampe, selon le climat du jardin », puis chacun des sept décors de l'estampe | avec le jardin vivant |
+| Style | Moderne, Brutaliste, Méditerranéen, « Estampe, selon le climat du jardin », puis chacun des six décors de l'estampe | avec le jardin vivant |
 
 Les choix valent pour l'appareil, sous les clés `monjardin.fond`,
 `monjardin.style` et `monjardin.decor`.
@@ -97,7 +106,8 @@ Chaque scène se peint donc en deux couches :
   reflet de lune sur l'eau, les plantes du premier plan, la branche, la chute
   et le temps. Cette couche est repeinte à chaque image.
 
-Le temps par image tombe de 8 à 14 millisecondes. L'estampe reste peinte en
+Le temps par image tombe de 8 à 14 millisecondes ; le méditerranéen, peint
+de la même façon, reste dans cette fourchette. L'estampe reste peinte en
 une seule couche, à 16 millisecondes. Les arbres et les massifs du fond restent
 immobiles entre deux repeints ; la branche, le premier plan et l'eau bougent.
 
@@ -123,8 +133,8 @@ premier plan ne soient peints.
 
 `app.js`, section « Le jardin vivant » :
 - le moteur commun : ciel, temps, outils de dessin, branche ;
-- les sept décors de l'estampe ;
-- `peindreModerne` et `peindreBrutaliste` ;
+- les six décors de l'estampe ;
+- `peindreModerne`, `peindreBrutaliste` et `peindreMediterraneen` ;
 - `peindreEnCouches` et `peindreJardin` ;
 - `soleilAuJardin` et `etatDuJardin` pour les données ;
 - `brancherFond` pour les deux lignes de réglage.
@@ -136,10 +146,12 @@ dans l'application.
 
 `outils/essais/ambiance.mjs` contrôle :
 - le moderne par défaut, son ciel bleuté au matin d'été et son mouvement ;
-- les dix styles de la liste unique et leur description ;
+- les dix styles de la liste unique, le méditerranéen à la place du décor
+  méditerranéen de l'estampe, et leur description ;
 - un brutaliste qui se peint autrement que le moderne, et sa mémoire sur
   l'appareil ;
 - l'estampe qui suit le climat, son ciel bleuté et son sol vert ;
+- le méditerranéen qui se peint ;
 - un décor de l'estampe choisi directement dans la liste.
 
 `ouvrirContexte` gagne l'option `style`.
