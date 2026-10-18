@@ -16,7 +16,7 @@
 <meta name="description" content="Calendrier de jardinage personnalisé selon les plantes de votre jardin.">
 <!-- Numéro de la copie installée, celui de l'agent de service. Réécrit par
      outils/verification.mjs, qui le calcule sur les empreintes des actifs. -->
-<meta name="version-appli" content="a636a57460">
+<meta name="version-appli" content="ae8de504bb">
 <meta name="apple-mobile-web-app-title" content="Mon jardin">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -325,15 +325,13 @@
           <label class="etiq-reglage" for="selFond">Fond</label>
           <select id="selFond"></select>
         </div>
-        <!-- Le jardin vivant se peint en trois styles ; l'estampe a sept décors,
-             dont celui qui suit le climat du jardin. -->
+        <!-- Tous les styles publiés du jardin vivant, dans une seule liste :
+             le moderne, le brutaliste, et l'estampe selon le climat ou dans
+             chacun de ses sept décors. Deux listes cachaient les décors
+             derrière le choix de l'estampe. -->
         <div class="ligne-reglage" id="ligneStyle">
           <label class="etiq-reglage" for="selStyle">Style</label>
           <select id="selStyle"></select>
-        </div>
-        <div class="ligne-reglage" id="ligneDecor">
-          <label class="etiq-reglage" for="selDecor">Décor</label>
-          <select id="selDecor"></select>
         </div>
         <p class="aide-reglage" id="aideFond"></p>
       </section>
@@ -395,7 +393,7 @@
   </div>
 </div>
 
-<script type="module" src="./app.js?v=3b5b6a222f"></script>
+<script type="module" src="./app.js?v=d8bab97085"></script>
 <!-- Noter est un geste et non une destination : il ne prend pas de place dans
      la barre des trois écrans, il se pose au-dessus. Ce qu'il porte vient de ce
      qui est à l'écran, l'espace ouvert ou la plante regardée. -->

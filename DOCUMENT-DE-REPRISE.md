@@ -764,7 +764,7 @@ Depuis le 16 octobre 2026, l'application n'a plus d'en-tête sombre : un fond vi
 
 Depuis le 17 octobre 2026, le fond par défaut est le jardin vivant : un paysage de jardin peint sur une toile, dont le ciel suit le soleil réel au point du jardin, la lune et le temps de l'heure, et dont le décor change avec la saison. Le feuillage du 16 octobre et un fond uni restent au choix dans les réglages du compte, pour l'appareil. Détail dans la note `jardin-vivant`.
 
-Depuis le 18 octobre 2026, le jardin vivant se peint en trois styles, chacun avec son décor : moderne, par défaut, et brutaliste, redessinés d'après les planches de Jérôme, et estampe, dont le décor suit le climat du jardin ou se choisit parmi sept. Les réglages du compte portent les lignes « Style » et « Décor ». Les deux styles illustrés se peignent en deux couches, un fond immobile gardé en mémoire et ce qui vit par-dessus. Détail dans la note `styles-du-jardin-vivant`.
+Depuis le 18 octobre 2026, le jardin vivant se peint en trois styles, chacun avec son décor : moderne, par défaut, et brutaliste, redessinés d'après les planches de Jérôme, et estampe, dont le décor suit le climat du jardin ou se choisit parmi sept. Les réglages du compte portent une ligne « Style » qui réunit tous les styles publiés : moderne, brutaliste, et l'estampe selon le climat ou dans chacun de ses sept décors. Les deux styles illustrés se peignent en deux couches, un fond immobile gardé en mémoire et ce qui vit par-dessus. Détail dans la note `styles-du-jardin-vivant`.
 
 Deux écrans principaux, accessibles par une barre flottante translucide en bas d'écran.
 

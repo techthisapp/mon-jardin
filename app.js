@@ -5427,18 +5427,21 @@ function animerJardin(actif) {
 }
 
 // Le choix du fond, dans les réglages du compte, vaut pour cet appareil.
+// Les styles publiés, dans l'ordre de la liste : une valeur « style|décor » pour chacun.
+const choixStylesPublies = () => [["moderne|", JV_STYLES.moderne.nom], ["brutaliste|", JV_STYLES.brutaliste.nom],
+  ["estampe|climat", "Estampe, selon le climat du jardin"]]
+  .concat(Object.entries(JV_THEMES).map(([v, th]) => ["estampe|" + v, "Estampe, " + th.nom.charAt(0).toLowerCase() + th.nom.slice(1)]));
 function brancherFond() {
-  const sel = $("selFond"), selS = $("selStyle"), selD = $("selDecor");
-  if (!sel || !selS || !selD) return;
+  const sel = $("selFond"), selS = $("selStyle");
+  if (!sel || !selS) return;
   const options = paires => paires.map(([v, nom]) => `<option value="${v}">${nom}</option>`).join("");
   sel.innerHTML = options(Object.entries(FONDS_ECRAN).map(([v, [nom]]) => [v, nom]));
-  selS.innerHTML = options(STYLES_JARDIN.map(v => [v, JV_STYLES[v].nom]));
-  selD.innerHTML = options([["climat", "Selon le climat du jardin"]].concat(Object.entries(JV_THEMES).map(([v, th]) => [v, th.nom])));
-  sel.value = choixFond; selS.value = choixStyle; selD.value = JV_THEMES[choixDecor] ? choixDecor : "climat";
-  // Le style ne vaut que pour le jardin vivant, le décor que pour l'estampe.
+  selS.innerHTML = options(choixStylesPublies());
+  sel.value = choixFond;
+  selS.value = choixStyle === "estampe" ? "estampe|" + (JV_THEMES[choixDecor] ? choixDecor : "climat") : choixStyle + "|";
+  // La liste des styles ne vaut que pour le jardin vivant.
   const majLignes = () => {
     $("ligneStyle").hidden = choixFond !== "jardin";
-    $("ligneDecor").hidden = choixFond !== "jardin" || choixStyle !== "estampe";
     $("aideFond").textContent = choixFond === "jardin" ? JV_STYLES[choixStyle].texte : FONDS_ECRAN[choixFond][1];
   };
   majLignes();
@@ -5448,12 +5451,11 @@ function brancherFond() {
     garder(FOND, choixFond); majLignes(); appliquerAmbiance();
   });
   selS.addEventListener("change", () => {
-    choixStyle = STYLES_JARDIN.indexOf(selS.value) !== -1 ? selS.value : "moderne";
-    garder(STYLE_JARDIN, choixStyle); majLignes(); appliquerAmbiance();
-  });
-  selD.addEventListener("change", () => {
-    choixDecor = selD.value;
-    garder(DECOR_JARDIN, choixDecor); appliquerAmbiance();
+    const [style, decor] = selS.value.split("|");
+    choixStyle = STYLES_JARDIN.indexOf(style) !== -1 ? style : "moderne";
+    garder(STYLE_JARDIN, choixStyle);
+    if (choixStyle === "estampe") { choixDecor = decor || "climat"; garder(DECOR_JARDIN, choixDecor); }
+    majLignes(); appliquerAmbiance();
   });
 }
 // Une rotation ou un changement de taille repeint aussitôt la toile immobile.

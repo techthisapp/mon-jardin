@@ -65,16 +65,21 @@ Le japonais et la ville se choisissent seulement à la main.
 
 ## Réglages
 
-Le bloc du compte porte trois lignes :
+Le bloc du compte porte deux lignes :
 
 | Ligne | Choix | Quand elle paraît |
 |---|---|---|
 | Fond | Jardin vivant, Feuillage, Uni | toujours |
-| Style | Moderne, Brutaliste, Estampe | avec le jardin vivant |
-| Décor | « Selon le climat du jardin » ou l'un des sept | avec l'estampe |
+| Style | Moderne, Brutaliste, « Estampe, selon le climat du jardin », puis chacun des sept décors de l'estampe | avec le jardin vivant |
 
 Les choix valent pour l'appareil, sous les clés `monjardin.fond`,
 `monjardin.style` et `monjardin.decor`.
+
+Une première version, publiée le 18 octobre, séparait le style et le décor en
+deux listes. Jérôme ne parvenait pas à choisir le style voulu : les décors de
+l'estampe n'apparaissaient qu'après avoir choisi l'estampe, dans une seconde
+ligne. À sa demande, tous les styles publiés tiennent dans une seule liste,
+où chacun se choisit directement.
 
 ## Deux couches pour tenir la cadence
 
@@ -122,7 +127,7 @@ premier plan ne soient peints.
 - `peindreModerne` et `peindreBrutaliste` ;
 - `peindreEnCouches` et `peindreJardin` ;
 - `soleilAuJardin` et `etatDuJardin` pour les données ;
-- `brancherFond` pour les trois lignes de réglage.
+- `brancherFond` pour les deux lignes de réglage.
 
 Le minimaliste et l'infrastructure des styles par filtre ne sont pas entrés
 dans l'application.
@@ -131,13 +136,11 @@ dans l'application.
 
 `outils/essais/ambiance.mjs` contrôle :
 - le moderne par défaut, son ciel bleuté au matin d'été et son mouvement ;
-- les trois styles proposés et leur description ;
-- la ligne du décor, cachée hors de l'estampe ;
+- les dix styles de la liste unique et leur description ;
 - un brutaliste qui se peint autrement que le moderne, et sa mémoire sur
   l'appareil ;
 - l'estampe qui suit le climat, son ciel bleuté et son sol vert ;
-- les sept décors et le choix du climat, et un décor choisi qui remplace
-  celui du climat.
+- un décor de l'estampe choisi directement dans la liste.
 
 `ouvrirContexte` gagne l'option `style`.
 

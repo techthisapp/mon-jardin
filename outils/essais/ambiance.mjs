@@ -177,32 +177,33 @@ export default async function essai(navigateur) {
   j.controle("le jardin bouge", v.bouge);
   j.controle("de jour, le ciel est dit clair", v.ciel === "jour", v.ciel);
 
-  j.section("trois styles, et les décors de l'estampe");
+  j.section("tous les styles publiés, dans une seule liste");
   const regler = (id, val) => vivant.pg.evaluate(([i, f]) => {
     const s = document.getElementById(i); s.value = f; s.dispatchEvent(new Event("change"));
     return { options: [...s.options].map(o => o.textContent), aide: document.getElementById("aideFond").textContent,
-      style: !document.getElementById("ligneStyle").hidden, decor: !document.getElementById("ligneDecor").hidden };
+      style: !document.getElementById("ligneStyle").hidden };
   }, [id, val]);
-  let st = await regler("selStyle", "brutaliste");
-  j.controle("trois styles au choix", st.options.join(", ") === "Moderne, Brutaliste, Estampe", st.options.join(", "));
-  j.controle("le style se règle avec le jardin vivant, le décor reste caché hors de l'estampe", st.style && !st.decor);
+  let st = await regler("selStyle", "brutaliste|");
+  j.controle("moderne, brutaliste, l'estampe selon le climat et ses sept décors",
+    st.options.length === 10 && st.options[1] === "Brutaliste" && st.options[2] === "Estampe, selon le climat du jardin"
+    && st.options[9] === "Estampe, jardin de ville", st.options.join(", "));
+  j.controle("la liste se règle avec le jardin vivant", st.style);
   j.controle("chaque style est décrit", /Béton brut/.test(st.aide), st.aide);
   await vivant.pg.waitForTimeout(300);
   const vb = await toile(vivant.pg);
   j.controle("le brutaliste se peint, différent du moderne", vb.style === "brutaliste" && vb.bouge && vb.image !== v.image, vb.style);
   j.controle("le style est gardé sur l'appareil", await vivant.pg.evaluate(() => localStorage.getItem("monjardin.style")) === "brutaliste");
-  st = await regler("selStyle", "estampe");
-  j.controle("l'estampe ouvre le choix du décor", st.decor);
+  await regler("selStyle", "estampe|climat");
   await vivant.pg.waitForTimeout(300);
   const ve = await toile(vivant.pg);
   j.controle("l'estampe suit le climat du jardin", ve.style === "estampe" && !!ve.decor, `${ve.style}, ${ve.decor}`);
   j.controle("en été, au matin, un ciel bleuté et un sol vert",
     ve.ciel0[2] > ve.ciel0[0] && ve.sol[1] > ve.sol[0] && ve.sol[1] > ve.sol[2], `ciel ${ve.ciel0.slice(0, 3)}, sol ${ve.sol.slice(0, 3)}`);
-  st = await regler("selDecor", "montagne");
-  j.controle("sept décors et le choix du climat", st.options.length === 8 && st.options[0] === "Selon le climat du jardin", st.options.join(", "));
+  await regler("selStyle", "estampe|montagne");
   await vivant.pg.waitForTimeout(200);
-  j.controle("le décor choisi remplace celui du climat", (await toile(vivant.pg)).decor === "montagne");
-  await regler("selStyle", "moderne");
+  const vm = await toile(vivant.pg);
+  j.controle("un décor de l'estampe se choisit directement", vm.style === "estampe" && vm.decor === "montagne", `${vm.style}, ${vm.decor}`);
+  await regler("selStyle", "moderne|");
 
   j.section("le choix du fond dans les réglages du compte");
   const choisir = val => vivant.pg.evaluate(f => {
