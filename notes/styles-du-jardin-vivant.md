@@ -129,6 +129,20 @@ Les corrections :
 - **Le voile du bas.** Avec le jardin vivant, il garde sa hauteur mais n'est
   plus qu'à moitié opaque.
 
+Jérôme a ensuite relevé que le sol prolongé n'avait pas de texture. Le sol de
+chaque scène descend désormais jusqu'au bas de l'écran avec son grain, sous
+la limite `B` que `jvScene` calcule : le gravier du méditerranéen, le béton et
+ses joints du brutaliste, le dallage et ses joints du moderne.
+
+## Les nuages derrière le décor
+
+Jérôme a relevé que les nuages passaient devant l'olivier. Peints avec ce qui
+vit, ils recouvraient le fond immobile tout entier. Le fond est désormais gardé
+en mémoire deux fois : en entier, et sans son ciel. À chaque image, la toile
+peint le fond entier, puis les nuages, puis le décor sans ciel par-dessus. Les
+nuages passent ainsi derrière les arbres, les cyprès et les monts. Cela coûte
+une copie d'image de plus par image ; le temps reste de 9 à 15 millisecondes.
+
 ## Pièges rencontrés
 
 **Le feuillage qui scintille.** Une masse de feuillage tirait la place de ses

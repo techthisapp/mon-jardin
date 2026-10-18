@@ -4434,9 +4434,12 @@ function jvScene(x, W, H, t, etat, P) {
   // La scène tient au-dessus de la barre de navigation ; dessous, son sol se prolonge.
   const Hs = H - (etat.basLibre || 0);
   const k = Hs / 830, ox = (W - 465 * k) / 2, L = -ox / k - 2, R = (W - ox) / k + 2;
-  // Deux couches : le fond immobile, peint de loin en loin, et ce qui vit, peint à chaque image.
-  const F = etat.couche !== "dessus", D = etat.couche !== "fond";
-  if (F && Hs < H) { x.fillStyle = o(P.sol || "#E6DFCF"); x.fillRect(0, Hs - 4, W, H - Hs + 4); }
+  /* Les couches : le fond immobile, peint de loin en loin, avec son ciel ou sans
+     lui ; les nuages ; ce qui vit, peint à chaque image. Sans couche, tout. */
+  const cc = etat.couche;
+  const F = !cc || cc === "fond" || cc === "objets", D = !cc || cc === "dessus";
+  const CIEL = !cc || cc === "fond", NUAGES = !cc || cc === "nuages";
+  if (CIEL && Hs < H) { x.fillStyle = o(P.sol || "#E6DFCF"); x.fillRect(0, Hs - 4, W, H - Hs + 4); }
   x.save(); x.translate(ox, 0); x.scale(k, k);
   const blanc = o("#F7F8F8");
   const { rect, poly, couronne, arbre, tronc, fan, rubans, plumets } = jvOutils(x, t, souffle, vent, o, neige, blanc);
@@ -4447,15 +4450,15 @@ function jvScene(x, W, H, t, etat, P) {
   const bas = jvMel(jvMel(c.bas, P.ciel[1], vif * 0.9), "#C9CCCB", gris * c.jour);
   const gc = x.createLinearGradient(0, 0, 0, 330);
   gc.addColorStop(0, haut); gc.addColorStop(1, bas);
-  if (F) { x.fillStyle = gc; x.fillRect(L, 0, R - L, 400); }
-  if (F && nuit > 0.1 && m.nappe < 0.8) {
+  if (CIEL) { x.fillStyle = gc; x.fillRect(L, 0, R - L, 400); }
+  if (CIEL && nuit > 0.1 && m.nappe < 0.8) {
     for (let i = 0; i < 40; i++) {
       x.fillStyle = `rgba(240,238,228,${(nuit * (1 - m.nappe) * (0.3 + 0.5 * Math.abs(Math.sin(t * 0.6 + i * 1.7)))).toFixed(2)})`;
       x.fillRect(L + jvAlea(i) * (R - L), jvAlea(i + 9) * 260, 1.2, 1.2);
     }
   }
   const voile = Math.min(1, m.nappe * 1.1 + m.brume * 0.3);
-  if (F && hs > -4) {
+  if (CIEL && hs > -4) {
     const sx = L + (R - L) * (0.14 + 0.6 * Math.min(1, Math.max(0, sol.fr))), sy = 285 - (hs / 70) * 220;
     const coul = jvMel("#FBE3B0", "#F4A07E", c.chaud);
     const hg = x.createRadialGradient(sx, sy, 20, sx, sy, 70);
@@ -4466,28 +4469,30 @@ function jvScene(x, W, H, t, etat, P) {
   const fn = Math.min(1, sol.fn);
   const lune = sol.fn <= 1 ? (1 - m.nappe * 0.75) * jvBorne(Math.sin(Math.PI * fn), 0, 0.25) * nuit : 0;
   const lx = L + (R - L) * (0.82 - 0.64 * fn), ly = 250 - Math.sin(Math.PI * fn) * 150;
-  if (F && lune > 0.02) {
+  if (CIEL && lune > 0.02) {
     const hl = x.createRadialGradient(lx, ly, 8, lx, ly, 140);
     hl.addColorStop(0, `rgba(226,232,246,${(0.38 * lune).toFixed(3)})`); hl.addColorStop(1, "rgba(200,212,236,0)");
     x.fillStyle = hl; x.fillRect(lx - 140, ly - 140, 280, 280);
     x.globalAlpha = lune; x.fillStyle = "#F3F0E6"; jvRond(x, lx, ly, 20); x.globalAlpha = 1;
   }
   // Nuages plats et doux, poussés par le vent
-  const nn = D ? Math.max(0, Math.round(6 * m.cumulus) - 1) : 0;
+  const nn = NUAGES ? Math.max(0, Math.round(6 * m.cumulus) - 1) : 0;
   for (let i = 0; i < nn; i++) {
     const w = 90 + jvAlea(i + 3) * 120, v = 0.5 + jvAlea(i + 8) * 0.6;
     const nx = L + ((jvAlea(i) * (R - L + w) + t * (2 + vent * 0.5) * v) % (R - L + w)) - w, ny = 40 + jvAlea(i + 1) * 170;
     x.fillStyle = jvRgba(nuit > 0.6 ? "#4A546C" : jvMel("#FFFFFF", "#B4B8BA", gris), 0.55);
     jvOvale(x, nx + w / 2, ny, w / 2, 9); jvOvale(x, nx + w * 0.62, ny - 7, w * 0.28, 9);
   }
-  if (F && m.nappe > 0) {
+  if (CIEL && m.nappe > 0) {
     const ng = x.createLinearGradient(0, 0, 0, 320);
     const tn = nuit > 0.6 ? "#2E3446" : "#A9AEB2";
     ng.addColorStop(0, jvRgba(tn, 0.85 * m.nappe)); ng.addColorStop(1, jvRgba(tn, 0.15 * m.nappe));
     x.fillStyle = ng; x.fillRect(L, 0, R - L, 330);
   }
 
-  return { nomS, P, sol, hs, c, m, vent, souffle, nuit, gris, neige, o, allume, L, R, blanc, haut, bas, voile, lune, lx, ly, t, F, D,
+  // Le bas de la scène, en coordonnées de la planche : le sol y descend jusqu'au bas de l'écran.
+  const B = 830 + (H - Hs) / k + 4;
+  return { nomS, P, sol, hs, c, m, vent, souffle, nuit, gris, neige, o, allume, L, R, B, blanc, haut, bas, voile, lune, lx, ly, t, F, D,
     outils: { rect, poly, couronne, arbre, tronc, fan, rubans, plumets } };
 }
 
@@ -4761,7 +4766,10 @@ function peindreModerne(x, W, H, t, etat, cache) {
   rect(L, 728, R - L, 8, o("#EAE3D6")); rect(L, 736, R - L, 4, o("#D3CABA"));
   rect(L, 682, 135 - L, 46, o("#EEE7DA")); rect(L, 728, 135 - L, 8, o("#D6CDBD"));
   // Le dallage du premier plan et ses ombres de feuillage
-  rect(L, 740, R - L, 100, o(P.sol));
+  rect(L, 740, R - L, Math.max(100, Z.B - 740), o(P.sol));
+  x.strokeStyle = jvRgba(o("#BFB4A0"), 0.45); x.lineWidth = 0.8;
+  for (let yj = 790; yj < Z.B; yj += 50) jvTrait(x, L, yj, R, yj);
+  for (let xj = 40; xj < R; xj += 90) jvTrait(x, xj, 740, xj - 6, Z.B);
   if (hs > 0 && voile < 0.6) {
     for (let i = 0; i < 18; i++) {
       x.fillStyle = jvRgba(o("#C9BEA8"), 0.45);
@@ -4980,11 +4988,11 @@ function peindreBrutaliste(x, W, H, t, etat, cache) {
   }
   beton([[L, 522], [450, 520], [R, 528], [R, 540], [L, 542]], 0.3, true);
   // Le dallage et les marches du premier plan
-  beton([[L, 540], [R, 540], [R, 830], [L, 830]], 0.32, false);
+  beton([[L, 540], [R, 540], [R, Z.B], [L, Z.B]], 0.32, false);
   x.strokeStyle = jvRgba(o("#9A948A"), 0.5); x.lineWidth = 0.8;
-  for (let k2 = 0; k2 < 5; k2++) jvTrait(x, 190, 660 + k2 * 36, R, 660 + k2 * 36);
-  for (let k2 = 0; k2 < 4; k2++) jvTrait(x, 240 + k2 * 70, 650, 230 + k2 * 80, 830);
-  if (neige) { x.fillStyle = blanc; x.fillRect(L, 540, R - L, 290); }
+  for (let yj = 660; yj < Z.B; yj += 36) jvTrait(x, 190, yj, R, yj);
+  for (let k2 = 0; k2 < 4; k2++) jvTrait(x, 240 + k2 * 70, 650, 230 + k2 * 80 + (Z.B - 830) * 0.12, Z.B);
+  if (neige) { x.fillStyle = blanc; x.fillRect(L, 540, R - L, Z.B - 540); }
   [[185, 548, 30], [190, 584, 30], [196, 620, 30]].forEach(([a, b, h], i) => {
     beton([[a, b], [R, b], [R, b + 8], [a, b + 8]], 0.3, true);
     beton([[a, b + 8], [R, b + 8], [R, b + h], [a, b + h]], -0.3, false);
@@ -5274,7 +5282,7 @@ function peindreMediterraneen(x, W, H, t, etat, cache) {
   if (P.vigne) couronne(445, 300, 28, 80, P.vigne, 60, 5, 1300);
   else if (nomS === "printemps" || nomS === "ete") { touffe(448, 250, 22, 40, ["#4E7A3A", "#6E9A4C", "#5E8A44"], 70, 1301, 3); for (let i = 0; i < 22; i++) { x.fillStyle = o("#FFFFFF"); jvRond(x, 430 + jvAlea(i) * 38, 214 + jvAlea(i + 2) * 80, 1.8); } }
   // Le gravier, et l'ombre de l'olivier qui s'y pose
-  gravier([[L, 448], [R, 448], [R, 830], [L, 830]]);
+  gravier([[L, 448], [R, 448], [R, Z.B], [L, Z.B]]);
   if (hs > 0 && voile < 0.6) for (let i = 0; i < 40; i++) ombreSol(110 + jvAlea(i + 70) * 230, 584 + jvAlea(i + 72) * 80, 18 + jvAlea(i + 74) * 22, 3.2, 0.11);
   // Les massifs derrière le bassin
   if (P.lavande) { lavande(L, 416, 300 - L, 62, 70, 1600); lavande(300, 426, 34, 40, 14, 1610); }
@@ -5484,15 +5492,22 @@ function peindreEnCouches(peintre, x, W, H, t, etat, cache) {
   const T = x.getTransform(), cv = x.canvas, s = etat.sol;
   const cle = [etat.style, etat.saison, etat.temps, etat.gel, Math.round(s.hs), Math.round(s.fr * 40), Math.round(Math.min(2, s.fn) * 20),
     cv.width, cv.height, T.a.toFixed(3), T.e.toFixed(1), Math.round(etat.basLibre || 0)].join("|");
-  if (!cache.fond || cache.cleFond !== cle) {
-    if (!cache.fond) cache.fond = document.createElement("canvas");
-    if (cache.fond.width !== cv.width || cache.fond.height !== cv.height) { cache.fond.width = cv.width; cache.fond.height = cv.height; }
-    const f = cache.fond.getContext("2d");
+  const image = (nom, couche) => {
+    if (!cache[nom]) cache[nom] = document.createElement("canvas");
+    const c = cache[nom];
+    if (c.width !== cv.width || c.height !== cv.height) { c.width = cv.width; c.height = cv.height; }
+    const f = c.getContext("2d");
     f.setTransform(1, 0, 0, 1, 0, 0); f.clearRect(0, 0, cv.width, cv.height); f.setTransform(T);
-    peintre(f, W, H, t, Object.assign({}, etat, { couche: "fond" }), cache);
+    peintre(f, W, H, t, Object.assign({}, etat, { couche }), cache);
+  };
+  if (!cache.fond || cache.cleFond !== cle) {
+    // Le décor entier, puis le même sans son ciel : les nuages passeront entre les deux.
+    image("fond", "fond"); image("objets", "objets");
     cache.cleFond = cle;
   }
   x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cache.fond, 0, 0); x.restore();
+  peintre(x, W, H, t, Object.assign({}, etat, { couche: "nuages" }), cache);
+  x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cache.objets, 0, 0); x.restore();
   return peintre(x, W, H, t, Object.assign({}, etat, { couche: "dessus" }), cache);
 }
 
