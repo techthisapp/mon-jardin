@@ -34,6 +34,10 @@ for (const [nom, quand] of MOMENTS) {
   await pg.setViewportSize({ width: 393, height: 852 });
   await pg.waitForTimeout(1500);
   await pg.screenshot({ path: join(SORTIE, `${STYLE}-${nom}.png`) });
+  // Le bas de la page, où le premier plan du décor passe derrière la barre de navigation
+  await pg.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await pg.waitForTimeout(400);
+  await pg.screenshot({ path: join(SORTIE, `${STYLE}-${nom}-bas.png`) });
   const etat = await pg.evaluate(() => { const z = document.getElementById("ambiance");
     return { fond: z.dataset.fond, ciel: z.dataset.ciel, saison: z.dataset.saison, meteo: z.dataset.meteo }; });
   console.log(nom, JSON.stringify(etat), "erreurs", erreurs.slice(0, 3));

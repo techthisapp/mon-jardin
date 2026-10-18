@@ -111,6 +111,24 @@ de la même façon, reste dans cette fourchette. L'estampe reste peinte en
 une seule couche, à 16 millisecondes. Les arbres et les massifs du fond restent
 immobiles entre deux repeints ; la branche, le premier plan et l'eau bougent.
 
+## Le premier plan au-dessus de la barre
+
+Sur l'iPhone, Jérôme a relevé que les éléments du bas de la scène étaient
+entièrement cachés. Deux causes s'ajoutaient :
+- le voile du bas d'écran, opaque sur 78 points au-dessus du bas, puis fondu
+  sur 38 ; il éteint ce qui défile sous la barre de navigation, mais il
+  masquait aussi le premier plan du décor ;
+- la scène, calée sur la hauteur de l'écran entier, posait ses plantes, ses
+  pots et son muret sous la barre.
+
+Les corrections :
+- **La hauteur de la scène.** Les scènes se calent désormais sur la hauteur
+  au-dessus de la barre, avec une marge de 24 points. Sous la barre, le sol
+  de la scène se prolonge : gravier, dallage ou terre. La hauteur de la barre
+  est relue quand la taille de la fenêtre change.
+- **Le voile du bas.** Avec le jardin vivant, il garde sa hauteur mais n'est
+  plus qu'à moitié opaque.
+
 ## Pièges rencontrés
 
 **Le feuillage qui scintille.** Une masse de feuillage tirait la place de ses
@@ -122,6 +140,11 @@ par le rameau.
 **Le balancement qui s'additionne.** L'écart de chaque rameau s'ajoutait à
 celui de son parent. Par grand vent, les pointes pivotaient de plusieurs
 radians. L'écart est divisé par cinq et le vent plafonné à 60 km/h.
+
+**La mesure d'un élément fixé à l'écran.** La présence de la barre de
+navigation se testait d'abord par `offsetParent`, qui vaut toujours `null`
+pour un élément en position fixe : la hauteur lue était zéro et la scène ne
+remontait pas. La barre se mesure par la taille de son rectangle.
 
 **Le reflet par copie de la toile.** Le bassin reflète la scène en recopiant
 sur elle-même une bande de la toile, retournée et découpée en bandes

@@ -4431,9 +4431,12 @@ function jvScene(x, W, H, t, etat, P) {
   const neige = nomS === "hiver" || m.neige > 0;
   const o = col => jvMel(col, "#141B2A", nuit * 0.62 + gris * 0.14);
   const allume = Math.max(nuit, jvBorne(-hs, -2, 4) * 0.8);
-  const k = H / 830, ox = (W - 465 * k) / 2, L = -ox / k - 2, R = (W - ox) / k + 2;
+  // La scène tient au-dessus de la barre de navigation ; dessous, son sol se prolonge.
+  const Hs = H - (etat.basLibre || 0);
+  const k = Hs / 830, ox = (W - 465 * k) / 2, L = -ox / k - 2, R = (W - ox) / k + 2;
   // Deux couches : le fond immobile, peint de loin en loin, et ce qui vit, peint à chaque image.
   const F = etat.couche !== "dessus", D = etat.couche !== "fond";
+  if (F && Hs < H) { x.fillStyle = o(P.sol || "#E6DFCF"); x.fillRect(0, Hs - 4, W, H - Hs + 4); }
   x.save(); x.translate(ox, 0); x.scale(k, k);
   const blanc = o("#F7F8F8");
   const { rect, poly, couronne, arbre, tronc, fan, rubans, plumets } = jvOutils(x, t, souffle, vent, o, neige, blanc);
@@ -5098,7 +5101,7 @@ const JME = {
     massif: ["#F4F2EA", "#FFFFFF", "#6E8A4E"], lavande: null, rameau: "amandier", chute: ["#FFFFFF", "#F6EEF0"], eau: ["#3E8AD2", "#7CB6E4"] },
   ete: { ciel: ["#3E7FD0", "#BCD4EA"], mer: "#2A62B0", colline: "#66844A", bosquet: ["#6E8E46", "#8AA85A", "#566E3A"],
     olivier: ["#8A9A68", "#A6B486", "#6E7E52", "#C0CAA4"], jarre: "agrumes", fruit: "#F4D23A", vigne: null,
-    massif: ["#6E5AB8", "#8A74CE", "#5E7A48"], lavande: ["#6A54B4", "#8C76D0", "#7A64C2"], rameau: "olivier", olive: "#7E8A3A", eau: ["#2E7ECC", "#6AAAE0"] },
+    massif: ["#6E5AB8", "#8A74CE", "#5E7A48"], lavande: ["#6A54B4", "#8C76D0", "#7A64C2"], rameau: "olivier", olive: "#7E8A3A", eau: ["#2E7ECC", "#6AAAE0"], sol: "#E6DFCF" },
   automne: { ciel: ["#E9C08A", "#F6E2C2"], mer: "#6A86A8", colline: "#9A7A44", bosquet: ["#C9853A", "#D9A24A", "#A8642E"],
     olivier: ["#7E8A62", "#9AA47E", "#646E4C", "#B4BC98"], jarre: "grenadier", fruit: "#C8402E", vigne: ["#B8341E", "#D8502A", "#8E2416"],
     massif: ["#C8642A", "#E0882E", "#A8401E"], lavande: null, rameau: "chene", feuille: ["#C8541E", "#E07A2A", "#A63A16"], chute: ["#C8541E", "#E07A2A", "#A63A16"], eau: ["#5E8AAE", "#A8C0D0"] },
@@ -5480,7 +5483,7 @@ function jvBrancheMediterraneenne(x, Z, segs) {
 function peindreEnCouches(peintre, x, W, H, t, etat, cache) {
   const T = x.getTransform(), cv = x.canvas, s = etat.sol;
   const cle = [etat.style, etat.saison, etat.temps, etat.gel, Math.round(s.hs), Math.round(s.fr * 40), Math.round(Math.min(2, s.fn) * 20),
-    cv.width, cv.height, T.a.toFixed(3), T.e.toFixed(1)].join("|");
+    cv.width, cv.height, T.a.toFixed(3), T.e.toFixed(1), Math.round(etat.basLibre || 0)].join("|");
   if (!cache.fond || cache.cleFond !== cle) {
     if (!cache.fond) cache.fond = document.createElement("canvas");
     if (cache.fond.width !== cv.width || cache.fond.height !== cv.height) { cache.fond.width = cv.width; cache.fond.height = cv.height; }
@@ -5508,6 +5511,8 @@ const JV_STYLES = {
 function peindreJardin(x, W, H, t, etat, cache) {
   const st = JV_STYLES[etat.style] || JV_STYLES.estampe;
   if (st.peindre) return st.peindre(x, W, H, t, etat, cache);
+  // La scène tient au-dessus de la barre de navigation ; dessous, son sol se prolonge.
+  const Htot = H; H = H - (etat.basLibre || 0);
   const th = JV_THEMES[etat.theme] || JV_THEMES.japonais, nomS = etat.saison, s = th.saisons[nomS];
   const m = Object.assign({}, JV_TEMPS[etat.temps] || JV_TEMPS.clair, etat.pluie ? { pluie: etat.pluie } : {});
   const sol = etat.sol, hs = sol.hs, c = cielDuJardin(hs, sol.montant), vent = etat.vent;
@@ -5641,6 +5646,7 @@ function peindreJardin(x, W, H, t, etat, cache) {
     }
     x.globalAlpha = 0.035; x.fillStyle = cache.grain; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
   }
+  if (Htot > H) { x.fillStyle = ombre(s.terre || "#B9A894"); x.fillRect(0, H - 1, W, Htot - H + 1); }
   return c;
 }
 
@@ -5711,6 +5717,16 @@ function dessinerJardin(t) {
   }
   const x = cv.getContext("2d");
   x.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
+  // La hauteur prise par la barre de navigation, relue quand la fenêtre change :
+  // la scène se tient au-dessus, pour que son premier plan ne passe pas dessous.
+  if (jv.basLibre === undefined || jv.hauteurLue !== LH) {
+    const barre = document.querySelector(".barre-basse");
+    // La barre est fixée à l'écran : sa présence se lit à sa taille, offsetParent y vaut toujours null.
+    const rb = barre ? barre.getBoundingClientRect() : null;
+    jv.basLibre = rb && rb.height > 0 ? Math.max(0, LH - rb.top) : 0;
+    jv.hauteurLue = LH;
+  }
+  e.basLibre = (jv.basLibre ? jv.basLibre + 24 : 0) / k;
   peindreJardin(x, W, H, t, e, jv.cache);
 }
 

@@ -3638,3 +3638,12 @@ main{--papier-haut:rgba(251,250,247,.72);--verre-bord:rgba(255,255,255,.62)}
 :root[data-fond="jardin"]:not([data-ciel="nuit"]) .tete-ecran .lien{
   text-shadow:0 0 10px rgba(255,255,255,.9),0 0 3px rgba(255,255,255,.8);
 }
+/* Avec le jardin vivant, le voile du bas d'écran garde sa hauteur mais
+   s'allège : opaque, il cachait le premier plan du décor ; la barre de verre
+   suffit à protéger la lecture. */
+:root[data-fond="jardin"] body::after{
+  background:linear-gradient(to top,
+    color-mix(in srgb, var(--papier) 55%, transparent) 0,
+    color-mix(in srgb, var(--papier) 45%, transparent) calc(78px + env(safe-area-inset-bottom)),
+    transparent 100%);
+}
