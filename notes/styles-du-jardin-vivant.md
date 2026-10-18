@@ -42,7 +42,21 @@ retouchée en plusieurs passes avant intégration :
 | Pampas et graminées | mur de pampas et de stipas, verveine, pennisetums, olivier, bassin turquoise, village et mer ; versant d'herbes et de tamaris jusqu'à la mer | épis qui ploient par la pointe, gauras et lavande étoffés, floraisons de printemps, cyprès remplacés par herbes et tamaris |
 | Jardin naturel | branche en fleur, arbre léger, massifs fleuris, mare et sa carpe Kohaku, libellules, allée et pas japonais, fougères ; forêt au pied des collines | ramures courbes, carpe sous l'eau en allers-retours, neige sur les massifs et l'allée, cyprès remplacés par une forêt |
 | Jardin japonais | cerisier, érable penché au-dessus de l'étang, pin taillé, bambouseraie, lanterne de pierre, pas japonais, iris ; forêt au pied du mont | sans cyprès, forêt de fond, ramures et neige posée sur les branches, feuillages plus fournis |
-| Jardin anglais | arche de roses aux tiges sinueuses, chêne étalé, manoir, balustrade et escalier, bassin, plates-bandes en rangs, pivoines, digitales, delphiniums, alliums | allée en courbe dégagée, rangs de touffes structurés, escalier complet, neige sur la terrasse |
+| Jardin anglais | arche de roses aux tiges sinueuses, chêne étalé, manoir, balustrade et escalier, bassin, pelouse tondue en bandes, cadran solaire, lavande en bordure d'allée, un massif composé au premier plan | allée en courbe dégagée, escalier complet, neige sur la terrasse, puis décor allégé et immobile |
+
+Le jardin anglais a été redessiné le 18 octobre 2026 à la demande de Jérôme,
+qui le trouvait trop fouillis. Le tapis de fleurs, les rangs de touffes et les
+bordures semées le long de l'allée ont disparu. Le décor tient désormais en
+quelques ensembles soignés, posés sur une pelouse tondue en bandes qui filent
+vers l'escalier : un cadran solaire, une bordure de lavande de chaque côté de
+l'allée, l'arche de roses en bouquets espacés, feuilles pointues et nervurées,
+et un seul massif composé au premier plan. Ce massif change avec la saison :
+digitales, alliums et tulipes au printemps ; delphiniums, alliums, pivoines et
+lavande l'été ; asters, sédums et têtes sèches d'alliums l'automne ; têtes
+sèches sous la neige l'hiver. Tout le décor est immobile et passe dans le fond
+gardé en mémoire. Seuls les reflets du bassin, la pluie et ce qui tombe du ciel
+restent animés. Le temps par image tombe d'environ 18 millisecondes à moins
+d'une milliseconde dans Chromium sur ordinateur.
 
 Le style brutaliste a été renommé « Urbain » à la demande de Jérôme. Il garde
 la clé `brutaliste`, si bien que le choix déjà enregistré sur un appareil reste
