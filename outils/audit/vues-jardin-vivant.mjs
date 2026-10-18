@@ -1,6 +1,7 @@
 /* Photographies du fond « Jardin vivant » dans l'application, aux quatre
-   saisons, de jour et de nuit, sur les données figées des essais.
-   Emploi : node outils/audit/vues-jardin-vivant.mjs <dossier de sortie>
+   saisons, de jour et de nuit, sur les données figées des essais, pour chacun
+   des trois styles.
+   Emploi : node outils/audit/vues-jardin-vivant.mjs <dossier de sortie> [style]
    Rien n'est écrit dans le dépôt, rien ne sort sur le réseau. */
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
@@ -8,7 +9,7 @@ import { extname, join, normalize } from "node:path";
 import { chromium } from "playwright";
 import { ICI, ouvrirContexte } from "../essais/commun.mjs";
 
-const SORTIE = process.argv[2];
+const SORTIE = process.argv[2], STYLE = process.argv[3] || "moderne";
 if (!SORTIE) { console.error("Dossier de sortie attendu."); process.exit(1); }
 await mkdir(SORTIE, { recursive: true });
 const RACINE = join(ICI, "..", "..");
@@ -29,10 +30,10 @@ const MOMENTS = [
   ["hiver", "2026-01-10T14:00:00+01:00"],
 ];
 for (const [nom, quand] of MOMENTS) {
-  const { ctx, pg, erreurs } = await ouvrirContexte(nav, { jour: new Date(quand).getTime() });
+  const { ctx, pg, erreurs } = await ouvrirContexte(nav, { jour: new Date(quand).getTime(), style: STYLE });
   await pg.setViewportSize({ width: 393, height: 852 });
   await pg.waitForTimeout(1500);
-  await pg.screenshot({ path: join(SORTIE, `${nom}.png`) });
+  await pg.screenshot({ path: join(SORTIE, `${STYLE}-${nom}.png`) });
   const etat = await pg.evaluate(() => { const z = document.getElementById("ambiance");
     return { fond: z.dataset.fond, ciel: z.dataset.ciel, saison: z.dataset.saison, meteo: z.dataset.meteo }; });
   console.log(nom, JSON.stringify(etat), "erreurs", erreurs.slice(0, 3));

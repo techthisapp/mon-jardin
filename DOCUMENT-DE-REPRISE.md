@@ -764,6 +764,8 @@ Depuis le 16 octobre 2026, l'application n'a plus d'en-tête sombre : un fond vi
 
 Depuis le 17 octobre 2026, le fond par défaut est le jardin vivant : un paysage de jardin peint sur une toile, dont le ciel suit le soleil réel au point du jardin, la lune et le temps de l'heure, et dont le décor change avec la saison. Le feuillage du 16 octobre et un fond uni restent au choix dans les réglages du compte, pour l'appareil. Détail dans la note `jardin-vivant`.
 
+Depuis le 18 octobre 2026, le jardin vivant se peint en trois styles, chacun avec son décor : moderne, par défaut, et brutaliste, redessinés d'après les planches de Jérôme, et estampe, dont le décor suit le climat du jardin ou se choisit parmi sept. Les réglages du compte portent les lignes « Style » et « Décor ». Les deux styles illustrés se peignent en deux couches, un fond immobile gardé en mémoire et ce qui vit par-dessus. Détail dans la note `styles-du-jardin-vivant`.
+
 Deux écrans principaux, accessibles par une barre flottante translucide en bas d'écran.
 
 **En ce moment** se lit sur deux niveaux depuis le 1er août 2026.
@@ -819,6 +821,8 @@ Les enregistrements d'événements passent par une fonction qui ignore un élém
 **Le survol sur écran tactile.** Un état de survol qui remplace une couleur de fond persiste après l'appui et fait disparaître cette couleur. Utiliser une ombre intérieure qui se superpose, et réserver le survol aux appareils qui en disposent par `@media (hover:hover)`.
 
 **Les marges sur un conteneur à positionnement absolu.** Une marge horizontale posée sur la rangée d'un tiroir de glissement décale la glissière et découvre le tiroir en permanence. La marge doit aller sur l'élément qui glisse.
+
+**Un tirage aléatoire calculé sur une position qui bouge.** Une masse de feuillage du jardin vivant tirait la place de ses feuilles d'une graine calculée sur sa position. Portée par une branche qui se balance, elle redistribuait ses feuilles à chaque image, et l'arbre scintillait. Une graine se fixe sur un identifiant stable.
 
 **Un enfant ajouté avant des sélecteurs `nth-child`.** La toile du jardin vivant, posée en tête du calque d'ambiance, a décalé les règles `.am-tache:nth-child(n)` et privé la cinquième tache de sa couleur. Un élément nouveau se place après ceux qu'un sélecteur de rang désigne.
 

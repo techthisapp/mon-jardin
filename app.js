@@ -3242,13 +3242,16 @@ let ambianceDite = "";
 
 /* ---------- Le jardin vivant ----------
    Fond par défaut depuis le 17 octobre 2026 : un paysage de jardin peint sur
-   une toile, dans la veine des estampes. Le ciel suit la hauteur réelle du
-   soleil au point du jardin, la lune traverse la nuit et éclaire le décor. La
-   prévision de l'heure pose les nuages, la pluie, la neige ou le brouillard,
-   et son vent balance la végétation. La saison change l'arbre du verger, la
-   branche, le potager, le bassin et ce qui tombe. Le fond « Feuillage », celui
-   des taches et des feuilles, et un fond uni restent au choix dans les
-   réglages du compte. */
+   une toile. Le ciel suit la hauteur réelle du soleil au point du jardin, la
+   lune traverse la nuit et éclaire le décor, la prévision de l'heure pose les
+   nuages, la pluie, la neige ou le brouillard, et son vent balance la
+   végétation. La saison change les arbres, les massifs, l'eau et ce qui tombe.
+
+   Depuis le 18 octobre, il se peint en trois styles, chacun avec son propre
+   décor : le moderne et le brutaliste, redessinés d'après les planches de
+   Jérôme, et l'estampe, dont le décor suit le climat du jardin ou se choisit
+   parmi sept. Le fond « Feuillage », celui des taches et des feuilles, et un
+   fond uni restent au choix dans les réglages du compte. */
 const FOND = "monjardin.fond";
 const FONDS_ECRAN = {
   jardin: ["Jardin vivant", "Un paysage de jardin qui suit le soleil et la lune, le temps de l'heure et la saison."],
@@ -3259,22 +3262,30 @@ let choixFond = (() => {
   try { const v = localStorage.getItem(FOND); return FONDS_ECRAN[v] ? v : "jardin"; }
   catch (e) { return "jardin"; }
 })();
-const JV_SAISONS = {
-  printemps: { terre: "#8AAE68", buisson: "#4A7D44", herbe: "#6B9A4C", fleur: "#F4B6C6", coeur: "#C8406A",
-    feuille: null, chute: "petales", ciel: ["#9CC3DC", "#EEF0E4"], mont: "#6E93A6", azalee: "#E2668E",
-    touches: ["#F4B6C6", "#F2CF4A", "#FFFFFF", "#AE96DA", "#F08A9E"],
-    pin: "#3E7246", houppier: ["#F3BCCA", "#F8D6DF", "#EAA0B4"], potager: "salades" },
-  ete: { terre: "#6FA04A", buisson: "#2E6E36", herbe: "#4E9038", fleur: null, coeur: null,
-    feuille: ["#3E7D34", "#5DA044", "#7DB653"], chute: "aucune", ciel: ["#7FB2D8", "#E6EEE6"], mont: "#5E879C",
-    azalee: null, touches: ["#EAB02E", "#D9507A", "#7B62C0", "#EC7F32", "#FFFFFF"],
-    pin: "#2F6538", houppier: ["#4E9440", "#6BAD50", "#3E7E36"], potager: "courges" },
-  automne: { terre: "#8D7C5A", buisson: "#7B4B30", herbe: "#A18B5E", fleur: null, coeur: null,
-    feuille: ["#B2402C", "#C7783A", "#9C3326"], chute: "momiji", ciel: null, mont: "#3C4752",
-    azalee: null, touches: null, pin: "#3B5C3D", houppier: ["#D66A2E", "#E8A23C", "#B8452C"], potager: "potirons" },
-  hiver: { terre: "#B5B8B0", buisson: "#4A5550", herbe: "#998E77", fleur: null, coeur: null,
-    feuille: null, chute: "aucune", ciel: null, mont: "#3C4752", azalee: null, touches: null,
-    pin: "#34493F", houppier: null, potager: "paille" },
+const STYLE_JARDIN = "monjardin.style";
+const DECOR_JARDIN = "monjardin.decor";
+const STYLES_JARDIN = ["moderne", "brutaliste", "estampe"];
+let choixStyle = (() => {
+  try { const v = localStorage.getItem(STYLE_JARDIN); return STYLES_JARDIN.indexOf(v) !== -1 ? v : "moderne"; }
+  catch (e) { return "moderne"; }
+})();
+let choixDecor = (() => {
+  try { return localStorage.getItem(DECOR_JARDIN) || "climat"; }
+  catch (e) { return "climat"; }
+})();
+
+const jvHex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+const jvMel = (a, b, t) => {
+  const x = jvHex(a), y = jvHex(b);
+  return "#" + x.map((v, i) => Math.round(Math.max(0, Math.min(255, v + (y[i] - v) * t)))
+    .toString(16).padStart(2, "0")).join("");
 };
+const jvBorne = (v, a, b) => Math.max(0, Math.min(1, (v - a) / (b - a)));
+const jvAlea = n => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+const jvRgba = (c, a) => { const [r, g, b] = jvHex(c); return `rgba(${r},${g},${b},${Math.max(0, a).toFixed(3)})`; };
+// Lavis sourds, comme un papier teinté : indigo la nuit, kaki à l'aube, papier clair le jour.
+const JV_CIELS = { nuit: ["#151B2A", "#28304A"], aube: ["#56607A", "#E6C6A2"],
+  jour: ["#BFCBCC", "#ECE7DA"], soir: ["#474A66", "#DDA184"] };
 // Ce que chaque ciel de l'heure pose : nuages en bandes, voile couvert, pluie, neige, brume, éclairs.
 const JV_TEMPS = {
   clair:      { cumulus: 0.2, nappe: 0, pluie: 0, neige: 0, brume: 0.15, orage: 0 },
@@ -3285,24 +3296,2056 @@ const JV_TEMPS = {
   neige:      { cumulus: 0.3, nappe: 0.8, pluie: 0, neige: 1, brume: 0.45, orage: 0 },
   brouillard: { cumulus: 0, nappe: 0.35, pluie: 0, neige: 0, brume: 1, orage: 0 },
 };
+
+function cielDuJardin(h, montant) {
+  const C = JV_CIELS, lever = montant ? C.aube : C.soir;
+  let p;
+  if (h <= -12) p = C.nuit;
+  else if (h < 2) { const t = (h + 12) / 14; p = [jvMel(C.nuit[0], lever[0], t), jvMel(C.nuit[1], lever[1], t)]; }
+  else if (h < 20) { const t = (h - 2) / 18; p = [jvMel(lever[0], C.jour[0], t), jvMel(lever[1], C.jour[1], t)]; }
+  else p = C.jour;
+  return { haut: p[0], bas: p[1], nuit: jvBorne(-h, 2, 12), jour: jvBorne(h, -4, 6),
+           chaud: jvBorne(25 - h, 0, 25) * jvBorne(h, -6, 2) };
+}
+
+// Une branche, tracée une fois, qui retombe du coin haut droit.
+function genBranche(W) {
+  const segs = [];
+  const pousse = (x, y, ang, len, ep, d, g) => {
+    const a = ang + (jvAlea(g) - 0.5) * 0.3;
+    const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+    const pli = (jvAlea(g + 1) - 0.5) * len * 0.25;
+    segs.push({ x, y, x2, y2, cx: (x + x2) / 2 - Math.sin(a) * pli, cy: (y + y2) / 2 + Math.cos(a) * pli, ep, d, g });
+    if (d >= 5) return;
+    pousse(x2, y2, a - 0.3 + (jvAlea(g + 2) - 0.5) * 0.3, len * 0.74, ep * 0.66, d + 1, g * 2 + 1);
+    if (d < 3 || jvAlea(g + 3) > 0.3) {
+      pousse(x2, y2, a + 0.5 + (jvAlea(g + 4) - 0.5) * 0.4, len * (0.5 + jvAlea(g + 5) * 0.2), ep * 0.55, d + 1, g * 2 + 2);
+    }
+  };
+  // Assez courte pour laisser lisibles le nom du jardin, la date et les titres d'écran.
+  pousse(W + 8, 22, Math.PI * 0.87, 60, 10, 0, 1);
+  pousse(W + 8, 90, Math.PI * 0.97, 42, 5.5, 1, 61);
+  return segs;
+}
+
+function jvCapsule(x, x0, y0, w, h) {
+  const r = h / 2;
+  x.beginPath(); x.moveTo(x0 + r, y0); x.lineTo(x0 + w - r, y0);
+  x.arc(x0 + w - r, y0 + r, r, -Math.PI / 2, Math.PI / 2); x.lineTo(x0 + r, y0 + h);
+  x.arc(x0 + r, y0 + r, r, Math.PI / 2, Math.PI * 1.5); x.fill();
+}
+function jvMomiji(x, cx, cy, r, rot) {
+  x.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const rr = k % 2 ? r * 0.42 : r, a = rot + k * Math.PI / 5 - Math.PI / 2;
+    x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  x.closePath(); x.fill();
+}
+const jvRond = (x, cx, cy, r) => { x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill(); };
+const jvOvale = (x, cx, cy, rx, ry, rot) => { x.beginPath(); x.ellipse(cx, cy, rx, ry, rot || 0, 0, 7); x.fill(); };
+const jvTrait = (x, a, b, c, d) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c, d); x.stroke(); };
+function jvFleur(x, cx, cy, r, couleur, coeur) {
+  x.fillStyle = couleur;
+  for (let p = 0; p < 5; p++) jvRond(x, cx + Math.cos(p * 1.257) * r * 1.2, cy + Math.sin(p * 1.257) * r * 1.2, r);
+  if (coeur) { x.fillStyle = coeur; jvRond(x, cx, cy, r * 0.45); }
+}
+
+/* ---------- Pièces de décor communes aux thèmes ---------- */
+function jvBrume(x, e, y, ep, a) {
+  const bg = x.createLinearGradient(0, y - ep, 0, y + ep);
+  bg.addColorStop(0, jvRgba(e.bas, 0)); bg.addColorStop(0.5, jvRgba(e.bas, a)); bg.addColorStop(1, jvRgba(e.bas, 0));
+  x.fillStyle = bg; x.fillRect(0, y - ep, e.W, ep * 2);
+}
+// Une ligne de crête ondulée, remplie jusqu'au bas de l'écran.
+function jvCrete(x, e, y, amp, f, ph, couleur) {
+  x.fillStyle = couleur;
+  x.beginPath(); x.moveTo(0, e.H);
+  for (let i = 0; i <= 40; i++) {
+    const xn = i / 40;
+    x.lineTo(xn * e.W, y - Math.sin(xn * f + ph) * amp - Math.sin(xn * f * 2.3 + ph * 2) * amp * 0.3);
+  }
+  x.lineTo(e.W, e.H); x.fill();
+}
+// Le sol du jardin, givré par gel, enneigé l'hiver.
+function jvSol(x, e, terre, y) {
+  const t0 = e.gel && !e.neigeux ? jvMel(terre, "#E4E8EA", 0.35) : terre;
+  const gs = x.createLinearGradient(0, y, 0, e.H);
+  gs.addColorStop(0, e.ombre(t0)); gs.addColorStop(1, e.ombre(jvMel(t0, "#283028", 0.4)));
+  x.fillStyle = gs; x.fillRect(0, y, e.W, e.H - y);
+  if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, e.m.neige ? 0.8 : 0.5); x.fillRect(0, y, e.W, 18); }
+}
+// Une fenêtre, allumée à la tombée du jour pour une part des maisons.
+function jvFenetre(x, e, fx, fy, w, h, k) {
+  const allume = e.allume * (jvAlea(k * 7.3) > 0.3 ? 1 : 0);
+  x.fillStyle = allume > 0.05 ? jvMel(e.ombre("#4E5862"), "#F4C46A", allume) : e.ombre("#4E5862");
+  x.fillRect(fx, fy, w, h);
+  if (allume > 0.3) {
+    const g = x.createRadialGradient(fx + w / 2, fy + h / 2, 1, fx + w / 2, fy + h / 2, w * 2.4);
+    g.addColorStop(0, `rgba(246,196,106,${(0.3 * allume).toFixed(2)})`); g.addColorStop(1, "rgba(246,196,106,0)");
+    x.fillStyle = g; x.fillRect(fx - w * 2, fy - w * 2, w * 5, h + w * 4);
+  }
+}
+// La fumée d'une cheminée, par temps frais ou le soir, poussée par le vent.
+function jvFumee(x, e, cx, cy) {
+  if (e.nomS === "ete" && e.c.nuit < 0.3) return;
+  for (let i = 0; i < 7; i++) {
+    const ph = (e.t * 0.1 + i / 7) % 1;
+    const px = cx + ph * (20 + e.vent * 1.6) + Math.sin(e.t * 0.8 + i) * 3, py = cy - ph * 70;
+    x.fillStyle = jvRgba(e.c.nuit > 0.5 ? "#8E96A8" : "#E6E4DE", 0.38 * (1 - ph));
+    jvRond(x, px, py, 3 + ph * 11);
+  }
+}
+// Un arbre à couronne ronde : en fleur, en feuilles, en fruits, ou nu.
+function jvArbre(x, e, px, py, k, couleurs, fruit, sol) {
+  const bal = Math.sin(e.t * e.souffle * 0.6 + px) * e.vent * 0.05 * k;
+  x.strokeStyle = e.ombre("#4E3E30"); x.lineCap = "round"; x.lineWidth = 6 * k;
+  x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px - 4 * k, py - 40 * k, px + bal * 0.5, py - 66 * k); x.stroke();
+  x.lineWidth = 2.6 * k;
+  const br = [[-34, -96], [30, -100], [-6, -118], [40, -78], [-40, -74]];
+  br.forEach(([dx, dy]) => {
+    x.beginPath(); x.moveTo(px + bal * 0.5, py - 62 * k);
+    x.quadraticCurveTo(px + dx * 0.4 * k, py + dy * 0.75 * k, px + dx * k + bal, py + dy * k); x.stroke();
+  });
+  if (couleurs) {
+    for (let i = 0; i < 16; i++) {
+      const a = jvAlea(i * 5 + 3 + px) * Math.PI * 2, d = 0.3 + jvAlea(i * 7 + px) * 0.7;
+      x.fillStyle = e.ombre(couleurs[i % couleurs.length]);
+      jvRond(x, px + bal + (Math.cos(a) * 42 * d + Math.sin(e.t * e.souffle + i) * e.vent * 0.03) * k,
+        py + (-96 + Math.sin(a) * 26 * d) * k, (13 + (i % 3) * 3) * k);
+    }
+    if (fruit) {
+      x.fillStyle = e.ombre(fruit);
+      for (let i = 0; i < 7; i++) jvRond(x, px + bal + (-30 + jvAlea(i + 40 + px) * 60) * k, py + (-112 + jvAlea(i + 50) * 40) * k, 3.2 * k);
+      if (sol) for (let i = 0; i < 4; i++) jvRond(x, px + (-26 + jvAlea(i + 60) * 52) * k, py + 4 + jvAlea(i + 70) * 6, 2.8 * k);
+    }
+  } else if (e.neigeux || e.gel) {
+    x.strokeStyle = jvRgba(e.blanc, 0.9); x.lineWidth = 1.6 * k;
+    br.slice(0, 3).forEach(([dx, dy]) => jvTrait(x, px + dx * 0.5 * k, py - 84 * k, px + dx * k + bal, py + (dy - 2) * k));
+  }
+}
+// Des graminées qui ploient au vent ; en épis à l'automne.
+function jvHerbes(x, e, bx, sens, j, couleur, epis) {
+  for (let i = 0; i < 10; i++) {
+    const base = bx + i * 2.6, L = 60 + jvAlea(j * 10 + i) * 50;
+    const b = Math.sin(e.t * e.souffle * 1.2 + i * 0.4 + j) * (3 + e.vent * 0.18) + e.vent * 0.35;
+    const tx = base + sens * (i - 5) * 4 + b, ty = e.H - 30 - L;
+    x.strokeStyle = e.ombre(couleur); x.lineWidth = 1.2;
+    x.beginPath(); x.moveTo(base, e.H - 30); x.quadraticCurveTo(base + b * 0.2, e.H - 30 - L * 0.6, tx, ty); x.stroke();
+    if (epis && i % 2 === 0) {
+      x.strokeStyle = jvRgba(e.ombre(epis), 0.85); x.lineWidth = 2.6;
+      x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(tx + 4 + b * 0.1, ty - 8, tx + 10 + b * 0.2, ty - 12); x.stroke();
+    }
+  }
+}
+// De petites fleurs semées dans l'herbe, qui se balancent.
+function jvSemis(x, e, couleurs, y0, y1, n, tige) {
+  for (let i = 0; i < n * e.W / 390; i++) {
+    const fx = jvAlea(i * 13 + 1) * e.W, fy = y0 + jvAlea(i * 7 + 2) * (y1 - y0);
+    const b = Math.sin(e.t * e.souffle * 1.4 + i) * (0.6 + e.vent * 0.05);
+    const r = 1.6 + (fy - e.HZ) / (e.H - e.HZ) * 2.4;
+    x.strokeStyle = e.ombre(tige); x.lineWidth = 0.9;
+    jvTrait(x, fx, fy + r * 3, fx + b, fy);
+    x.fillStyle = e.ombre(couleurs[i % couleurs.length]); jvRond(x, fx + b, fy, r);
+  }
+}
+// Rosée du matin, deux heures après le lever, par ciel dégagé.
+function jvRosee(x, e) {
+  if (e.sol.depuisLever < -0.5 || e.sol.depuisLever > 2.5 || e.m.nappe >= 0.5 || e.nomS === "hiver") return;
+  for (let i = 0; i < 22; i++) {
+    x.fillStyle = `rgba(255,253,245,${(0.6 * Math.max(0, Math.sin(e.t * 1.6 + i * 2.3))).toFixed(2)})`;
+    x.fillRect(jvAlea(i * 7) * e.W, e.HZ + 24 + jvAlea(i * 11) * (e.H - e.HZ - 60), 1.6, 1.6);
+  }
+}
+function jvOiseaux(x, e, y) {
+  x.strokeStyle = jvRgba(e.ombre("#24282A"), 0.6); x.lineWidth = 1.1;
+  for (let i = 0; i < 5; i++) {
+    const bx = ((e.t * 11 + i * 17) % (e.W + 140)) - 70, by = y + i * 7 + (i % 2) * 5 + Math.sin(e.t * 0.8 + i) * 3;
+    const ai = 2 + Math.sin(e.t * 5 + i) * 2;
+    x.beginPath(); x.moveTo(bx - 5, by - ai); x.quadraticCurveTo(bx - 2, by - 2, bx, by);
+    x.quadraticCurveTo(bx + 2, by - 2, bx + 5, by - ai); x.stroke();
+  }
+}
+// Martinets ou hirondelles d'été : vol rapide en croissants.
+function jvMartinets(x, e, y) {
+  x.fillStyle = jvRgba(e.ombre("#22262A"), 0.75);
+  for (let i = 0; i < 4; i++) {
+    const u = e.t * 0.35 + i * 1.7;
+    const bx = (e.W * 0.5 + Math.sin(u) * e.W * 0.45 + i * 30) % e.W, by = y + Math.sin(u * 1.7 + i) * 40;
+    const a = Math.cos(u) > 0 ? 1 : -1;
+    x.beginPath(); x.moveTo(bx - 7 * a, by - 2); x.quadraticCurveTo(bx, by + 1, bx + 7 * a, by - 4);
+    x.quadraticCurveTo(bx, by - 1, bx - 7 * a, by - 2); x.fill();
+  }
+}
+function jvLucioles(x, e) {
+  for (let i = 0; i < 14; i++) {
+    const fx = jvAlea(i * 5) * e.W + Math.sin(e.t * 0.35 + i) * 18, fy = e.HZ + jvAlea(i * 9) * 160 + Math.cos(e.t * 0.45 + i) * 10;
+    const a = Math.max(0, Math.sin(e.t * 1.2 + i * 1.9)) * 0.8;
+    const r = x.createRadialGradient(fx, fy, 0, fx, fy, 7);
+    r.addColorStop(0, `rgba(226,240,160,${a.toFixed(2)})`); r.addColorStop(1, "rgba(226,240,160,0)");
+    x.fillStyle = r; x.fillRect(fx - 7, fy - 7, 14, 14);
+  }
+}
+function jvPapillons(x, e) {
+  ["#FFFFFF", "#F4D35E", "#EC8A3E", "#AFCBEF"].forEach((pc, i) => {
+    const u = e.t * 0.05 + i * 0.27;
+    const px = e.W * (0.08 + 0.84 * (0.5 + 0.5 * Math.sin(u * 2.3 + i)));
+    const py = e.HZ + 40 + Math.sin(u * 3.1 + i * 2) * 70 + Math.sin(e.t * 2.2 + i) * 6;
+    const ai = 0.25 + Math.abs(Math.sin(e.t * 9 + i * 1.3)) * 0.75;
+    x.fillStyle = pc;
+    [[-3.6, -1.5, 4.2, 3.4, -0.5], [3.6, -1.5, 4.2, 3.4, 0.5], [-2.6, 2.4, 2.6, 2.2, -0.3], [2.6, 2.4, 2.6, 2.2, 0.3]]
+      .forEach(([dx, dy, rx, ry, a]) => jvOvale(x, px + dx * ai, py + dy, rx * ai, ry, a));
+    x.fillStyle = "rgba(40,36,30,.7)"; x.fillRect(px - 0.5, py - 3, 1, 7);
+  });
+}
+// Les petites maisons d'un village lointain, et son clocher.
+function jvVillage(x, e, cx, y, couleur, clocher) {
+  x.fillStyle = couleur;
+  for (let i = 0; i < 7; i++) {
+    const hx = cx - 60 + i * 17 + jvAlea(i) * 6, w = 12 + jvAlea(i + 3) * 6, h = 8 + jvAlea(i + 5) * 6;
+    x.fillRect(hx, y - h, w, h);
+    x.beginPath(); x.moveTo(hx - 2, y - h); x.lineTo(hx + w / 2, y - h - 7); x.lineTo(hx + w + 2, y - h); x.fill();
+  }
+  if (clocher) {
+    x.fillRect(cx - 3, y - 30, 8, 30);
+    x.beginPath(); x.moveTo(cx - 4, y - 30); x.lineTo(cx + 1, y - 50); x.lineTo(cx + 6, y - 30); x.fill();
+  }
+}
+
+/* ---------- Les thèmes ----------
+   Chaque thème porte ses couleurs de saison, sa branche, ce qui tombe, et
+   peint son décor ; le ciel, le temps, la lune, la branche, la chute, la
+   pluie et le grain sont communs. */
+const JV_PETALES = c => ({ forme: "petale", couleurs: c });
+const JV_FEUILLES = c => ({ forme: "ovale", couleurs: c });
+
+function decorJaponais(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre, vent, souffle } = e;
+  const pied = HZ - 28;
+  const MONTS = [{ p: 0.1, h: 92, w: 0.32 }, { p: 0.47, h: 140, w: 0.38 }, { p: 0.88, h: 104, w: 0.3 }];
+  const mont = () => {
+    x.beginPath(); x.moveTo(0, pied + 30);
+    for (let i = 0; i <= 48; i++) {
+      const xn = i / 48;
+      let y = 0;
+      MONTS.forEach(p => { y = Math.max(y, p.h * Math.pow(Math.max(0, 1 - Math.abs(xn - p.p) / (p.w / 2)), 1.3)); });
+      x.lineTo(xn * W, pied - y + jvAlea(i) * 3);
+    }
+    x.lineTo(W, pied + 30); x.closePath();
+  };
+  x.fillStyle = ombre(jvMel(e.bas, s.mont, s.ciel ? 0.45 : 0.3)); mont(); x.fill();
+  if (e.neigeux) { x.save(); mont(); x.clip(); x.fillStyle = jvRgba(e.blanc, 0.85); x.fillRect(0, 0, W, pied - 108); x.restore(); }
+  jvBrume(x, e, pied - 10, 40, s.ciel ? 0.55 : 0.75);
+  jvCrete(x, e, HZ - 16, 13, 5, 1, ombre(jvMel(e.bas, jvMel(s.terre, "#2D3833", s.ciel ? 0.25 : 0.45), s.ciel ? 0.72 : 0.6)));
+  jvBrume(x, e, HZ - 4, 22, 0.6 + e.m.brume * 0.3);
+  jvSol(x, e, s.terre, HZ + 4);
+  // Pin taillé en plateaux
+  {
+    const px = 62, py = HZ + 10, bal = Math.sin(t * souffle * 0.5) * vent * 0.03;
+    x.strokeStyle = ombre("#4A3A2E"); x.lineCap = "round"; x.lineWidth = 6;
+    x.beginPath(); x.moveTo(px, py); x.bezierCurveTo(px + 16, py - 32, px - 20, py - 58, px + 6 + bal, py - 96); x.stroke();
+    x.lineWidth = 2.6;
+    const plateaux = [[-30, -42, 30, 9], [26, -64, 27, 8], [-10, -90, 23, 8], [6 + bal, -108, 14, 6]];
+    plateaux.forEach(([dx, dy]) => jvTrait(x, px + 2, py + dy + 10, px + dx, py + dy + 2));
+    plateaux.forEach(([dx, dy, rx, ry]) => {
+      const cx = px + dx + bal * 0.5;
+      x.fillStyle = ombre(s.pin); jvOvale(x, cx, py + dy, rx, ry);
+      x.fillStyle = ombre(jvMel(s.pin, "#B9D08A", 0.25)); jvOvale(x, cx, py + dy - ry * 0.35, rx * 0.8, ry * 0.45);
+      if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.92); x.beginPath(); x.ellipse(cx, py + dy - ry * 0.5, rx * 0.85, ry * 0.42, 0, Math.PI, 0); x.fill(); }
+    });
+  }
+  jvArbre(x, e, W * 0.8, HZ + 12, 1, s.houppier, nomS === "ete" ? "#D8452F" : null);
+  // Massifs taillés en boule, couverts d'azalées au printemps
+  [[0.07, 44, 48], [0.29, 36, 30], [0.62, 52, 36]].forEach(([px, dy, r], j) => {
+    const mx = W * px, my = HZ + dy;
+    x.fillStyle = ombre(s.buisson); x.beginPath(); x.ellipse(mx, my, r, r * 0.58, 0, Math.PI, 0); x.fill();
+    x.strokeStyle = jvRgba(ombre(jvMel(s.buisson, "#E8E4D4", 0.25)), 0.5); x.lineWidth = 1.2;
+    x.beginPath(); x.ellipse(mx, my, r * 0.8, r * 0.42, 0, Math.PI * 1.15, Math.PI * 1.75); x.stroke();
+    if (s.azalee) {
+      for (let i = 0; i < 26; i++) {
+        const a = Math.PI * (1.05 + jvAlea(j * 31 + i) * 0.9), d = 0.25 + jvAlea(i * 3 + j) * 0.7;
+        x.fillStyle = ombre(i % 4 ? s.azalee : "#F6D0DC"); jvRond(x, mx + Math.cos(a) * r * d, my + Math.sin(a) * r * 0.55 * d, 2);
+      }
+    }
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.9); x.beginPath(); x.ellipse(mx, my - r * 0.38, r * 0.72, r * 0.22, 0, Math.PI, 0); x.fill(); }
+  });
+  // Tuteurs du potager, liés en tête, garnis l'été
+  if (nomS !== "hiver") {
+    const grand = nomS === "ete" ? 46 : 32;
+    for (let i = 0; i < 6; i++) {
+      const px = W * 0.74 + i * 14, b = Math.sin(t * souffle + i) * vent * 0.012;
+      x.strokeStyle = ombre("#6A5A44"); x.lineWidth = 1.3;
+      jvTrait(x, px, HZ + 72, px + b + (i % 2 ? 3 : -3), HZ + 72 - grand);
+      if (nomS === "ete") {
+        for (let j = 0; j < 4; j++) { x.fillStyle = ombre(j % 2 ? "#3F8236" : "#5DA044"); jvOvale(x, px + (j % 2 ? 3 : -3), HZ + 66 - j * 10, 4, 2.4, j); }
+        if (i % 2 === 0) { x.fillStyle = ombre("#D2402E"); jvRond(x, px + 2, HZ + 50 - (i % 3) * 6, 2.6); }
+      }
+    }
+    x.strokeStyle = ombre("#6A5A44"); jvTrait(x, W * 0.74 - 6, HZ + 78 - grand, W * 0.74 + 76, HZ + 78 - grand);
+  }
+  if (s.touches) jvSemis(x, e, s.touches, HZ + 70, H - 40, 70, s.herbe);
+  // Bassin : reflet du ciel, carpes, nénuphars, ronds dans l'eau, reflet de la lune
+  {
+    const ex = W * 0.44, ey = HZ + 116, rx = 80, ry = 19, gele = e.neigeux && nomS === "hiver";
+    x.fillStyle = ombre("#666A63"); jvOvale(x, ex, ey + 1, rx + 7, ry + 5);
+    x.save(); x.beginPath(); x.ellipse(ex, ey, rx, ry, 0, 0, 7); x.clip();
+    const eau = x.createLinearGradient(0, ey - ry, 0, ey + ry);
+    eau.addColorStop(0, gele ? "#DCE2E3" : jvMel(e.bas, "#2E4A52", 0.25));
+    eau.addColorStop(1, gele ? "#BFC9CC" : jvMel(e.haut, "#1E3640", 0.35));
+    x.fillStyle = eau; x.fillRect(ex - rx, ey - ry, rx * 2, ry * 2);
+    if (!gele) {
+      if (nomS !== "hiver") {
+        ["#E8742E", "#F4F1EA", "#D9482B"].forEach((kc, i) => {
+          const a = t * 0.22 * (i % 2 ? -1 : 1) + i * 2.1;
+          x.fillStyle = jvRgba(kc, 0.75 * (1 - e.c.nuit * 0.6));
+          jvOvale(x, ex + Math.cos(a) * rx * 0.58, ey + Math.sin(a) * ry * 0.5, 7, 2.6,
+            Math.atan2(Math.cos(a) * ry, -Math.sin(a) * rx) * (i % 2 ? -1 : 1));
+        });
+      }
+      if (nomS === "ete" || nomS === "printemps") {
+        [[-44, -4], [-30, 6], [38, -2], [52, 7], [12, 9]].forEach(([dx, dy], i) => {
+          x.fillStyle = ombre(i % 2 ? "#4C8A3E" : "#3E7634");
+          x.beginPath(); x.ellipse(ex + dx, ey + dy, 8, 3, 0, 0.3, Math.PI * 2); x.fill();
+          if (nomS === "ete" && i % 2 === 0) { x.fillStyle = ombre("#F2A9C0"); jvOvale(x, ex + dx + 1, ey + dy - 2, 3.2, 2.2); }
+        });
+      }
+      jvRonds(x, e, ex, ey, rx, ry);
+      jvReflet(x, e, ex, ey - ry + 3, 7);
+    }
+    x.restore();
+    x.fillStyle = ombre("#7A7C75");
+    [[-rx - 2, 2, 9], [rx - 6, -6, 7], [-20, ry + 2, 8], [34, ry, 6]].forEach(([dx, dy, r]) => jvOvale(x, ex + dx, ey + dy, r, r * 0.55));
+  }
+  // Lanterne de pierre, allumée à la tombée du jour
+  {
+    const tx = W * 0.15, ty = HZ + 132, pierre = ombre("#8D8C84");
+    x.fillStyle = pierre;
+    x.fillRect(tx - 9, ty - 5, 18, 5); x.fillRect(tx - 3, ty - 26, 6, 21); x.fillRect(tx - 11, ty - 30, 22, 4); x.fillRect(tx - 8, ty - 44, 16, 14);
+    x.fillStyle = e.allume > 0.05 ? jvMel(ombre("#3A3A36"), "#F4C46A", e.allume) : ombre("#3A3A36");
+    x.fillRect(tx - 4, ty - 41, 8, 8);
+    if (e.allume > 0.05) {
+      const gl = x.createRadialGradient(tx, ty - 37, 2, tx, ty - 37, 46);
+      gl.addColorStop(0, `rgba(246,196,106,${(0.45 * e.allume).toFixed(2)})`); gl.addColorStop(1, "rgba(246,196,106,0)");
+      x.fillStyle = gl; x.fillRect(tx - 46, ty - 83, 92, 92);
+    }
+    x.fillStyle = pierre;
+    x.beginPath(); x.moveTo(tx - 17, ty - 44); x.quadraticCurveTo(tx, ty - 50, tx + 17, ty - 44);
+    x.lineTo(tx + 8, ty - 54); x.lineTo(tx - 8, ty - 54); x.closePath(); x.fill();
+    jvRond(x, tx, ty - 57, 3.2);
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.95); x.beginPath(); x.ellipse(tx, ty - 52, 13, 3, 0, Math.PI, 0); x.fill(); }
+  }
+  if (nomS === "ete") jvTournesols(x, e, [[W * 0.9, 112], [W * 0.96, 96], [W * 0.84, 84]], HZ + 150);
+  // Carrés du potager et ce qui y pousse
+  [W * 0.66, W * 0.84].forEach((bx, j) => {
+    const by = HZ + 158, bw = 58;
+    x.fillStyle = ombre("#7A5A3B"); x.fillRect(bx - bw / 2, by - 10, bw, 13);
+    x.fillStyle = ombre("#946F49"); x.fillRect(bx - bw / 2, by - 10, bw, 2.4);
+    x.fillStyle = ombre("#4A382A"); x.fillRect(bx - bw / 2 + 3, by - 12, bw - 6, 3);
+    for (let i = 0; i < 4; i++) jvLegume(x, e, s.potager, bx - bw / 2 + 9 + i * 13.5, by - 14, i + j, 1);
+  });
+  jvHerbes(x, e, 18, 1, 0, s.herbe, nomS === "automne" ? "#E6DAC0" : null);
+  jvHerbes(x, e, W - 34, -1, 1, s.herbe, nomS === "automne" ? "#E6DAC0" : null);
+  jvHerbes(x, e, W * 0.4, 1, 2, s.herbe, nomS === "automne" ? "#E6DAC0" : null);
+  jvRosee(x, e);
+  // Libellules d'été au-dessus du bassin
+  if (e.c.jour > 0.6 && nomS === "ete" && !e.m.pluie) {
+    for (let i = 0; i < 2; i++) {
+      const u = t / 2.5 + i * 0.5, sauts = Math.floor(u), e2 = Math.min(1, (u % 1) * 4);
+      const ax = W * 0.44 + (jvAlea(sauts * 3 + i) - 0.5) * 160, ay = HZ + 70 + jvAlea(sauts * 5 + i) * 40;
+      const bx = W * 0.44 + (jvAlea(sauts * 3 + i + 3) - 0.5) * 160, by = HZ + 70 + jvAlea(sauts * 5 + i + 3) * 40;
+      const dx = ax + (bx - ax) * e2, dy = ay + (by - ay) * e2;
+      x.fillStyle = "rgba(235,242,250,.6)"; jvOvale(x, dx - 2, dy - 4, 1.8, 6, 0.3); jvOvale(x, dx + 2, dy - 4, 1.8, 6, -0.3);
+      x.strokeStyle = "#2F6FA6"; x.lineWidth = 1.6; jvTrait(x, dx - 6, dy, dx + 8, dy);
+    }
+  }
+}
+// Ronds dans l'eau, nombreux sous la pluie.
+function jvRonds(x, e, ex, ey, rx, ry) {
+  const nr = e.m.pluie ? 14 : 2, cadence = e.m.pluie ? 1.4 : 0.35;
+  x.lineWidth = 0.9;
+  for (let i = 0; i < nr; i++) {
+    const u = e.t * cadence + jvAlea(i * 3), ph = u % 1, cyc = Math.floor(u);
+    x.strokeStyle = `rgba(240,244,248,${(0.5 * (1 - ph)).toFixed(2)})`;
+    x.beginPath(); x.ellipse(ex + (jvAlea(i + cyc * 7) - 0.5) * rx * 1.4, ey + (jvAlea(i * 2 + cyc) - 0.5) * ry, 2 + ph * 12, 0.6 + ph * 3, 0, 0, 7); x.stroke();
+  }
+}
+// Reflet de la lune, ou éclat du soleil, sur une eau.
+function jvReflet(x, e, cx, y0, n) {
+  if (e.lune > 0.05) {
+    const rfx = cx + (e.lx - e.W / 2) * 0.35;
+    for (let i = 0; i < n; i++) {
+      const w = 14 - i * 1.4 + Math.sin(e.t * 2 + i) * 3;
+      x.fillStyle = `rgba(236,238,246,${(0.55 * e.lune * (1 - i / (n + 1))).toFixed(3)})`;
+      x.fillRect(rfx - w / 2 + Math.sin(e.t * 1.3 + i * 2) * 2, y0 + i * 5, w, 1.6);
+    }
+  } else if (e.hs > 0 && e.voile < 0.6) {
+    x.fillStyle = "rgba(255,250,235,.35)"; x.fillRect(cx - 30 + Math.sin(e.t) * 4, y0 + 10, 22, 1.4);
+  }
+}
+function jvTournesols(x, e, liste, base) {
+  liste.forEach(([fx, L], i) => {
+    const b = Math.sin(e.t * e.souffle + i) * (2 + e.vent * 0.12);
+    x.strokeStyle = e.ombre("#4E7A34"); x.lineWidth = 2.2;
+    x.beginPath(); x.moveTo(fx, base); x.quadraticCurveTo(fx + b * 0.3, base - L * 0.6, fx + b, base - L); x.stroke();
+    x.fillStyle = e.ombre("#4E8A3A"); jvOvale(x, fx + b * 0.4 - 7, base - L * 0.5, 7, 3, -0.5);
+    x.fillStyle = e.ombre("#F2BE2C");
+    for (let p = 0; p < 12; p++) { const a = p * Math.PI / 6; jvOvale(x, fx + b + Math.cos(a) * 8, base - L + Math.sin(a) * 8, 4.2, 1.8, a); }
+    x.fillStyle = e.ombre("#5E3B1F"); jvRond(x, fx + b, base - L, 5);
+  });
+}
+// Un légume du potager, selon ce que porte la saison.
+function jvLegume(x, e, sorte, cx, cy, i, k) {
+  const b = Math.sin(e.t * e.souffle * 1.3 + i) * e.vent * 0.03, o = e.ombre;
+  if (sorte === "salades") {
+    x.fillStyle = o(i % 2 ? "#9CCB64" : "#7DB252");
+    for (let p = 0; p < 5; p++) jvOvale(x, cx + b + Math.cos(p * 1.25) * 3 * k, cy - 3 * k + Math.sin(p * 1.25) * 2 * k, 4 * k, 3 * k, p);
+  } else if (sorte === "courges") {
+    x.fillStyle = o("#3F7F36"); jvOvale(x, cx + b, cy - 4 * k, 6.5 * k, 4.5 * k);
+    if (i % 2 === 0) { x.fillStyle = o("#F2C83A"); jvRond(x, cx + b + 3 * k, cy - 7 * k, 2.4 * k); }
+  } else if (sorte === "potirons") {
+    x.fillStyle = o("#5E7A3A"); jvOvale(x, cx - 3 * k, cy - 2 * k, 5 * k, 2.4 * k, 0.4);
+    if (i % 2 === 0) { x.fillStyle = o("#E07A24"); jvOvale(x, cx + 3 * k, cy - 3 * k, 6 * k, 4.6 * k); }
+  } else if (sorte === "choux") {
+    x.fillStyle = o("#6E8F86"); jvRond(x, cx + b * 0.3, cy - 5 * k, 6 * k);
+    x.fillStyle = o("#9DB8AE"); jvRond(x, cx + b * 0.3, cy - 6 * k, 3 * k);
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.85); jvOvale(x, cx, cy - 9 * k, 4 * k, 1.6 * k); }
+  } else if (sorte === "poireaux") {
+    x.strokeStyle = o("#5F8A78"); x.lineWidth = 1.6 * k;
+    [-3, 0, 3].forEach(d => jvTrait(x, cx + d * k * 0.4, cy, cx + d * k + b, cy - 13 * k));
+    x.strokeStyle = o("#E6E3D2"); jvTrait(x, cx, cy, cx, cy - 4 * k);
+  } else {
+    x.fillStyle = o(e.neigeux ? "#F1F0EA" : "#C9B47C"); x.fillRect(cx - 6 * k, cy, 12 * k, 2.5 * k);
+  }
+}
+
+function decorCampagne(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre } = e;
+  // Champs en damier sur trois plans, bordés de haies
+  const CHAMPS = { printemps: ["#9DBF6A", "#E3D158", "#7FA65A", "#B5CC7E"], ete: ["#D9BE6A", "#B9A65A", "#8DAA5E", "#E2CB7A"],
+    automne: ["#9A7B55", "#B79B6A", "#7E8A5A", "#A68A62"], hiver: ["#B9BBB0", "#A9AD9F", "#C4C3B8", "#B0B4A8"] }[nomS];
+  [[HZ - 58, 0.62, 10], [HZ - 34, 0.42, 16], [HZ - 10, 0.22, 22]].forEach(([y, fond, amp], k) => {
+    const crete = xn => y - Math.sin(xn * 4 + k * 1.7) * amp;
+    x.save();
+    x.beginPath(); x.moveTo(0, H);
+    for (let i = 0; i <= 40; i++) x.lineTo(i / 40 * W, crete(i / 40));
+    x.lineTo(W, H); x.clip();
+    let px = -20;
+    for (let i = 0; px < W; i++) {
+      const w = 40 + jvAlea(i + k * 20) * 60;
+      x.fillStyle = ombre(jvMel(CHAMPS[(i + k) % 4], e.bas, fond));
+      x.beginPath(); x.moveTo(px, H); x.lineTo(px + 26, y - 40); x.lineTo(px + w + 26, y - 40); x.lineTo(px + w, H); x.fill();
+      px += w;
+    }
+    x.restore();
+    x.fillStyle = ombre(jvMel(s.haie, e.bas, fond * 0.8));
+    for (let i = 0; i < 60; i++) { const xn = i / 60; jvRond(x, xn * W, crete(xn) - 1, 3 + jvAlea(i + k) * 2); }
+    jvBrume(x, e, y + 4, 10, 0.35);
+  });
+  jvSol(x, e, s.terre, HZ + 10);
+  // Longère de pierre, toit d'ardoise, fumée
+  {
+    const x0 = W * 0.5, w = W * 0.42, y = HZ + 44, hm = 34, ht = 26;
+    x.fillStyle = ombre("#D9CDB4"); x.fillRect(x0, y - hm, w, hm);
+    x.fillStyle = ombre("#4E5763");
+    x.beginPath(); x.moveTo(x0 - 6, y - hm); x.lineTo(x0 + 14, y - hm - ht); x.lineTo(x0 + w - 14, y - hm - ht); x.lineTo(x0 + w + 6, y - hm); x.fill();
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.9); x.beginPath(); x.moveTo(x0 + 2, y - hm - 6); x.lineTo(x0 + 14, y - hm - ht); x.lineTo(x0 + w - 14, y - hm - ht); x.lineTo(x0 + w - 2, y - hm - 6); x.fill(); }
+    x.fillStyle = ombre("#BDB19A"); x.fillRect(x0 + w * 0.78, y - hm - ht - 12, 9, 16);
+    jvFumee(x, e, x0 + w * 0.78 + 4, y - hm - ht - 14);
+    [0.12, 0.3, 0.62, 0.82].forEach((f, i) => jvFenetre(x, e, x0 + w * f, y - hm + 9, 9, 11, i + 3));
+    x.fillStyle = ombre("#5E7A8A"); x.fillRect(x0 + w * 0.46, y - 22, 11, 22);
+  }
+  // Poulailler et ses poules, le jour
+  {
+    const px = W * 0.33, py = HZ + 60;
+    x.fillStyle = ombre("#9A7650"); x.fillRect(px, py - 18, 30, 18);
+    x.fillStyle = ombre("#A8452E"); x.beginPath(); x.moveTo(px - 4, py - 18); x.lineTo(px + 15, py - 30); x.lineTo(px + 34, py - 18); x.fill();
+    x.fillStyle = ombre("#3A2E24"); x.fillRect(px + 11, py - 10, 8, 10);
+    if (e.c.jour > 0.5 && !e.m.pluie) {
+      ["#F4EFE4", "#B5703A", "#F4EFE4"].forEach((pc, i) => {
+        const cx = px + 44 + i * 16 + Math.sin(e.t * 0.3 + i) * 6, cy = py + 4 + i * 3, bec = Math.abs(Math.sin(e.t * 2 + i * 2)) > 0.8 ? 3 : 0;
+        x.fillStyle = ombre(pc); jvOvale(x, cx, cy, 5, 3.6); jvRond(x, cx + 4, cy - 3 + bec, 2.2);
+        x.fillStyle = ombre("#C83A2E"); jvRond(x, cx + 4, cy - 5.4 + bec, 1);
+      });
+    }
+  }
+  jvArbre(x, e, W * 0.16, HZ + 34, 0.95, s.houppier, s.fruit, nomS === "automne");
+  // Clôture de châtaignier
+  {
+    const y = HZ + 82;
+    x.strokeStyle = ombre("#8C7656"); x.lineWidth = 1.6;
+    for (let px = 4; px < W; px += 7) jvTrait(x, px, y, px + (jvAlea(px) - 0.5) * 1.5, y - 15 - jvAlea(px + 1) * 3);
+    x.lineWidth = 0.8; x.strokeStyle = ombre("#5C5650");
+    jvTrait(x, 0, y - 4, W, y - 4); jvTrait(x, 0, y - 11, W, y - 11);
+  }
+  // Potager en planches
+  const RANGS = { printemps: ["salades", "poireaux", "salades", "choux"], ete: ["salades", "courges", "poireaux", "choux"],
+    automne: ["potirons", "poireaux", "choux", "salades"], hiver: ["poireaux", "choux", "paille", "poireaux"] }[nomS];
+  RANGS.forEach((sorte, r) => {
+    const y = HZ + 104 + r * 24, k = 0.8 + r * 0.12;
+    x.fillStyle = ombre(jvMel(s.terre, "#5A4632", 0.35)); x.fillRect(0, y - 2, W, 5 * k);
+    for (let i = 0; i < W / (20 * k); i++) jvLegume(x, e, sorte, 10 + i * 20 * k + (r % 2) * 8, y, i + r, k);
+  });
+  // Épouvantail
+  {
+    const px = W * 0.8, py = HZ + 150, b = Math.sin(e.t * e.souffle * 0.8) * (1 + e.vent * 0.08);
+    x.strokeStyle = ombre("#6B5536"); x.lineWidth = 2.4;
+    jvTrait(x, px, py, px + b * 0.3, py - 56); jvTrait(x, px - 20 + b, py - 40, px + 20 + b, py - 42);
+    x.fillStyle = ombre("#B5523A"); x.fillRect(px - 9 + b * 0.6, py - 44, 18, 20);
+    x.fillStyle = ombre("#E7D3AE"); jvRond(x, px + b * 0.6, py - 52, 6);
+    x.fillStyle = ombre("#7A5A30"); x.fillRect(px - 10 + b * 0.6, py - 58, 20, 3); x.fillRect(px - 5 + b * 0.6, py - 66, 10, 8);
+  }
+  jvHerbes(x, e, 10, 1, 0, s.herbe, nomS === "automne" ? "#D9C79A" : null);
+  jvHerbes(x, e, W - 30, -1, 1, s.herbe, null);
+  jvRosee(x, e);
+}
+
+function decorMer(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre } = e;
+  const yMer = HZ - 74, yRive = HZ - 14;
+  // La mer, qui reflète le ciel, et ses scintillements
+  const mer = x.createLinearGradient(0, yMer, 0, yRive);
+  mer.addColorStop(0, ombre(jvMel(e.bas, s.mer, 0.55))); mer.addColorStop(1, ombre(jvMel(e.bas, s.mer, 0.75)));
+  x.fillStyle = mer; x.fillRect(0, yMer, W, yRive - yMer + 12);
+  for (let i = 0; i < 46 * W / 390; i++) {
+    const py = yMer + 3 + jvAlea(i) * (yRive - yMer - 6), px = (jvAlea(i + 9) * W + t * (4 + i % 5)) % W;
+    x.fillStyle = `rgba(255,255,255,${(0.18 + 0.2 * Math.sin(e.t * 2 + i)).toFixed(2)})`;
+    x.fillRect(px, py, 6 + (py - yMer) / 6, 1);
+  }
+  // Le chemin du soleil ou de la lune sur l'eau
+  const astre = e.lune > 0.05 ? [e.lx, e.lune, "236,238,246"] : (e.hs > 0 && e.voile < 0.7 ? [e.sx, 1 - e.voile, "255,240,210"] : null);
+  if (astre) {
+    for (let i = 0; i < 12; i++) {
+      const py = yMer + 3 + i * 5, w = 8 + i * 2 + Math.sin(t * 2 + i) * 4;
+      x.fillStyle = `rgba(${astre[2]},${(0.5 * astre[1] * (1 - i / 14)).toFixed(3)})`;
+      x.fillRect(astre[0] - w / 2 + Math.sin(t * 1.3 + i) * 3, py, w, 1.4);
+    }
+  }
+  // Un voilier l'été, le jour
+  if (nomS === "ete" && e.c.jour > 0.6 && e.vent < 45) {
+    const bx = ((t * 3) % (W + 80)) - 40, by = yMer + 16;
+    x.fillStyle = ombre("#3C3A38"); x.beginPath(); x.moveTo(bx - 9, by); x.lineTo(bx + 9, by); x.lineTo(bx + 6, by + 3); x.lineTo(bx - 6, by + 3); x.fill();
+    x.fillStyle = ombre("#F6F3EA"); x.beginPath(); x.moveTo(bx, by - 1); x.lineTo(bx, by - 18); x.lineTo(bx + 9, by - 1); x.fill();
+  }
+  // La pointe et son phare, dont le faisceau tourne la nuit
+  {
+    x.fillStyle = ombre(jvMel(e.bas, "#4A5148", 0.6));
+    x.beginPath(); x.moveTo(W * 0.66, yRive); x.quadraticCurveTo(W * 0.78, yMer - 8, W * 0.9, yMer - 12); x.lineTo(W, yMer - 6); x.lineTo(W, yRive); x.fill();
+    const fx = W * 0.86, fy = yMer - 11;
+    x.fillStyle = ombre("#F2EFE6"); x.beginPath(); x.moveTo(fx - 5, fy); x.lineTo(fx - 3, fy - 40); x.lineTo(fx + 3, fy - 40); x.lineTo(fx + 5, fy); x.fill();
+    x.fillStyle = ombre("#B8403A"); x.fillRect(fx - 4.4, fy - 16, 8.8, 6); x.fillRect(fx - 3.4, fy - 32, 6.8, 5);
+    x.fillStyle = ombre("#2E3436"); x.fillRect(fx - 4, fy - 46, 8, 6);
+    if (e.allume > 0.1) {
+      x.fillStyle = jvMel("#2E3436", "#FFE7A8", e.allume); x.fillRect(fx - 2.5, fy - 45, 5, 4);
+      const a = t * 0.9;
+      [a, a + Math.PI].forEach(r => {
+        const g = x.createLinearGradient(fx, fy - 43, fx + Math.cos(r) * 160, fy - 43 + Math.sin(r) * 18);
+        g.addColorStop(0, `rgba(255,236,180,${(0.4 * e.allume * Math.abs(Math.cos(r))).toFixed(3)})`); g.addColorStop(1, "rgba(255,236,180,0)");
+        x.fillStyle = g; x.beginPath(); x.moveTo(fx, fy - 43);
+        x.lineTo(fx + Math.cos(r) * 160, fy - 43 + Math.sin(r) * 18 - 9); x.lineTo(fx + Math.cos(r) * 160, fy - 43 + Math.sin(r) * 18 + 9); x.fill();
+      });
+    }
+  }
+  // Les vagues sur le sable, plus fortes au vent, et les embruns
+  const houle = 2 + e.vent * 0.08;
+  for (let k = 0; k < 3; k++) {
+    x.strokeStyle = `rgba(250,250,246,${(0.7 - k * 0.18).toFixed(2)})`; x.lineWidth = 1.4 - k * 0.3;
+    x.beginPath();
+    const y = yRive - 4 + k * 4 + Math.sin(t * 0.7 + k) * houle;
+    for (let i = 0; i <= 40; i++) { const xn = i / 40; x.lineTo(xn * W * 0.7, y + Math.sin(xn * 18 + t * 1.5 + k) * 1.4); }
+    x.stroke();
+  }
+  if (e.vent > 30) {
+    for (let i = 0; i < 30; i++) {
+      const ph = (t * 0.6 + jvAlea(i)) % 1;
+      x.fillStyle = `rgba(255,255,255,${(0.5 * (1 - ph)).toFixed(2)})`;
+      jvRond(x, (jvAlea(i + 3) * W * 0.7 + ph * e.vent * 2) % W, yRive - ph * 30, 1.2);
+    }
+  }
+  // Les dunes et leurs oyats
+  jvCrete(x, e, HZ + 6, 12, 6, 0.4, ombre(jvMel(s.sable, e.bas, 0.15)));
+  x.strokeStyle = ombre("#9FA66A"); x.lineWidth = 1;
+  for (let i = 0; i < 50 * W / 390; i++) {
+    const ox = jvAlea(i * 3) * W, oy = HZ + 2 + jvAlea(i * 5) * 20, b = Math.sin(t * e.souffle + i) * (1 + e.vent * 0.1) + e.vent * 0.12;
+    jvTrait(x, ox, oy, ox + b + 3, oy - 10); jvTrait(x, ox + 2, oy, ox + b - 2, oy - 8);
+  }
+  jvSol(x, e, s.terre, HZ + 30);
+  // Le tamaris, penché par le vent du large
+  {
+    const px = W * 0.14, py = HZ + 60, bal = Math.sin(t * e.souffle * 0.5) * e.vent * 0.05;
+    x.strokeStyle = ombre("#5C4A3C"); x.lineWidth = 5; x.lineCap = "round";
+    x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + 10, py - 40, px + 22 + bal, py - 78); x.stroke();
+    for (let i = 0; i < 90; i++) {
+      const a = jvAlea(i * 3) * Math.PI * 2, d = jvAlea(i * 5) * 46;
+      const cx = px + 22 + bal * 1.3 + Math.cos(a) * d, cy = py - 92 + Math.sin(a) * d * 0.55;
+      x.fillStyle = ombre(s.tamaris[i % s.tamaris.length]);
+      jvOvale(x, cx + Math.sin(t * e.souffle + i) * e.vent * 0.04, cy, 4, 2, a);
+    }
+  }
+  // Le muret de granit et les hortensias devant
+  {
+    const y = HZ + 74;
+    for (let r = 0; r < 2; r++) {
+      for (let px = -10 + r * 12; px < W; px += 26) {
+        const w = 18 + jvAlea(px + r) * 10;
+        x.fillStyle = ombre(jvAlea(px * 3 + r) > 0.5 ? "#8E9091" : "#A3A39C");
+        x.beginPath(); x.roundRect ? x.roundRect(px, y - 22 + r * 11, w, 10, 3) : x.rect(px, y - 22 + r * 11, w, 10); x.fill();
+      }
+    }
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.85); x.fillRect(0, y - 24, W, 3); }
+    for (let i = 0; i < 6; i++) {
+      const hx = W * (0.08 + i * 0.17), hy = y + 26 + (i % 2) * 8, r = 20 + (i % 3) * 4;
+      x.fillStyle = ombre(s.hortensia ? "#3F6E3E" : "#7A6A56");
+      x.beginPath(); x.ellipse(hx, hy, r, r * 0.6, 0, Math.PI, 0); x.fill();
+      if (s.hortensia) {
+        const teinte = s.hortensia[i % s.hortensia.length];
+        for (let b = 0; b < 3; b++) {
+          const bx = hx - r * 0.55 + b * r * 0.55, by = hy - r * 0.42 - (b % 2) * 4;
+          for (let p = 0; p < 9; p++) {
+            x.fillStyle = ombre(p % 3 ? teinte : jvMel(teinte, "#FFFFFF", 0.3));
+            jvRond(x, bx + Math.cos(p * 0.7) * 4.5 * jvAlea(p + b), by + Math.sin(p * 0.7) * 4 * jvAlea(p + b + 1), 2.2);
+          }
+        }
+      }
+    }
+  }
+  jvHerbes(x, e, 6, 1, 0, s.herbe, null);
+  jvHerbes(x, e, W - 30, -1, 1, s.herbe, null);
+  // Mouettes, en toute saison
+  if (e.c.jour > 0.4) {
+    for (let i = 0; i < 4; i++) {
+      const u = t * 0.06 + i * 0.25, bx = ((u % 1) * (W + 120)) - 60 + Math.sin(t * 0.3 + i) * 20;
+      const by = HZ * 0.42 + Math.sin(t * 0.5 + i * 2) * 26 + i * 12, ai = Math.sin(t * 2.4 + i) * 3;
+      x.strokeStyle = ombre("#F6F6F2"); x.lineWidth = 1.8;
+      x.beginPath(); x.moveTo(bx - 9, by - 2 - ai); x.quadraticCurveTo(bx - 4, by - 5, bx, by); x.quadraticCurveTo(bx + 4, by - 5, bx + 9, by - 2 - ai); x.stroke();
+      x.strokeStyle = ombre("#5A5E62"); x.lineWidth = 1.2; jvTrait(x, bx - 9, by - 2 - ai, bx - 7, by - 3.4 - ai); jvTrait(x, bx + 9, by - 2 - ai, bx + 7, by - 3.4 - ai);
+    }
+  }
+}
+
+function decorMediterraneen(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre } = e;
+  // Collines de garrigue et cyprès sur la crête
+  jvCrete(x, e, HZ - 60, 16, 3, 0.6, ombre(jvMel(e.bas, "#8C8E62", 0.42)));
+  x.fillStyle = ombre(jvMel(e.bas, "#3E4C38", 0.45));
+  for (let i = 0; i < 9; i++) {
+    const xn = 0.05 + i * 0.11 + jvAlea(i) * 0.03, cy = HZ - 60 - Math.sin(xn * 3 + 0.6) * 16 - Math.sin(xn * 6.9 + 1.2) * 4.8;
+    jvOvale(x, xn * W, cy - 8, 2.4, 10);
+  }
+  jvBrume(x, e, HZ - 50, 18, 0.4);
+  jvCrete(x, e, HZ - 22, 12, 4, 2, ombre(jvMel(e.bas, "#6F7A4E", 0.6)));
+  jvBrume(x, e, HZ - 10, 14, 0.35);
+  jvSol(x, e, s.terre, HZ + 4);
+  // Le mas, crépi ocre, tuiles rondes, volets bleus
+  {
+    const x0 = W * 0.55, w = W * 0.38, y = HZ + 42, hm = 38;
+    x.fillStyle = ombre("#E3C08E"); x.fillRect(x0, y - hm, w, hm);
+    x.fillStyle = ombre("#B5603C");
+    x.beginPath(); x.moveTo(x0 - 8, y - hm); x.lineTo(x0 + w * 0.5, y - hm - 16); x.lineTo(x0 + w + 8, y - hm); x.fill();
+    x.strokeStyle = ombre("#93492D"); x.lineWidth = 0.8;
+    for (let i = 1; i < 4; i++) jvTrait(x, x0 - 8 + i * 4, y - hm - i * 4 + 1, x0 + w + 8 - i * 4, y - hm - i * 4 + 1);
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.85); x.beginPath(); x.moveTo(x0, y - hm - 2); x.lineTo(x0 + w * 0.5, y - hm - 16); x.lineTo(x0 + w, y - hm - 2); x.fill(); }
+    [0.14, 0.4, 0.72].forEach((f, i) => {
+      jvFenetre(x, e, x0 + w * f, y - hm + 10, 8, 12, i + 11);
+      x.fillStyle = ombre("#6B8DA6"); x.fillRect(x0 + w * f - 5, y - hm + 10, 4, 12); x.fillRect(x0 + w * f + 9, y - hm + 10, 4, 12);
+    });
+    x.fillStyle = ombre("#7A5236"); x.beginPath(); x.moveTo(x0 + w * 0.56, y); x.lineTo(x0 + w * 0.56, y - 15); x.arc(x0 + w * 0.56 + 6, y - 15, 6, Math.PI, 0); x.lineTo(x0 + w * 0.56 + 12, y); x.fill();
+  }
+  // Cyprès en flammes sombres
+  [[W * 0.48, 110], [W * 0.97, 96], [W * 0.04, 84]].forEach(([cx, L], i) => {
+    const b = Math.sin(t * e.souffle * 0.7 + i) * e.vent * 0.06, base = HZ + 50;
+    x.fillStyle = ombre("#2F4A33");
+    x.beginPath(); x.moveTo(cx - 9, base);
+    x.quadraticCurveTo(cx - 12, base - L * 0.5, cx + b, base - L); x.quadraticCurveTo(cx + 12, base - L * 0.5, cx + 9, base); x.fill();
+    x.fillStyle = ombre("#3E5E40"); x.beginPath(); x.moveTo(cx - 2, base - 4); x.quadraticCurveTo(cx - 5, base - L * 0.5, cx + b, base - L + 6); x.quadraticCurveTo(cx + 2, base - L * 0.5, cx + 3, base - 4); x.fill();
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.7); jvOvale(x, cx + b * 0.5, base - L * 0.6, 4, 2); }
+  });
+  // Oliviers argentés, ou mimosa en fleur l'hiver
+  [[W * 0.2, HZ + 64, 1], [W * 0.38, HZ + 52, 0.75]].forEach(([px, py, k], j) => {
+    const mimosa = nomS === "hiver" && j === 1;
+    const bal = Math.sin(t * e.souffle * 0.6 + j) * e.vent * 0.04;
+    x.strokeStyle = ombre("#6E665A"); x.lineWidth = 7 * k; x.lineCap = "round";
+    x.beginPath(); x.moveTo(px, py); x.bezierCurveTo(px + 12 * k, py - 20 * k, px - 14 * k, py - 34 * k, px + 4 * k + bal, py - 54 * k); x.stroke();
+    x.lineWidth = 3 * k; jvTrait(x, px + 2 * k, py - 30 * k, px - 26 * k + bal, py - 52 * k);
+    const teintes = mimosa ? ["#F2D23A", "#E8C230", "#F6E06A"] : ["#93A07A", "#A9B48F", "#7E8C66"];
+    for (let i = 0; i < 22; i++) {
+      const a = jvAlea(i * 3 + j) * Math.PI * 2, d = 0.3 + jvAlea(i * 5 + j) * 0.7;
+      x.fillStyle = ombre(teintes[i % 3]);
+      jvOvale(x, px - 8 * k + bal + Math.cos(a) * 46 * d * k + Math.sin(t * e.souffle + i) * e.vent * 0.03, py - 66 * k + Math.sin(a) * 22 * d * k, (11 + (i % 3) * 3) * k, (7 + (i % 2) * 2) * k, a * 0.2);
+    }
+    if (!mimosa && (nomS === "automne" || nomS === "hiver")) {
+      x.fillStyle = ombre("#3A2F3A");
+      for (let i = 0; i < 10; i++) jvRond(x, px - 40 * k + jvAlea(i + j * 9) * 70 * k, py - 80 * k + jvAlea(i + 30) * 34 * k, 1.8 * k);
+    }
+  });
+  // Restanques de pierre sèche, rangs de lavande
+  [HZ + 96, HZ + 156].forEach((y, r) => {
+    for (let px = -8 + r * 9; px < W; px += 16) {
+      x.fillStyle = ombre(jvAlea(px + r * 3) > 0.5 ? "#BBA98A" : "#A8957A");
+      jvOvale(x, px + 8, y + 8, 8, 5);
+      jvOvale(x, px + 16, y + 15, 7, 4.5);
+    }
+    for (let i = 0; i < W / 26; i++) {
+      const lx = 13 + i * 26 + r * 9, ly = y, b = Math.sin(t * e.souffle * 1.2 + i + r) * (0.6 + e.vent * 0.05);
+      x.fillStyle = ombre(s.lavande[1]); x.beginPath(); x.ellipse(lx, ly, 11, 9, 0, Math.PI, 0); x.fill();
+      if (nomS === "ete" || nomS === "printemps") {
+        x.strokeStyle = ombre(s.lavande[0]); x.lineWidth = nomS === "ete" ? 2.4 : 1.4;
+        for (let k = -4; k <= 4; k += 2) jvTrait(x, lx + k, ly - 5, lx + k * 1.6 + b, ly - (nomS === "ete" ? 15 : 11) + Math.abs(k));
+      }
+      if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.85); x.beginPath(); x.ellipse(lx, ly - 4, 8, 3, 0, Math.PI, 0); x.fill(); }
+    }
+  });
+  jvHerbes(x, e, 8, 1, 0, s.herbe, nomS === "automne" ? "#E1D2A8" : null);
+  jvHerbes(x, e, W - 30, -1, 1, s.herbe, null);
+  if (nomS === "ete" && e.c.jour > 0.6) jvMartinets(x, e, HZ * 0.4);
+}
+
+function decorMontagne(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre } = e;
+  // Sommets en pics, une face à l'ombre, enneigés selon la saison
+  const base = HZ - 40;
+  const PICS = [{ p: 0.1, h: 140, w: 0.34 }, { p: 0.38, h: 196, w: 0.38 }, { p: 0.68, h: 166, w: 0.32 }, { p: 0.94, h: 132, w: 0.28 }];
+  const sommet = xn => {
+    let y = 0;
+    PICS.forEach(k => { y = Math.max(y, k.h * Math.pow(Math.max(0, 1 - Math.abs(xn - k.p) / (k.w / 2)), 0.95)); });
+    return base - 20 - y - Math.abs(Math.sin(xn * 47)) * 5;
+  };
+  const cimes = () => { x.beginPath(); x.moveTo(0, base + 20); for (let i = 0; i <= 80; i++) x.lineTo(i / 80 * W, sommet(i / 80)); x.lineTo(W, base + 20); x.closePath(); };
+  x.fillStyle = ombre(jvMel(e.bas, "#6D7C8C", 0.5)); cimes(); x.fill();
+  const limite = e.m.neige ? base - 40 : { hiver: base - 50, printemps: base - 110, ete: base - 160, automne: base - 140 }[nomS];
+  x.save(); cimes(); x.clip();
+  x.fillStyle = jvRgba(e.blanc, 0.92);
+  x.beginPath(); x.moveTo(0, 0); x.lineTo(W, 0);
+  for (let i = 60; i >= 0; i--) x.lineTo(i / 60 * W, limite + Math.sin(i * 1.7) * 9 + Math.sin(i * 4.3) * 5);
+  x.fill();
+  x.fillStyle = jvRgba("#1E2A3A", 0.22);
+  PICS.forEach(k => {
+    const px = k.p * W, py = base - 20 - k.h;
+    x.beginPath(); x.moveTo(px, py); x.lineTo(px + k.w * W * 0.5, base + 20); x.lineTo(px + k.w * W * 0.12, base + 20); x.closePath(); x.fill();
+  });
+  x.restore();
+  jvBrume(x, e, base, 26, 0.6);
+  // Versant de forêt et ses sapins
+  const crete = xn => HZ - 20 - Math.sin(xn * 3.4 + 1) * 14;
+  x.fillStyle = ombre(jvMel(e.bas, "#2F4A3A", 0.62));
+  x.beginPath(); x.moveTo(0, H); for (let i = 0; i <= 40; i++) x.lineTo(i / 40 * W, crete(i / 40)); x.lineTo(W, H); x.fill();
+  for (let i = 0; i < 46 * W / 390; i++) {
+    const xn = jvAlea(i * 7), cx = xn * W, cy = crete(xn) + 4, h = 12 + jvAlea(i) * 8;
+    x.fillStyle = ombre(jvMel(e.bas, "#2A4434", 0.68));
+    x.beginPath(); x.moveTo(cx - h * 0.35, cy); x.lineTo(cx, cy - h); x.lineTo(cx + h * 0.35, cy); x.fill();
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.75); x.beginPath(); x.moveTo(cx - 2, cy - h + 4); x.lineTo(cx, cy - h); x.lineTo(cx + 2, cy - h + 4); x.fill(); }
+  }
+  jvBrume(x, e, HZ - 4, 16, 0.4 + e.m.brume * 0.3);
+  jvSol(x, e, e.neigeux ? "#E9ECEC" : s.terre, HZ + 6);
+  // Le chalet, son balcon fleuri et sa fumée
+  {
+    const x0 = W * 0.56, w = 118, y = HZ + 54, hm = 34;
+    x.fillStyle = ombre("#8E8A82"); x.fillRect(x0, y - 10, w, 10);
+    x.fillStyle = ombre("#8A5A36"); x.fillRect(x0, y - hm, w, hm - 10);
+    x.strokeStyle = ombre("#6E4628"); x.lineWidth = 0.8;
+    for (let k = 1; k < 5; k++) jvTrait(x, x0, y - hm + k * 5, x0 + w, y - hm + k * 5);
+    x.fillStyle = ombre("#5A4636");
+    x.beginPath(); x.moveTo(x0 - 14, y - hm + 2); x.lineTo(x0 + w / 2, y - hm - 30); x.lineTo(x0 + w + 14, y - hm + 2); x.fill();
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.95); x.beginPath(); x.moveTo(x0 - 14, y - hm); x.lineTo(x0 + w / 2, y - hm - 31); x.lineTo(x0 + w + 14, y - hm); x.lineTo(x0 + w / 2, y - hm - 25); x.fill(); }
+    x.fillStyle = ombre("#7A7470"); x.fillRect(x0 + w * 0.72, y - hm - 30, 8, 14);
+    jvFumee(x, e, x0 + w * 0.72 + 4, y - hm - 32);
+    [0.18, 0.44, 0.7].forEach((f, i) => jvFenetre(x, e, x0 + w * f, y - hm + 5, 10, 10, i + 21));
+    x.strokeStyle = ombre("#4A3222"); x.lineWidth = 1.2; jvTrait(x, x0 + 4, y - hm + 18, x0 + w - 4, y - hm + 18);
+    if (nomS === "ete" || nomS === "printemps") {
+      for (let i = 0; i < 16; i++) { x.fillStyle = ombre(i % 3 ? "#D2382E" : "#4E7A34"); jvRond(x, x0 + 6 + i * 7, y - hm + 16 - (i % 2), 2.2); }
+    }
+  }
+  // Clôture de perches en biais
+  x.strokeStyle = ombre("#7C6448"); x.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    const px = i * W * 0.06, py = HZ + 72 + i * 5;
+    jvTrait(x, px, py, px, py - 16);
+    if (i) { jvTrait(x, px - W * 0.06, py - 5 - 13, px, py - 13); jvTrait(x, px - W * 0.06, py - 5 - 6, px, py - 6); }
+  }
+  // Prairie alpine, rocaille et ses coussins fleuris
+  if (s.touches && !e.neigeux) jvSemis(x, e, s.touches, HZ + 90, H - 40, 60, s.herbe);
+  [[W * 0.4, HZ + 128, 16], [W * 0.46, HZ + 134, 11], [W * 0.34, HZ + 136, 9]].forEach(([rx, ry, r], i) => {
+    x.fillStyle = ombre(i % 2 ? "#8F918C" : "#A2A39C"); x.beginPath(); x.ellipse(rx, ry, r, r * 0.7, 0, Math.PI, 0); x.fill();
+    if (s.coussin) { x.fillStyle = ombre(s.coussin); for (let k = 0; k < 6; k++) jvRond(x, rx - r + 4 + k * r / 3, ry + 1, 2); }
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.9); x.beginPath(); x.ellipse(rx, ry - r * 0.45, r * 0.8, r * 0.28, 0, Math.PI, 0); x.fill(); }
+  });
+  // Deux grands sapins au premier plan
+  [[W * 0.1, HZ + 160, 140], [W * 0.93, HZ + 150, 110]].forEach(([cx, base, L], j) => {
+    const b = Math.sin(t * e.souffle * 0.6 + j) * e.vent * 0.05;
+    x.fillStyle = ombre("#4A3A2E"); x.fillRect(cx - 3, base - 12, 6, 12);
+    for (let k = 0; k < 6; k++) {
+      const yb = base - 10 - k * L / 7, w = (L * 0.32) * (1 - k / 7), sw = b * k / 6;
+      x.fillStyle = ombre(k % 2 ? "#2C4A36" : "#335640");
+      x.beginPath(); x.moveTo(cx - w + sw, yb); x.lineTo(cx + sw, yb - L / 4); x.lineTo(cx + w + sw, yb); x.fill();
+      if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.9); x.beginPath(); x.moveTo(cx - w * 0.7 + sw, yb - 2); x.lineTo(cx + sw, yb - L / 5); x.lineTo(cx + w * 0.7 + sw, yb - 2); x.lineTo(cx + sw, yb - L / 8); x.fill(); }
+    }
+  });
+  jvHerbes(x, e, W * 0.3, 1, 2, s.herbe, null);
+  jvRosee(x, e);
+}
+
+function decorEst(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre } = e;
+  // La plaine, un village et son clocher au loin
+  jvCrete(x, e, HZ - 34, 3, 2, 0.3, ombre(jvMel(e.bas, "#7A8466", 0.4)));
+  jvVillage(x, e, W * 0.28, HZ - 34, ombre(jvMel(e.bas, "#6D7480", 0.45)), true);
+  jvVillage(x, e, W * 0.86, HZ - 32, ombre(jvMel(e.bas, "#6D7480", 0.4)), false);
+  jvBrume(x, e, HZ - 30, 14, 0.5);
+  jvCrete(x, e, HZ - 12, 4, 3, 1, ombre(jvMel(e.bas, s.terre, 0.6)));
+  jvSol(x, e, s.terre, HZ);
+  // Maison à colombages, toit raide, nid de cigognes
+  {
+    const x0 = W * 0.62, w = W * 0.3, y = HZ + 36, hm = 40;
+    x.fillStyle = ombre("#EDE3CF"); x.fillRect(x0, y - hm, w, hm);
+    x.strokeStyle = ombre("#6B4A32"); x.lineWidth = 2;
+    x.strokeRect(x0, y - hm, w, hm); jvTrait(x, x0, y - hm / 2, x0 + w, y - hm / 2);
+    for (let k = 1; k < 4; k++) jvTrait(x, x0 + w * k / 4, y - hm, x0 + w * k / 4, y);
+    jvTrait(x, x0, y - hm / 2, x0 + w / 4, y - hm); jvTrait(x, x0 + w * 3 / 4, y - hm, x0 + w, y - hm / 2);
+    jvTrait(x, x0 + w / 4, y, x0 + w / 2, y - hm / 2); jvTrait(x, x0 + w / 2, y - hm / 2, x0 + w * 3 / 4, y);
+    x.fillStyle = ombre("#9C4E36"); x.beginPath(); x.moveTo(x0 - 6, y - hm); x.lineTo(x0 + w / 2, y - hm - 44); x.lineTo(x0 + w + 6, y - hm); x.fill();
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.92); x.beginPath(); x.moveTo(x0 - 6, y - hm); x.lineTo(x0 + w / 2, y - hm - 44); x.lineTo(x0 + w + 6, y - hm); x.lineTo(x0 + w / 2, y - hm - 36); x.fill(); }
+    [[0.1, 0.62], [0.58, 0.62], [0.1, 0.12], [0.58, 0.12]].forEach(([fx, fy], i) => jvFenetre(x, e, x0 + w * fx + 4, y - hm + hm * fy + 2, 9, 9, i + 31));
+    const cx = x0 + w * 0.7, cy = y - hm - 30;
+    x.fillStyle = ombre("#A04A34"); x.fillRect(cx, cy, 8, 16);
+    if (nomS === "printemps" || nomS === "ete") {
+      x.fillStyle = ombre("#6E5638"); jvOvale(x, cx + 4, cy, 12, 4);
+      x.fillStyle = ombre("#F4F2EC"); jvOvale(x, cx + 4, cy - 8, 6, 4); jvRond(x, cx + 9, cy - 15, 2.4);
+      x.strokeStyle = ombre("#F4F2EC"); x.lineWidth = 1.6; jvTrait(x, cx + 8, cy - 9, cx + 9, cy - 14);
+      x.fillStyle = ombre("#24282A"); jvOvale(x, cx + 1, cy - 8, 4, 2.6);
+      x.strokeStyle = ombre("#D2502E"); x.lineWidth = 1.4; jvTrait(x, cx + 11, cy - 15, cx + 16, cy - 13);
+    }
+  }
+  // Le verger de mirabelliers, en rangs
+  [[HZ + 30, 0.5, 8, 0.02, 0.56], [HZ + 74, 0.7, 5, 0.06, 0.55], [HZ + 140, 0.95, 3, 0.1, 0.9]].forEach(([y, k, n, x0, l]) => {
+    for (let i = 0; i < n; i++) jvArbre(x, e, W * (x0 + i * l / Math.max(1, n - 1)) + (jvAlea(i + y) - 0.5) * 8, y, k, s.houppier, s.fruit, nomS === "ete");
+    x.fillStyle = ombre(jvMel(s.terre, s.herbe, 0.4)); x.fillRect(0, y + 2, W, 3);
+  });
+  // Échelle et panier de mirabelles, l'été
+  if (nomS === "ete") {
+    x.strokeStyle = ombre("#8A6E4A"); x.lineWidth = 1.8;
+    const ex = W * 0.34, ey = HZ + 140;
+    jvTrait(x, ex, ey, ex + 16, ey - 70); jvTrait(x, ex + 10, ey, ex + 26, ey - 70);
+    for (let k = 1; k < 7; k++) jvTrait(x, ex + k * 16 / 7, ey - k * 10, ex + 10 + k * 16 / 7, ey - k * 10);
+    x.fillStyle = ombre("#9A7448"); x.beginPath(); x.ellipse(W * 0.58, H - 70, 16, 9, 0, 0, Math.PI); x.fill();
+    x.fillStyle = ombre("#E8C03A"); for (let k = 0; k < 9; k++) jvRond(x, W * 0.58 - 12 + k * 3, H - 71 - (k % 2) * 2, 2.6);
+  }
+  if (s.touches) jvSemis(x, e, s.touches, HZ + 150, H - 40, 40, s.herbe);
+  jvHerbes(x, e, 8, 1, 0, s.herbe, null);
+  jvHerbes(x, e, W - 30, -1, 1, s.herbe, nomS === "automne" ? "#D9C79A" : null);
+  // Une cigogne qui passe, au printemps et l'été
+  if ((nomS === "printemps" || nomS === "ete") && e.c.jour > 0.6 && !e.m.pluie) {
+    const bx = ((t * 7) % (W + 160)) - 80, by = HZ * 0.34 + Math.sin(t * 0.4) * 10, ai = Math.sin(t * 1.6) * 5;
+    x.strokeStyle = ombre("#F4F2EC"); x.lineWidth = 3;
+    x.beginPath(); x.moveTo(bx - 16, by - ai); x.quadraticCurveTo(bx - 6, by - 4, bx, by); x.quadraticCurveTo(bx + 6, by - 4, bx + 16, by - ai); x.stroke();
+    x.strokeStyle = ombre("#24282A"); x.lineWidth = 3; jvTrait(x, bx - 16, by - ai, bx - 11, by - 3 - ai * 0.5); jvTrait(x, bx + 16, by - ai, bx + 11, by - 3 - ai * 0.5);
+    x.strokeStyle = ombre("#F4F2EC"); x.lineWidth = 2; jvTrait(x, bx, by, bx + 12, by + 1);
+    x.strokeStyle = ombre("#D2502E"); x.lineWidth = 1.2; jvTrait(x, bx + 12, by + 1, bx + 18, by + 2); jvTrait(x, bx - 2, by, bx - 14, by + 2);
+  }
+  jvRosee(x, e);
+}
+
+function decorVille(x, e) {
+  const { W, H, HZ, s, nomS, t, ombre } = e;
+  // Les toits de la ville au loin
+  x.fillStyle = ombre(jvMel(e.bas, "#7D8794", 0.45));
+  for (let px = -10, i = 0; px < W; i++) {
+    const w = 26 + jvAlea(i) * 30, h = 40 + jvAlea(i + 3) * 70;
+    x.fillRect(px, HZ - 40 - h, w, h + 40);
+    px += w + 2;
+  }
+  jvBrume(x, e, HZ - 60, 30, 0.4);
+  // Les immeubles d'en face : façades, toits de zinc, cheminées, fenêtres
+  for (let px = -20, i = 0; px < W; i++) {
+    const w = 70 + jvAlea(i + 9) * 40, h = 60 + jvAlea(i + 13) * 30, y = HZ + 40;
+    x.fillStyle = ombre(i % 2 ? "#D9CFBE" : "#E2D8C6"); x.fillRect(px, y - h, w, h);
+    x.fillStyle = ombre("#6D7A88");
+    x.beginPath(); x.moveTo(px - 2, y - h); x.lineTo(px + 8, y - h - 20); x.lineTo(px + w - 8, y - h - 20); x.lineTo(px + w + 2, y - h); x.fill();
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.85); x.fillRect(px + 8, y - h - 22, w - 16, 3); }
+    for (let k = 0; k < 3; k++) { x.fillStyle = ombre("#B86A4A"); x.fillRect(px + 14 + k * (w - 28) / 2, y - h - 28, 4, 8); }
+    for (let r = 0; r < 3; r++) for (let c = 0; c < Math.floor(w / 18); c++) {
+      jvFenetre(x, e, px + 6 + c * 18, y - h + 8 + r * 20, 8, 12, i * 31 + r * 7 + c + Math.floor(t / 23) * (c === 1 ? 1 : 0));
+    }
+    if (e.c.jour > 0.5) {
+      for (let k = 0; k < 2; k++) { x.fillStyle = ombre("#8A8E94"); jvOvale(x, px + 20 + k * 22 + Math.sin(t * 0.2 + i) * 3, y - h - 21, 3.4, 2.4); }
+    }
+    px += w + 10;
+  }
+  // Le sol du balcon, puis la rambarde de fer forgé
+  const yR = HZ + 104;
+  x.fillStyle = ombre("#B9A894"); x.fillRect(0, yR, W, H - yR);
+  x.strokeStyle = ombre("#A3927E"); x.lineWidth = 0.8;
+  for (let k = 0; k < 8; k++) jvTrait(x, 0, yR + 14 + k * k * 4, W, yR + 14 + k * k * 4);
+  x.strokeStyle = ombre("#2E3236"); x.lineWidth = 1.6;
+  jvTrait(x, 0, HZ + 40, W, HZ + 40); jvTrait(x, 0, yR, W, yR);
+  for (let px = 4; px < W; px += 9) jvTrait(x, px, HZ + 40, px, yR);
+  x.lineWidth = 1;
+  for (let px = 9; px < W; px += 36) { x.beginPath(); x.arc(px + 4, HZ + 56, 5, 0, 7); x.stroke(); }
+  // Jardinières accrochées à la rambarde
+  for (let i = 0; i < 3; i++) {
+    const jx = W * (0.06 + i * 0.34), jy = HZ + 46, jw = W * 0.24;
+    x.fillStyle = ombre("#B5643E"); x.fillRect(jx, jy, jw, 14);
+    x.fillStyle = ombre("#9A5232"); x.fillRect(jx, jy, jw, 3);
+    for (let k = 0; k < 6; k++) {
+      const fx = jx + 6 + k * (jw - 12) / 5, b = Math.sin(t * e.souffle * 1.3 + k + i) * (0.8 + e.vent * 0.05);
+      x.fillStyle = ombre(s.jardiniere ? "#4E7A3A" : "#5A6A4E"); jvOvale(x, fx, jy - 3, 6, 4);
+      if (s.jardiniere) { jvFleur(x, fx + b, jy - 9 - (k % 2) * 3, 2, ombre(s.jardiniere[(k + i) % s.jardiniere.length]), ombre("#F2D05A")); }
+    }
+    if (e.neigeux) { x.fillStyle = jvRgba(e.blanc, 0.9); x.fillRect(jx, jy - 3, jw, 3); }
+  }
+  // Pots sur le sol du balcon
+  [[W * 0.16, 1], [W * 0.5, 0.8], [W * 0.86, 1.1]].forEach(([px, k], i) => {
+    const py = yR + 70;
+    x.fillStyle = ombre("#B86A44"); x.beginPath(); x.moveTo(px - 14 * k, py - 26 * k); x.lineTo(px + 14 * k, py - 26 * k); x.lineTo(px + 10 * k, py); x.lineTo(px - 10 * k, py); x.fill();
+    const b = Math.sin(t * e.souffle + i) * (1 + e.vent * 0.06);
+    if (i === 0) { // un tomate l'été, sinon un aromate
+      x.strokeStyle = ombre("#7A6A50"); x.lineWidth = 1.4; jvTrait(x, px, py - 26 * k, px + b * 0.3, py - 76 * k);
+      x.fillStyle = ombre(nomS === "hiver" ? "#7A8A6A" : "#4E8A3A");
+      for (let j = 0; j < 7; j++) jvOvale(x, px + (j % 2 ? 6 : -6) + b * 0.4, py - 32 * k - j * 6 * k, 5, 3, j);
+      if (nomS === "ete") { x.fillStyle = ombre("#D2402E"); [[4, -40], [-5, -52], [5, -60]].forEach(([dx, dy]) => jvRond(x, px + dx + b * 0.4, py + dy * k, 3.2)); }
+    } else if (i === 1) { // un olivier en pot
+      x.strokeStyle = ombre("#6E665A"); x.lineWidth = 2.4; jvTrait(x, px, py - 26 * k, px + b * 0.2, py - 56 * k);
+      for (let j = 0; j < 12; j++) { x.fillStyle = ombre(j % 2 ? "#93A07A" : "#A9B48F"); jvOvale(x, px + b * 0.4 + Math.cos(j) * 14, py - 64 * k + Math.sin(j * 1.7) * 8, 5, 2.4, j); }
+    } else { // des herbes
+      for (let j = 0; j < 14; j++) { x.strokeStyle = ombre("#5E8A4A"); x.lineWidth = 1.2; jvTrait(x, px - 8 + j, py - 26 * k, px - 12 + j * 1.6 + b, py - 44 * k - (j % 3) * 4); }
+    }
+  });
+  // Guirlande lumineuse sur la rambarde, les nuits d'hiver
+  if (nomS === "hiver" && e.allume > 0.2) {
+    for (let i = 0; i < W / 14; i++) {
+      const gx = 6 + i * 14, gy = HZ + 40 + Math.sin(i * 0.9) * 3 + 3, a = 0.5 + 0.5 * Math.sin(t * 2 + i * 1.3);
+      const g = x.createRadialGradient(gx, gy, 0, gx, gy, 6);
+      g.addColorStop(0, `rgba(255,220,140,${(e.allume * a).toFixed(2)})`); g.addColorStop(1, "rgba(255,220,140,0)");
+      x.fillStyle = g; x.fillRect(gx - 6, gy - 6, 12, 12);
+    }
+  }
+  if (nomS === "ete" && e.c.jour > 0.6) jvMartinets(x, e, HZ * 0.4);
+}
+
+/* Les couleurs de saison de chaque thème, et ce que portent sa branche et sa
+   chute. Les champs communs : ciel, le bleu du jour par beau temps ; chute,
+   ce qui tombe ; branche, l'essence de la branche du coin haut droit. */
+const JV_THEMES = {
+  japonais: { nom: "Jardin japonais", climat: null, branche: "erable", decor: decorJaponais,
+    oiseaux: ["printemps", "automne"], papillons: true, lucioles: true,
+    saisons: {
+      printemps: { terre: "#8AAE68", buisson: "#4A7D44", herbe: "#6B9A4C", ciel: ["#9CC3DC", "#EEF0E4"], mont: "#6E93A6",
+        azalee: "#E2668E", touches: ["#F4B6C6", "#F2CF4A", "#FFFFFF", "#AE96DA", "#F08A9E"], pin: "#3E7246",
+        houppier: ["#F3BCCA", "#F8D6DF", "#EAA0B4"], potager: "salades", chute: JV_PETALES(["#F4B6C6", "#FBE3EA"]),
+        rameau: { fleur: "#F4B6C6", coeur: "#C8406A" } },
+      ete: { terre: "#6FA04A", buisson: "#2E6E36", herbe: "#4E9038", ciel: ["#7FB2D8", "#E6EEE6"], mont: "#5E879C",
+        touches: ["#EAB02E", "#D9507A", "#7B62C0", "#EC7F32", "#FFFFFF"], pin: "#2F6538",
+        houppier: ["#4E9440", "#6BAD50", "#3E7E36"], potager: "courges", rameau: { feuille: ["#3E7D34", "#5DA044", "#7DB653"] } },
+      automne: { terre: "#8D7C5A", buisson: "#7B4B30", herbe: "#A18B5E", mont: "#3C4752", pin: "#3B5C3D",
+        houppier: ["#D66A2E", "#E8A23C", "#B8452C"], potager: "potirons", chute: { forme: "momiji", couleurs: ["#B2402C", "#C7783A", "#9C3326"] },
+        rameau: { feuille: ["#B2402C", "#C7783A", "#9C3326"] } },
+      hiver: { terre: "#B5B8B0", buisson: "#4A5550", herbe: "#998E77", mont: "#3C4752", pin: "#34493F", potager: "paille", rameau: {} },
+    } },
+  campagne: { nom: "Potager de campagne", climat: "oceanique_degrade", branche: "pommier", decor: decorCampagne,
+    oiseaux: ["printemps", "automne", "hiver"], papillons: true, lucioles: true, martinets: true,
+    saisons: {
+      printemps: { terre: "#86A862", herbe: "#6B9A4C", haie: "#4E7A40", ciel: ["#9EC2D8", "#EEF0E4"],
+        houppier: ["#F6E3E6", "#FFFFFF", "#EBC4CC"], chute: JV_PETALES(["#F8E8EC", "#FFFFFF"]), rameau: { fleur: "#FBF0F2", coeur: "#D98A9A" } },
+      ete: { terre: "#7FA052", herbe: "#5E8E40", haie: "#3E6A34", ciel: ["#86B6D8", "#E8EEE4"],
+        houppier: ["#5E9444", "#77AD55", "#4A7E38"], fruit: "#C8372D", rameau: { feuille: ["#5E9444", "#77AD55"], fruit: "#C8372D" } },
+      automne: { terre: "#8E7C56", herbe: "#9A8A5A", haie: "#6E5A34",
+        houppier: ["#D9A23A", "#C9842E", "#A8B04A"], fruit: "#C8372D", chute: JV_FEUILLES(["#D9A23A", "#C9842E", "#B5662E"]),
+        rameau: { feuille: ["#D9A23A", "#C9842E"], fruit: "#C8372D" } },
+      hiver: { terre: "#AEB2A6", herbe: "#9A927A", haie: "#4E5A4C", rameau: {} },
+    } },
+  mer: { nom: "Jardin de bord de mer", climat: "oceanique", branche: "tamaris", decor: decorMer,
+    oiseaux: [], papillons: true, lucioles: false,
+    saisons: {
+      printemps: { terre: "#8EAE6E", herbe: "#7E9E5A", sable: "#E3D3A8", mer: "#4F8BA6", ciel: ["#9AC6E0", "#EEF2EC"],
+        tamaris: ["#E7A9C2", "#F2C4D6", "#7C9A6A"], hortensia: null, chute: JV_PETALES(["#EDB5CB"]), rameau: { plume: "#E7A9C2" } },
+      ete: { terre: "#7EA05A", herbe: "#8EA05E", sable: "#E8D7A8", mer: "#3E86A8", ciel: ["#7DB6DC", "#EAF0EC"],
+        tamaris: ["#E7A9C2", "#7C9A6A", "#8EAA78"], hortensia: ["#6F8FD0", "#E79BB8", "#8FA8E0"], rameau: { plume: "#E7A9C2" } },
+      automne: { terre: "#8A8A5E", herbe: "#A09A66", sable: "#D9CBA2", mer: "#4A7488",
+        tamaris: ["#8EA06E", "#A8A870", "#7C8A60"], hortensia: ["#B9A2A8", "#9BA0B8", "#A8908A"], chute: JV_FEUILLES(["#B8A55A", "#9C8A4A"]), rameau: { plume: null } },
+      hiver: { terre: "#A6ACA2", herbe: "#9A9478", sable: "#CFC6AE", mer: "#4C6676",
+        tamaris: ["#8A7E70", "#9A8E7E", "#7E7468"], hortensia: null, rameau: {} },
+    } },
+  mediterraneen: { nom: "Jardin méditerranéen", climat: "mediterraneen", branche: "olivier", decor: decorMediterraneen,
+    oiseaux: ["printemps", "automne"], papillons: true, lucioles: true,
+    saisons: {
+      printemps: { terre: "#B3A578", herbe: "#8E9A5E", ciel: ["#8EC0E2", "#F0EEE2"], lavande: ["#9C9AC0", "#8E9A7A"],
+        chute: JV_PETALES(["#F6E6EA", "#FFFFFF"]), rameau: {} },
+      ete: { terre: "#C2AE78", herbe: "#B5A46A", ciel: ["#6FAEDC", "#F2ECDC"], lavande: ["#7C5CB0", "#7E8A6A"], rameau: {} },
+      automne: { terre: "#B09A6E", herbe: "#A8996A", ciel: ["#9CC0D8", "#EEE8DA"], lavande: ["#8F86A0", "#7E8670"],
+        chute: JV_FEUILLES(["#9AA57E", "#B7B08A"]), rameau: { olive: true } },
+      hiver: { terre: "#A9A286", herbe: "#9A9474", lavande: ["#9A9C92", "#8A8E80"], rameau: { olive: true } },
+    } },
+  montagne: { nom: "Jardin de montagne", climat: "montagnard", branche: "sapin", decor: decorMontagne,
+    oiseaux: ["printemps", "ete", "automne"], papillons: true, lucioles: false,
+    saisons: {
+      printemps: { terre: "#86A866", herbe: "#6E9A4E", ciel: ["#94C0E0", "#EEF2EE"], touches: ["#3F5FC8", "#F2D04A", "#FFFFFF", "#E7A9C2"],
+        coussin: "#F2B8CC", rameau: {} },
+      ete: { terre: "#78A04E", herbe: "#5E9040", ciel: ["#78B2DE", "#EAF0EC"], touches: ["#F2C230", "#C64B7A", "#FFFFFF", "#7A6CC8", "#3F5FC8"],
+        coussin: "#FFFFFF", rameau: { cone: true } },
+      automne: { terre: "#9C8656", herbe: "#B09A5E", coussin: null,
+        chute: { forme: "aiguille", couleurs: ["#D9A93A", "#E2BC4E", "#C8922E"] }, rameau: { cone: true } },
+      hiver: { terre: "#E9ECEC", herbe: "#9A927A", coussin: null, rameau: {} },
+    } },
+  est: { nom: "Verger de l'Est", climat: "semi_continental", branche: "mirabellier", decor: decorEst,
+    oiseaux: ["automne", "hiver"], papillons: true, lucioles: true,
+    saisons: {
+      printemps: { terre: "#8AAA64", herbe: "#6E9A4C", ciel: ["#9CC2DC", "#EEF0E6"], houppier: ["#FFFFFF", "#F3EEE6", "#E4ECD4"],
+        touches: ["#F2D04A", "#FFFFFF", "#AE96DA"], chute: JV_PETALES(["#FFFFFF", "#F3EEE6"]), rameau: { fleur: "#FFFFFF", coeur: "#C9B04A" } },
+      ete: { terre: "#86A456", herbe: "#6A9444", ciel: ["#84B4D8", "#ECEEE2"], houppier: ["#5E8E44", "#6FA052", "#4E7E3A"],
+        fruit: "#E8C03A", touches: ["#F2D04A", "#D9507A", "#FFFFFF"], rameau: { feuille: ["#5E8E44", "#6FA052"], fruit: "#E8C03A" } },
+      automne: { terre: "#948058", herbe: "#9E8E5C", houppier: ["#E3B23C", "#D58A2E", "#C9A03E"],
+        chute: JV_FEUILLES(["#E3B23C", "#D58A2E"]), rameau: { feuille: ["#E3B23C", "#D58A2E"] } },
+      hiver: { terre: "#B3B6AE", herbe: "#9C947C", rameau: {} },
+    } },
+  ville: { nom: "Jardin de ville", climat: null, branche: "glycine", decor: decorVille,
+    oiseaux: [], papillons: false, lucioles: false,
+    saisons: {
+      printemps: { ciel: ["#9EC2D8", "#EEEEE6"], jardiniere: ["#D9382E", "#F2C83A", "#F4B6C6"],
+        chute: JV_PETALES(["#B7A4E0", "#9C86D0"]), rameau: { grappe: true } },
+      ete: { ciel: ["#88B6D8", "#ECECE4"], jardiniere: ["#D2382E", "#E8586E", "#FFFFFF"], rameau: { feuille: ["#5E8E44", "#77A552"] } },
+      automne: { jardiniere: ["#C86A2E", "#8E5AA8", "#E3A43A"], chute: JV_FEUILLES(["#C9A04A", "#A8783A"]),
+        rameau: { feuille: ["#D9B03A", "#C9963A"] } },
+      hiver: { jardiniere: null, rameau: {} },
+    } },
+};
+// Le thème qui répond au climat du jardin, quand le fond suit le climat.
+const JV_THEME_DU_CLIMAT = { oceanique: "mer", oceanique_degrade: "campagne", semi_continental: "est",
+  mediterraneen: "mediterraneen", montagnard: "montagne" };
+
+/* La branche du coin haut droit, selon son essence et la saison. */
+function jvRameau(x, e, segs, essence) {
+  const { t, souffle, vent, ombre, neigeux } = e, r = e.s.rameau || {};
+  const W = e.W;
+  const rot = Math.sin(t * souffle * 0.55) * (0.006 + vent * 0.0007);
+  x.save(); x.translate(W + 8, 30); x.rotate(rot); x.translate(-W - 8, -30);
+  x.lineCap = "round";
+  const encre = ombre(essence === "olivier" ? "#4E463C" : essence === "tamaris" ? "#4A3A30" : "#24282A");
+  segs.forEach(sg => {
+    x.strokeStyle = jvRgba(encre, 0.9); x.lineWidth = sg.ep;
+    x.beginPath(); x.moveTo(sg.x, sg.y); x.quadraticCurveTo(sg.cx, sg.cy, sg.x2, sg.y2); x.stroke();
+    x.strokeStyle = jvRgba(encre, 0.35); x.lineWidth = sg.ep * 0.5;
+    x.beginPath(); x.moveTo(sg.x, sg.y + sg.ep * 0.4); x.quadraticCurveTo(sg.cx, sg.cy + sg.ep * 0.5, sg.x2, sg.y2 + sg.ep * 0.3); x.stroke();
+  });
+  // Le sapin porte ses aiguilles le long des rameaux, en un seul tracé.
+  if (essence === "sapin") {
+    x.strokeStyle = ombre("#2E5238"); x.lineWidth = 1.2; x.beginPath();
+    segs.forEach(sg => {
+      if (sg.d < 1) return;
+      const L = Math.hypot(sg.x2 - sg.x, sg.y2 - sg.y), ux = (sg.x2 - sg.x) / L, uy = (sg.y2 - sg.y) / L;
+      for (let k = 2; k < L; k += 3) {
+        const px = sg.x + ux * k, py = sg.y + uy * k, n = 6 + (sg.d < 3 ? 2 : 0);
+        x.moveTo(px, py); x.lineTo(px - uy * n + ux * 3, py + ux * n + uy * 3);
+        x.moveTo(px, py); x.lineTo(px + uy * n + ux * 3, py - ux * n + uy * 3);
+      }
+    });
+    x.stroke();
+  }
+  if (neigeux) {
+    segs.forEach(sg => {
+      if (sg.d > 3) return;
+      x.strokeStyle = jvRgba(e.blanc, 0.92); x.lineWidth = Math.max(1.4, sg.ep * (essence === "sapin" ? 0.9 : 0.45));
+      x.beginPath(); x.moveTo(sg.x, sg.y - sg.ep * 0.45); x.quadraticCurveTo(sg.cx, sg.cy - sg.ep * 0.5, sg.x2, sg.y2 - sg.ep * 0.3); x.stroke();
+    });
+  }
+  segs.forEach((sg, i) => {
+    if (sg.d < 3) return;
+    const fl = Math.sin(t * souffle * 1.8 + i) * vent * 0.025;
+    for (let j = 0; j < 6; j++) {
+      const fx = sg.x2 + (jvAlea(sg.g + j) - 0.5) * 18 + fl, fy = sg.y2 + (jvAlea(sg.g + j + 7) - 0.5) * 12, a = jvAlea(sg.g + j) * 6;
+      if (essence === "olivier") {
+        x.fillStyle = ombre(j % 2 ? "#8E9C74" : "#C3CBB0"); jvOvale(x, fx, fy, 6, 1.6, a);
+        if (r.olive && j % 3 === 0) { x.fillStyle = ombre("#3A2F3A"); jvRond(x, fx + 2, fy + 3, 2); }
+        continue;
+      }
+      if (essence === "tamaris") {
+        x.strokeStyle = ombre(r.plume === undefined ? "#8A7E70" : "#7C9A6A"); x.lineWidth = 0.8;
+        jvTrait(x, fx, fy, fx + Math.cos(a) * 8, fy + 6 + Math.sin(a) * 3);
+        if (r.plume) { x.fillStyle = ombre(r.plume); jvRond(x, fx + Math.cos(a) * 8, fy + 6 + Math.sin(a) * 3, 1.6); }
+        continue;
+      }
+      if (essence === "sapin") {
+        if (r.cone && j === 0 && sg.d === 4) { x.fillStyle = ombre("#7A5634"); jvOvale(x, fx, fy + 6, 2.6, 5); }
+        continue;
+      }
+      if (essence === "glycine" && r.grappe) {
+        if (j > 2) continue;
+        for (let k = 0; k < 7; k++) { x.fillStyle = ombre(k % 2 ? "#9C86D0" : "#B7A4E0"); jvRond(x, fx + Math.sin(t + k) * 0.6, fy + k * 3.4, 3.2 - k * 0.35); }
+        continue;
+      }
+      if (r.fleur && j < 5) { jvFleur(x, fx, fy, 2.1, ombre(j % 3 ? r.fleur : jvMel(r.fleur, "#FFFFFF", 0.5)), ombre(r.coeur)); continue; }
+      if (r.feuille && j < 4) {
+        x.fillStyle = ombre(r.feuille[(i + j) % r.feuille.length]);
+        if (essence === "erable") jvMomiji(x, fx, fy, 5.5, a); else jvOvale(x, fx, fy, 5, 2.8, a);
+        if (r.fruit && j === 0) { x.fillStyle = ombre(r.fruit); jvRond(x, fx + 3, fy + 5, essence === "pommier" ? 4 : 2.6); }
+      }
+    }
+  });
+  x.restore();
+}
+
+/* ---------- Le style moderne ----------
+   D'après la planche de Jérôme : une villa blanche au bardage de bois, un
+   bassin miroir et ses marches flottantes, des terrasses et des haies
+   taillées, des cyprès devant les monts, une branche qui retombe du coin
+   haut droit. La scène est dessinée dans le cadre de la planche, 465 sur 830,
+   mise à l'échelle sur la hauteur de l'écran ; le ciel, les monts, l'eau et
+   le sol s'étendent sur toute la largeur. */
+const JMO = {
+  printemps: { ciel: ["#A9CBE8", "#E8EEEC"], mont: ["#8D9FBE", "#A5B5C8"], bosquet: ["#86AE5A", "#A9C878", "#6E9A4C"],
+    haie: ["#3F6E3A", "#5E8E4A"], gazon: "#8DB25E", eau: ["#6C9CC4", "#A2C6DE"], sol: "#ECE4D6",
+    rameau: "sakura", chute: ["#F6C6D2", "#FBE3EA"] },
+  ete: { ciel: ["#78B0E0", "#DCEAF0"], mont: ["#7F94B6", "#98ABC0"], bosquet: ["#6F9A50", "#94B862", "#5E8A44"],
+    haie: ["#3A6A36", "#568A44"], gazon: "#86AE58", eau: ["#5A92BE", "#8CBCDA"], sol: "#EAE2D3",
+    rameau: "erable", feuille: ["#9DBB3A", "#6E9A2E", "#3E6A2E", "#C2D45A", "#557E2A"] },
+  automne: { ciel: ["#F2D3B0", "#F6E6CF"], mont: ["#A39AA8", "#BDB0AE"], bosquet: ["#C9853A", "#D9A24A", "#A8642E"],
+    haie: ["#46653A", "#5E7A44"], gazon: "#A9A462", eau: ["#C9B596", "#E2CDAE"], sol: "#EDE3D3",
+    rameau: "erable", feuille: ["#E0621E", "#F08A2A", "#C8401E"], chute: ["#E0621E", "#F08A2A", "#C8401E"] },
+  hiver: { ciel: ["#B9C8DA", "#E3E8EE"], mont: ["#9AA6BC", "#B6C0CE"], bosquet: ["#8E9C9A", "#A9B4B2"],
+    haie: ["#3E5A44", "#4E6A52"], gazon: "#F4F5F3", eau: ["#9EB2C2", "#C6D3DC"], sol: "#F2F3F2", rameau: "nu" },
+};
+// Une feuille d'érable : cinq lobes dentés autour du pétiole.
+function jvErable(x, cx, cy, r, rot) {
+  x.beginPath();
+  for (let i = 0; i <= 60; i++) {
+    const th = i / 60 * Math.PI * 2, lobe = Math.pow(Math.abs(Math.cos(th * 2.5)), 0.7);
+    const dent = (i % 3 === 0 ? 0.08 : 0), bas = th > Math.PI * 0.35 && th < Math.PI * 0.65 ? 0.35 : 1;
+    const rr = r * (0.42 + 0.58 * lobe * bas + dent);
+    const a = th + rot - Math.PI / 2;
+    x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  x.closePath(); x.fill();
+}
+/* Les outils de dessin partagés par les décors illustrés : aplats, feuillages,
+   arbres ramifiés, touffes, feuilles rubanées et graminées. */
+function jvOutils(x, t, souffle, vent, o, neige, blanc) {
+  const rect = (a, b, w, h, col) => { x.fillStyle = col; x.fillRect(a, b, w, h); };
+  const poly = (pts, col) => { x.fillStyle = col; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); };
+  // Le tirage des feuilles suit une graine fixe : tiré sur la position, il changeait à chaque balancement.
+  const couronne = (cx, cy, rx, ry, cols, n, r0, graine) => {
+    const gr = graine === undefined ? Math.round(cx) * 13 + Math.round(cy) : graine * 17.3;
+    const b0 = Math.sin(t * souffle * 0.5 + gr * 0.01) * vent * 0.02;
+    x.fillStyle = o(jvMel(cols[0], "#10241A", 0.35));
+    for (let i = 0; i < 9; i++) jvOvale(x, cx + b0 + (jvAlea(i + gr) - 0.5) * rx * 1.2, cy + (jvAlea(i + gr + 0.5) - 0.5) * ry * 1.1, rx * 0.55, ry * 0.55);
+    for (let i = 0; i < n * 2; i++) {
+      const a = jvAlea(i * 3 + gr) * Math.PI * 2, d = Math.sqrt(jvAlea(i * 7 + gr + 0.25));
+      const px = cx + Math.cos(a) * rx * d, py = cy + Math.sin(a) * ry * d;
+      const lum = (cy - py) / ry * 0.5 + (cx - px) / rx * 0.3;
+      const b = b0 + Math.sin(t * souffle * 0.9 + i * 0.3) * vent * 0.008;
+      x.fillStyle = o(jvMel(cols[i % cols.length], lum > 0 ? "#F4F2C8" : "#10241A", Math.min(0.45, Math.abs(lum) * 0.5)));
+      jvOvale(x, px + b, py, r0 * (0.55 + jvAlea(i + 5) * 0.45), r0 * (0.32 + jvAlea(i + 9) * 0.2), a + jvAlea(i) * 2);
+    }
+  };
+  // Un arbre ramifié : une charpente qui se divise, et au bout de chaque rameau son bouquet.
+  const arbre = (cx, base, h, ep, ouverture, bouquet, graine, prof = 4) => {
+    const rameaux = [];
+    const pousse = (px, py, ang, len, e2, d, g) => {
+      // L'écart s'ajoute de rameau en rameau : il reste faible, même par grand vent.
+      const b = Math.sin(t * souffle * 0.45 + d * 0.35) * Math.min(vent, 60) * 0.0008 * d;
+      const a = ang + (jvAlea(g) - 0.5) * 0.5 + b, x2 = px + Math.cos(a) * len, y2 = py + Math.sin(a) * len;
+      x.strokeStyle = o(d < 2 ? "#4E3A2C" : "#5E4636"); x.lineWidth = e2; x.lineCap = "round";
+      x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo((px + x2) / 2 + (jvAlea(g + 1) - 0.5) * len * 0.3, (py + y2) / 2, x2, y2); x.stroke();
+      if (d >= 2) rameaux.push([x2, y2, a, g, d]);
+      if (d >= prof) return;
+      const n = d === 0 ? 3 : 2;
+      for (let k2 = 0; k2 < n; k2++) pousse(x2, y2, a + (k2 - (n - 1) / 2) * ouverture + (jvAlea(g + k2 + 3) - 0.5) * 0.3, len * (0.68 + jvAlea(g + k2) * 0.12), e2 * 0.62, d + 1, g * 3 + k2 + 1);
+    };
+    pousse(cx, base, -Math.PI / 2, h * 0.24, ep, 0, graine);
+    rameaux.forEach(r => bouquet(...r));
+  };
+  const tronc = (pts, ep) => { x.strokeStyle = o("#5E4636"); x.lineCap = "round"; x.lineWidth = ep; x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); };
+  const fan = (cx, base, L0, n, col, ep) => {
+    x.strokeStyle = o(col); x.lineWidth = ep;
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (i / (n - 1) - 0.5) * 1.9, Ln = L0 * (0.7 + jvAlea(i + cx) * 0.4);
+      const b = Math.sin(t * souffle * 1.2 + i * 0.3 + cx) * (1.5 + vent * 0.12);
+      x.beginPath(); x.moveTo(cx, base); x.quadraticCurveTo(cx + Math.cos(a) * Ln * 0.5, base + Math.sin(a) * Ln * 0.6, cx + Math.cos(a) * Ln + b, base + Math.sin(a) * Ln); x.stroke();
+    }
+  };
+  // Feuilles rubanées : un ruban effilé, courbé, qui ploie au vent.
+  const rubans = (cx, base, L0, n, cols, larg) => {
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (i / (n - 1) - 0.5) * 2.2, Ln = L0 * (0.6 + jvAlea(i + cx) * 0.5);
+      const b = Math.sin(t * souffle * 1.2 + i * 0.4 + cx) * (1.5 + vent * 0.14);
+      const tx = cx + Math.cos(a) * Ln + b, ty = base + Math.sin(a) * Ln * 0.85 + Ln * 0.18 * Math.abs(Math.cos(a));
+      const mx = cx + Math.cos(a) * Ln * 0.45, my = base + Math.sin(a) * Ln * 0.7;
+      x.fillStyle = o(cols[i % cols.length]);
+      x.beginPath(); x.moveTo(cx - larg, base); x.quadraticCurveTo(mx - larg, my, tx, ty); x.quadraticCurveTo(mx + larg, my, cx + larg, base); x.fill();
+    }
+  };
+  // Une touffe de graminées : des centaines de brins courbes, des épis duveteux en tête.
+  const plumets = (cx, base, L0, n) => {
+    const N = n * 6, cols = neige ? ["#B89A6A", "#A88A5A", "#C9AE80"] : ["#C9A46A", "#B58E54", "#DDBE86", "#A07A44"];
+    // La masse de la touffe, peinte d'abord, que les brins viennent animer
+    const bm = Math.sin(t * souffle * 1.1 + cx) * (2 + vent * 0.16);
+    const fond = x.createLinearGradient(0, base - L0, 0, base);
+    fond.addColorStop(0, jvRgba(o(neige ? "#EDE9E0" : "#E6CC96"), 0.95)); fond.addColorStop(1, o(neige ? "#8E7650" : "#9A7442"));
+    x.fillStyle = fond; x.beginPath(); x.moveTo(cx - 16, base);
+    for (let k2 = 0; k2 <= 16; k2++) { const u = k2 / 16 - 0.5, a2 = -Math.PI / 2 + u * 1.6, l2 = L0 * 0.86 * (1 - Math.abs(u) * 0.4); x.lineTo(cx + Math.cos(a2) * l2 + bm, base + Math.sin(a2) * l2); }
+    x.lineTo(cx + 16, base); x.closePath(); x.fill();
+    for (let i = 0; i < N; i++) {
+      const u = i / (N - 1) - 0.5, a = -Math.PI / 2 + u * 1.7 + (jvAlea(i + cx) - 0.5) * 0.2, Ln = L0 * (0.55 + jvAlea(i * 3 + cx) * 0.5) * (1 - Math.abs(u) * 0.35);
+      const b = Math.sin(t * souffle * 1.1 + i * 0.05 + cx) * (2 + vent * 0.16) * (Ln / L0);
+      // Le brin s'arque puis retombe en tête, d'autant plus qu'il penche.
+      const tomb = Math.abs(Math.cos(a)) * Ln * 0.28;
+      const tx = cx + Math.cos(a) * Ln * 1.05 + b + u * 10, ty = base + Math.sin(a) * Ln * 0.9 + tomb;
+      const kx = cx + Math.cos(a) * Ln * 0.75 + u * 12 + b * 0.5, ky = base + Math.sin(a) * Ln * 1.02;
+      x.strokeStyle = o(cols[i % cols.length]); x.lineWidth = 1.2;
+      x.beginPath(); x.moveTo(cx + u * 14, base); x.quadraticCurveTo(kx, ky, tx, ty); x.stroke();
+      if (i % 2 === 0) {
+        // L'épi plumeux : de courts filaments de part et d'autre de la tête du brin
+        const dx = tx - kx, dy = ty - ky, dl = Math.hypot(dx, dy) || 1, ux = dx / dl, uy = dy / dl;
+        x.strokeStyle = jvRgba(o(neige ? "#F6F4EE" : "#EFDDB4"), 0.85); x.lineWidth = 1.1;
+        x.beginPath();
+        for (let k2 = 0; k2 < 9; k2++) {
+          const px = tx - ux * k2 * 2.6, py = ty - uy * k2 * 2.6, l = 4.5 - k2 * 0.3;
+          x.moveTo(px, py); x.lineTo(px - uy * l + ux * 2, py + ux * l + uy * 2);
+          x.moveTo(px, py); x.lineTo(px + uy * l + ux * 2, py - ux * l + uy * 2);
+        }
+        x.stroke();
+        if (neige && i % 4 === 0) { x.fillStyle = jvRgba(blanc, 0.95); jvOvale(x, tx - ux * 8, ty - uy * 8 - 2, 6, 2.6, Math.atan2(uy, ux)); }
+      }
+    }
+  };
+  return { rect, poly, couronne, arbre, tronc, fan, rubans, plumets };
+}
+
+/* Le ciel vivant des décors illustrés, dans le cadre de la planche, 465 sur
+   830 : couleur de la saison, soleil, lune, étoiles, nuages et voile du temps.
+   Renvoie tout ce que le décor doit connaître pour se peindre. */
+function jvScene(x, W, H, t, etat, P) {
+  const nomS = etat.saison, sol = etat.sol, hs = sol.hs, c = cielDuJardin(hs, sol.montant);
+  const m = Object.assign({}, JV_TEMPS[etat.temps] || JV_TEMPS.clair), vent = etat.vent, souffle = 0.35 + vent / 30;
+  const nuit = c.nuit, gris = m.nappe * 0.6 + m.pluie * 0.15;
+  const neige = nomS === "hiver" || m.neige > 0;
+  const o = col => jvMel(col, "#141B2A", nuit * 0.62 + gris * 0.14);
+  const allume = Math.max(nuit, jvBorne(-hs, -2, 4) * 0.8);
+  const k = H / 830, ox = (W - 465 * k) / 2, L = -ox / k - 2, R = (W - ox) / k + 2;
+  // Deux couches : le fond immobile, peint de loin en loin, et ce qui vit, peint à chaque image.
+  const F = etat.couche !== "dessus", D = etat.couche !== "fond";
+  x.save(); x.translate(ox, 0); x.scale(k, k);
+  const blanc = o("#F7F8F8");
+  const { rect, poly, couronne, arbre, tronc, fan, rubans, plumets } = jvOutils(x, t, souffle, vent, o, neige, blanc);
+
+  // Ciel : la couleur de la saison le jour, l'heure et le temps par-dessus
+  const vif = c.jour * (1 - gris);
+  const haut = jvMel(jvMel(c.haut, P.ciel[0], vif * 0.9), "#9AA2A8", gris * c.jour);
+  const bas = jvMel(jvMel(c.bas, P.ciel[1], vif * 0.9), "#C9CCCB", gris * c.jour);
+  const gc = x.createLinearGradient(0, 0, 0, 330);
+  gc.addColorStop(0, haut); gc.addColorStop(1, bas);
+  if (F) { x.fillStyle = gc; x.fillRect(L, 0, R - L, 400); }
+  if (F && nuit > 0.1 && m.nappe < 0.8) {
+    for (let i = 0; i < 40; i++) {
+      x.fillStyle = `rgba(240,238,228,${(nuit * (1 - m.nappe) * (0.3 + 0.5 * Math.abs(Math.sin(t * 0.6 + i * 1.7)))).toFixed(2)})`;
+      x.fillRect(L + jvAlea(i) * (R - L), jvAlea(i + 9) * 260, 1.2, 1.2);
+    }
+  }
+  const voile = Math.min(1, m.nappe * 1.1 + m.brume * 0.3);
+  if (F && hs > -4) {
+    const sx = L + (R - L) * (0.14 + 0.6 * Math.min(1, Math.max(0, sol.fr))), sy = 285 - (hs / 70) * 220;
+    const coul = jvMel("#FBE3B0", "#F4A07E", c.chaud);
+    const hg = x.createRadialGradient(sx, sy, 20, sx, sy, 70);
+    hg.addColorStop(0, jvRgba(coul, 0.35 * (1 - voile))); hg.addColorStop(1, jvRgba(coul, 0));
+    x.fillStyle = hg; x.fillRect(sx - 70, sy - 70, 140, 140);
+    x.globalAlpha = (1 - voile * 0.8) * jvBorne(hs, -4, 1); x.fillStyle = coul; jvRond(x, sx, sy, 24); x.globalAlpha = 1;
+  }
+  const fn = Math.min(1, sol.fn);
+  const lune = sol.fn <= 1 ? (1 - m.nappe * 0.75) * jvBorne(Math.sin(Math.PI * fn), 0, 0.25) * nuit : 0;
+  const lx = L + (R - L) * (0.82 - 0.64 * fn), ly = 250 - Math.sin(Math.PI * fn) * 150;
+  if (F && lune > 0.02) {
+    const hl = x.createRadialGradient(lx, ly, 8, lx, ly, 140);
+    hl.addColorStop(0, `rgba(226,232,246,${(0.38 * lune).toFixed(3)})`); hl.addColorStop(1, "rgba(200,212,236,0)");
+    x.fillStyle = hl; x.fillRect(lx - 140, ly - 140, 280, 280);
+    x.globalAlpha = lune; x.fillStyle = "#F3F0E6"; jvRond(x, lx, ly, 20); x.globalAlpha = 1;
+  }
+  // Nuages plats et doux, poussés par le vent
+  const nn = D ? Math.max(0, Math.round(6 * m.cumulus) - 1) : 0;
+  for (let i = 0; i < nn; i++) {
+    const w = 90 + jvAlea(i + 3) * 120, v = 0.5 + jvAlea(i + 8) * 0.6;
+    const nx = L + ((jvAlea(i) * (R - L + w) + t * (2 + vent * 0.5) * v) % (R - L + w)) - w, ny = 40 + jvAlea(i + 1) * 170;
+    x.fillStyle = jvRgba(nuit > 0.6 ? "#4A546C" : jvMel("#FFFFFF", "#B4B8BA", gris), 0.55);
+    jvOvale(x, nx + w / 2, ny, w / 2, 9); jvOvale(x, nx + w * 0.62, ny - 7, w * 0.28, 9);
+  }
+  if (F && m.nappe > 0) {
+    const ng = x.createLinearGradient(0, 0, 0, 320);
+    const tn = nuit > 0.6 ? "#2E3446" : "#A9AEB2";
+    ng.addColorStop(0, jvRgba(tn, 0.85 * m.nappe)); ng.addColorStop(1, jvRgba(tn, 0.15 * m.nappe));
+    x.fillStyle = ng; x.fillRect(L, 0, R - L, 330);
+  }
+
+  return { nomS, P, sol, hs, c, m, vent, souffle, nuit, gris, neige, o, allume, L, R, blanc, haut, bas, voile, lune, lx, ly, t, F, D,
+    outils: { rect, poly, couronne, arbre, tronc, fan, rubans, plumets } };
+}
+
+// Ce qui tombe et le temps posés sur le décor, puis le cadre rendu.
+function jvFinScene(x, Z, feuille) {
+  const { nomS, P, m, vent, nuit, o, L, R, bas, lune, lx, ly, t } = Z;
+  // Ce qui tombe, la pluie, la neige, le brouillard
+  const pente = Math.max(-0.5, Math.min(0.5, vent / 95));
+  if (m.pluie) {
+    x.strokeStyle = nuit > 0.5 ? "rgba(200,208,222,.3)" : "rgba(70,80,92,.28)"; x.lineWidth = 0.9;
+    for (let i = 0; i < 110 * m.pluie; i++) {
+      const py = (jvAlea(i + 3) * 830 + t * (560 + jvAlea(i) * 240)) % 830, px = L + (jvAlea(i + 7) * (R - L) + py * pente + (R - L)) % (R - L);
+      jvTrait(x, px, py, px + 30 * pente, py + 30);
+    }
+  } else {
+    const chute = m.neige ? ["#FFFFFF"] : P.chute;
+    if (chute) {
+      const n = m.neige ? 70 : 12;
+      for (let i = 0; i < n; i++) {
+        const v = m.neige ? 20 + jvAlea(i) * 16 : 12 + jvAlea(i) * 8;
+        const py = (jvAlea(i + 1) * 860 + t * v) % 860 - 20;
+        const px = L + (jvAlea(i + 2) * (R - L) * 0.8 + (R - L) * 0.2 + Math.sin(t * 0.6 + i) * 24 - t * vent * 0.35 + (R - L) * 8) % (R - L);
+        if (m.neige) { x.fillStyle = "rgba(250,250,246,.9)"; jvRond(x, px, py, 1.4 + jvAlea(i) * 1.6); continue; }
+        x.save(); x.translate(px, py); x.rotate(t * (0.5 + jvAlea(i)) + i);
+        x.fillStyle = o(chute[i % chute.length]);
+        if (nomS === "automne") (feuille || jvErable)(x, 0, 0, 7, 0); else jvOvale(x, 0, 0, 3.4, 2);
+        x.restore();
+      }
+    }
+  }
+  if (m.brume > 0.4) {
+    const bg = x.createLinearGradient(0, 260, 0, 560);
+    bg.addColorStop(0, jvRgba(bas, 0)); bg.addColorStop(0.5, jvRgba(bas, 0.7 * m.brume)); bg.addColorStop(1, jvRgba(bas, 0.2 * m.brume));
+    x.fillStyle = bg; x.fillRect(L, 260, R - L, 300);
+  }
+  if (m.orage) {
+    const cy = t % 7.5, f = cy < 0.24 ? 1 - cy / 0.24 : 0;
+    if (f > 0) { x.fillStyle = `rgba(230,232,240,${(0.5 * f).toFixed(2)})`; x.fillRect(L, 0, R - L, 830); }
+  }
+  // Clarté de la lune
+  if (lune > 0.05) {
+    const cl = x.createRadialGradient(lx, ly, 40, lx, ly, 560);
+    cl.addColorStop(0, `rgba(190,206,236,${(0.18 * lune).toFixed(3)})`); cl.addColorStop(1, "rgba(190,206,236,0)");
+    x.fillStyle = cl; x.fillRect(L, 0, R - L, 830);
+  }
+  x.restore();
+}
+
+// La branche qui retombe du coin haut droit : bois, puis fleurs, feuilles ou neige selon la saison.
+function jvBrancheIllustree(x, Z, segs) {
+  const { P, t, souffle, vent, o, blanc } = Z;
+  const px = segs[0].x, py = segs[0].y + 10;
+  const rot = Math.sin(t * souffle * 0.55) * (0.006 + vent * 0.0007);
+  x.save(); x.translate(px, py); x.rotate(rot); x.translate(-px, -py);
+  x.lineCap = "round";
+  segs.forEach(sg => {
+    x.strokeStyle = o("#4A3226"); x.lineWidth = sg.ep;
+    x.beginPath(); x.moveTo(sg.x, sg.y); x.quadraticCurveTo(sg.cx, sg.cy, sg.x2, sg.y2); x.stroke();
+    if (P.rameau === "nu" && sg.d <= 4) { x.strokeStyle = jvRgba(blanc, 0.95); x.lineWidth = Math.max(1.2, sg.ep * 0.5); x.beginPath(); x.moveTo(sg.x, sg.y - sg.ep * 0.45); x.quadraticCurveTo(sg.cx, sg.cy - sg.ep * 0.5, sg.x2, sg.y2 - sg.ep * 0.4); x.stroke(); }
+  });
+  segs.forEach((sg, i) => {
+    if (sg.d < 2 || P.rameau === "nu") return;
+    const fl = Math.sin(t * souffle * 1.8 + i) * vent * 0.03;
+    if (P.rameau === "sakura" && sg.d < 3) return;
+    if (P.rameau !== "sakura" && sg.d < 3) return;
+    for (let j = 0; j < (P.rameau === "sakura" ? 5 : 3); j++) {
+      const fx = sg.x2 + (jvAlea(sg.g + j) - 0.5) * (P.rameau === "sakura" ? 20 : 44) + fl, fy = sg.y2 + (jvAlea(sg.g + j + 7) - 0.5) * (P.rameau === "sakura" ? 14 : 22) + (P.rameau === "sakura" ? 4 : 14), a = jvAlea(sg.g + j) * 6;
+      if (P.rameau === "sakura") {
+        x.strokeStyle = o("#5A3A2C"); x.lineWidth = 0.7; jvTrait(x, sg.x2, sg.y2, fx, fy);
+        if (j === 4) { x.fillStyle = o("#E88AA4"); jvOvale(x, fx, fy, 2, 2.8, a); continue; }
+        x.fillStyle = o(j % 2 ? "#F7CFDA" : "#FCE6EC");
+        for (let p2 = 0; p2 < 5; p2++) { const ap = a + p2 * 1.257; jvOvale(x, fx + Math.cos(ap) * 3.4, fy + Math.sin(ap) * 3.4, 3.1, 2.3, ap); }
+        x.fillStyle = o("#D2607E"); jvRond(x, fx, fy, 1.1);
+      }
+      else {
+        const r = 14 + jvAlea(sg.g + j) * 7, col = P.feuille[(i + j) % P.feuille.length];
+        x.strokeStyle = o("#5A4630"); x.lineWidth = 0.8; jvTrait(x, sg.x2, sg.y2, fx, fy - r * 0.6);
+        x.fillStyle = o(jvMel(col, "#10241A", (j % 3) * 0.12)); jvErable(x, fx, fy, r, a * 0.5 - 0.25 + Math.PI);
+        x.strokeStyle = jvRgba(o(jvMel(col, "#10241A", 0.4)), 0.6); x.lineWidth = 0.6;
+        for (let v = 0; v < 5; v++) { const av = a * 0.5 - 0.25 + Math.PI - Math.PI / 2 + (v - 2) * 0.62; jvTrait(x, fx, fy, fx + Math.cos(av) * r * 0.8, fy + Math.sin(av) * r * 0.8); }
+      }
+    }
+  });
+  x.restore();
+
+}
+
+function peindreModerne(x, W, H, t, etat, cache) {
+  const Z = jvScene(x, W, H, t, etat, JMO[etat.saison]);
+  const { nomS, P, sol, hs, c, m, vent, souffle, nuit, gris, neige, o, allume, L, R, blanc, haut, bas, voile, lune, lx, ly } = Z;
+  const { rect, poly, couronne, arbre, tronc, fan, rubans, plumets } = Z.outils;
+  const gel = nomS === "hiver";
+  if (Z.F) {
+
+  // Une masse de feuillage : un fond sombre, puis des feuilles en trois tons, plus claires en haut à gauche.
+  // Les monts, l'hiver enneigés
+  const mont1 = [[L, 300], [40, 288], [110, 266], [170, 250], [215, 262], [262, 272], [320, 262], [372, 276], [420, 268], [R, 284], [R, 360], [L, 360]];
+  poly(mont1, o(jvMel(P.mont[0], bas, 0.25)));
+  if (neige) poly([[150, 262], [170, 250], [192, 258], [206, 268], [186, 266], [172, 272], [160, 266]], jvRgba(blanc, 0.9));
+  const mont2 = [[L, 318], [60, 300], [130, 312], [200, 296], [270, 306], [340, 292], [410, 304], [R, 300], [R, 370], [L, 370]];
+  poly(mont2, o(jvMel(P.mont[1], bas, 0.3)));
+  const hz = x.createLinearGradient(0, 300, 0, 360);
+  hz.addColorStop(0, jvRgba(bas, 0)); hz.addColorStop(1, jvRgba(bas, 0.55));
+  x.fillStyle = hz; x.fillRect(L, 300, R - L, 60);
+  // Le bosquet du fond : des masses d'arbres texturées, plus pâles au loin
+  rect(L, 372, R - L, 100, o(jvMel(P.bosquet[0], "#24402A", 0.45)));
+  const nb = Math.ceil((R - L) / 46);
+  for (let i = 0; i < nb; i++) {
+    const bx = L + i * 46 + jvAlea(i) * 20, by = 350 + jvAlea(i + 3) * 16;
+    couronne(bx, by, 26 + jvAlea(i + 1) * 12, 22 + jvAlea(i + 2) * 8, P.bosquet.map(cc => jvMel(cc, bas, 0.18)), 22, 6);
+    if (neige) { x.fillStyle = jvRgba(blanc, 0.8); jvOvale(x, bx, by - 16, 16, 5); }
+  }
+  for (let i = 0; i < nb; i++) couronne(L + i * 46 + 23 + jvAlea(i + 5) * 14, 392 + jvAlea(i + 8) * 18, 30, 20, P.bosquet, 24, 6);
+  rect(L, 466, R - L, 84, o("#EEE7DB"));
+  // Les cyprès
+  const cypres = (cx, top, base, w, i) => {
+    const b = Math.sin(t * souffle * 0.8 + i) * vent * 0.05;
+    x.fillStyle = o("#2C5536");
+    x.beginPath(); x.moveTo(cx - w, base); x.quadraticCurveTo(cx - w * 1.15, (top + base) / 2, cx + b, top); x.quadraticCurveTo(cx + w * 1.15, (top + base) / 2, cx + w, base); x.fill();
+    x.fillStyle = o("#426E44");
+    x.beginPath(); x.moveTo(cx - w * 0.9, base); x.quadraticCurveTo(cx - w, (top + base) / 2, cx + b, top + 4); x.quadraticCurveTo(cx - w * 0.15, (top + base) / 2, cx - w * 0.1, base); x.fill();
+    if (neige) { x.fillStyle = jvRgba(blanc, 0.8); for (let k2 = 0; k2 < 4; k2++) jvOvale(x, cx - w * 0.3 + (k2 % 2) * w * 0.5, top + 20 + k2 * (base - top) / 5, w * 0.35, 2.2); }
+  };
+  [[210, 312, 372, 6], [226, 320, 372, 5], [283, 290, 372, 8], [330, 244, 372, 10], [354, 276, 372, 8]].forEach((a, i) => cypres(...a, i));
+  if (nomS !== "ete") [[38, 214, 352, 9], [60, 226, 352, 8], [84, 242, 352, 7]].forEach((a, i) => cypres(...a, i + 5));
+
+  // L'arbre de gauche, selon la saison
+  if (nomS === "ete") {
+    // Pin parasol : tronc fin, couronne étagée et plate
+    tronc([[50, 440], [56, 380], [62, 340], [52, 300], [40, 278]], 6); tronc([[60, 345], [96, 300], [122, 280]], 4.5);
+    tronc([[96, 300], [150, 292], [176, 300]], 3); tronc([[54, 300], [20, 286]], 3); tronc([[120, 282], [96, 258]], 2.5);
+    [[34, 276, 46, 15], [96, 250, 56, 17], [150, 286, 44, 13], [16, 300, 30, 10], [70, 262, 40, 12]].forEach(([cx, cy, rx, ry]) => {
+      couronne(cx, cy, rx, ry, ["#3A6634", "#4E7C40", "#2E5430", "#6C9A4C"], 70, 8);
+    });
+  } else if (nomS === "printemps") {
+    arbre(56, 448, 130, 5, 0.8, (bx, by, a, g, d) => couronne(bx, by, 17, 12, ["#F6D3DE", "#FBE8EE", "#EBB8C8", "#FFFFFF"], 16, 4.4, g), 11);
+  } else if (nomS === "automne") {
+    arbre(72, 470, 300, 10, 0.78, (bx, by, a, g, d) => couronne(bx, by, 30 - d * 3, 22 - d * 2, ["#D9541E", "#E8742A", "#C8401E", "#F09A3A", "#B5321E"], 16, 6.5, g), 5, 5);
+  } else {
+    arbre(64, 452, 190, 6, 0.8, (bx, by, a, g, d) => {
+      x.strokeStyle = o("#5E4636"); x.lineWidth = 0.9;
+      for (let k2 = 0; k2 < 5; k2++) { const a2 = a + (k2 - 2) * 0.42, l2 = 9 + jvAlea(g + k2) * 8; jvTrait(x, bx, by, bx + Math.cos(a2) * l2, by + Math.sin(a2) * l2);
+        x.fillStyle = jvRgba(blanc, 0.95); jvOvale(x, bx + Math.cos(a2) * l2 * 0.7, by + Math.sin(a2) * l2 * 0.7 - 1.5, 4, 2.2, a2); }
+      x.fillStyle = jvRgba(blanc, 0.92); jvOvale(x, bx, by - 2, 7, 3.4);
+    }, 8, 5);
+  }
+
+  // Les murs et la villa, au bardage de bois qui s'éclaire le soir
+  // Un mur éclairé par le côté : dégradé de face, arête claire, flanc d'ombre, ombre portée au pied.
+  const mur = (a, b, w, h) => {
+    const gm = x.createLinearGradient(a, 0, a + w, 0);
+    gm.addColorStop(0, o("#F2EDE4")); gm.addColorStop(1, o("#DED7C9"));
+    x.fillStyle = gm; x.fillRect(a, b, w, h);
+    rect(a, b, w, 3, o("#F8F5EE")); rect(a + w - 7, b, 7, h, o("#CFC6B6"));
+    x.fillStyle = jvRgba(o("#6E6252"), 0.18 * (1 - voile)); x.beginPath(); x.moveTo(a + w, b + h); x.lineTo(a + w + 22, b + h); x.lineTo(a + w + 8, b + h - 14); x.lineTo(a + w, b + h - 14); x.fill();
+    if (neige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(a + w / 2, b, w / 2 + 2, 5, 0, Math.PI, 0); x.fill(); }
+  };
+  mur(255, 352, 135, 64); mur(118, 414, 60, 54);
+  { const gv = x.createLinearGradient(390, 0, 470, 0); gv.addColorStop(0, o("#F4EFE6")); gv.addColorStop(1, o("#E2DBCD")); x.fillStyle = gv; x.fillRect(390, 268, 80, 205); }
+  rect(380, 250, 92, 18, o("#F4EFE6")); rect(380, 268, 92, 5, o("#CFC6B6"));
+  if (neige) rect(380, 246, 92, 5, blanc);
+  rect(404, 298, 66, 140, o("#D6CEC0"));
+  rect(408, 314, 62, 120, o("#9C5A34"));
+  x.strokeStyle = o("#74401F"); x.lineWidth = 1.4;
+  for (let sx = 411; sx < 470; sx += 4.4) jvTrait(x, sx, 314, sx, 434);
+  if (allume > 0.08) {
+    x.fillStyle = `rgba(255,206,120,${(0.55 * allume).toFixed(2)})`;
+    for (let sx = 413; sx < 470; sx += 4.4) x.fillRect(sx, 316, 1.6, 116);
+    const gl = x.createRadialGradient(438, 440, 6, 438, 440, 110);
+    gl.addColorStop(0, `rgba(255,200,120,${(0.35 * allume).toFixed(2)})`); gl.addColorStop(1, "rgba(255,200,120,0)");
+    x.fillStyle = gl; x.fillRect(330, 330, 220, 220);
+  }
+  // Haies taillées
+  const haie = (a, b, w, h) => {
+    rect(a, b, w, h, o(P.haie[0])); rect(a, b, w, 5, o(P.haie[1]));
+    x.fillStyle = o(jvMel(P.haie[0], "#1E3A22", 0.3));
+    for (let i = 0; i < w * h / 40; i++) jvRond(x, a + jvAlea(i + a) * w, b + 5 + jvAlea(i * 3 + b) * (h - 5), 1.4);
+    if (neige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(a + w / 2, b, w / 2 + 2, 7, 0, Math.PI, 0); x.fill(); rect(a - 2, b - 1, w + 4, 3, blanc); }
+  };
+  haie(172, 414, 128, 54); haie(236, 446, 120, 34);
+  if (nomS === "automne") { x.fillStyle = o("#B5381E"); [[300, 448, 22], [335, 440, 18], [190, 465, 16]].forEach(([a, b, r]) => couronne(a, b, r, r * 0.6, ["#B5381E", "#D0502A", "#8E2A18"], 22, 5)); }
+  // Massifs du milieu et de droite
+  if (nomS === "ete") {
+    couronne(395, 446, 26, 14, ["#3E6A34", "#557E40"], 30, 6);
+    x.fillStyle = o("#9FB2A2"); x.beginPath(); x.ellipse(320, 492, 42, 30, 0, Math.PI, 0); x.fill();
+    fan(320, 494, 52, 60, "#B9C8B8", 1.3); fan(320, 494, 44, 40, "#8EA494", 1.1);
+    rubans(420, 500, 40, 18, ["#4E7A3E", "#5E8A48"], 2.2);
+    for (let i = 0; i < 46; i++) {
+      const lx = 370 + jvAlea(i) * 96, ly = 470 + jvAlea(i + 3) * 26, h = 22 + jvAlea(i + 7) * 18, b = Math.sin(t * souffle * 1.3 + i) * (1 + vent * 0.08);
+      x.strokeStyle = o("#6E8A5A"); x.lineWidth = 1; jvTrait(x, lx, ly + 10, lx + b * 0.5, ly - h * 0.4);
+      for (let k2 = 0; k2 < 6; k2++) { x.fillStyle = o(k2 % 2 ? "#9A86D6" : "#B6A4E8"); jvOvale(x, lx + b * (0.5 + k2 * 0.1), ly - h * 0.4 - k2 * 3.4, 1.9, 2.6); }
+    }
+    rubans(46, 482, 96, 38, ["#3E6E34", "#4E7E3A", "#2E5A2A", "#5E8E44"], 3.4);
+    [[20, 410], [62, 418], [96, 440], [8, 448], [40, 400]].forEach(([a, b], i) => {
+      const bb = Math.sin(t * souffle + i) * (1 + vent * 0.08);
+      x.strokeStyle = o("#5E8A44"); x.lineWidth = 1.3; jvTrait(x, 46 + (a - 46) * 0.3, 478, a + bb, b);
+      for (let k2 = 0; k2 < 16; k2++) { const an = k2 * 2.4; x.fillStyle = o(k2 % 3 ? "#FFFFFF" : "#E6E8F2"); jvOvale(x, a + bb + Math.cos(an) * 7 * jvAlea(k2 + i), b + Math.sin(an) * 7 * jvAlea(k2 + i + 1), 2.4, 1.3, an); }
+    });
+  } else if (nomS === "printemps") {
+    couronne(345, 430, 30, 18, ["#F4F2EA", "#FFFFFF", "#7FA85A"], 40, 4);
+    couronne(430, 470, 40, 26, ["#F4F2EA", "#FFFFFF", "#5E8E44"], 50, 5);
+    couronne(130, 458, 30, 12, ["#E8EDE0", "#FFFFFF", "#7FA85A"], 26, 5);
+    couronne(38, 495, 44, 22, ["#6E9A4C", "#86AE5A"], 30, 8);
+  } else if (nomS === "automne") {
+    plumets(360, 492, 56, 24); plumets(40, 488, 62, 26);
+    couronne(430, 480, 36, 22, ["#B5381E", "#D0502A"], 30, 6);
+  } else {
+    couronne(345, 428, 28, 14, ["#E6ECEE", "#FFFFFF"], 30, 4);
+    couronne(440, 452, 34, 24, ["#3E5A44", "#FFFFFF", "#F2F4F4"], 40, 6);
+    couronne(40, 478, 46, 18, ["#FFFFFF", "#ECF0F0", "#3E5A44"], 40, 7);
+    couronne(120, 438, 30, 10, ["#FFFFFF", "#3E5A44"], 20, 5);
+  }
+  // Un massif bas à gauche des terrasses
+  {
+    const cols = { printemps: ["#6E9A4C", "#86AE5A", "#F4F2EA"], ete: ["#4E7E3A", "#6E9A4C", "#3E6A30"], automne: ["#9A5A2E", "#B5381E", "#7E6A3A"], hiver: ["#3E5A44", "#FFFFFF", "#F2F4F4"] }[nomS];
+    couronne(30, 512, 62, 22, cols, 60, 7, 901);
+    if (neige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(30, 500, 64, 14, 0, Math.PI, 0); x.fill(); }
+  }
+  // Terrasses, gazons et bac de droite
+  const dalle = (a, b, w, h, f) => {
+    const gd = x.createLinearGradient(0, b, 0, b + h); gd.addColorStop(0, o("#F3EDE3")); gd.addColorStop(1, o("#E6DFD1"));
+    x.fillStyle = gd; x.fillRect(a, b, w, h); rect(a, b + h, w, f, o("#CEC4B3"));
+    rect(a, b + h + f, w, 3, jvRgba(o("#6E6252"), 0.16 * (1 - voile)));
+    if (neige) { rect(a, b - 2, w, 4, blanc); }
+  };
+  dalle(96, 468, 266, 9, 5); rect(110, 486, 246, 9, o(P.gazon));
+  dalle(86, 496, 272, 12, 5); rect(128, 514, 228, 6, o(P.gazon));
+  dalle(L, 522, 362 - L, 20, 7);
+  rect(355, 494, R - 355, 82, o("#E9E2D5")); rect(355, 494, R - 355, 5, o("#F3EEE5"));
+  if (neige) rect(355, 491, R - 355, 5, blanc);
+
+  // Le bassin miroir
+  rect(L, 548, R - L, 8, o("#EEE7DB"));
+  const ge = x.createLinearGradient(0, 556, 0, 732);
+  ge.addColorStop(0, o(jvMel(P.eau[0], haut, 0.25))); ge.addColorStop(1, o(jvMel(P.eau[1], bas, 0.2)));
+  x.fillStyle = ge; x.fillRect(L, 556, R - L, 176);
+  rect(L, 556, R - L, 3, jvRgba(o("#2E4A60"), 0.45));
+  x.save(); x.beginPath(); x.rect(L, 559, R - L, 173); x.clip();
+  // Reflet miroir de la scène, découpé en bandes que le vent fait onduler
+  {
+    // On reflète la bande des arbres, des cyprès et de la villa, tassée dans le bassin.
+    const T = x.getTransform(), p0 = T.transformPoint({ x: L, y: 250 }), p1 = T.transformPoint({ x: R, y: 470 }), q = T.transformPoint({ x: L, y: 559 }), q1 = T.transformPoint({ x: L, y: 732 });
+    const sx = Math.max(0, p0.x), sw = Math.min(x.canvas.width, p1.x) - sx, sh = p1.y - p0.y, bandes = 22, hb = sh / bandes, hd = (q1.y - q.y) / bandes;
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = gel ? 0.4 : 0.5;
+    for (let i = 0; i < bandes; i++) {
+      const dx = Math.sin(t * 1.4 + i * 0.8) * (0.6 + vent * 0.06) * (i / bandes + 0.3) * T.a;
+      // La bande i, comptée depuis la ligne d'eau, reçoit la bande symétrique au-dessus.
+      const syS = p1.y - (i + 1) * hb;
+      x.save(); x.translate(0, q.y + (i + 1) * hd); x.scale(1, -1);
+      x.drawImage(x.canvas, sx, syS, sw, hb, sx + dx, 0, sw, hd + 0.5);
+      x.restore();
+    }
+    x.restore();
+    const vt = x.createLinearGradient(0, 559, 0, 732);
+    vt.addColorStop(0, jvRgba(o(P.eau[0]), 0.55)); vt.addColorStop(1, jvRgba(o(P.eau[1]), 0.62));
+    x.fillStyle = vt; x.fillRect(L, 559, R - L, 173);
+  }
+  if (gel) {
+    x.fillStyle = jvRgba(blanc, 0.25); x.fillRect(L, 559, R - L, 173);
+    x.strokeStyle = jvRgba(blanc, 0.6); x.lineWidth = 0.8;
+    [[20, 640, 120, 652, 180, 646], [200, 690, 300, 700, 360, 694], [60, 712, 140, 706, 220, 716]].forEach(([a, b, c2, d, e2, f]) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c2, d); x.lineTo(e2, f); x.stroke(); });
+  }
+  x.restore();
+  // Les marches flottantes et leur ombre sur l'eau
+  [[287, 540, 140, 22], [315, 584, R - 315, 22], [340, 624, R - 340, 26]].forEach(([a, b, w, h]) => {
+    rect(a + 4, b + h + 8, w, 10, jvRgba(o("#1E3448"), 0.35));
+    const gd = x.createLinearGradient(0, b, 0, b + h); gd.addColorStop(0, o("#F4EEE4")); gd.addColorStop(1, o("#E4DCCD"));
+    x.fillStyle = gd; x.fillRect(a, b, w, h); rect(a, b, w, 1.5, o("#FBF8F2")); rect(a, b + h, w, 9, o("#CBC1AF"));
+    if (neige) { x.fillStyle = blanc; x.fillRect(a, b - 3, w, 5); jvOvale(x, a + w * 0.4, b - 2, w * 0.35, 3); }
+  });
+  rect(L, 728, R - L, 8, o("#EAE3D6")); rect(L, 736, R - L, 4, o("#D3CABA"));
+  rect(L, 682, 135 - L, 46, o("#EEE7DA")); rect(L, 728, 135 - L, 8, o("#D6CDBD"));
+  // Le dallage du premier plan et ses ombres de feuillage
+  rect(L, 740, R - L, 100, o(P.sol));
+  if (hs > 0 && voile < 0.6) {
+    for (let i = 0; i < 18; i++) {
+      x.fillStyle = jvRgba(o("#C9BEA8"), 0.45);
+      jvOvale(x, 240 + jvAlea(i) * 230 + Math.sin(t * souffle * 0.6 + i) * 3, 760 + jvAlea(i + 5) * 60, 9 + jvAlea(i + 2) * 10, 3.5, 0.3);
+    }
+  }
+  // Lumières de jardin au bord de la terrasse, la nuit
+  if (allume > 0.2) [[120, 520], [250, 520], [360, 492], [180, 736], [330, 736]].forEach(([a, b]) => {
+    const g = x.createRadialGradient(a, b, 1, a, b, 26); g.addColorStop(0, `rgba(255,214,140,${(0.6 * allume).toFixed(2)})`); g.addColorStop(1, "rgba(255,214,140,0)");
+    x.fillStyle = g; x.fillRect(a - 26, b - 26, 52, 52);
+  });
+  }
+  if (Z.D) {
+  // Ce qui bouge sur l'eau, hors des marches
+  x.save(); x.beginPath(); x.rect(L, 559, R - L, 173);
+  [[287, 540, 140, 31], [315, 584, R - 315, 31], [340, 624, R - 340, 35]].forEach(([a, b, w, h]) => x.rect(a, b, w, h));
+  x.clip("evenodd");
+  // Scintillements, ronds de pluie, glace
+  for (let i = 0; i < 26; i++) {
+    const sx = L + ((jvAlea(i) * (R - L) + t * (3 + (i % 4))) % (R - L)), sy = 566 + jvAlea(i + 3) * 160;
+    x.fillStyle = `rgba(255,255,255,${(0.16 + 0.18 * Math.sin(t * 1.6 + i)).toFixed(2)})`; x.fillRect(sx, sy, 10 + jvAlea(i) * 16, 1.2);
+  }
+  if (lune > 0.05) for (let i = 0; i < 9; i++) { x.fillStyle = `rgba(236,238,246,${(0.5 * lune * (1 - i / 10)).toFixed(2)})`; const w = 18 - i * 1.5 + Math.sin(t * 2 + i) * 3; x.fillRect(lx - w / 2 + Math.sin(t * 1.3 + i) * 2, 566 + i * 7, w, 1.6); }
+  if (m.pluie && !gel) jvRonds(x, { m, t }, 230, 650, 230, 70);
+  // Ce qui flotte : pétales au printemps, feuilles à l'automne
+  if (P.chute && !gel) {
+    for (let i = 0; i < 16; i++) {
+      x.fillStyle = o(P.chute[i % P.chute.length]);
+      const fx = 20 + jvAlea(i * 5) * 420 + Math.sin(t * 0.2 + i) * 6, fy = 600 + jvAlea(i * 3) * 120;
+      if (nomS === "automne") jvErable(x, fx, fy, 5, i); else jvOvale(x, fx, fy, 3.2, 1.6, i);
+    }
+  }
+  x.restore();
+  // Le premier plan, selon la saison
+  if (nomS === "ete") {
+    x.fillStyle = o("#24401C"); jvOvale(x, 110, 800, 150, 90);
+    couronne(90, 790, 120, 70, ["#3E6A2E", "#557E36", "#2E5422", "#6E9A44"], 260, 9);
+    couronne(220, 810, 60, 40, ["#3E6A2E", "#557E36", "#6E9A44"], 80, 8);
+  } else if (nomS === "printemps") {
+    rubans(60, 850, 230, 54, ["#3E7A2E", "#4E8A36", "#6EA048", "#2E6224"], 3.2); rubans(170, 850, 160, 30, ["#5E9440", "#6EA048"], 2.6);
+    for (let i = 0; i < 13; i++) {
+      const a = -Math.PI / 2 + (i / 12 - 0.5) * 1.8, Ln = 110 + jvAlea(i) * 110, b = Math.sin(t * souffle * 1.2 + i) * (1.5 + vent * 0.12);
+      jvFleur(x, 60 + Math.cos(a) * Ln + b, 850 + Math.sin(a) * Ln, 6.2, o(i % 3 ? "#FFFFFF" : "#FBEFF2"), o("#E9A3B5"));
+    }
+  } else if (nomS === "automne") {
+    plumets(60, 840, 190, 40); plumets(190, 840, 130, 28);
+  } else {
+    plumets(80, 800, 170, 22);
+    x.fillStyle = blanc; jvOvale(x, 300, 850, 220, 60);
+    couronne(70, 800, 90, 40, ["#2E4A36", "#3E5A44"], 60, 8);
+    x.fillStyle = blanc; x.beginPath(); x.ellipse(70, 790, 96, 34, 0, Math.PI, 0); x.fill(); jvOvale(x, 70, 790, 96, 10);
+  }
+  // Rosée du matin sur les dalles
+  if (sol.depuisLever > -0.5 && sol.depuisLever < 2.5 && m.nappe < 0.5 && !neige) {
+    for (let i = 0; i < 14; i++) { x.fillStyle = `rgba(255,253,245,${(0.6 * Math.max(0, Math.sin(t * 1.6 + i * 2.3))).toFixed(2)})`; x.fillRect(150 + jvAlea(i * 7) * 300, 745 + jvAlea(i * 11) * 80, 1.6, 1.6); }
+  }
+
+  // La branche du coin haut droit
+  // La branche est tracée pour la largeur de l'écran : elle se retrace si celle-ci change.
+  if (!cache.brancheMo || cache.brancheMoR !== R) {
+    const segs = [];
+    const pousse = (px, py, ang, len, ep, d, g) => {
+      const a = ang + (jvAlea(g) - 0.5) * 0.35, x2 = px + Math.cos(a) * len, y2 = py + Math.sin(a) * len, pli = (jvAlea(g + 1) - 0.5) * len * 0.25;
+      segs.push({ x: px, y: py, x2, y2, cx: (px + x2) / 2 - Math.sin(a) * pli, cy: (py + y2) / 2 + Math.cos(a) * pli, ep, d, g });
+      if (d >= 5) return;
+      pousse(x2, y2, a - 0.32 + (jvAlea(g + 2) - 0.5) * 0.3, len * 0.74, ep * 0.66, d + 1, g * 2 + 1);
+      if (d < 3 || jvAlea(g + 3) > 0.3) pousse(x2, y2, a + 0.5 + (jvAlea(g + 4) - 0.5) * 0.4, len * (0.5 + jvAlea(g + 5) * 0.2), ep * 0.55, d + 1, g * 2 + 2);
+    };
+    pousse(R + 30, 30, Math.PI * 0.9, 92, 10, 0, 3); pousse(R + 30, 110, Math.PI * 0.98, 60, 6, 1, 77);
+    cache.brancheMo = segs; cache.brancheMoR = R;
+  }
+  jvBrancheIllustree(x, Z, cache.brancheMo);
+  jvFinScene(x, Z);
+  } else x.restore();
+  return c;
+}
+
+/* ---------- Le style brutaliste ----------
+   D'après la seconde planche de Jérôme : du béton brut piqueté, un grand mur
+   à droite d'où retombe une grimpante, des murets étagés et un escalier, un
+   bassin sombre en perspective, de grands bacs plantés au premier plan, des
+   nuages de buis taillés et des cyprès devant un mont. */
+const JBR = {
+  printemps: { ciel: ["#B4CDE2", "#ECEEE8"], mont: ["#9CA6BC", "#AFC0B8"], bosquet: ["#8EB262", "#A9C878", "#F1C6D2", "#7EA458"],
+    nuage: ["#5E8E44", "#7EA854"], eau: ["#5E7E86", "#86A2A8"], beton: "#BDB8AE", sol: "#DAD5CB",
+    rameau: "sakura", chute: ["#F6C6D2", "#FBE3EA"], bac: "fleurs", grimpe: ["#4E7A3A", "#6E9A4C"], grimpeFleur: "#FFFFFF" },
+  ete: { ciel: ["#8FB8DC", "#E2E8E6"], mont: ["#8E9AAE", "#9AAE9E"], bosquet: ["#6E9A44", "#94BC5A", "#5A8A3A"],
+    nuage: ["#4E7E36", "#6E9E48"], eau: ["#4E6E78", "#7898A2"], beton: "#B8B3A9", sol: "#DED8CD",
+    rameau: "erable", feuille: ["#7FA83A", "#5E8A2E", "#9DBB3A", "#3E6A2E"], bac: "lavande", grimpe: ["#3E6A30", "#557E3A"], grimpeFleur: "#F4F2EA" },
+  automne: { ciel: ["#E8D2B6", "#F2E6D4"], mont: ["#A49CA6", "#B8A898"], bosquet: ["#D08A3A", "#E2A848", "#B5542A", "#C9A050"],
+    nuage: ["#B5381E", "#D0502A"], eau: ["#6E747A", "#9A9690"], beton: "#BAB4AA", sol: "#DCD6CB",
+    rameau: "erable", feuille: ["#E0621E", "#F08A2A", "#C8401E"], chute: ["#E0621E", "#F08A2A", "#C8401E"], bac: "graminees", grimpe: ["#B5481E", "#D0682A"] },
+  hiver: { ciel: ["#BCC8D6", "#E6E9EC"], mont: ["#A6AEC0", "#BAC2CC"], bosquet: ["#A9B0B2", "#C4CACC", "#8E9698"],
+    nuage: ["#3E5A44", "#4E6A52"], eau: ["#55646C", "#7E8C94"], beton: "#BFBBB3", sol: "#F2F2F0",
+    rameau: "nu", bac: "baies", grimpe: ["#6E6A60", "#8A857A"] },
+};
+function peindreBrutaliste(x, W, H, t, etat, cache) {
+  const Z = jvScene(x, W, H, t, etat, JBR[etat.saison]);
+  const { nomS, P, sol, hs, c, m, vent, souffle, neige, o, allume, L, R, blanc, haut, bas, voile, lune, lx } = Z;
+  const { rect, poly, couronne, arbre, fan, rubans, plumets } = Z.outils;
+  const gel = nomS === "hiver";
+  const bassin = [[L, 452], [248, 450], [450, 508], [450, 522], [L, 524]];
+  // Le béton : un aplat, puis son piqueté, un motif tiré une fois.
+  if (!cache.beton) {
+    const cb = document.createElement("canvas"); cb.width = cb.height = 96;
+    const g = cb.getContext("2d");
+    for (let i = 0; i < 700; i++) {
+      g.fillStyle = jvAlea(i * 3.1) > 0.5 ? "rgba(70,66,60,.55)" : "rgba(255,255,255,.5)";
+      g.beginPath(); g.arc(jvAlea(i) * 96, jvAlea(i + 0.5) * 96, 0.35 + jvAlea(i * 7) * 0.9, 0, 7); g.fill();
+    }
+    cache.beton = cb;
+  }
+  const pique = x.createPattern(cache.beton, "repeat");
+  const beton = (pts, ton, eclat) => {
+    poly(pts, o(jvMel(P.beton, ton > 0 ? "#FFFFFF" : "#3A3832", Math.abs(ton))));
+    x.save(); x.globalAlpha = 0.35 * (1 - Z.nuit * 0.6); x.fillStyle = pique;
+    x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill(); x.restore();
+    if (eclat) { x.strokeStyle = jvRgba(o("#FFFFFF"), 0.35); x.lineWidth = 1; jvTrait(x, pts[0][0], pts[0][1], pts[1][0], pts[1][1]); }
+  };
+  const boite = (a, b, w, h, dessus) => {
+    beton([[a, b + dessus], [a + w, b + dessus], [a + w, b + h], [a, b + h]], -0.16, false);
+    beton([[a, b], [a + w, b], [a + w, b + dessus], [a, b + dessus]], 0.3, true);
+    rect(a, b + dessus, w, 2, jvRgba(o("#3A3832"), 0.25));
+    rect(a, b + h, w, 5, jvRgba(o("#3A3832"), 0.2 * (1 - voile)));
+    if (neige) { x.fillStyle = blanc; x.beginPath(); x.moveTo(a - 1, b + dessus * 0.6); x.lineTo(a - 1, b - 4); x.quadraticCurveTo(a + w / 2, b - 9, a + w + 1, b - 4); x.lineTo(a + w + 1, b + dessus * 0.6); x.fill(); }
+  };
+
+  if (Z.F) {
+  // Le mont et les collines
+  poly([[L, 286], [60, 276], [120, 258], [175, 236], [206, 222], [240, 238], [290, 262], [340, 270], [R, 280], [R, 360], [L, 360]], o(jvMel(P.mont[0], bas, 0.28)));
+  if (neige) poly([[178, 236], [206, 222], [232, 236], [220, 242], [206, 236], [192, 244]], jvRgba(blanc, 0.92));
+  poly([[L, 300], [80, 290], [160, 300], [240, 288], [320, 296], [R, 290], [R, 380], [L, 380]], o(jvMel(P.mont[1], bas, 0.35)));
+  { const hz = x.createLinearGradient(0, 280, 0, 340); hz.addColorStop(0, jvRgba(bas, 0)); hz.addColorStop(1, jvRgba(bas, 0.5)); x.fillStyle = hz; x.fillRect(L, 280, R - L, 60); }
+  // Arbres du fond, masses texturées
+  rect(L, 330, R - L, 120, o(jvMel(P.bosquet[0], "#24402A", 0.45)));
+  for (let i = 0; i < Math.ceil((R - L) / 40); i++) {
+    const bx = L + i * 40 + jvAlea(i + 2) * 16, by = 318 + jvAlea(i + 6) * 20;
+    couronne(bx, by, 24 + jvAlea(i) * 12, 20 + jvAlea(i + 1) * 8, P.bosquet.map(cc => jvMel(cc, bas, 0.15)), 20, 6, 300 + i);
+    if (neige) { x.fillStyle = jvRgba(blanc, 0.85); jvOvale(x, bx, by - 15, 15, 5); }
+  }
+  // Grands arbres derrière le mur de droite
+  [[330, 210, 46, 60], [420, 140, 60, 70], [460, 230, 40, 50]].forEach(([cx, cy, rx, ry], i) => {
+    if (nomS === "hiver") { arbre(cx, cy + ry * 1.6, ry * 2.2, 4, 0.75, (bx, by, a, g) => { x.fillStyle = jvRgba(blanc, 0.9); jvOvale(x, bx, by - 2, 5, 2.4, a); }, 40 + i, 4); return; }
+    couronne(cx, cy, rx, ry, P.bosquet, 50, 7, 500 + i);
+  });
+  // Les cyprès
+  [[236, 262, 336, 7], [254, 258, 336, 7], [278, 230, 336, 8]].forEach(([cx, top, base, w], i) => {
+    const b = Math.sin(t * souffle * 0.8 + i) * Math.min(vent, 60) * 0.04;
+    x.fillStyle = o("#2C4A38");
+    x.beginPath(); x.moveTo(cx - w, base); x.quadraticCurveTo(cx - w * 1.15, (top + base) / 2, cx + b, top); x.quadraticCurveTo(cx + w * 1.15, (top + base) / 2, cx + w, base); x.fill();
+    x.fillStyle = o("#406A48"); x.beginPath(); x.moveTo(cx - w * 0.9, base); x.quadraticCurveTo(cx - w, (top + base) / 2, cx + b, top + 4); x.quadraticCurveTo(cx - w * 0.15, (top + base) / 2, cx - w * 0.1, base); x.fill();
+    if (neige) { x.fillStyle = jvRgba(blanc, 0.8); for (let k2 = 0; k2 < 4; k2++) jvOvale(x, cx - 2 + (k2 % 2) * 4, top + 18 + k2 * 18, w * 0.4, 2); }
+  });
+  // Les nuages de buis : un tronc torse, des plateaux taillés
+  {
+    const bal = Math.sin(t * souffle * 0.4) * Math.min(vent, 60) * 0.015;
+    x.strokeStyle = o("#5A4232"); x.lineCap = "round";
+    x.lineWidth = 6; x.beginPath(); x.moveTo(78, 392); x.bezierCurveTo(70, 360, 96, 340, 84, 300); x.bezierCurveTo(78, 286, 62, 280, 52, 270); x.stroke();
+    x.lineWidth = 3.5; jvTrait(x, 86, 330, 100, 312); jvTrait(x, 82, 356, 98, 352); jvTrait(x, 80, 340, 30, 318);
+    [[50, 268, 46, 14], [100, 312, 44, 13], [96, 352, 38, 12], [26, 318, 26, 10]].forEach(([cx, cy, rx, ry], i) => {
+      const col = P.nuage;
+      x.fillStyle = o(jvMel(col[0], "#10241A", 0.3)); jvOvale(x, cx + bal, cy + 2, rx, ry);
+      couronne(cx + bal, cy - 1, rx * 0.92, ry * 0.8, [col[0], col[1], jvMel(col[1], "#F4F2C8", 0.25)], 40, 5, 700 + i);
+      if (neige) { x.fillStyle = blanc; x.beginPath(); x.ellipse(cx + bal, cy - ry * 0.35, rx * 0.95, ry * 0.7, 0, Math.PI, 0); x.fill(); }
+    });
+  }
+  // Le grand mur de droite et la grimpante qui en retombe
+  beton([[365, 196], [R, 196], [R, 356], [365, 356]], -0.02, true);
+  beton([[358, 196], [365, 196], [365, 356], [358, 356]], -0.18, false);
+  if (neige) rect(358, 191, R - 358, 6, blanc);
+  // Les murets étagés, l'escalier du fond
+  boite(L, 368, 75 - L, 72, 8);
+  boite(186, 340, 100, 56, 7); boite(216, 368, 70, 30, 5);
+  boite(298, 386, 80, 66, 8);
+  for (let i = 0; i < 4; i++) boite(92 + i * 4, 392 + i * 11, 180 - i * 4, 12, 4);
+  couronne(132, 384, 30, 10, P.bosquet.slice(0, 2), 16, 4, 801);
+  // La grimpante : une masse en tête du mur, puis des lianes feuillues qui retombent en courbes
+  couronne(392, 250, 40, 24, P.grimpe, 50, 5, 950);
+  couronne(440, 270, 36, 26, P.grimpe, 46, 5, 951);
+  for (let i = 0; i < 11; i++) {
+    const gx = 366 + i * 9.5 + jvAlea(i) * 6, l = 60 + jvAlea(i + 3) * 170, ph = jvAlea(i + 9) * 6;
+    const b0 = Math.sin(t * souffle * 0.7 + i * 0.5) * (1 + Math.min(vent, 60) * 0.07);
+    for (let k2 = 0; k2 < l / 5; k2++) {
+      const u = k2 * 5 / l, px = gx + Math.sin(u * 4 + ph) * 6 + b0 * u * 1.6, py = 262 + k2 * 5;
+      x.fillStyle = o(P.grimpe[(k2 + i) % 2]);
+      jvOvale(x, px - 3, py, 3.6, 2.2, 0.6 + Math.sin(k2 + i)); jvOvale(x, px + 3, py + 2, 3.6, 2.2, -0.6 + Math.cos(k2 + i));
+      if (P.grimpeFleur && (k2 + i) % 5 === 0) { x.fillStyle = o(P.grimpeFleur); jvRond(x, px, py + 1, 1.8); }
+    }
+  }
+
+  // Le bassin sombre, en perspective, et sa margelle
+  beton([[L, 436], [R, 436], [R, 545], [L, 545]], 0.3, false);
+  beton([[L, 440], [250, 438], [R, 500], [R, 512], [L, 452]], 0.28, true);
+  {
+    const ge = x.createLinearGradient(0, 450, 0, 524);
+    ge.addColorStop(0, o(jvMel(P.eau[0], haut, 0.2))); ge.addColorStop(1, o(jvMel(P.eau[1], bas, 0.15)));
+    x.fillStyle = ge; x.beginPath(); bassin.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill();
+    x.save(); x.beginPath(); bassin.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+    // Reflet du fond : arbres, cyprès, murets, tassé dans le bassin
+    const T = x.getTransform(), p0 = T.transformPoint({ x: L, y: 230 }), p1 = T.transformPoint({ x: R, y: 440 }), q = T.transformPoint({ x: L, y: 452 }), q1 = T.transformPoint({ x: L, y: 524 });
+    const sx = Math.max(0, p0.x), sw = Math.min(x.canvas.width, p1.x) - sx, sh = p1.y - p0.y, n = 16, hb = sh / n, hd = (q1.y - q.y) / n;
+    x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = gel ? 0.35 : 0.5;
+    for (let i = 0; i < n; i++) {
+      const dx = Math.sin(t * 1.4 + i * 0.8) * (0.6 + Math.min(vent, 60) * 0.06) * (i / n + 0.3) * T.a;
+      x.save(); x.translate(0, q.y + (i + 1) * hd); x.scale(1, -1);
+      x.drawImage(x.canvas, sx, p1.y - (i + 1) * hb, sw, hb, sx + dx, 0, sw, hd + 0.5); x.restore();
+    }
+    x.restore();
+    x.fillStyle = jvRgba(o(P.eau[0]), 0.5); x.fillRect(L, 450, R - L, 75);
+    if (gel) {
+      x.fillStyle = jvRgba(blanc, 0.22); x.fillRect(L, 450, R - L, 75);
+      x.strokeStyle = jvRgba(blanc, 0.6); x.lineWidth = 0.8;
+      [[10, 480, 120, 492, 200, 486], [150, 506, 260, 512, 330, 506]].forEach(([a, b, c2, d, e2, f]) => { x.beginPath(); x.moveTo(a, b); x.lineTo(c2, d); x.lineTo(e2, f); x.stroke(); });
+    }
+    x.restore();
+  }
+  beton([[L, 522], [450, 520], [R, 528], [R, 540], [L, 542]], 0.3, true);
+  // Le dallage et les marches du premier plan
+  beton([[L, 540], [R, 540], [R, 830], [L, 830]], 0.32, false);
+  x.strokeStyle = jvRgba(o("#9A948A"), 0.5); x.lineWidth = 0.8;
+  for (let k2 = 0; k2 < 5; k2++) jvTrait(x, 190, 660 + k2 * 36, R, 660 + k2 * 36);
+  for (let k2 = 0; k2 < 4; k2++) jvTrait(x, 240 + k2 * 70, 650, 230 + k2 * 80, 830);
+  if (neige) { x.fillStyle = blanc; x.fillRect(L, 540, R - L, 290); }
+  [[185, 548, 30], [190, 584, 30], [196, 620, 30]].forEach(([a, b, h], i) => {
+    beton([[a, b], [R, b], [R, b + 8], [a, b + 8]], 0.3, true);
+    beton([[a, b + 8], [R, b + 8], [R, b + h], [a, b + h]], -0.3, false);
+    { const gs = x.createLinearGradient(0, b + 8, 0, b + h); gs.addColorStop(0, jvRgba(o("#2E2C28"), 0.18)); gs.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = gs; x.fillRect(a, b + 8, R - a, h - 8); }
+    rect(a, b + h, R - a, 4, jvRgba(o("#4A463E"), 0.18 * (1 - voile)));
+    if (neige) rect(a, b - 3, R - a, 6, blanc);
+  });
+  boite(268, 690, 122, 54, 10);
+  // Feuilles et pétales tombés sur le dallage et les marches
+  if (P.chute && !neige) for (let i = 0; i < 26; i++) {
+    x.fillStyle = o(P.chute[i % P.chute.length]);
+    const fx = 200 + jvAlea(i * 7 + 1) * 260, fy = 552 + jvAlea(i * 5 + 2) * 270;
+    if (nomS === "automne") jvErable(x, fx, fy, 4 + jvAlea(i) * 2.5, i); else jvOvale(x, fx, fy, 3, 1.6, i);
+  }
+  // Ombres de feuillage sur le dallage, par beau temps
+  if (hs > 0 && voile < 0.6) {
+    for (let i = 0; i < 40; i++) {
+      x.fillStyle = jvRgba(o("#7A7468"), 0.34);
+      jvOvale(x, 200 + jvAlea(i) * 270 + Math.sin(t * souffle * 0.6 + i) * 3, 650 + jvAlea(i + 5) * 170, 10 + jvAlea(i + 2) * 14, 4, -0.4);
+    }
+  }
+  }
+  if (Z.D) {
+  // Ce qui bouge sur le bassin
+  x.save(); x.beginPath(); bassin.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.clip();
+    for (let i = 0; i < 16; i++) {
+      const px = L + ((jvAlea(i) * (R - L) + t * (3 + (i % 4))) % (R - L)), py = 456 + jvAlea(i + 3) * 64;
+      x.fillStyle = `rgba(255,255,255,${(0.14 + 0.16 * Math.sin(t * 1.6 + i)).toFixed(2)})`; x.fillRect(px, py, 8 + jvAlea(i) * 14, 1.1);
+    }
+    if (lune > 0.05) for (let i = 0; i < 7; i++) { x.fillStyle = `rgba(236,238,246,${(0.5 * lune * (1 - i / 8)).toFixed(2)})`; const w = 14 - i * 1.4; x.fillRect(lx - w / 2 + Math.sin(t * 1.3 + i) * 2, 458 + i * 8, w, 1.5); }
+    if (m.pluie && !gel) jvRonds(x, { m, t }, 220, 488, 200, 30);
+    if (P.chute && !gel) for (let i = 0; i < 10; i++) { x.fillStyle = o(P.chute[i % P.chute.length]); const fx = 20 + jvAlea(i * 5) * 380 + Math.sin(t * 0.2 + i) * 5, fy = 462 + jvAlea(i * 3) * 54; if (nomS === "automne") jvErable(x, fx, fy, 4.5, i); else jvOvale(x, fx, fy, 3, 1.5, i); }
+  x.restore();
+  // Les grands bacs plantés
+  const bac = (a, b, w, h, cx, base) => {
+    // Face du bac : plus sombre que le dallage, et qui fonce vers le pied
+    beton([[a, b + 18], [a + w, b + 18], [a + w, b + h], [a, b + h]], -0.26, false);
+    const gf = x.createLinearGradient(0, b + 18, 0, b + h);
+    gf.addColorStop(0, "rgba(255,255,255,0)"); gf.addColorStop(1, jvRgba(o("#2E2C28"), 0.22));
+    x.fillStyle = gf; x.fillRect(a, b + 18, w, h - 18);
+    rect(a + w - 8, b + 18, 8, h - 18, jvRgba(o("#2E2C28"), 0.16));
+    // Margelle : une arête claire et épaisse, son ombre sous elle
+    beton([[a, b], [a + w, b], [a + w, b + 18], [a, b + 18]], 0.42, true);
+    rect(a, b + 18, w, 3, jvRgba(o("#2E2C28"), 0.3));
+    rect(a, b + h, w, 6, jvRgba(o("#2E2C28"), 0.22 * (1 - voile)));
+    if (neige) { x.fillStyle = blanc; x.beginPath(); x.moveTo(a - 1, b + 10); x.lineTo(a - 1, b - 4); x.quadraticCurveTo(a + w / 2, b - 10, a + w + 1, b - 4); x.lineTo(a + w + 1, b + 10); x.fill(); }
+    const masse = { lavande: ["#4E7A34", "#6E9A48", "#3E6A2E"], fleurs: ["#5E8A3E", "#7EA44E"], graminees: ["#8E6A3A", "#A07A44"], baies: ["#5E5A50", "#7A746A"] }[P.bac];
+    for (let i = 0; i < 6; i++) couronne(a + w * (0.08 + i * 0.17), base - 10 - (i % 2) * 6, w * 0.13, 20, masse, 26, 6.5, a * 3 + i);
+    // Ce qui déborde par-dessus la margelle
+    if (P.bac !== "baies") rubans(a + 26, b + 14, 70, 16, masse, 2.4);
+    if (P.bac === "lavande") {
+      rubans(cx - 40, base, 70, 22, ["#5E8A3E", "#7EA44E", "#4E7A34"], 2.2);
+      for (let i = 0; i < 80; i++) {
+        const lx2 = a + 10 + jvAlea(i + a) * (w - 24), ly2 = base - 4 - jvAlea(i + 3) * 22, h2 = 34 + jvAlea(i + 7) * 40, bb = Math.sin(t * souffle * 1.3 + i) * (1 + Math.min(vent, 60) * 0.08);
+        x.strokeStyle = o("#6E8A5A"); x.lineWidth = 1; jvTrait(x, lx2, ly2 + 8, lx2 + bb * 0.5, ly2 - h2 * 0.4);
+        for (let k2 = 0; k2 < 7; k2++) { x.fillStyle = o(k2 % 2 ? "#6E58B8" : "#8C76CE"); jvOvale(x, lx2 + bb * (0.5 + k2 * 0.1), ly2 - h2 * 0.4 - k2 * 3.4, 1.9, 2.6); }
+      }
+    } else if (P.bac === "fleurs") {
+      rubans(cx - 40, base, 70, 20, ["#5E8A3E", "#7EA44E"], 2.2);
+      couronne(cx, base - 10, w * 0.4, 18, ["#5E8A3E", "#7EA44E"], 30, 6, a + 1);
+      for (let i = 0; i < 26; i++) jvFleur(x, a + 14 + jvAlea(i + a) * (w - 30) + Math.sin(t * souffle + i) * 1.2, base - 8 - jvAlea(i + 4) * 30, 3.2, o(i % 3 ? "#FFFFFF" : "#F4B6C6"), o("#E8C84A"));
+    } else if (P.bac === "graminees") {
+      couronne(a + w * 0.72, base - 16, w * 0.24, 26, ["#B5381E", "#8E2A18", "#D0502A", "#7A2416"], 40, 5.5, a + 77);
+      plumets(cx - 30, base, 90, 14);
+      for (let i = 0; i < 14; i++) { x.fillStyle = o(i % 2 ? "#B5381E" : "#D0502A"); jvRond(x, a + w - 50 + jvAlea(i) * 40, base - 10 - jvAlea(i + 2) * 30, 2.4); }
+    } else {
+      plumets(cx - 40, base, 70, 10);
+      x.strokeStyle = o("#7A3A2A"); x.lineWidth = 1.2;
+      for (let i = 0; i < 9; i++) { const bx = cx + 10 + i * 6, h2 = 40 + jvAlea(i) * 30; jvTrait(x, bx, base, bx + (i - 4) * 3, base - h2); x.fillStyle = o("#C8302A"); for (let k2 = 0; k2 < 4; k2++) jvRond(x, bx + (i - 4) * 3 * (k2 / 4), base - h2 * (0.6 + k2 * 0.1), 2); }
+      x.fillStyle = blanc; x.beginPath(); x.ellipse(cx, base - 2, w * 0.45, 10, 0, Math.PI, 0); x.fill();
+    }
+  };
+  bac(L, 560, 190 - L, 140, 90, 576);
+  bac(L, 720, 290 - L, 120, 110, 736);
+  // Rosée du matin sur le dallage
+  if (sol.depuisLever > -0.5 && sol.depuisLever < 2.5 && m.nappe < 0.5 && !neige) {
+    for (let i = 0; i < 14; i++) { x.fillStyle = `rgba(255,253,245,${(0.6 * Math.max(0, Math.sin(t * 1.6 + i * 2.3))).toFixed(2)})`; x.fillRect(200 + jvAlea(i * 7) * 260, 660 + jvAlea(i * 11) * 160, 1.6, 1.6); }
+  }
+  // Lumières encastrées dans les murets, la nuit
+  if (allume > 0.2) [[40, 430], [236, 392], [338, 446], [300, 736], [150, 700]].forEach(([a, b]) => {
+    const g = x.createRadialGradient(a, b, 1, a, b, 30); g.addColorStop(0, `rgba(255,214,140,${(0.6 * allume).toFixed(2)})`); g.addColorStop(1, "rgba(255,214,140,0)");
+    x.fillStyle = g; x.fillRect(a - 30, b - 30, 60, 60);
+  });
+
+  // La branche du coin haut droit
+  // La branche est tracée pour la largeur de l'écran : elle se retrace si celle-ci change.
+  if (!cache.brancheBr || cache.brancheBrR !== R) {
+    const segs = [];
+    const pousse = (px, py, ang, len, ep, d, g) => {
+      const a = ang + (jvAlea(g) - 0.5) * 0.35, x2 = px + Math.cos(a) * len, y2 = py + Math.sin(a) * len, pli = (jvAlea(g + 1) - 0.5) * len * 0.25;
+      segs.push({ x: px, y: py, x2, y2, cx: (px + x2) / 2 - Math.sin(a) * pli, cy: (py + y2) / 2 + Math.cos(a) * pli, ep, d, g });
+      if (d >= 5) return;
+      pousse(x2, y2, a - 0.32 + (jvAlea(g + 2) - 0.5) * 0.3, len * 0.74, ep * 0.66, d + 1, g * 2 + 1);
+      if (d < 3 || jvAlea(g + 3) > 0.3) pousse(x2, y2, a + 0.5 + (jvAlea(g + 4) - 0.5) * 0.4, len * (0.5 + jvAlea(g + 5) * 0.2), ep * 0.55, d + 1, g * 2 + 2);
+    };
+    pousse(R + 30, 20, Math.PI * 0.88, 90, 10, 0, 5); pousse(R + 30, 90, Math.PI * 0.97, 56, 6, 1, 91);
+    cache.brancheBr = segs; cache.brancheBrR = R;
+  }
+  jvBrancheIllustree(x, Z, cache.brancheBr);
+  jvFinScene(x, Z);
+  } else x.restore();
+  return c;
+}
+
+/* Une scène illustrée en deux couches. Le fond immobile est peint dans une
+   image gardée en mémoire, et repeint seulement quand le soleil, la lune, le
+   temps ou la taille changent ; ce qui vit est peint par-dessus à chaque
+   image. Une scène entière coûtait de 30 à 43 millisecondes par image. */
+function peindreEnCouches(peintre, x, W, H, t, etat, cache) {
+  const T = x.getTransform(), cv = x.canvas, s = etat.sol;
+  const cle = [etat.style, etat.saison, etat.temps, etat.gel, Math.round(s.hs), Math.round(s.fr * 40), Math.round(Math.min(2, s.fn) * 20),
+    cv.width, cv.height, T.a.toFixed(3), T.e.toFixed(1)].join("|");
+  if (!cache.fond || cache.cleFond !== cle) {
+    if (!cache.fond) cache.fond = document.createElement("canvas");
+    if (cache.fond.width !== cv.width || cache.fond.height !== cv.height) { cache.fond.width = cv.width; cache.fond.height = cv.height; }
+    const f = cache.fond.getContext("2d");
+    f.setTransform(1, 0, 0, 1, 0, 0); f.clearRect(0, 0, cv.width, cv.height); f.setTransform(T);
+    peintre(f, W, H, t, Object.assign({}, etat, { couche: "fond" }), cache);
+    cache.cleFond = cle;
+  }
+  x.save(); x.setTransform(1, 0, 0, 1, 0, 0); x.drawImage(cache.fond, 0, 0); x.restore();
+  return peintre(x, W, H, t, Object.assign({}, etat, { couche: "dessus" }), cache);
+}
+
+const JV_STYLES = {
+  estampe: { nom: "Estampe", texte: "Lavis sourds, grain de papier, monts dans la brume, branche à l'encre ; un décor par climat." },
+  moderne: { nom: "Moderne", texte: "Villa blanche, bassin miroir et marches flottantes, terrasses, haies taillées, cyprès devant les monts.",
+    peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreModerne, x, W, H, t, e, c) },
+  brutaliste: { nom: "Brutaliste", texte: "Béton brut, grand mur et grimpante, murets étagés, bassin sombre, grands bacs plantés, nuages de buis.",
+    peindre: (x, W, H, t, e, c) => peindreEnCouches(peindreBrutaliste, x, W, H, t, e, c) },
+};
+/* Une image du jardin.
+   etat : { theme, saison, temps, vent, gel, sol: { hs, fr, fn, montant, depuisLever } }
+   cache : un objet gardé d'une image à l'autre, pour la branche et le grain. */
+function peindreJardin(x, W, H, t, etat, cache) {
+  const st = JV_STYLES[etat.style] || JV_STYLES.estampe;
+  if (st.peindre) return st.peindre(x, W, H, t, etat, cache);
+  const th = JV_THEMES[etat.theme] || JV_THEMES.japonais, nomS = etat.saison, s = th.saisons[nomS];
+  const m = Object.assign({}, JV_TEMPS[etat.temps] || JV_TEMPS.clair, etat.pluie ? { pluie: etat.pluie } : {});
+  const sol = etat.sol, hs = sol.hs, c = cielDuJardin(hs, sol.montant), vent = etat.vent;
+  const gris = m.nappe * 0.65 + m.pluie * 0.15;
+  const vif = s.ciel ? c.jour * (1 - gris) * 0.85 : 0;
+  const haut = jvMel(s.ciel ? jvMel(c.haut, s.ciel[0], vif) : c.haut, "#848B90", gris * c.jour);
+  const bas = jvMel(s.ciel ? jvMel(c.bas, s.ciel[1], vif) : c.bas, "#C3C6C3", gris * c.jour);
+  const ombre = coul => jvMel(coul, "#141B2A", c.nuit * 0.6 + gris * 0.12);
+  const HZ = H * 0.7, voile = Math.min(1, m.nappe * 1.1 + m.brume * 0.3);
+  const fn = Math.min(1, sol.fn);
+  const lune = sol.fn <= 1 ? (1 - m.nappe * 0.75) * jvBorne(Math.sin(Math.PI * fn), 0, 0.25) * c.nuit : 0;
+  const e = { W, H, HZ, t, nomS, s, m, c, sol, hs, vent, souffle: 0.35 + vent / 30, haut, bas, ombre, gris, voile, gel: etat.gel,
+    neigeux: nomS === "hiver" && etat.theme !== "mediterraneen" || m.neige > 0, blanc: ombre("#F4F3EE"), lune,
+    lx: W * (0.86 - 0.72 * fn), ly: HZ - 110 - Math.sin(Math.PI * fn) * 170,
+    sx: W * (0.14 + 0.62 * Math.min(1, Math.max(0, sol.fr))), allume: Math.max(c.nuit, jvBorne(-hs, -2, 4) * 0.8) };
+
+  // Ciel en lavis et étoiles
+  const g = x.createLinearGradient(0, 0, 0, HZ);
+  g.addColorStop(0, haut); g.addColorStop(1, bas);
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  if (c.nuit > 0.05 && m.nappe < 0.8) {
+    for (let i = 0; i < 46 * W / 390; i++) {
+      const a = c.nuit * (1 - m.nappe) * (0.35 + 0.45 * Math.abs(Math.sin(t * 0.6 + i * 1.7)));
+      x.fillStyle = `rgba(240,236,224,${a.toFixed(3)})`;
+      x.fillRect(jvAlea(i) * W, jvAlea(i + 99) * HZ * 0.6, 1.3, 1.3);
+    }
+  }
+  // Disque plat du soleil, vermillon près de l'horizon
+  if (hs > -4) {
+    const sy = HZ - 90 - (hs / 70) * HZ * 0.7, teinte = jvMel("#F3ECD8", "#C4442E", c.chaud);
+    const r = x.createRadialGradient(e.sx, sy, 20, e.sx, sy, 60);
+    r.addColorStop(0, jvRgba(teinte, 0.28)); r.addColorStop(1, jvRgba(teinte, 0));
+    x.globalAlpha = 1 - voile * 0.7; x.fillStyle = r; x.fillRect(e.sx - 60, sy - 60, 120, 120);
+    x.globalAlpha = (1 - voile * 0.8) * jvBorne(hs, -4, 1); x.fillStyle = teinte; jvRond(x, e.sx, sy, 21);
+    x.globalAlpha = 1;
+  }
+  // La lune, qui traverse le ciel du coucher au lever, et son halo
+  if (lune > 0.01) {
+    const hl = x.createRadialGradient(e.lx, e.ly, 10, e.lx, e.ly, 170);
+    hl.addColorStop(0, `rgba(226,232,246,${(0.42 * lune).toFixed(3)})`);
+    hl.addColorStop(0.35, `rgba(200,212,236,${(0.14 * lune).toFixed(3)})`);
+    hl.addColorStop(1, "rgba(200,212,236,0)");
+    x.fillStyle = hl; x.fillRect(e.lx - 170, e.ly - 170, 340, 340);
+    x.globalAlpha = lune; x.fillStyle = "#F1EEE2"; jvRond(x, e.lx, e.ly, 19);
+    x.fillStyle = "rgba(170,170,160,.28)";
+    [[-6, -4, 4.5], [5, 3, 3.4], [-2, 8, 2.6], [7, -7, 2]].forEach(([dx, dy, rr]) => jvRond(x, e.lx + dx, e.ly + dy, rr));
+    x.globalAlpha = 1;
+  }
+  // Bandes de nuages poussées par le vent, au bord argenté près de la lune
+  const teinte = c.nuit > 0.6 ? jvMel("#363D52", "#525C72", m.nappe)
+    : jvMel(jvMel("#F6F2E8", "#E8BFA2", c.chaud * 0.6), "#9A9D9C", gris * 0.6);
+  const nb = Math.round((2 + 6 * m.cumulus) * W / 390);
+  for (let i = 0; i < nb; i++) {
+    const w = 110 + jvAlea(i + 3) * 180, hh = 9 + jvAlea(i + 5) * 6, v = 0.5 + jvAlea(i + 8) * 0.7;
+    const nx = ((jvAlea(i) * (W + w) + t * (3 + vent * 0.7) * v) % (W + w)) - w, ny = HZ * (0.12 + jvAlea(i + 1) * 0.5);
+    const proche = lune * jvBorne(160 - Math.hypot(nx + w / 2 - e.lx, ny - e.ly), 0, 160);
+    x.fillStyle = jvRgba(jvMel(teinte, "#C9D2E6", proche * 0.8), 0.78);
+    jvCapsule(x, nx, ny, w, hh); jvCapsule(x, nx + w * 0.22, ny + hh + 3, w * 0.62, hh * 0.8);
+  }
+  if (m.nappe > 0) {
+    const ng = x.createLinearGradient(0, 0, 0, HZ * 0.8);
+    ng.addColorStop(0, jvRgba(teinte, 0.9)); ng.addColorStop(1, jvRgba(teinte, 0));
+    x.globalAlpha = m.nappe; x.fillStyle = ng; x.fillRect(0, 0, W, HZ * 0.8); x.globalAlpha = 1;
+  }
+  if (m.orage) {
+    const cy = t % 7.5, f = cy < 0.24 ? 1 - cy / 0.24 : (cy > 0.45 && cy < 0.6 ? 0.5 * (1 - (cy - 0.45) / 0.15) : 0);
+    if (f > 0) { x.fillStyle = `rgba(230,232,240,${(0.5 * f).toFixed(3)})`; x.fillRect(0, 0, W, H); }
+  }
+
+  th.decor(x, e);
+
+  // La vie commune aux thèmes
+  if (c.jour > 0.6 && th.oiseaux.indexOf(nomS) !== -1 && !m.pluie) jvOiseaux(x, e, HZ * 0.36);
+  if (th.lucioles && c.nuit > 0.5 && nomS === "ete" && !m.pluie) jvLucioles(x, e);
+  if (th.papillons && c.jour > 0.6 && (nomS === "printemps" || nomS === "ete") && !m.pluie && vent < 35) jvPapillons(x, e);
+  if (th.martinets && nomS === "ete" && c.jour > 0.6) jvMartinets(x, e, HZ * 0.4);
+  // Clarté de la lune posée sur le paysage
+  if (lune > 0.05) {
+    const cl = x.createRadialGradient(e.lx, e.ly, 40, e.lx, e.ly, 520);
+    cl.addColorStop(0, `rgba(190,206,236,${(0.2 * lune).toFixed(3)})`); cl.addColorStop(1, "rgba(190,206,236,0)");
+    x.fillStyle = cl; x.fillRect(0, 0, W, H);
+  }
+  if (cache.largeur !== W) { cache.branche = genBranche(W); cache.largeur = W; }
+  jvRameau(x, e, cache.branche, th.branche);
+
+  // Ce qui tombe : pétales, feuilles, aiguilles, flocons ; la pluie en traits fins
+  const pente = Math.max(-0.5, Math.min(0.5, vent / 95));
+  const chute = m.neige ? { forme: "flocon" } : s.chute;
+  if (chute && !m.pluie) {
+    const n = (chute.forme === "flocon" ? 70 : 12) * W / 390;
+    for (let i = 0; i < n; i++) {
+      const v = chute.forme === "flocon" ? 20 + jvAlea(i) * 16 : 12 + jvAlea(i) * 8;
+      const py = (jvAlea(i + 1) * H + t * v) % (H + 20) - 10;
+      const px = (jvAlea(i + 2) * W * 0.8 + W * 0.2 + Math.sin(t * 0.6 + i) * 24 - t * vent * 0.35 + W * 8) % W;
+      if (chute.forme === "flocon") { x.fillStyle = "rgba(250,250,246,.85)"; jvRond(x, px, py, 1.3 + jvAlea(i) * 1.6); continue; }
+      x.save(); x.translate(px, py); x.rotate(t * (0.5 + jvAlea(i)) + i);
+      const coul = ombre(chute.couleurs[i % chute.couleurs.length]);
+      if (chute.forme === "petale") { x.fillStyle = jvRgba(coul, 0.9); jvOvale(x, 0, 0, 3, 1.8); }
+      else if (chute.forme === "momiji") { x.fillStyle = coul; jvMomiji(x, 0, 0, 5.5, 0); }
+      else if (chute.forme === "aiguille") { x.strokeStyle = coul; x.lineWidth = 1; jvTrait(x, -4, 0, 4, 0); }
+      else { x.fillStyle = coul; jvOvale(x, 0, 0, 5, 2.6); }
+      x.restore();
+    }
+  }
+  if (m.pluie) {
+    x.strokeStyle = c.nuit > 0.5 ? "rgba(200,208,222,.3)" : "rgba(56,64,74,.28)"; x.lineWidth = 0.8;
+    const n = Math.round(110 * m.pluie * W / 390);
+    for (let i = 0; i < n; i++) {
+      const v = 560 + jvAlea(i) * 240, py = (jvAlea(i + 3) * H + t * v) % H, px = (jvAlea(i + 7) * W + py * pente + W) % W;
+      jvTrait(x, px, py, px + 30 * pente, py + 30);
+    }
+  }
+  if (m.brume > 0.5) {
+    for (let i = 0; i < 3; i++) {
+      x.fillStyle = jvRgba(bas, 0.35 * m.brume);
+      jvCapsule(x, -120 + (t * (5 + i * 3)) % 120 + i * 40, HZ - 60 + i * 60, W * 0.9, 26);
+    }
+    x.fillStyle = jvRgba(bas, 0.32 * m.brume); x.fillRect(0, 0, W, H);
+  }
+  // Grain du papier
+  {
+    if (!cache.grain) {
+      const gc = document.createElement("canvas"); gc.width = gc.height = 160;
+      const gx = gc.getContext("2d"), d = gx.createImageData(160, 160);
+      for (let i = 0; i < 160 * 160; i++) {
+        const v = jvAlea(i + 0.5) * 255;
+        d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255;
+      }
+      gx.putImageData(d, 0, 0);
+      cache.grain = x.createPattern(gc, "repeat");
+    }
+    x.globalAlpha = 0.035; x.fillStyle = cache.grain; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
+  }
+  return c;
+}
+
+// Le temps de l'heure, dit par l'application, et le ciel que chaque décor en tire.
 const JV_DE_TEMPS = { soleil: "clair", soleil_nuage: "nuageux", nuage: "couvert", brume: "brouillard",
   pluie: "pluie", averse: "pluie", orage: "orage", neige: "neige" };
-// Lavis sourds, comme un papier teinté : indigo la nuit, kaki à l'aube, papier clair le jour.
-const JV_CIELS = { nuit: ["#151B2A", "#28304A"], aube: ["#56607A", "#E6C6A2"],
-  jour: ["#BFCBCC", "#ECE7DA"], soir: ["#474A66", "#DDA184"] };
-const JV_MONTS = [{ p: 0.1, h: 92, w: 0.32 }, { p: 0.47, h: 140, w: 0.38 }, { p: 0.88, h: 104, w: 0.3 }];
-const JV_SUMI = "#24282A";
-const jvHex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
-const jvMel = (a, b, t) => {
-  const x = jvHex(a), y = jvHex(b);
-  return "#" + x.map((v, i) => Math.round(Math.max(0, Math.min(255, v + (y[i] - v) * t)))
-    .toString(16).padStart(2, "0")).join("");
-};
-const jvBorne = (v, a, b) => Math.max(0, Math.min(1, (v - a) / (b - a)));
-const jvAlea = n => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
-const jvRgba = (c, a) => { const [r, g, b] = jvHex(c); return `rgba(${r},${g},${b},${a.toFixed(3)})`; };
-// La toile, son décor tracé une fois, sa boucle et l'état du ciel relu au quart d'heure.
-const jv = { toile: null, branche: null, largeur: 0, grain: null, boucle: 0, derniere: 0, etat: null };
+// La toile, ce que les décors gardent d'une image à l'autre, la boucle et l'état du ciel relu au quart d'heure.
+const jv = { toile: null, cache: {}, boucle: 0, derniere: 0, etat: null };
 
 /* La hauteur du soleil, sa course dans le jour et celle de la lune dans la
    nuit, au point du jardin. Déclinaison par la série de Spencer, équation du
@@ -3328,17 +5371,6 @@ function soleilAuJardin(d, lat, lon) {
     fn: jour < 24 ? (((solaire - (12 + jour / 2)) % 24) + 24) % 24 / (24 - jour) : 2 };
 }
 
-function cielDuJardin(h, montant) {
-  const C = JV_CIELS, lever = montant ? C.aube : C.soir;
-  let p;
-  if (h <= -12) p = C.nuit;
-  else if (h < 2) { const t = (h + 12) / 14; p = [jvMel(C.nuit[0], lever[0], t), jvMel(C.nuit[1], lever[1], t)]; }
-  else if (h < 20) { const t = (h - 2) / 18; p = [jvMel(lever[0], C.jour[0], t), jvMel(lever[1], C.jour[1], t)]; }
-  else p = C.jour;
-  return { haut: p[0], bas: p[1], nuit: jvBorne(-h, 2, 12), jour: jvBorne(h, -4, 6),
-           chaud: jvBorne(25 - h, 0, 25) * jvBorne(h, -6, 2) };
-}
-
 // L'état du ciel de l'heure : relu par appliquerAmbiance, la toile le lit à chaque image.
 function etatDuJardin(saison) {
   const g = jardinActif();
@@ -3353,46 +5385,12 @@ function etatDuJardin(saison) {
     if (ih >= 0 && h.precipitation) mm = h.precipitation[ih] || 0;
     gel = !!(meteo.daily.temperature_2m_min && meteo.daily.temperature_2m_min[i] <= 0);
   }
-  const m = Object.assign({}, JV_TEMPS[temps]);
+  // Le décor de l'estampe suit le climat du jardin, sauf choix contraire.
+  const theme = JV_THEMES[choixDecor] ? choixDecor : (JV_THEME_DU_CLIMAT[g && g.climate_key] || "japonais");
   // La pluie forte serre ses traits : de la moitié à une fois et demie la densité de base.
-  if (m.pluie && !m.orage) m.pluie = Math.max(0.5, Math.min(1.5, 0.6 + mm / 4));
-  const c = cielDuJardin(sol.hs, sol.montant);
-  return { saison, s: JV_SAISONS[saison], m, temps, vent: Math.min(60, vent), gel, sol, c };
-}
-
-function genBranche(W) {
-  const segs = [];
-  const pousse = (x, y, ang, len, ep, d, g) => {
-    const a = ang + (jvAlea(g) - 0.5) * 0.3;
-    const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
-    const pli = (jvAlea(g + 1) - 0.5) * len * 0.25;
-    segs.push({ x, y, x2, y2, cx: (x + x2) / 2 - Math.sin(a) * pli, cy: (y + y2) / 2 + Math.cos(a) * pli, ep, d, g });
-    if (d >= 5) return;
-    pousse(x2, y2, a - 0.3 + (jvAlea(g + 2) - 0.5) * 0.3, len * 0.74, ep * 0.66, d + 1, g * 2 + 1);
-    if (d < 3 || jvAlea(g + 3) > 0.3) {
-      pousse(x2, y2, a + 0.5 + (jvAlea(g + 4) - 0.5) * 0.4, len * (0.5 + jvAlea(g + 5) * 0.2), ep * 0.55, d + 1, g * 2 + 2);
-    }
-  };
-  // Assez courte pour laisser lisibles le nom du jardin et la date.
-  pousse(W + 8, 22, Math.PI * 0.87, 60, 10, 0, 1);
-  pousse(W + 8, 90, Math.PI * 0.97, 42, 5.5, 1, 61);
-  return segs;
-}
-
-function jvCapsule(x, x0, y0, w, h) {
-  const r = h / 2;
-  x.beginPath(); x.moveTo(x0 + r, y0); x.lineTo(x0 + w - r, y0);
-  x.arc(x0 + w - r, y0 + r, r, -Math.PI / 2, Math.PI / 2); x.lineTo(x0 + r, y0 + h);
-  x.arc(x0 + r, y0 + r, r, Math.PI / 2, Math.PI * 1.5); x.fill();
-}
-
-function jvMomiji(x, cx, cy, r, rot) {
-  x.beginPath();
-  for (let k = 0; k < 10; k++) {
-    const rr = k % 2 ? r * 0.42 : r, a = rot + k * Math.PI / 5 - Math.PI / 2;
-    x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
-  }
-  x.closePath(); x.fill();
+  const pluie = temps === "pluie" ? Math.max(0.5, Math.min(1.5, 0.6 + mm / 4)) : 0;
+  return { style: choixStyle, theme, saison, temps, pluie, vent: Math.min(60, vent), gel, sol,
+    c: cielDuJardin(sol.hs, sol.montant) };
 }
 
 /* Une image du jardin. Le décor est pensé pour un écran de 390 points sur
@@ -3406,480 +5404,11 @@ function dessinerJardin(t) {
   if (cv.width !== Math.round(LW * dpr) || cv.height !== Math.round(LH * dpr)) {
     cv.width = Math.round(LW * dpr); cv.height = Math.round(LH * dpr);
   }
-  if (jv.largeur !== W) { jv.branche = genBranche(W); jv.largeur = W; }
   const x = cv.getContext("2d");
   x.setTransform(dpr * k, 0, 0, dpr * k, 0, 0);
-  const nomS = e.saison, s = e.s, m = e.m, c = e.c, sol = e.sol, hs = sol.hs, vent = e.vent;
-  const souffle = 0.35 + vent / 30;
-  const gris = m.nappe * 0.65 + m.pluie * 0.15;
-  const vif = s.ciel ? c.jour * (1 - gris) * 0.85 : 0;
-  const haut = jvMel(s.ciel ? jvMel(c.haut, s.ciel[0], vif) : c.haut, "#848B90", gris * c.jour);
-  const bas = jvMel(s.ciel ? jvMel(c.bas, s.ciel[1], vif) : c.bas, "#C3C6C3", gris * c.jour);
-  const ombre = coul => jvMel(coul, "#141B2A", c.nuit * 0.6 + gris * 0.12);
-  const neigeux = nomS === "hiver" || m.neige > 0;
-  const blanc = () => ombre("#F4F3EE");
-  const HZ = H * 0.7;
-
-  // Ciel en lavis et étoiles
-  const g = x.createLinearGradient(0, 0, 0, HZ);
-  g.addColorStop(0, haut); g.addColorStop(1, bas);
-  x.fillStyle = g; x.fillRect(0, 0, W, H);
-  if (c.nuit > 0.05 && m.nappe < 0.8) {
-    for (let i = 0; i < 46 * W / 390; i++) {
-      const a = c.nuit * (1 - m.nappe) * (0.35 + 0.45 * Math.abs(Math.sin(t * 0.6 + i * 1.7)));
-      x.fillStyle = `rgba(240,236,224,${a.toFixed(3)})`;
-      x.fillRect(jvAlea(i) * W, jvAlea(i + 99) * HZ * 0.6, 1.3, 1.3);
-    }
-  }
-  // Disque plat du soleil, vermillon près de l'horizon
-  const voile = Math.min(1, m.nappe * 1.1 + m.brume * 0.3);
-  if (hs > -4) {
-    const fr = Math.min(1, Math.max(0, sol.fr));
-    const sx = W * (0.14 + 0.62 * fr), sy = HZ - 90 - (hs / 70) * HZ * 0.7;
-    const teinte = jvMel("#F3ECD8", "#C4442E", c.chaud);
-    const r = x.createRadialGradient(sx, sy, 20, sx, sy, 60);
-    r.addColorStop(0, jvRgba(teinte, 0.28)); r.addColorStop(1, jvRgba(teinte, 0));
-    x.globalAlpha = 1 - voile * 0.7; x.fillStyle = r; x.fillRect(sx - 60, sy - 60, 120, 120);
-    x.globalAlpha = (1 - voile * 0.8) * jvBorne(hs, -4, 1); x.fillStyle = teinte;
-    x.beginPath(); x.arc(sx, sy, 21, 0, 7); x.fill(); x.globalAlpha = 1;
-  }
-  // La lune, qui traverse le ciel du coucher au lever, et son halo
-  const fn = Math.min(1, sol.fn);
-  const lune = sol.fn <= 1 ? (1 - m.nappe * 0.75) * jvBorne(Math.sin(Math.PI * fn), 0, 0.25) * c.nuit : 0;
-  const lx = W * (0.86 - 0.72 * fn), ly = HZ - 110 - Math.sin(Math.PI * fn) * 170;
-  if (lune > 0.01) {
-    const hl = x.createRadialGradient(lx, ly, 10, lx, ly, 170);
-    hl.addColorStop(0, `rgba(226,232,246,${(0.42 * lune).toFixed(3)})`);
-    hl.addColorStop(0.35, `rgba(200,212,236,${(0.14 * lune).toFixed(3)})`);
-    hl.addColorStop(1, "rgba(200,212,236,0)");
-    x.fillStyle = hl; x.fillRect(lx - 170, ly - 170, 340, 340);
-    x.globalAlpha = lune;
-    x.fillStyle = "#F1EEE2"; x.beginPath(); x.arc(lx, ly, 19, 0, 7); x.fill();
-    x.fillStyle = "rgba(170,170,160,.28)";
-    [[-6, -4, 4.5], [5, 3, 3.4], [-2, 8, 2.6], [7, -7, 2]].forEach(([dx, dy, rr]) => {
-      x.beginPath(); x.arc(lx + dx, ly + dy, rr, 0, 7); x.fill();
-    });
-    x.globalAlpha = 1;
-  }
-  // Bandes de nuages poussées par le vent, au bord argenté près de la lune
-  const teinte = c.nuit > 0.6 ? jvMel("#363D52", "#525C72", m.nappe)
-    : jvMel(jvMel("#F6F2E8", "#E8BFA2", c.chaud * 0.6), "#9A9D9C", gris * 0.6);
-  const derive = 3 + vent * 0.7;
-  const nb = Math.round((2 + 6 * m.cumulus) * W / 390);
-  for (let i = 0; i < nb; i++) {
-    const w = 110 + jvAlea(i + 3) * 180, hh = 9 + jvAlea(i + 5) * 6, v = 0.5 + jvAlea(i + 8) * 0.7;
-    const nx = ((jvAlea(i) * (W + w) + t * derive * v) % (W + w)) - w;
-    const ny = HZ * (0.12 + jvAlea(i + 1) * 0.5);
-    const proche = lune * jvBorne(160 - Math.hypot(nx + w / 2 - lx, ny - ly), 0, 160);
-    x.fillStyle = jvRgba(jvMel(teinte, "#C9D2E6", proche * 0.8), 0.78);
-    jvCapsule(x, nx, ny, w, hh);
-    jvCapsule(x, nx + w * 0.22, ny + hh + 3, w * 0.62, hh * 0.8);
-  }
-  if (m.nappe > 0) {
-    const ng = x.createLinearGradient(0, 0, 0, HZ * 0.8);
-    ng.addColorStop(0, jvRgba(teinte, 0.9)); ng.addColorStop(1, jvRgba(teinte, 0));
-    x.globalAlpha = m.nappe; x.fillStyle = ng; x.fillRect(0, 0, W, HZ * 0.8); x.globalAlpha = 1;
-  }
-  if (m.orage) {
-    const cy = t % 7.5;
-    const f = cy < 0.24 ? 1 - cy / 0.24 : (cy > 0.45 && cy < 0.6 ? 0.5 * (1 - (cy - 0.45) / 0.15) : 0);
-    if (f > 0) { x.fillStyle = `rgba(230,232,240,${(0.5 * f).toFixed(3)})`; x.fillRect(0, 0, W, H); }
-  }
-
-  // Monts lointains, d'autant plus pâles qu'ils sont loin, enneigés l'hiver
-  const pied = HZ - 28;
-  const mont = () => {
-    x.beginPath(); x.moveTo(0, pied + 30);
-    for (let i = 0; i <= 48; i++) {
-      const xn = i / 48;
-      let y = 0;
-      JV_MONTS.forEach(p => { y = Math.max(y, p.h * Math.pow(Math.max(0, 1 - Math.abs(xn - p.p) / (p.w / 2)), 1.3)); });
-      x.lineTo(xn * W, pied - y + jvAlea(i) * 3);
-    }
-    x.lineTo(W, pied + 30); x.closePath();
-  };
-  x.fillStyle = ombre(jvMel(bas, s.mont, s.ciel ? 0.45 : 0.3)); mont(); x.fill();
-  if (neigeux) {
-    x.save(); mont(); x.clip();
-    x.fillStyle = jvRgba(blanc(), 0.85); x.fillRect(0, 0, W, pied - 108);
-    x.restore();
-  }
-  const brume = (y, ep, a) => {
-    const bg = x.createLinearGradient(0, y - ep, 0, y + ep);
-    bg.addColorStop(0, jvRgba(bas, 0)); bg.addColorStop(0.5, jvRgba(bas, a)); bg.addColorStop(1, jvRgba(bas, 0));
-    x.fillStyle = bg; x.fillRect(0, y - ep, W, ep * 2);
-  };
-  brume(pied - 10, 40, s.ciel ? 0.55 : 0.75);
-  x.fillStyle = ombre(jvMel(bas, jvMel(s.terre, "#2D3833", s.ciel ? 0.25 : 0.45), s.ciel ? 0.72 : 0.6));
-  x.beginPath(); x.moveTo(0, HZ + 20);
-  for (let i = 0; i <= 30; i++) { const xn = i / 30; x.lineTo(xn * W, HZ - 16 - Math.sin(xn * 5 + 1) * 13 - Math.sin(xn * 11) * 4); }
-  x.lineTo(W, HZ + 20); x.fill();
-  brume(HZ - 4, 22, 0.6 + m.brume * 0.3);
-
-  // Le sol du jardin, givré par gel, enneigé l'hiver
-  const terre = e.gel && !neigeux ? jvMel(s.terre, "#E4E8EA", 0.35) : s.terre;
-  const gs = x.createLinearGradient(0, HZ, 0, H);
-  gs.addColorStop(0, ombre(terre)); gs.addColorStop(1, ombre(jvMel(terre, "#283028", 0.4)));
-  x.fillStyle = gs; x.fillRect(0, HZ + 4, W, H - HZ);
-  if (neigeux) { x.fillStyle = jvRgba(blanc(), m.neige ? 0.8 : 0.5); x.fillRect(0, HZ + 4, W, 18); }
-
-  // Pin taillé en plateaux
-  {
-    const px = 62, py = HZ + 10, bal = Math.sin(t * souffle * 0.5) * vent * 0.03;
-    x.strokeStyle = ombre("#4A3A2E"); x.lineCap = "round"; x.lineWidth = 6;
-    x.beginPath(); x.moveTo(px, py); x.bezierCurveTo(px + 16, py - 32, px - 20, py - 58, px + 6 + bal, py - 96); x.stroke();
-    x.lineWidth = 2.6;
-    const plateaux = [[-30, -42, 30, 9], [26, -64, 27, 8], [-10, -90, 23, 8], [6 + bal, -108, 14, 6]];
-    plateaux.forEach(([dx, dy]) => { x.beginPath(); x.moveTo(px + 2, py + dy + 10); x.lineTo(px + dx, py + dy + 2); x.stroke(); });
-    plateaux.forEach(([dx, dy, rx, ry]) => {
-      const cx = px + dx + bal * 0.5;
-      x.fillStyle = ombre(s.pin); x.beginPath(); x.ellipse(cx, py + dy, rx, ry, 0, 0, 7); x.fill();
-      x.fillStyle = ombre(jvMel(s.pin, "#B9D08A", 0.25));
-      x.beginPath(); x.ellipse(cx, py + dy - ry * 0.35, rx * 0.8, ry * 0.45, 0, 0, 7); x.fill();
-      if (neigeux) { x.fillStyle = jvRgba(blanc(), 0.92); x.beginPath(); x.ellipse(cx, py + dy - ry * 0.5, rx * 0.85, ry * 0.42, 0, Math.PI, 0); x.fill(); }
-    });
-  }
-  // Arbre du verger : en fleur, en feuilles et en fruits, roux, ou nu
-  {
-    const px = W * 0.8, py = HZ + 12, bal = Math.sin(t * souffle * 0.6 + 1) * vent * 0.05;
-    const branches = [[-34, -96], [30, -100], [-6, -118], [40, -78], [-40, -74]];
-    x.strokeStyle = ombre("#4E3E30"); x.lineWidth = 6; x.lineCap = "round";
-    x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px - 4, py - 40, px + bal * 0.5, py - 66); x.stroke();
-    x.lineWidth = 2.6;
-    branches.forEach(([dx, dy]) => {
-      x.beginPath(); x.moveTo(px + bal * 0.5, py - 62); x.quadraticCurveTo(px + dx * 0.4, py + dy * 0.75, px + dx + bal, py + dy); x.stroke();
-    });
-    if (s.houppier) {
-      for (let i = 0; i < 16; i++) {
-        const a = jvAlea(i * 5 + 3) * Math.PI * 2, d = 0.3 + jvAlea(i * 7) * 0.7;
-        const cx = px + bal + Math.cos(a) * 42 * d + Math.sin(t * souffle + i) * vent * 0.03, cy = py - 96 + Math.sin(a) * 26 * d;
-        x.fillStyle = ombre(s.houppier[i % s.houppier.length]);
-        x.beginPath(); x.arc(cx, cy, 13 + (i % 3) * 3, 0, 7); x.fill();
-      }
-      if (nomS === "ete") {
-        for (let i = 0; i < 6; i++) {
-          x.fillStyle = ombre("#D8452F");
-          x.beginPath(); x.arc(px + bal - 30 + jvAlea(i + 40) * 60, py - 112 + jvAlea(i + 50) * 40, 3.2, 0, 7); x.fill();
-        }
-      }
-    } else if (neigeux) {
-      x.strokeStyle = jvRgba(blanc(), 0.9); x.lineWidth = 1.6;
-      branches.slice(0, 3).forEach(([dx, dy]) => { x.beginPath(); x.moveTo(px + dx * 0.5, py - 84); x.lineTo(px + dx + bal, py + dy - 2); x.stroke(); });
-    }
-  }
-  // Massifs taillés en boule, couverts d'azalées au printemps
-  [[0.07, 44, 48], [0.29, 36, 30], [0.62, 52, 36]].forEach(([px, dy, r], j) => {
-    const mx = W * px, my = HZ + dy;
-    x.fillStyle = ombre(s.buisson);
-    x.beginPath(); x.ellipse(mx, my, r, r * 0.58, 0, Math.PI, 0); x.fill();
-    x.strokeStyle = jvRgba(ombre(jvMel(s.buisson, "#E8E4D4", 0.25)), 0.5); x.lineWidth = 1.2;
-    x.beginPath(); x.ellipse(mx, my, r * 0.8, r * 0.42, 0, Math.PI * 1.15, Math.PI * 1.75); x.stroke();
-    if (s.azalee) {
-      for (let i = 0; i < 26; i++) {
-        const a = Math.PI * (1.05 + jvAlea(j * 31 + i) * 0.9), d = 0.25 + jvAlea(i * 3 + j) * 0.7;
-        x.fillStyle = ombre(i % 4 ? s.azalee : "#F6D0DC");
-        x.beginPath(); x.arc(mx + Math.cos(a) * r * d, my + Math.sin(a) * r * 0.55 * d, 2, 0, 7); x.fill();
-      }
-    }
-    if (neigeux) { x.fillStyle = jvRgba(blanc(), 0.9); x.beginPath(); x.ellipse(mx, my - r * 0.38, r * 0.72, r * 0.22, 0, Math.PI, 0); x.fill(); }
-  });
-  // Tuteurs du potager, liés en tête, garnis l'été
-  if (nomS !== "hiver") {
-    x.strokeStyle = ombre("#6A5A44"); x.lineWidth = 1.3;
-    const grand = nomS === "ete" ? 46 : 32;
-    for (let i = 0; i < 6; i++) {
-      const px = W * 0.74 + i * 14, b = Math.sin(t * souffle + i) * vent * 0.012;
-      x.strokeStyle = ombre("#6A5A44");
-      x.beginPath(); x.moveTo(px, HZ + 72); x.lineTo(px + b + (i % 2 ? 3 : -3), HZ + 72 - grand); x.stroke();
-      if (nomS === "ete") {
-        for (let j = 0; j < 4; j++) {
-          x.fillStyle = ombre(j % 2 ? "#3F8236" : "#5DA044");
-          x.beginPath(); x.ellipse(px + (j % 2 ? 3 : -3), HZ + 66 - j * 10, 4, 2.4, j, 0, 7); x.fill();
-        }
-        if (i % 2 === 0) { x.fillStyle = ombre("#D2402E"); x.beginPath(); x.arc(px + 2, HZ + 50 - (i % 3) * 6, 2.6, 0, 7); x.fill(); }
-      }
-    }
-    x.strokeStyle = ombre("#6A5A44");
-    x.beginPath(); x.moveTo(W * 0.74 - 6, HZ + 78 - grand); x.lineTo(W * 0.74 + 76, HZ + 78 - grand); x.stroke();
-  }
-  // Petites fleurs semées au premier plan, aux couleurs de la saison
-  if (s.touches) {
-    for (let i = 0; i < 70 * W / 390; i++) {
-      const fx = jvAlea(i * 13 + 1) * W, fy = HZ + 70 + jvAlea(i * 7 + 2) * (H - HZ - 110);
-      const b = Math.sin(t * souffle * 1.4 + i) * (0.6 + vent * 0.05);
-      const r = 1.6 + (fy - HZ) / (H - HZ) * 2.4;
-      x.strokeStyle = ombre(s.herbe); x.lineWidth = 0.9;
-      x.beginPath(); x.moveTo(fx, fy + r * 3); x.lineTo(fx + b, fy); x.stroke();
-      x.fillStyle = ombre(s.touches[i % s.touches.length]);
-      x.beginPath(); x.arc(fx + b, fy, r, 0, 7); x.fill();
-    }
-  }
-  // Bassin : reflet du ciel, carpes, nénuphars, ronds dans l'eau, reflet de la lune
-  {
-    const ex = W * 0.44, ey = HZ + 116, rx = 80, ry = 19, gele = neigeux && nomS === "hiver";
-    x.fillStyle = ombre("#666A63"); x.beginPath(); x.ellipse(ex, ey + 1, rx + 7, ry + 5, 0, 0, 7); x.fill();
-    x.save(); x.beginPath(); x.ellipse(ex, ey, rx, ry, 0, 0, 7); x.clip();
-    const eau = x.createLinearGradient(0, ey - ry, 0, ey + ry);
-    eau.addColorStop(0, gele ? "#DCE2E3" : jvMel(bas, "#2E4A52", 0.25));
-    eau.addColorStop(1, gele ? "#BFC9CC" : jvMel(haut, "#1E3640", 0.35));
-    x.fillStyle = eau; x.fillRect(ex - rx, ey - ry, rx * 2, ry * 2);
-    if (!gele) {
-      if (nomS !== "hiver") {
-        ["#E8742E", "#F4F1EA", "#D9482B"].forEach((kc, i) => {
-          const a = t * 0.22 * (i % 2 ? -1 : 1) + i * 2.1;
-          const kx = ex + Math.cos(a) * rx * 0.58, ky = ey + Math.sin(a) * ry * 0.5;
-          x.fillStyle = jvRgba(kc, 0.75 * (1 - c.nuit * 0.6));
-          x.beginPath(); x.ellipse(kx, ky, 7, 2.6, Math.atan2(Math.cos(a) * ry, -Math.sin(a) * rx) * (i % 2 ? -1 : 1), 0, 7); x.fill();
-        });
-      }
-      if (nomS === "ete" || nomS === "printemps") {
-        [[-44, -4], [-30, 6], [38, -2], [52, 7], [12, 9]].forEach(([dx, dy], i) => {
-          x.fillStyle = ombre(i % 2 ? "#4C8A3E" : "#3E7634");
-          x.beginPath(); x.ellipse(ex + dx, ey + dy, 8, 3, 0, 0.3, Math.PI * 2); x.fill();
-          if (nomS === "ete" && i % 2 === 0) {
-            x.fillStyle = ombre("#F2A9C0"); x.beginPath(); x.ellipse(ex + dx + 1, ey + dy - 2, 3.2, 2.2, 0, 0, 7); x.fill();
-          }
-        });
-      }
-      const nr = m.pluie ? 14 : 2, cadence = m.pluie ? 1.4 : 0.35;
-      x.lineWidth = 0.9;
-      for (let i = 0; i < nr; i++) {
-        const u = t * cadence + jvAlea(i * 3), ph = u % 1, cyc = Math.floor(u);
-        const rxx = ex + (jvAlea(i + cyc * 7) - 0.5) * rx * 1.4, ryy = ey + (jvAlea(i * 2 + cyc) - 0.5) * ry;
-        x.strokeStyle = `rgba(240,244,248,${(0.5 * (1 - ph)).toFixed(2)})`;
-        x.beginPath(); x.ellipse(rxx, ryy, 2 + ph * 12, 0.6 + ph * 3, 0, 0, 7); x.stroke();
-      }
-      if (lune > 0.05) {
-        const rfx = ex + (lx - W / 2) * 0.35;
-        for (let i = 0; i < 7; i++) {
-          const w = 14 - i * 1.4 + Math.sin(t * 2 + i) * 3;
-          x.fillStyle = `rgba(236,238,246,${(0.55 * lune * (1 - i / 8)).toFixed(3)})`;
-          x.fillRect(rfx - w / 2 + Math.sin(t * 1.3 + i * 2) * 2, ey - ry + 3 + i * 5, w, 1.6);
-        }
-      } else if (hs > 0 && voile < 0.6) {
-        x.fillStyle = "rgba(255,250,235,.35)"; x.fillRect(ex - 30 + Math.sin(t) * 4, ey - 6, 22, 1.4);
-      }
-    }
-    x.restore();
-    x.fillStyle = ombre("#7A7C75");
-    [[-rx - 2, 2, 9], [rx - 6, -6, 7], [-20, ry + 2, 8], [34, ry, 6]].forEach(([dx, dy, r]) => {
-      x.beginPath(); x.ellipse(ex + dx, ey + dy, r, r * 0.55, 0, 0, 7); x.fill();
-    });
-  }
-  // Lanterne de pierre, allumée à la tombée du jour
-  {
-    const tx = W * 0.15, ty = HZ + 132, pierre = ombre("#8D8C84");
-    x.fillStyle = pierre;
-    x.fillRect(tx - 9, ty - 5, 18, 5); x.fillRect(tx - 3, ty - 26, 6, 21); x.fillRect(tx - 11, ty - 30, 22, 4);
-    x.fillRect(tx - 8, ty - 44, 16, 14);
-    const allume = Math.max(c.nuit, jvBorne(-hs, -2, 4) * 0.8);
-    x.fillStyle = allume > 0.05 ? jvMel(ombre("#3A3A36"), "#F4C46A", allume) : ombre("#3A3A36");
-    x.fillRect(tx - 4, ty - 41, 8, 8);
-    if (allume > 0.05) {
-      const gl = x.createRadialGradient(tx, ty - 37, 2, tx, ty - 37, 46);
-      gl.addColorStop(0, `rgba(246,196,106,${(0.45 * allume).toFixed(2)})`); gl.addColorStop(1, "rgba(246,196,106,0)");
-      x.fillStyle = gl; x.fillRect(tx - 46, ty - 83, 92, 92);
-    }
-    x.fillStyle = pierre;
-    x.beginPath(); x.moveTo(tx - 17, ty - 44); x.quadraticCurveTo(tx, ty - 50, tx + 17, ty - 44);
-    x.lineTo(tx + 8, ty - 54); x.lineTo(tx - 8, ty - 54); x.closePath(); x.fill();
-    x.beginPath(); x.arc(tx, ty - 57, 3.2, 0, 7); x.fill();
-    if (neigeux) { x.fillStyle = jvRgba(blanc(), 0.95); x.beginPath(); x.ellipse(tx, ty - 52, 13, 3, 0, Math.PI, 0); x.fill(); }
-  }
-  // Tournesols de l'été, derrière les carrés
-  if (nomS === "ete") {
-    [[W * 0.9, 112], [W * 0.96, 96], [W * 0.84, 84]].forEach(([fx, L], i) => {
-      const base = HZ + 150, b = Math.sin(t * souffle + i) * (2 + vent * 0.12);
-      x.strokeStyle = ombre("#4E7A34"); x.lineWidth = 2.2;
-      x.beginPath(); x.moveTo(fx, base); x.quadraticCurveTo(fx + b * 0.3, base - L * 0.6, fx + b, base - L); x.stroke();
-      x.fillStyle = ombre("#4E8A3A"); x.beginPath(); x.ellipse(fx + b * 0.4 - 7, base - L * 0.5, 7, 3, -0.5, 0, 7); x.fill();
-      x.fillStyle = ombre("#F2BE2C");
-      for (let p = 0; p < 12; p++) {
-        const a = p * Math.PI / 6;
-        x.beginPath(); x.ellipse(fx + b + Math.cos(a) * 8, base - L + Math.sin(a) * 8, 4.2, 1.8, a, 0, 7); x.fill();
-      }
-      x.fillStyle = ombre("#5E3B1F"); x.beginPath(); x.arc(fx + b, base - L, 5, 0, 7); x.fill();
-    });
-  }
-  // Carrés du potager et ce qui y pousse
-  [W * 0.66, W * 0.84].forEach((bx, j) => {
-    const by = HZ + 158, bw = 58;
-    x.fillStyle = ombre("#7A5A3B"); x.fillRect(bx - bw / 2, by - 10, bw, 13);
-    x.fillStyle = ombre("#946F49"); x.fillRect(bx - bw / 2, by - 10, bw, 2.4);
-    x.fillStyle = ombre("#4A382A"); x.fillRect(bx - bw / 2 + 3, by - 12, bw - 6, 3);
-    for (let i = 0; i < 4; i++) {
-      const cx = bx - bw / 2 + 9 + i * 13.5, cy = by - 14, b = Math.sin(t * souffle * 1.3 + i + j) * vent * 0.03;
-      if (s.potager === "salades") {
-        x.fillStyle = ombre(i % 2 ? "#9CCB64" : "#7DB252");
-        for (let p = 0; p < 5; p++) { x.beginPath(); x.ellipse(cx + b + Math.cos(p * 1.25) * 3, cy - 3 + Math.sin(p * 1.25) * 2, 4, 3, p, 0, 7); x.fill(); }
-      } else if (s.potager === "courges") {
-        x.fillStyle = ombre("#3F7F36"); x.beginPath(); x.ellipse(cx + b, cy - 4, 6.5, 4.5, 0, 0, 7); x.fill();
-        if (i % 2 === 0) { x.fillStyle = ombre("#F2C83A"); x.beginPath(); x.arc(cx + b + 3, cy - 7, 2.4, 0, 7); x.fill(); }
-      } else if (s.potager === "potirons") {
-        x.fillStyle = ombre("#5E7A3A"); x.beginPath(); x.ellipse(cx - 3, cy - 2, 5, 2.4, 0.4, 0, 7); x.fill();
-        if (i % 2 === 0) { x.fillStyle = ombre("#E07A24"); x.beginPath(); x.ellipse(cx + 3, cy - 3, 6, 4.6, 0, 0, 7); x.fill(); }
-      } else {
-        x.fillStyle = ombre(neigeux ? "#F1F0EA" : "#C9B47C"); x.fillRect(cx - 6, cy, 12, 2.5);
-      }
-    }
-  });
-  // Graminées du premier plan, qui ploient au vent ; en épis à l'automne
-  [[18, 1], [W - 34, -1], [W * 0.4, 1]].forEach(([bx, sens], j) => {
-    for (let i = 0; i < 10; i++) {
-      const base = bx + i * 2.6, L = 70 + jvAlea(j * 10 + i) * 50;
-      const b = Math.sin(t * souffle * 1.2 + i * 0.4 + j) * (3 + vent * 0.18) + vent * 0.35;
-      const tx = base + sens * (i - 5) * 4 + b, ty = H - 30 - L;
-      x.strokeStyle = ombre(s.herbe); x.lineWidth = 1.2;
-      x.beginPath(); x.moveTo(base, H - 30); x.quadraticCurveTo(base + b * 0.2, H - 30 - L * 0.6, tx, ty); x.stroke();
-      if (nomS === "automne" && i % 2 === 0) {
-        x.strokeStyle = jvRgba(ombre("#E6DAC0"), 0.85); x.lineWidth = 2.6;
-        x.beginPath(); x.moveTo(tx, ty); x.quadraticCurveTo(tx + 4 + b * 0.1, ty - 8, tx + 10 + b * 0.2, ty - 12); x.stroke();
-      }
-    }
-  });
-  // Rosée ou givre du matin, par ciel dégagé
-  if (sol.depuisLever > -0.5 && sol.depuisLever < 2.5 && m.nappe < 0.5 && nomS !== "hiver") {
-    for (let i = 0; i < 22; i++) {
-      const a = 0.6 * Math.max(0, Math.sin(t * 1.6 + i * 2.3));
-      x.fillStyle = `rgba(255,253,245,${a.toFixed(2)})`;
-      x.fillRect(jvAlea(i * 7) * W, HZ + 24 + jvAlea(i * 11) * (H - HZ - 60), 1.6, 1.6);
-    }
-  }
-  // Oiseaux de passage, d'un trait d'encre
-  if (c.jour > 0.6 && (nomS === "printemps" || nomS === "automne") && !m.pluie) {
-    x.strokeStyle = jvRgba(ombre(JV_SUMI), 0.6); x.lineWidth = 1.1;
-    for (let i = 0; i < 5; i++) {
-      const bx = ((t * 11 + i * 17) % (W + 140)) - 70, by = HZ * 0.36 + i * 7 + (i % 2) * 5 + Math.sin(t * 0.8 + i) * 3;
-      const ai = 2 + Math.sin(t * 5 + i) * 2;
-      x.beginPath(); x.moveTo(bx - 5, by - ai); x.quadraticCurveTo(bx - 2, by - 2, bx, by);
-      x.quadraticCurveTo(bx + 2, by - 2, bx + 5, by - ai); x.stroke();
-    }
-  }
-  // Lucioles des nuits d'été
-  if (c.nuit > 0.5 && nomS === "ete" && !m.pluie) {
-    for (let i = 0; i < 14; i++) {
-      const fx = jvAlea(i * 5) * W + Math.sin(t * 0.35 + i) * 18, fy = HZ + jvAlea(i * 9) * 160 + Math.cos(t * 0.45 + i) * 10;
-      const a = Math.max(0, Math.sin(t * 1.2 + i * 1.9)) * 0.8;
-      const r = x.createRadialGradient(fx, fy, 0, fx, fy, 7);
-      r.addColorStop(0, `rgba(226,240,160,${a.toFixed(2)})`); r.addColorStop(1, "rgba(226,240,160,0)");
-      x.fillStyle = r; x.fillRect(fx - 7, fy - 7, 14, 14);
-    }
-  }
-  // Papillons au printemps et en été, libellules autour du bassin
-  if (c.jour > 0.6 && (nomS === "printemps" || nomS === "ete") && !m.pluie && vent < 35) {
-    ["#FFFFFF", "#F4D35E", "#EC8A3E", "#AFCBEF"].forEach((pc, i) => {
-      const u = t * 0.05 + i * 0.27;
-      const px = W * (0.08 + 0.84 * (0.5 + 0.5 * Math.sin(u * 2.3 + i)));
-      const py = HZ + 40 + Math.sin(u * 3.1 + i * 2) * 70 + Math.sin(t * 2.2 + i) * 6;
-      const ai = 0.25 + Math.abs(Math.sin(t * 9 + i * 1.3)) * 0.75;
-      x.fillStyle = pc;
-      [[-3.6, -1.5, 4.2, 3.4, -0.5], [3.6, -1.5, 4.2, 3.4, 0.5], [-2.6, 2.4, 2.6, 2.2, -0.3], [2.6, 2.4, 2.6, 2.2, 0.3]]
-        .forEach(([dx, dy, rx, ry, a]) => { x.beginPath(); x.ellipse(px + dx * ai, py + dy, rx * ai, ry, a, 0, 7); x.fill(); });
-      x.fillStyle = "rgba(40,36,30,.7)"; x.fillRect(px - 0.5, py - 3, 1, 7);
-    });
-  }
-  if (c.jour > 0.6 && nomS === "ete" && !m.pluie) {
-    for (let i = 0; i < 2; i++) {
-      const u = t / 2.5 + i * 0.5, sauts = Math.floor(u), e2 = Math.min(1, (u % 1) * 4);
-      const ax = W * 0.44 + (jvAlea(sauts * 3 + i) - 0.5) * 160, ay = HZ + 70 + jvAlea(sauts * 5 + i) * 40;
-      const bx = W * 0.44 + (jvAlea(sauts * 3 + i + 3) - 0.5) * 160, by = HZ + 70 + jvAlea(sauts * 5 + i + 3) * 40;
-      const dx = ax + (bx - ax) * e2, dy = ay + (by - ay) * e2;
-      x.fillStyle = "rgba(235,242,250,.6)";
-      x.beginPath(); x.ellipse(dx - 2, dy - 4, 1.8, 6, 0.3, 0, 7); x.fill();
-      x.beginPath(); x.ellipse(dx + 2, dy - 4, 1.8, 6, -0.3, 0, 7); x.fill();
-      x.strokeStyle = "#2F6FA6"; x.lineWidth = 1.6; x.beginPath(); x.moveTo(dx - 6, dy); x.lineTo(dx + 8, dy); x.stroke();
-    }
-  }
-  // Clarté de la lune posée sur le paysage
-  if (lune > 0.05) {
-    const cl = x.createRadialGradient(lx, ly, 40, lx, ly, 520);
-    cl.addColorStop(0, `rgba(190,206,236,${(0.2 * lune).toFixed(3)})`); cl.addColorStop(1, "rgba(190,206,236,0)");
-    x.fillStyle = cl; x.fillRect(0, 0, W, H);
-  }
-
-  // La branche à l'encre, qui se balance autour de sa base
-  const rot = Math.sin(t * souffle * 0.55) * (0.006 + vent * 0.0007);
-  x.save(); x.translate(W + 8, 30); x.rotate(rot); x.translate(-W - 8, -30);
-  x.lineCap = "round";
-  const encre = ombre(JV_SUMI);
-  jv.branche.forEach(sg => {
-    x.strokeStyle = jvRgba(encre, 0.9); x.lineWidth = sg.ep;
-    x.beginPath(); x.moveTo(sg.x, sg.y); x.quadraticCurveTo(sg.cx, sg.cy, sg.x2, sg.y2); x.stroke();
-    x.strokeStyle = jvRgba(encre, 0.35); x.lineWidth = sg.ep * 0.5;
-    x.beginPath(); x.moveTo(sg.x, sg.y + sg.ep * 0.4); x.quadraticCurveTo(sg.cx, sg.cy + sg.ep * 0.5, sg.x2, sg.y2 + sg.ep * 0.3); x.stroke();
-    if (neigeux && sg.d <= 3) {
-      x.strokeStyle = jvRgba(ombre("#F5F4F0"), 0.92); x.lineWidth = Math.max(1.4, sg.ep * 0.45);
-      x.beginPath(); x.moveTo(sg.x, sg.y - sg.ep * 0.45); x.quadraticCurveTo(sg.cx, sg.cy - sg.ep * 0.5, sg.x2, sg.y2 - sg.ep * 0.3); x.stroke();
-    }
-  });
-  jv.branche.forEach((sg, i) => {
-    if (sg.d < 3) return;
-    const fl = Math.sin(t * souffle * 1.8 + i) * vent * 0.025;
-    for (let j = 0; j < (s.fleur ? 6 : 4); j++) {
-      const fx = sg.x2 + (jvAlea(sg.g + j) - 0.5) * 18 + fl, fy = sg.y2 + (jvAlea(sg.g + j + 7) - 0.5) * 12;
-      if (s.fleur) {
-        x.fillStyle = ombre(j % 3 ? s.fleur : "#FBE3EA");
-        for (let p = 0; p < 5; p++) { x.beginPath(); x.arc(fx + Math.cos(p * 1.257) * 2.6, fy + Math.sin(p * 1.257) * 2.6, 2.2, 0, 7); x.fill(); }
-        x.fillStyle = ombre(s.coeur); x.beginPath(); x.arc(fx, fy, 0.9, 0, 7); x.fill();
-      } else if (s.feuille) {
-        x.fillStyle = ombre(s.feuille[(i + j) % s.feuille.length]);
-        jvMomiji(x, fx, fy, 5.5, jvAlea(sg.g + j) * 2);
-      }
-    }
-  });
-  x.restore();
-
-  // Ce qui tombe : pétales, feuilles d'érable, flocons ; la pluie en traits fins
-  const pente = Math.max(-0.5, Math.min(0.5, vent / 95));
-  const chute = m.neige ? "flocons" : s.chute;
-  if (chute !== "aucune" && !m.pluie) {
-    const n = (chute === "flocons" ? 70 : 12) * W / 390;
-    for (let i = 0; i < n; i++) {
-      const v = chute === "flocons" ? 20 + jvAlea(i) * 16 : 12 + jvAlea(i) * 8;
-      const py = (jvAlea(i + 1) * H + t * v) % (H + 20) - 10;
-      const px = (jvAlea(i + 2) * W * 0.8 + W * 0.2 + Math.sin(t * 0.6 + i) * 24 - t * vent * 0.35 + W * 8) % W;
-      if (chute === "flocons") {
-        x.fillStyle = "rgba(250,250,246,.85)"; x.beginPath(); x.arc(px, py, 1.3 + jvAlea(i) * 1.6, 0, 7); x.fill();
-        continue;
-      }
-      x.save(); x.translate(px, py); x.rotate(t * (0.5 + jvAlea(i)) + i);
-      if (chute === "petales") { x.fillStyle = jvRgba(ombre(s.fleur), 0.9); x.beginPath(); x.ellipse(0, 0, 3, 1.8, 0, 0, 7); x.fill(); }
-      else { x.fillStyle = ombre(s.feuille[i % s.feuille.length]); jvMomiji(x, 0, 0, 5.5, 0); }
-      x.restore();
-    }
-  }
-  if (m.pluie) {
-    x.strokeStyle = c.nuit > 0.5 ? "rgba(200,208,222,.3)" : "rgba(56,64,74,.28)"; x.lineWidth = 0.8;
-    const n = Math.round(110 * m.pluie * W / 390);
-    for (let i = 0; i < n; i++) {
-      const v = 560 + jvAlea(i) * 240, py = (jvAlea(i + 3) * H + t * v) % H, px = (jvAlea(i + 7) * W + py * pente + W) % W;
-      x.beginPath(); x.moveTo(px, py); x.lineTo(px + 30 * pente, py + 30); x.stroke();
-    }
-  }
-  if (m.brume > 0.5) {
-    for (let i = 0; i < 3; i++) {
-      x.fillStyle = jvRgba(bas, 0.35 * m.brume);
-      jvCapsule(x, -120 + (t * (5 + i * 3)) % 120 + i * 40, HZ - 60 + i * 60, W * 0.9, 26);
-    }
-    x.fillStyle = jvRgba(bas, 0.32 * m.brume); x.fillRect(0, 0, W, H);
-  }
-  // Grain du papier
-  if (!jv.grain) {
-    const gc = document.createElement("canvas"); gc.width = gc.height = 160;
-    const gx = gc.getContext("2d"), d = gx.createImageData(160, 160);
-    for (let i = 0; i < 160 * 160; i++) {
-      const v = jvAlea(i + 0.5) * 255;
-      d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255;
-    }
-    gx.putImageData(d, 0, 0);
-    jv.grain = x.createPattern(gc, "repeat");
-  }
-  x.globalAlpha = 0.035; x.fillStyle = jv.grain; x.fillRect(0, 0, W, H); x.globalAlpha = 1;
+  peindreJardin(x, W, H, t, e, jv.cache);
 }
 
-/* La boucle tourne à trente images par seconde au plus, se suspend quand
-   l'onglet est caché et s'arrête hors du fond « Jardin vivant ». Quand le
-   système demande moins de mouvement, une seule image est peinte. */
 const JV_CALME = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
 function animerJardin(actif) {
   cancelAnimationFrame(jv.boucle);
@@ -3899,18 +5428,32 @@ function animerJardin(actif) {
 
 // Le choix du fond, dans les réglages du compte, vaut pour cet appareil.
 function brancherFond() {
-  const sel = $("selFond");
-  if (!sel) return;
-  sel.innerHTML = Object.entries(FONDS_ECRAN)
-    .map(([v, [nom]]) => `<option value="${v}">${nom}</option>`).join("");
-  sel.value = choixFond;
-  const aide = () => { $("aideFond").textContent = FONDS_ECRAN[choixFond][1]; };
-  aide();
+  const sel = $("selFond"), selS = $("selStyle"), selD = $("selDecor");
+  if (!sel || !selS || !selD) return;
+  const options = paires => paires.map(([v, nom]) => `<option value="${v}">${nom}</option>`).join("");
+  sel.innerHTML = options(Object.entries(FONDS_ECRAN).map(([v, [nom]]) => [v, nom]));
+  selS.innerHTML = options(STYLES_JARDIN.map(v => [v, JV_STYLES[v].nom]));
+  selD.innerHTML = options([["climat", "Selon le climat du jardin"]].concat(Object.entries(JV_THEMES).map(([v, th]) => [v, th.nom])));
+  sel.value = choixFond; selS.value = choixStyle; selD.value = JV_THEMES[choixDecor] ? choixDecor : "climat";
+  // Le style ne vaut que pour le jardin vivant, le décor que pour l'estampe.
+  const majLignes = () => {
+    $("ligneStyle").hidden = choixFond !== "jardin";
+    $("ligneDecor").hidden = choixFond !== "jardin" || choixStyle !== "estampe";
+    $("aideFond").textContent = choixFond === "jardin" ? JV_STYLES[choixStyle].texte : FONDS_ECRAN[choixFond][1];
+  };
+  majLignes();
+  const garder = (cle, v) => { try { localStorage.setItem(cle, v); } catch (e) { /* stockage indisponible */ } };
   sel.addEventListener("change", () => {
     choixFond = FONDS_ECRAN[sel.value] ? sel.value : "jardin";
-    try { localStorage.setItem(FOND, choixFond); } catch (e) { /* stockage indisponible */ }
-    aide();
-    appliquerAmbiance();
+    garder(FOND, choixFond); majLignes(); appliquerAmbiance();
+  });
+  selS.addEventListener("change", () => {
+    choixStyle = STYLES_JARDIN.indexOf(selS.value) !== -1 ? selS.value : "moderne";
+    garder(STYLE_JARDIN, choixStyle); majLignes(); appliquerAmbiance();
+  });
+  selD.addEventListener("change", () => {
+    choixDecor = selD.value;
+    garder(DECOR_JARDIN, choixDecor); appliquerAmbiance();
   });
 }
 // Une rotation ou un changement de taille repeint aussitôt la toile immobile.
@@ -3958,12 +5501,13 @@ function appliquerAmbiance() {
     const [cr, cg, cb] = jvHex(jv.etat.c.haut);
     const nuit = (0.2126 * cr + 0.7152 * cg + 0.0722 * cb) / 255 < 0.45;
     z.dataset.ciel = nuit ? "nuit" : "jour";
+    z.dataset.style = choixStyle; z.dataset.decor = jv.etat.theme;
     racine.dataset.ciel = z.dataset.ciel;
     r.setProperty("--am-ciel", jv.etat.c.haut);
     if (!jv.boucle) animerJardin(true);
   } else {
     animerJardin(false);
-    delete z.dataset.ciel; delete racine.dataset.ciel;
+    delete z.dataset.ciel; delete racine.dataset.ciel; delete z.dataset.style; delete z.dataset.decor;
   }
   // Ce qui tombe ne se redessine que si la saison ou le temps l'ont changé.
   const flocons = a.flocons || temps === "neige";
